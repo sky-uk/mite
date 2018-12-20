@@ -129,8 +129,6 @@ class ScenarioManager:
         return work, scenario_volume_map
 
     def is_active(self):
-        logger.debug("In start: %s" % (self._in_start,))
-        logger.debug("Scenarios: %s" % (self._scenarios,))
         return self._in_start or bool(self._scenarios)
 
     def checkin_data(self, ids):

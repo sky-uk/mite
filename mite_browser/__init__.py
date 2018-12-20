@@ -83,6 +83,9 @@ class Browser:
     async def post(self, url, *args, **kwargs):
         return await self.request("POST", url, *args, **kwargs)
 
+    async def options(self, url, *args, **kwargs):
+        return await self.request("OPTIONS", url, *args, **kwargs)
+
     async def erase_all_cookies(self):
         await self._session.erase_all_cookies()
 

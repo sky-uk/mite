@@ -11,6 +11,7 @@ Usage:
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
+    mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite --help
     mite --version
 
@@ -19,6 +20,8 @@ Arguments:
     CONFIG_SPEC             Identifier for config callable returning dict of config
     JOURNEY_SPEC            Identifier for journey async callable
     VOLUME_MODEL_SPEC       Identifier for volume model callable
+    HAR_FILE_PATH           Path for the har file to convert into a mite journey
+    CONVERTED_FILE_PATH     Path for the file where will be saved the conversion from har file to mite journey
 
 Examples:
     mite scenario test mite.example:scenario
@@ -48,6 +51,7 @@ Options:
     --collector-dir=DIRECTORY       Set the collectors output directory [default: collector_data]
     --collector-roll=NUM_LINES      How many lines per collector output file [default: 100000]
     --recorder-dir=DIRECTORY        Set the recorders output directory [default: recorder_data]
+    --sleep-time=SLEEP              Set the second to await between each request [default: 1]
 """
 import sys
 import os
@@ -67,6 +71,7 @@ from .utils import spec_import, pack_msg
 from .web import app, prometheus_metrics
 from .logoutput import MsgOutput, HttpStatsOutput
 from .stats import Stats
+from .har_to_mite import har_convert_to_mite
 
 
 def _msg_backend_module(opts):
@@ -346,6 +351,10 @@ def configure_python_path(opts):
         sys.path.insert(0, os.getcwd())
 
 
+def har_converter(opts):
+    har_convert_to_mite(opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time'])
+
+
 def main():
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     opts = docopt.docopt(__doc__)
@@ -369,6 +378,8 @@ def main():
         prometheus_exporter(opts)
     elif opts['recorder']:
         recorder(opts)
+    elif opts['har']:
+        har_converter(opts)
 
 
 if __name__ == '__main__':

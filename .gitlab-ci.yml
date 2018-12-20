@@ -1,0 +1,43 @@
+image: docker:17.09.1-ce
+
+stages:
+    - build_nanomsg
+    - build_python_mite_dependencies
+    - build_acurl
+    - build_mite
+
+before_script:
+    - "docker login -u\"$DOCKER_USERNAME\" -p\"$DOCKER_PASSWORD\" $DOCKER_REPO"
+
+build_nanomsg:
+    stage: build_nanomsg
+    script:
+        - "docker build -t build_nanomsg -f docker/BuildNanomsgDockerfile ."
+        - "docker tag build_nanomsg $DOCKER_REPO/$DOCKER_PREFIX/build_nanomsg"
+        - "docker push $DOCKER_REPO/$DOCKER_PREFIX/build_nanomsg"
+
+build_python_mite_dependencies:
+    stage: build_python_mite_dependencies
+    script:
+        - "docker build --build-arg NANOMSG_BASE_IMAGE=$DOCKER_REPO/$DOCKER_PREFIX/build_nanomsg -t build_python_mite_packages -f docker/BuildPythonPackagesDockerfile ."
+        - "docker tag build_python_mite_packages $DOCKER_REPO/$DOCKER_PREFIX/build_python_mite_packages"
+        - "docker push $DOCKER_REPO/$DOCKER_PREFIX/build_python_mite_packages"
+
+build_acurl:
+    stage: build_acurl
+    script:
+        - "docker build --build-arg MITE_DEPENDENCIES_BASE_IMAGE=$DOCKER_REPO/$DOCKER_PREFIX/build_python_mite_packages -t build_acurl -f docker/BuildAcurlDockerfile ."
+        - "docker tag build_acurl $DOCKER_REPO/$DOCKER_PREFIX/build_acurl"
+        - "docker push $DOCKER_REPO/$DOCKER_PREFIX/build_acurl"
+
+build_mite:
+    stage: build_mite
+    script:
+        - "docker build --build-arg FULL_MITE_DEPENDENCIES_IMAGE=$DOCKER_REPO/$DOCKER_PREFIX/build_acurl -t mite -f docker/BuildMiteDockerfile ."
+        - "docker tag mite $DOCKER_REPO/$DOCKER_PREFIX/mite"
+        - "docker push $DOCKER_REPO/$DOCKER_PREFIX/mite"
+
+variables:
+    GIT_SSL_NO_VERIFY: "1"
+    DOCKER_PREFIX: "id-nft"
+    GIT_STRATEGY: clone
