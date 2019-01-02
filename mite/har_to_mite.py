@@ -21,10 +21,10 @@ def set_expected_status_code(cur_page, entries):
     if code == 302 and cur_page['response']['redirectURL']:
         for other_page in entries:
             if cur_page['response']['redirectURL'] == other_page['request']['url']:
-                cur_page['response']['redirectURL'] = other_page['request']['url']
+                cur_page['response']['redirectURL'] = other_page['response']['redirectURL']
                 cur_page['response']['status'] = other_page['response']['status']
-                pages.remove(other_page)
-                code, status_groups = set_sexpected_status_code(cur_page, entries)
+                entries.remove(other_page)
+                code, status_groups = set_expected_status_code(cur_page, entries)
     elif code == 304:
         code = "200, 304"
         status_groups = "_in_groups"
@@ -50,12 +50,9 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     journey_main = ""
     page_urls = [page['title'] for page in temp_pages['log']['pages']] 
     entries = temp_pages['log']['entries']
-    # Sort based on start time, may not be necessary. Review HAR spec 
     entries.sort(key=lambda n: n["startedDateTime"])
 
-    while entries:
-        cur_page = entries.pop()
-        
+    for cur_page in entries:        
         if not cur_page['response']['status'] or not cur_page['request']['url'] in page_urls:
             continue
 
@@ -78,7 +75,7 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     journey_start = "from .utils import check_status_code, check_status_code_in_groups\n"
     journey_start += "from mite_browser import browser_decorator\n"
     journey_start += "from mite.exceptions import MiteError\n"
-    journey_start += "from asyncio import sleep\n\n"
+    journey_start += "from asyncio import sleep\n\n\n"
     journey_start += "@browser_decorator()\n"
     journey_start += "async def journey(ctx):\n"
     #journey_start += "    # import ipdb; ipdb.set_trace()\n\n"
