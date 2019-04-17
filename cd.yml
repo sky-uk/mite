@@ -1,0 +1,11 @@
+version: 1
+context: identity
+triggering: multibranch
+
+defaultNodes:
+  default: id-small-slave
+
+modules:
+  mite:
+    pipelineShape: simple
+    directory: "/"
