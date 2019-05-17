@@ -1,4 +1,3 @@
-ARG FULL_MITE_DEPENDENCIES_IMAGE
-FROM ${FULL_MITE_DEPENDENCIES_IMAGE}
+FROM registry.tools.cosmic.sky/identity/sre/build_acurl
 ADD . / /mite/
 RUN cd /mite \ && pip install -e .
