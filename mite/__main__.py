@@ -60,6 +60,7 @@ import docopt
 import threading
 import logging
 import uvloop
+import signal
 
 from .scenario import ScenarioManager
 from .config import ConfigManager
@@ -290,6 +291,13 @@ def controller(opts):
     server = _create_controller_server(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
+
+    def handle_signal():
+        # FIXME: kill runners, do any other shutdown tasks
+        controller._killed = True
+
+    loop.add_signal_handler(signal.SIGINT, handle_signal)
+    loop.add_signal_handler(signal.SIGTERM, handle_signal)
 
     def controller_report():
         controller.report(sender.send)
