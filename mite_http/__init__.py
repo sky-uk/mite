@@ -37,8 +37,8 @@ class SessionPool:
     async def _checkout(self, context):
         session = self._el.session()
 
-        def response_callback(r):
-            context.send(
+        async def response_callback(r):
+            await context.send(
                 'http_curl_metrics',
                 start_time=r.start_time,
                 effective_url=r.url,

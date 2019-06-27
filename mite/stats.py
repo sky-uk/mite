@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+import asyncio
 
 
 class Counter:
@@ -140,7 +141,7 @@ class Stats:
             processor.process(msg)
         t = time.time()
         if t > self.dump_timeout:
-            self.sender(self.dump())
+            asyncio.ensure_future(self.sender(self.dump()))
             self.dump_timeout = t + 0.25
 
     def dump(self):

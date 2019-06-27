@@ -170,7 +170,7 @@ class DirectReciever:
     def add_raw_listener(self, raw_listener):
         self._raw_listeners.append(raw_listener)
 
-    def recieve(self, msg):
+    async def recieve(self, msg):
         for listener in self._listeners:
             listener(msg)
         packed_msg = pack_msg(msg)
@@ -245,11 +245,14 @@ def test_scenarios(test_name, opts, scenarios):
     _setup_msg_processors(receiver, opts)
     loop = asyncio.get_event_loop()
 
-    def controller_report():
-        controller.report(receiver.recieve)
-        loop.call_later(1, controller_report)
-    loop.call_later(1, controller_report)
-    loop.run_until_complete(_create_runner(opts, transport, receiver.recieve).run())
+    async def controller_report():
+        while True:
+            await asyncio.sleep(1)
+            await controller.report(receiver.recieve)
+    loop.run_until_complete(asyncio.gather(
+        controller_report(),
+        _create_runner(opts, transport, receiver.recieve).run()
+    ))
 
 
 def scenario_test_cmd(opts):
@@ -291,13 +294,19 @@ def controller(opts):
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
 
-    def controller_report():
-        controller.report(sender.send)
-        loop.call_later(1, controller_report)
-    loop.call_later(1, controller_report)
+    async def controller_report():
+        while True:
+            if controller.should_stop():
+                return
+            await asyncio.sleep(1)
+            await controller.report(sender.send)
+
     try:
-        loop.run_until_complete(server.run(controller, controller.should_stop))
-    except KeyboardInterrupt:
+        loop.run_until_complete(asyncio.gather(
+            controller_report(),
+            server.run(controller, controller.should_stop)
+        ))
+    except  KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
 

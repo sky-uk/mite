@@ -36,15 +36,15 @@ class _TransactionContextManager:
         self._name = name
 
     async def __aenter__(self):
-        self._ctx._start_transaction(self._name)
+        await self._ctx._start_transaction(self._name)
 
     async def __aexit__(self, exception_type, exception_val, traceback):
         try:
             if exception_val and not isinstance(exception_val, (HandledException, KeyboardInterrupt)):
                 if isinstance(exception_val, MiteError):
-                    self._ctx._send_mite_error(exception_val, traceback)
+                    await self._ctx._send_mite_error(exception_val, traceback)
                 else:
-                    self._ctx._send_exception(exception_val, traceback)
+                    await self._ctx._send_exception(exception_val, traceback)
                 if self._ctx._debug:
                     drop_to_debugger(traceback)
                 if isinstance(exception_val, MiteError):
@@ -52,7 +52,7 @@ class _TransactionContextManager:
                 else:
                     raise HandledException(exception_val, traceback)
         finally:
-            self._ctx._end_transaction()
+            await self._ctx._end_transaction()
 
 
 class _ExceptionHandlerContextManager:
@@ -68,7 +68,7 @@ class _ExceptionHandlerContextManager:
                 return False
             if not isinstance(exception_val, HandledMiteError):
                 if not isinstance(exception_val, HandledException):
-                    self._ctx._send_exception(exception_val, traceback)
+                    await self._ctx._send_exception(exception_val, traceback)
                     if self._ctx._debug:
                         drop_to_debugger(traceback)
                 await asyncio.sleep(1)
@@ -99,11 +99,13 @@ class Context:
             return self._should_stop_func()
         return False
 
-    def send(self, type, **content):
+    async def send(self, type, **content):
+        # FIXME: AFAICT, this is never called from outside this class and
+        # ought to be a private method
         msg = content
         msg['type'] = type
         self._add_context_headers_and_time(msg)
-        self._send(msg)
+        await self._send(msg)
         logger.debug("sent message: %s", msg)
 
     def transaction(self, name):
@@ -141,30 +143,24 @@ class Context:
     def _tb_format_location(self, tb):
         return '{}:{}:{}'.format(*self._extract_filename_lineno_funcname(tb))
 
-    def _send_exception(self, value, tb):
+    async def _send_exception(self, value, tb):
         message = str(value)
         ex_type = type(value).__name__
         location = self._tb_format_location(tb)
         stacktrace = ''.join(traceback.format_tb(tb))
-        self.send('exception', message=message, ex_type=ex_type, location=location, stacktrace=stacktrace)
+        await self.send('exception', message=message, ex_type=ex_type, location=location, stacktrace=stacktrace)
 
-    def _send_mite_error(self, value, tb):
+    async def _send_mite_error(self, value, tb):
         location = self._tb_format_location(tb)
-        self.send('error', message=str(value), location=location, **value.fields)
+        await self.send('error', message=str(value), location=location, **value.fields)
 
-    def _start_transaction(self, name):
-        msg = {}
+    async def _start_transaction(self, name):
         self._transaction_ids.append(next(self._trans_id_gen))
         self._transaction_names.append(name)
-        self._add_context_headers_and_time(msg)
-        msg['type'] = 'start'
-        self._send(msg)
+        await self.send('start')
 
-    def _end_transaction(self):
-        msg = {}
-        self._add_context_headers_and_time(msg)
-        msg['type'] = 'end'
-        self._send(msg)
+    async def _end_transaction(self):
+        await self.send('end')
         self._transaction_names.pop()
         self._transaction_ids.pop()
 
