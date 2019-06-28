@@ -98,9 +98,6 @@ class Runner:
         if self._work[id] == 0:
             del self._work[id]
 
-    def _current_work(self):
-        return self._work
-
     async def run(self):
         context_id_gen = count(1)
         config = RunnerConfig()
@@ -139,7 +136,7 @@ class Runner:
         waiter = self._loop.create_future()
         completed_data_ids = []
         while not self._stop:
-            work, config_list, self._stop = await self._transport.request_work(runner_id, self._current_work(),
+            work, config_list, self._stop = await self._transport.request_work(runner_id, self._work,
                                                                                completed_data_ids, self._max_work)
             config._update(config_list)
             for scenario_id, scenario_data_id, journey_spec, args in work:
@@ -157,12 +154,12 @@ class Runner:
                     self._execute(context, scenario_id, scenario_data_id, journey_spec, args))
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
-        while self._current_work():
-            _, config_list, _ = await self._transport.request_work(runner_id, self._current_work(),
+        while self._work:
+            _, config_list, _ = await self._transport.request_work(runner_id, self._work,
                                                                    completed_data_ids, 0)
             config._update(config_list)
             completed_data_ids = await wait()
-        await self._transport.request_work(runner_id, self._current_work(), completed_data_ids, 0)
+        await self._transport.request_work(runner_id, self._work, completed_data_ids, 0)
         await self._transport.bye(runner_id)
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
