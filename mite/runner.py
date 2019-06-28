@@ -72,14 +72,13 @@ class RunnerConfig:
 
 
 class Runner:
-    def __init__(self, transport, msg_sender, loop_wait_min=0.01, loop_wait_max=0.5, max_work=None, loop=None,
+    def __init__(self, transport, msg_sender, loop_wait_max=0.5, max_work=None, loop=None,
                  debug=False):
         self._transport = transport
         self._msg_sender = msg_sender
         self._work = {}
         self._datapool_proxies = {}
         self._stop = False
-        self._loop_wait_min = loop_wait_min
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
         if loop is None:
