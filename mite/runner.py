@@ -77,7 +77,6 @@ class Runner:
         self._transport = transport
         self._msg_sender = msg_sender
         self._work = {}
-        self._datapool_proxies = {}
         self._stop = False
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
