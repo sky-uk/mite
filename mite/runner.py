@@ -101,9 +101,6 @@ class Runner:
     def _current_work(self):
         return self._work
 
-    def should_stop(self):
-        return self._stop
-
     async def run(self):
         context_id_gen = count(1)
         config = RunnerConfig()
@@ -154,8 +151,7 @@ class Runner:
                     'scenario_id': scenario_id,
                     'scenario_data_id': scenario_data_id
                 }
-                context = Context(self._msg_sender, config, id_data=id_data, should_stop_func=self.should_stop,
-                                  debug=self._debug)
+                context = Context(self._msg_sender, config, id_data=id_data, debug=self._debug)
                 self._inc_work(scenario_id)
                 future = asyncio.ensure_future(
                     self._execute(context, scenario_id, scenario_data_id, journey_spec, args))

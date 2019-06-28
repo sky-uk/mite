@@ -77,13 +77,12 @@ class _ExceptionHandlerContextManager:
 
 
 class Context:
-    def __init__(self, send, config, id_data=None, should_stop_func=None, debug=False):
+    def __init__(self, send, config, id_data=None, debug=False):
         self._send = send
         self._config = config
         if id_data is None:
             id_data = {}
         self._id_data = id_data
-        self._should_stop_func = should_stop_func
         self._transaction_names = []
         self._transaction_ids = []
         self._debug = debug
@@ -92,12 +91,6 @@ class Context:
     @property
     def config(self):
         return self._config
-
-    @property
-    def should_stop(self):
-        if self._should_stop_func is not None:
-            return self._should_stop_func()
-        return False
 
     def send(self, type, **content):
         msg = content
