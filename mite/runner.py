@@ -142,7 +142,7 @@ class Runner:
             work, config_list, self._stop = await self._transport.request_work(runner_id, self._current_work(),
                                                                                completed_data_ids, self._max_work)
             config._update(config_list)
-            for num, (scenario_id, scenario_data_id, journey_spec, args) in enumerate(work):
+            for scenario_id, scenario_data_id, journey_spec, args in work:
                 id_data = {
                     'test': test_name,
                     'runner_id': runner_id,
