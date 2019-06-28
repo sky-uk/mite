@@ -46,7 +46,10 @@ class Sender:
         logger.debug("sender connected to address: %s", address)
 
     def send(self, msg):
-        self._socket.send(pack_msg(msg))
+        try:
+            self._socket.send(pack_msg(msg), flags=zmq.NOBLOCK)
+        except zmq.ZMQError:
+            pass  # TODO: what should happen here?
 
 
 class Receiver:
