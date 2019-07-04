@@ -2,7 +2,7 @@ import msgpack
 import importlib
 
 
-_msg_unpacker = msgpack.Unpacker(encoding='utf-8', use_list=False)
+_msg_unpacker = msgpack.Unpacker(raw=False, use_list=False)
 
 
 def unpack_msg(msg):
