@@ -2,31 +2,25 @@ from collections import deque
 from acurl import EventLoop
 import logging
 
+from mite.compat import asynccontextmanager
+
 logger = logging.getLogger(__name__)
 
 
-class _SessionPoolContextManager:
-    def __init__(self, session_pool, context):
-        self._session_pool = session_pool
-        self._context = context
-
-    async def __aenter__(self):
-        self._context.http = await self._session_pool._checkout(self._context)
-
-    async def __aexit__(self, *args):
-        await self._session_pool._checkin(self._context.http)
-        del self._context.http
-
-
 class SessionPool:
-    """No longer actually goes pooling as this is built into acurl. API just left in place.
-    Will need a refactor"""
+    """No longer actually goes pooling as this is built into acurl.
+
+    API just left in place. TODO: Will need a refactor"""
     def __init__(self):
         self._el = EventLoop()
         self._pool = deque()
 
-    def session_context(self, context):
-        return _SessionPoolContextManager(self, context)
+    @asynccontextmanager
+    async def session_context(self, context):
+        context.http = await self._checkout(context)
+        yield
+        await self._checkin(context.http)
+        del context.http
 
     def decorator(self, func):
         async def wrapper(ctx, *args, **kwargs):
