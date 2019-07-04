@@ -78,7 +78,6 @@ class Controller:
         self._work_tracker = WorkTracker()
         self._runner_tracker = RunnerTracker()
         self._config_manager = config_manager
-        self._killed = False
 
     def hello(self):
         runner_id = next(self._runner_id_gen)
@@ -123,9 +122,7 @@ class Controller:
     def should_stop(self):
         logger.debug("Scenario manager active: %s" % (self._scenario_manager.is_active(),))
         logger.debug("Active runners: %s" % (self._runner_tracker.get_active_count(),))
-        logger.debug("Is killed?: %s" % (self._killed,))
-        return self._killed or \
-            ((not self._scenario_manager.is_active()) and self._runner_tracker.get_active_count() == 0)
+        return (not self._scenario_manager.is_active()) and self._runner_tracker.get_active_count() == 0
 
     def bye(self, runner_id):
         self._runner_tracker.remove_runner(runner_id)

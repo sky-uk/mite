@@ -60,7 +60,6 @@ import docopt
 import threading
 import logging
 import uvloop
-import signal
 
 from .scenario import ScenarioManager
 from .config import ConfigManager
@@ -292,18 +291,15 @@ def controller(opts):
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
 
-    def handle_signal():
-        # FIXME: kill runners, do any other shutdown tasks
-        controller._killed = True
-
-    loop.add_signal_handler(signal.SIGINT, handle_signal)
-    loop.add_signal_handler(signal.SIGTERM, handle_signal)
-
     def controller_report():
         controller.report(sender.send)
         loop.call_later(1, controller_report)
     loop.call_later(1, controller_report)
-    loop.run_until_complete(server.run(controller, controller.should_stop))
+    try:
+        loop.run_until_complete(server.run(controller, controller.should_stop))
+    except KeyboardInterrupt:
+        # TODO: kill runners, do other shutdown tasks
+        logging.info("Received interrupt signal, shutting down")
 
 
 def runner(opts):
