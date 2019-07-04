@@ -6,8 +6,7 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 import mite_http
 
-EMBEDDED_URL_REGEX = re_compile("url\(\s*[\"'](.*)[\"']\s*\)", IGNORECASE)
-
+EMBEDDED_URL_REGEX = re_compile("url\(\s*[\"']([^\"']*:)?([^\"']*)[\"']\s*\)", IGNORECASE)
 
 class OptionError(MiteError):
     def __init__(self, value, options):
@@ -51,16 +50,18 @@ class Browser:
         self._session = context.http
         self._embedded_res = embedded_res
 
-    async def _download_resource(self, url, page, type):
-        """Download a resource and then register it with the page it came from."""
+    async def _download_resource(self, url, origin, type):
+        """Download a resource and then register it with the origin it came from."""
         resource = await self._session.request('GET', url)
-        page._register_resource(resource, type)
+        origin._register_resource(resource, type)
 
-    async def _download_resources(self, page):
-        """Downloads embedded resources, will do this recursively when content like iframes are present"""
-        await asyncio.gather(*[self._download_resource(url, page, rtype)
-                               for url, rtype in page._extract_embeded_urls()])
-        await asyncio.gather(*[self._download_resources(subpage) for subpage in page.resources_with_embedabbles])
+    async def _download_resources(self, origin):
+        if type(origin) is not Resource:
+            """Downloads embedded resources, will do this recursively when content like iframes are present"""
+            await asyncio.gather(*[self._download_resource(url, origin, rtype)
+                                   for url, rtype in origin._extract_embeded_urls()])
+            await asyncio.gather(*[self._download_resources(resource)
+                                   for resource in origin.resources_with_embedabbles])
 
     async def request(self, method, url, *args, **kwargs):
         """Perform a request and return a page object"""
@@ -101,6 +102,10 @@ class Resource:
     def __init__(self, response, browser):
         self.response = response
         self.browser = browser
+
+    @property
+    def text(self):
+        return self.response.text
 
 
 class Page(Resource):
@@ -152,7 +157,7 @@ class Page(Resource):
     @property
     def resources_with_embedabbles(self):
         """Any sub-resources of a page which might also contain their own embedded resources"""
-        return self.frames  # + self.stylesheets
+        return self.frames + self.stylesheets
 
     def _register_resource(self, response, rtype):
         if rtype == 'resource':
@@ -232,6 +237,10 @@ class Script(Resource):
     def __init__(self, response, browser):
         super().__init__(response, browser)
 
+    @property
+    def text(self):
+        return self.response.text
+
 
 class Stylesheet(Resource):
     """Stylesheet object"""
@@ -239,11 +248,25 @@ class Stylesheet(Resource):
         super().__init__(response, browser)
         self.resources = []
 
+    @property
+    def text(self):
+        return self.response.text
+
     def _extract_embeded_urls(self):
         """Extracts embedded resources from a stylesheet"""
-        base_url = self.response.url
         for match in EMBEDDED_URL_REGEX.finditer(self.response.text):
-            yield url_builder(base_url, match)
+            yield url_builder(self.response.url, match[2]), "resource"
+
+    def _register_resource(self, response, rtype):
+            self.resources.append(Resource(response, self.browser))
+
+    @property
+    def resources_with_embedabbles(self):
+        """Any sub-resources of a stylesheet which might also contain their own embedded resources"""
+        return self.resources
+
+    def __repr__(self):
+        return self.text
 
 
 class Form:
