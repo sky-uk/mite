@@ -12,8 +12,8 @@ class Duplicator:
         self._zmq_context = zmq.Context()
         self._in_socket = self._zmq_context.socket(zmq.PULL)
         self._in_socket.bind(in_address)
-        self._out_sockets = [self._zmq_context.socket(zmq.PUSH) for i in out_addresses]
-        for socket, address in zip(self._out_sockets, out_addresses):
+        self._out_sockets = [(i, self._zmq_context.socket(zmq.PUSH)) for i in out_addresses]
+        for address, socket in self._out_sockets:
             socket.bind(address)
         if loop is None:
             loop = asyncio.get_event_loop()
@@ -25,8 +25,11 @@ class Duplicator:
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
             msg = self._in_socket.recv()
-            for socket in self._out_sockets:
-                socket.send(msg)
+            for address, socket in self._out_sockets:
+                try:
+                    socket.send(msg, flags=zmq.NOBLOCK)
+                except zmq.ZMQError:
+                    logger.error("Duplicator message buffer full for address %s" % (address,))
 
 
 class Sender:
@@ -43,7 +46,10 @@ class Sender:
         logger.debug("sender connected to address: %s", address)
 
     def send(self, msg):
-        self._socket.send(pack_msg(msg))
+        try:
+            self._socket.send(pack_msg(msg), flags=zmq.NOBLOCK)
+        except zmq.ZMQError:
+            pass  # TODO: what should happen here?
 
 
 class Receiver:
