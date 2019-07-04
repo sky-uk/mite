@@ -295,7 +295,11 @@ def controller(opts):
         controller.report(sender.send)
         loop.call_later(1, controller_report)
     loop.call_later(1, controller_report)
-    loop.run_until_complete(server.run(controller, controller.should_stop))
+    try:
+        loop.run_until_complete(server.run(controller, controller.should_stop))
+    except KeyboardInterrupt:
+        # TODO: kill runners, do other shutdown tasks
+        logging.info("Received interrupt signal, shutting down")
 
 
 def runner(opts):
