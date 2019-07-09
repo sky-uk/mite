@@ -124,7 +124,7 @@ class Runner:
                 self._max_work if not self._stop else 0
             )
             completed_data_ids = []
-            config._update(config_list)  # TODO: why?
+            config._update(config_list)
             for scenario_id, _, _, _ in work:
                 self._inc_work(scenario_id)
             pending += [asyncio.create_task(do_work(*job)) for job in work]
