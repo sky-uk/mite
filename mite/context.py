@@ -6,7 +6,7 @@ import warnings
 from itertools import count
 import sys
 
-from .compat import asynccontextmanager
+from contextlib import asynccontextmanager
 from .exceptions import MiteError
 
 

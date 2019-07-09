@@ -3,7 +3,7 @@ from acurl import EventLoop
 import logging
 import asyncio
 
-from mite.compat import asynccontextmanager
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
