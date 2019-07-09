@@ -13,7 +13,7 @@ from .exceptions import MiteError
 logger = logging.getLogger(__name__)
 
 
-class HandledException(BaseException):
+class HandledException(Exception):
     def __init__(self, original_exception, original_tb):
         self.original_exception = original_exception
         self.original_tb = original_tb
@@ -77,7 +77,7 @@ class Context:
                 drop_to_debugger(traceback)
                 return
             else:
-                raise new_exc
+                raise new_exc from exception_val
         finally:
             await self._end_transaction()
 
