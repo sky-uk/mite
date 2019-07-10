@@ -108,9 +108,7 @@ class Resource:
     @property
     def _embeded_urls(self):
         """At the moment there is no reason to look for a url inside the resource source code such an image"""
-        for match in []:
-            """This will never be called"""
-            yield None, ""
+        return []
 
     @property
     def _resources_with_embedabbles(self):
