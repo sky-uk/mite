@@ -35,6 +35,7 @@ Options:
 """ [default: mite.config:default_config_loader]
     --spawn-rate=NUM_PER_SECOND     Maximum spawn rate [default: 1000]
     --max-loop-delay=SECONDS        Runner internal loop delay maximum [default: 1]
+    --min-loop-delay=SECONDS        Runner internal loop delay minimum [default: 0]
     --runner-max-journeys=NUMBER    Max number of concurrent journeys a runner can run
     --controller-socket=SOCKET      Controller socket [default: tcp://127.0.0.1:14301]
     --message-socket=SOCKET         Message socket [default: tcp://127.0.0.1:14302]
@@ -220,10 +221,11 @@ def _create_config_manager(opts):
 
 def _create_runner(opts, transport, msg_senders):
     loop_wait_max = float(opts['--max-loop-delay'])
+    loop_wait_min = float(opts['--min-loop-delay'])
     max_work = None
     if opts['--runner-max-journeys']:
         max_work = int(opts['--runner-max-journeys'])
-    return Runner(transport, msg_senders, loop_wait_max=loop_wait_max,
+    return Runner(transport, msg_senders, loop_wait_min=loop_wait_min, loop_wait_max=loop_wait_max,
                   max_work=max_work, debug=opts['--debugging'])
 
 

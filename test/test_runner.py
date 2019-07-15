@@ -2,7 +2,8 @@ import pytest
 from mite.runner import Runner
 
 from mocks.mock_direct_runner_transport import DirectRunnerTransportMock
-from mocks.mock_sender import SenderMock
+from mocks.mock_direct_receiver import DirectReceiverMock
+from mocks.mock_recorder_msg_http import setup_mock_msg_processors
 
 
 # Inside the runner the directRunnerTransport request the work, what it will receive it should be similar to:
@@ -18,9 +19,11 @@ from mocks.mock_sender import SenderMock
 
 @pytest.mark.asyncio
 async def test_runnner_run():
+    transport = DirectRunnerTransportMock()
+    receiver = DirectReceiverMock()
+    setup_mock_msg_processors(receiver)
     for i in range(10):
-        transport = DirectRunnerTransportMock()
-        runner = Runner(transport, SenderMock().send)
-        while not transport._all_done:
-            await runner.run()
-        assert 7 in transport._completed_data
+        runner = Runner(transport, receiver)
+        await runner.run()
+        print(transport._completed_data)
+        assert (7, 7) in transport._completed_data
