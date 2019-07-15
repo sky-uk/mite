@@ -1,32 +1,27 @@
 from collections import deque
 from acurl import EventLoop
 import logging
+import asyncio
+
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
 
-class _SessionPoolContextManager:
-    def __init__(self, session_pool, context):
-        self._session_pool = session_pool
-        self._context = context
-
-    async def __aenter__(self):
-        self._context.http = await self._session_pool._checkout(self._context)
-
-    async def __aexit__(self, *args):
-        await self._session_pool._checkin(self._context.http)
-        del self._context.http
-
-
 class SessionPool:
-    """No longer actually goes pooling as this is built into acurl. API just left in place.
-    Will need a refactor"""
+    """No longer actually goes pooling as this is built into acurl.
+
+    API just left in place. TODO: Will need a refactor"""
     def __init__(self):
         self._el = EventLoop()
         self._pool = deque()
 
-    def session_context(self, context):
-        return _SessionPoolContextManager(self, context)
+    @asynccontextmanager
+    async def session_context(self, context):
+        context.http = await self._checkout(context)
+        yield
+        await self._checkin(context.http)
+        del context.http
 
     def decorator(self, func):
         async def wrapper(ctx, *args, **kwargs):
@@ -60,9 +55,15 @@ class SessionPool:
 
 
 def get_session_pool():
-    if not hasattr(get_session_pool, '_session_pool'):
-        get_session_pool._session_pool = SessionPool()
-    return get_session_pool._session_pool
+    # We memoize the function by event loop.  This is because, in unit tests,
+    # there are multiple event loops in circulation.
+    try:
+        return get_session_pool._session_pools[asyncio.get_event_loop()]
+    except KeyError:
+        sp = SessionPool()
+        get_session_pool._session_pools[asyncio.get_event_loop()] = sp
+        return sp
+get_session_pool._session_pools = {}
 
 
 def mite_http(func):

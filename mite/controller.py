@@ -104,6 +104,11 @@ class Controller:
         self._runner_tracker.update(runner_id)
         self._scenario_manager.checkin_data(completed_data_ids)
         work = self._required_work_for_runner(runner_id, max_work)
+        # FIXME: We send changes in the config dict to the runner on every
+        # iteration of the loop.  This is currently not very exciting, because
+        # the config never changes.  See
+        # https://github.com/sky-uk/mite/issues/13 for ideas about how it
+        # might be extended.
         return work, self._config_manager.get_changes_for_runner(runner_id), not self._scenario_manager.is_active()
 
     def report(self, sender):
