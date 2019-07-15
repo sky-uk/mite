@@ -65,6 +65,8 @@ def test_get_work():
     work, scenario_volume_map = scenario_manager.get_work(test_current_work, test_num_runner_current_work,
                                                           test_num_runners, None, 0.2)
 
+    print(work)
+    print(scenario_volume_map)
 
     assert work.count((4, None, 'test_scenario_04', None)) == 4
     assert work.count((1, None, 'test_scenario_01', None)) == 1
