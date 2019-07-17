@@ -29,7 +29,7 @@ class RecyclableIterableDataPool:
     def checkin(self, id):
         data = self._checked_out[id]
         self._available.append(DataPoolItem(id, data))
-        
+
 
 class IterableFactoryDataPool:
     def __init__(self, iterable_factory):
@@ -91,3 +91,7 @@ def create_iterable_data_pool_with_recycling(iterable):
 
 def create_iterable_data_pool(iterable):
     return IterableDataPool(iterable)
+
+
+def iterable_factory_data_pool(fn):
+    return IterableFactoryDataPool(fn)
