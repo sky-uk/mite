@@ -46,7 +46,7 @@ def browser_decorator(separation=0):
 
 class Browser:
     """Browser abstraction wraps a session and provides some behaviour that is closer to a real browser."""
-    def __init__(self, context, embedded_res=True):
+    def __init__(self, context, embedded_res=False):
         self._ctx = context
         self._session = context.http
         self._embedded_res = embedded_res
