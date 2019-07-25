@@ -1,0 +1,4 @@
+sanic
+psutil
+pandas
+altair
