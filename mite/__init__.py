@@ -7,12 +7,20 @@
 import time
 import asyncio
 import random
+from pkg_resources import get_distribution, DistributionNotFound
 
 from .exceptions import MiteError
 from .context import Context
 from .runner import RunnerConfig
 
 from .exceptions import MiteError
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
+
 
 def test_context(extensions=('http',), **config):
     runner_config = RunnerConfig()
