@@ -6,8 +6,7 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 import mite_http
 
-EMBEDDED_URL_REGEX = re_compile("url\(\s*[\"'](.*)[\"']\s*\)", IGNORECASE)
-
+EMBEDDED_URL_REGEX = re_compile("\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE)
 
 class OptionError(MiteError):
     def __init__(self, value, options):
@@ -46,21 +45,22 @@ def browser_decorator(separation=0):
 
 class Browser:
     """Browser abstraction wraps a session and provides some behaviour that is closer to a real browser."""
-    def __init__(self, context, embedded_res=True):
+    def __init__(self, context, embedded_res=False):
         self._ctx = context
         self._session = context.http
         self._embedded_res = embedded_res
 
-    async def _download_resource(self, url, page, type):
-        """Download a resource and then register it with the page it came from."""
+    async def _download_resource(self, url, origin, type):
+        """Download a resource and then register it with the origin it came from."""
         resource = await self._session.request('GET', url)
-        page._register_resource(resource, type)
+        origin._register_resource(resource, type)
 
-    async def _download_resources(self, page):
+    async def _download_resources(self, origin):
         """Downloads embedded resources, will do this recursively when content like iframes are present"""
-        await asyncio.gather(*[self._download_resource(url, page, rtype)
-                               for url, rtype in page._extract_embeded_urls()])
-        await asyncio.gather(*[self._download_resources(subpage) for subpage in page.resources_with_embedabbles])
+        await asyncio.gather(*[self._download_resource(url, origin, rtype)
+                               for url, rtype in origin._embeded_urls])
+        await asyncio.gather(*[self._download_resources(resource)
+                               for resource in origin._resources_with_embedabbles])
 
     async def request(self, method, url, *args, **kwargs):
         """Perform a request and return a page object"""
@@ -101,6 +101,19 @@ class Resource:
     def __init__(self, response, browser):
         self.response = response
         self.browser = browser
+
+    @property
+    def text(self):
+        return self.response.text
+    @property
+    def _embeded_urls(self):
+        """At the moment there is no reason to look for a url inside the resource source code such an image"""
+        return []
+
+    @property
+    def _resources_with_embedabbles(self):
+        """At the moment the resource will not contain their own embedded resources"""
+        return []
 
 
 class Page(Resource):
@@ -150,9 +163,9 @@ class Page(Resource):
         return self.dom.find(*args, **kwargs)
 
     @property
-    def resources_with_embedabbles(self):
+    def _resources_with_embedabbles(self):
         """Any sub-resources of a page which might also contain their own embedded resources"""
-        return self.frames  # + self.stylesheets
+        return self.frames + self.stylesheets
 
     def _register_resource(self, response, rtype):
         if rtype == 'resource':
@@ -164,7 +177,8 @@ class Page(Resource):
         elif rtype == 'page':
             self.frames.append(Page(response, self.browser))
 
-    def _extract_embeded_urls(self):
+    @property
+    def _embeded_urls(self):
         """Extracts all embedded resources from a page"""
         # TODO: Look into prerender and whether we should be getting these resources.
         base_url = self.response.url
@@ -232,6 +246,10 @@ class Script(Resource):
     def __init__(self, response, browser):
         super().__init__(response, browser)
 
+    @property
+    def text(self):
+        return self.response.text
+
 
 class Stylesheet(Resource):
     """Stylesheet object"""
@@ -239,11 +257,23 @@ class Stylesheet(Resource):
         super().__init__(response, browser)
         self.resources = []
 
-    def _extract_embeded_urls(self):
+    @property
+    def text(self):
+        return self.response.text
+
+    @property
+    def _embeded_urls(self):
         """Extracts embedded resources from a stylesheet"""
-        base_url = self.response.url
         for match in EMBEDDED_URL_REGEX.finditer(self.response.text):
-            yield url_builder(base_url, match)
+            yield url_builder(self.response.url, match[2]), "resource"
+
+    def _register_resource(self, response, rtype):
+            self.resources.append(Resource(response, self.browser))
+
+    @property
+    def _resources_with_embedabbles(self):
+        """Any sub-resources of a stylesheet which might also contain their own embedded resources"""
+        return self.resources
 
 
 class Form:

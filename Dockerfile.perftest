@@ -1,0 +1,15 @@
+FROM python:3.7
+
+COPY ./test/perf/test-requirements.txt /test-requirements.txt
+
+RUN pip install -r test-requirements.txt
+
+RUN pip install bs4 docopt flask msgpack-python nanomsg pyzmq uvloop
+
+COPY . /package
+
+WORKDIR /package
+
+RUN pip install -r /package/requirements.txt
+
+CMD python test/perf/perftest.py
