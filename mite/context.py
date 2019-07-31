@@ -100,8 +100,6 @@ class Context:
         return False
 
     async def send(self, type, **content):
-        # FIXME: AFAICT, this is never called from outside this class and
-        # ought to be a private method
         msg = content
         msg['type'] = type
         self._add_context_headers_and_time(msg)
