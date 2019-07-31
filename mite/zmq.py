@@ -88,7 +88,7 @@ _MSG_TYPE_BYE = 3
 
 
 class RunnerTransport:
-    def __init__(self, socket_address, loop=None):
+    def __init__(self, socket_address):
         self._zmq_context = zmq.Context()
         self._sock = self._zmq_context.socket(zmq_constants.REQ)
         self._sock.connect(socket_address)
@@ -103,9 +103,8 @@ class RunnerTransport:
                 runner_id, current_work, completed_data_ids, max_work))
         await self._sock.send(pack_msg((_MSG_TYPE_REQUEST_WORK,
                                         [runner_id, current_work, completed_data_ids, max_work])))
-        msg = await self._sock.recv()
-        result = unpack_msg(msg)
-        return result
+        msg = unpack_msg(await self._sock.recv())
+        return msg
 
     async def bye(self, runner_id):
         logger.debug("Saying bye")
@@ -114,7 +113,7 @@ class RunnerTransport:
 
 
 class ControllerServer:
-    def __init__(self, socket_address, loop=None):
+    def __init__(self, socket_address):
         self._zmq_context = zmq.Context()
         self._sock = self._zmq_context.socket(zmq_constants.REP)
         self._sock.bind(socket_address)
