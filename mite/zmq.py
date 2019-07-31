@@ -2,7 +2,6 @@ import zmq.asyncio as zmq
 import zmq as zmq_constants
 
 from .utils import pack_msg, unpack_msg
-import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,10 +39,11 @@ class Sender:
         self._socket.connect(address)
         logger.debug("sender connected to address: %s", address)
 
-    def send(self, msg):
+    async def send(self, msg):
         try:
             await self._socket.send(pack_msg(msg), flags=zmq_constants.NOBLOCK)
         except zmq_constants.ZMQError:
+            # logging.error(f"zmq errno {e.errno}; {e.strerror}")
             pass  # TODO: what should happen here?
 
 
