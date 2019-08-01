@@ -1,5 +1,5 @@
 from mocks.mock_context import MockContext
-from mite.http import mite_http
+from mite_http import mite_http
 import pytest
 
 
