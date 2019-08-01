@@ -43,8 +43,7 @@ class Sender:
         try:
             await self._socket.send(pack_msg(msg), flags=zmq_constants.NOBLOCK)
         except zmq_constants.ZMQError:
-            # logging.error(f"zmq errno {e.errno}; {e.strerror}")
-            pass  # TODO: what should happen here?
+            logging.error(f"ZMQ errno {e.errno}; {e.strerror}")
 
 
 class Receiver:
