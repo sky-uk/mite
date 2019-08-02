@@ -366,6 +366,7 @@ class Session:
 
         return await self._request(method, url, tuple(headers_list) if headers_list else None, tuple(cookie_list) if cookie_list else None, auth, data, cert, allow_redirects, max_redirects)
 
+    # TODO: make it a property
     def set_response_callback(self, callback):
         self._response_callback = callback
 
@@ -378,7 +379,7 @@ class Session:
         response = Response(request, await future, start_time)
 
         if self._response_callback:
-            self._response_callback(response)
+            await self._response_callback(response)
         if allow_redirects and (300 <= response.status_code < 400) and response.redirect_url is not None:
             if remaining_redirects == 0:
                 raise RequestError('Max Redirects')
