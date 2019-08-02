@@ -1,3 +1,27 @@
+# Git workflow
+
+To set up the pre-commit hooks for this project, run:
+
+```
+pip install -r dev-requirements.txt
+pre-commit install
+```
+
+This will run a linter and formatter on the code before you check it in.
+It will deny any checkins that do not conform to the projectʼs style
+guidelines.  To run the checkers yourself, run `flake8` (linter) and
+`black` (formatter) in the project directory.
+
+# Releasing
+
+## Public
+
+Not yet authorized
+
+## Internal
+
+See the documentation in `DEV.md` in the `id-mite-nft` repo.
+
 # Running tests
 
 ## Unit tests
