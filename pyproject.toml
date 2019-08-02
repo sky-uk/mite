@@ -1,0 +1,15 @@
+[tool.black]
+include ='\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.tox
+  | build
+  | dist
+  | __pycache__
+  | .eggs
+)/
+'''
+skip-string-normalization = true
+target-version = ['py37']
+line-length = 90
