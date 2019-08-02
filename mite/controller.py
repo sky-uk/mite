@@ -106,11 +106,11 @@ class Controller:
         work = self._required_work_for_runner(runner_id, max_work)
         return work, self._config_manager.get_changes_for_runner(runner_id), not self._scenario_manager.is_active()
 
-    def report(self, sender):
+    async def report(self, sender):
         required = self._scenario_manager.get_required_work()
         active_runner_ids = self._runner_tracker.get_active()
         actual = self._work_tracker.get_total_work(active_runner_ids)
-        sender({
+        await sender({
             'type': 'controller_report',
             'time': time.time(),
             'test': self._testname,

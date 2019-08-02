@@ -1,0 +1,17 @@
+cat_msgpack.py
+cd-scripts
+cd.yml
+**/collector_data
+debug_mite.py
+diagram
+doc
+docker
+.eggs
+grafana_dashboard_template.json
+mite.egg-info
+.pytest_cache
+**/recorder_data
+**/__pycache__
+coverage_html_report
+.coverage
+.tox

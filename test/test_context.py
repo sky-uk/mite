@@ -5,6 +5,7 @@ import pytest
 
 test_msg = 'test msg for the unit test'
 
+
 @pytest.mark.asyncio
 async def test_send():
     config = RunnerConfigMock()
