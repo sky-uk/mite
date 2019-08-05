@@ -171,13 +171,17 @@ class Runner:
         await self._transport.bye(runner_id)
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
-        logger.debug('Runner._execute starting scenario_id=%r scenario_data_id=%r journey_spec=%r args=%r',
-                     scenario_id, scenario_data_id, journey_spec, args)
-        async with context._exception_handler():
-            async with context.transaction('__root__'):
-                journey = spec_import(journey_spec)
-                if args is None:
-                    await journey(context)
-                else:
-                    await journey(context, *args)
+        logger.debug(
+            'Runner._execute starting scenario_id=%r scenario_data_id=%r journey_spec=%r args=%r',
+            scenario_id,
+            scenario_data_id,
+            journey_spec,
+            args,
+        )
+        async with context.transaction('__root__'):
+            journey = spec_import(journey_spec)
+            if args is None:
+                await journey(context)
+            else:
+                await journey(context, *args)
         return scenario_id, scenario_data_id
