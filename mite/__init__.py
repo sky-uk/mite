@@ -7,11 +7,19 @@
 import time
 import asyncio
 import random
+from pkg_resources import get_distribution, DistributionNotFound
 
-from .exceptions import MiteError
+from .exceptions import MiteError  # noqa: F401
 from .context import Context
 from .runner import RunnerConfig
 import mite.utils
+
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 # TODO: move to test.py?

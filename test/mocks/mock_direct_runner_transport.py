@@ -1,10 +1,10 @@
-test_works = [(1, 1, 'test.legacy:journeytest1', ('1',)),
-              (2, 2, 'test.legacy:journeytest2', ('2',)),
-              (3, 3, 'test.legacy:journeytest3', ('3',)),
-              (4, 4, 'test.legacy:journeytest3', ('4',)),
-              (5, 5, 'test.legacy:journeytest3', ('5',)),
-              (6, 6, 'test.legacy:journeytest3', ('6',)),
-              (7, 7, 'test.legacy:journeytest3', ('7',))
+test_works = [(1, 1, 'legacy:journeytest1', ('1',)),
+              (2, 2, 'legacy:journeytest2', ('2',)),
+              (3, 3, 'legacy:journeytest3', ('3',)),
+              (4, 4, 'legacy:journeytest3', ('4',)),
+              (5, 5, 'legacy:journeytest3', ('5',)),
+              (6, 6, 'legacy:journeytest3', ('6',)),
+              (7, 7, 'legacy:journeytest3', ('7',))
               ]
 
 
