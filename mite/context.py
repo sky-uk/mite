@@ -59,13 +59,13 @@ class Context:
             if not is_handled:
                 e._mite_handled = True
                 if isinstance(e, MiteError):
-                    self._send_mite_error(e)
+                    await self._send_mite_error(e)
                 else:
-                    self._send_exception(e)
-            if self._debug:
-                breakpoint()
+                    await self._send_exception(e)
+                if self._debug:
+                    breakpoint()
             else:
-                raise
+                pass
         finally:
             await self._end_transaction()
 
