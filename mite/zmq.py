@@ -128,8 +128,8 @@ class ControllerServer:
         self._sock = self._zmq_context.socket(zmq_constants.REP)
         self._sock.bind(socket_address)
 
-    async def run(self, controller, stop_func=None):
-        while stop_func is None or not stop_func():
+    async def run(self, controller):
+        while True:
             _type, content = unpack_msg(await self._sock.recv())
             if _type == _MSG_TYPE_HELLO:
                 await self._sock.send(pack_msg(controller.hello()))
