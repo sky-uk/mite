@@ -14,8 +14,8 @@ async def test_send():
 
     await ctx.send('test_type', message=test_msg, transaction='test')
 
-    assert sender.test_result['message'] == test_msg
-    assert sender.test_result['type'] == 'test_type'
+    assert sender.messages[-1]['message'] == test_msg
+    assert sender.messages[-1]['type'] == 'test_type'
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_start_transaction():
 
     await ctx._start_transaction(test_transaction_name)
 
-    assert sender.test_result['type'] == 'start'
+    assert sender.messages[-1]['type'] == 'start'
     assert test_transaction_name in ctx._transaction_names
 
 
@@ -43,5 +43,5 @@ async def test_end_transaction():
 
     await ctx._end_transaction()
 
-    assert sender.test_result['type'] == 'end'
+    assert sender.messages[-1]['type'] == 'end'
     assert test_transaction_name not in ctx._transaction_names
