@@ -23,4 +23,4 @@ async def test_runnner_run():
         runner = Runner(transport, SenderMock().send)
         while not transport._all_done:
             await runner.run()
-        assert 7 in transport._completed_data
+        assert (7, 7) in transport._completed_data
