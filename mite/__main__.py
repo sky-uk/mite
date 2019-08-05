@@ -299,14 +299,30 @@ def controller(opts):
             await asyncio.sleep(1)
             await controller.report(sender.send)
 
+    async def check_stop(controller, tasks):
+        while True:
+            if controller.should_stop():
+                for task in tasks:
+                    task.cancel()
+                return
+            await asyncio.sleep(5)
+
+    report_task = loop.create_task(controller_report())
+    server_task = loop.create_task(server.run(controller))
+
     try:
         loop.run_until_complete(asyncio.gather(
-            controller_report(),
-            server.run(controller, controller.should_stop)
+            report_task,
+            server_task,
+            check_stop(controller, (report_task, server_task))
         ))
-    except  KeyboardInterrupt:
+    except KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
+    except asyncio.CancelledError:
+        pass
+    finally:
+        loop.close()
 
 
 def runner(opts):
