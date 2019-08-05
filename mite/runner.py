@@ -86,9 +86,7 @@ class Runner:
         self._transport = transport
         self._msg_sender = msg_sender
         self._work = {}
-        self._datapool_proxies = {}
         self._stop = False
-        self._loop_wait_min = loop_wait_min
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
         if loop is None:
@@ -106,12 +104,6 @@ class Runner:
         self._work[id] -= 1
         if self._work[id] == 0:
             del self._work[id]
-
-    def _current_work(self):
-        return self._work
-
-    def should_stop(self):
-        return self._stop
 
     async def run(self):
         context_id_gen = count(1)
