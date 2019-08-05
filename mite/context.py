@@ -12,16 +12,6 @@ from .exceptions import MiteError
 logger = logging.getLogger(__name__)
 
 
-class HandledException(BaseException):
-    def __init__(self, original_exception, original_tb):
-        self.original_exception = original_exception
-        self.original_tb = original_tb
-
-
-class HandledMiteError(HandledException):
-    pass
-
-
 def drop_to_debugger(traceback):
     try:
         import ipdb as pdb
@@ -59,24 +49,18 @@ class Context:
         await self._start_transaction(name)
         try:
             yield None
-        except:  # noqa: E722
-            exception_type, exception_val, traceback = sys.exc_info()
-            if isinstance(exception_val, KeyboardInterrupt):
-                new_exc = exception_val
-            elif isinstance(exception_val, HandledException):
-                return
-            elif isinstance(exception_val, MiteError):
-                await self._send_mite_error(exception_val, traceback)
-                new_exc = HandledMiteError(exception_val, traceback)
-            else:
-                await self._send_exception(exception_val, traceback)
-                new_exc = HandledException(exception_val, traceback)
-
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            if not e._mite_handled:
+                e._mite_handled = True
+                if isinstance(e, MiteError):
+                    self._send_mite_error(e)
+                else:
+                    self._send_exception(e)
             if self._debug:
-                drop_to_debugger(traceback)
-                return
-            else:
-                raise new_exc
+                breakpoint()
+                raise
         finally:
             await self._end_transaction()
 
@@ -112,9 +96,10 @@ class Context:
     def _tb_format_location(self, tb):
         return '{}:{}:{}'.format(*self._extract_filename_lineno_funcname(tb))
 
-    async def _send_exception(self, value, tb):
+    async def _send_exception(self, value):
         message = str(value)
         ex_type = type(value).__name__
+        tb = sys.exc_info()[2]
         location = self._tb_format_location(tb)
         stacktrace = ''.join(traceback.format_tb(tb))
         await self.send(
@@ -125,7 +110,8 @@ class Context:
             stacktrace=stacktrace,
         )
 
-    async def _send_mite_error(self, value, tb):
+    async def _send_mite_error(self, value):
+        tb = sys.exc_info()[2]
         location = self._tb_format_location(tb)
         await self.send('error', message=str(value), location=location, **value.fields)
 
