@@ -95,4 +95,7 @@ ENV/
 .idea/*
 
 # Jordan's add . moron protection
-collector_data/*
+recorder_data/
+collector_data/
+
+coverage_html_report/
