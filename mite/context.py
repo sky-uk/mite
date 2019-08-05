@@ -52,7 +52,11 @@ class Context:
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            if not e._mite_handled:
+            try:
+                is_handled = e._mite_handled
+            except AttributeError:
+                is_handled = False
+            if not is_handled:
                 e._mite_handled = True
                 if isinstance(e, MiteError):
                     self._send_mite_error(e)
