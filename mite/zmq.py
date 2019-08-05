@@ -46,7 +46,7 @@ class Sender:
     async def send(self, msg):
         try:
             await self._socket.send(pack_msg(msg), flags=zmq_constants.NOBLOCK)
-        except zmq_constants.ZMQError:
+        except zmq_constants.ZMQError as e:
             logging.error(f"ZMQ errno {e.errno}; {e.strerror}")
 
 
