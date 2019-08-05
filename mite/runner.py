@@ -45,7 +45,9 @@ class RunnerConfig:
         self._config = {}
 
     def __repr__(self):
-        return "RunnerConfig({})".format(", ".join(["{}={}".format(k, v) for k, v in self._config.items()]))
+        return "RunnerConfig({})".format(
+            ", ".join(["{}={}".format(k, v) for k, v in self._config.items()])
+        )
 
     def _update(self, kv_list):
         for k, v in kv_list:
@@ -72,8 +74,15 @@ class RunnerConfig:
 
 
 class Runner:
-    def __init__(self, transport, msg_sender, loop_wait_min=0.01, loop_wait_max=0.5, max_work=None, loop=None,
-                 debug=False):
+    def __init__(
+        self,
+        transport,
+        msg_sender,
+        loop_wait_max=0.5,
+        max_work=None,
+        loop=None,
+        debug=False,
+    ):
         self._transport = transport
         self._msg_sender = msg_sender
         self._work = {}
