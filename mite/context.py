@@ -40,7 +40,9 @@ class _TransactionContextManager:
 
     async def __aexit__(self, exception_type, exception_val, traceback):
         try:
-            if exception_val and not isinstance(exception_val, (HandledException, KeyboardInterrupt)):
+            if exception_val and not isinstance(
+                exception_val, (HandledException, KeyboardInterrupt)
+            ):
                 if isinstance(exception_val, MiteError):
                     await self._ctx._send_mite_error(exception_val, traceback)
                 else:
@@ -146,7 +148,13 @@ class Context:
         ex_type = type(value).__name__
         location = self._tb_format_location(tb)
         stacktrace = ''.join(traceback.format_tb(tb))
-        await self.send('exception', message=message, ex_type=ex_type, location=location, stacktrace=stacktrace)
+        await self.send(
+            'exception',
+            message=message,
+            ex_type=ex_type,
+            location=location,
+            stacktrace=stacktrace,
+        )
 
     async def _send_mite_error(self, value, tb):
         location = self._tb_format_location(tb)
