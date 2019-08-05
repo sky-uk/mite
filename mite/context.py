@@ -60,6 +60,7 @@ class Context:
                     self._send_exception(e)
             if self._debug:
                 breakpoint()
+            else:
                 raise
         finally:
             await self._end_transaction()
