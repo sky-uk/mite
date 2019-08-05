@@ -12,7 +12,9 @@ class Duplicator:
         self._zmq_context = zmq.Context()
         self._in_socket = self._zmq_context.socket(zmq_constants.PULL)
         self._in_socket.bind(in_address)
-        self._out_sockets = [(i, self._zmq_context.socket(zmq_constants.PUSH)) for i in out_addresses]
+        self._out_sockets = [
+            (i, self._zmq_context.socket(zmq_constants.PUSH)) for i in out_addresses
+        ]
         for address, socket in self._out_sockets:
             socket.bind(address)
 
@@ -23,7 +25,9 @@ class Duplicator:
                 try:
                     await socket.send(msg, flags=zmq_constants.NOBLOCK)
                 except zmq_constants.ZMQError:
-                    logger.error("Duplicator message buffer full for address %s" % (address,))
+                    logger.error(
+                        "Duplicator message buffer full for address %s" % (address,)
+                    )
 
 
 class Sender:
@@ -98,10 +102,17 @@ class RunnerTransport:
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
         logger.debug(
-            "Requesting work runner_id=%s current_work=%s completed_data_ids=%s max_work=%s" % (
-                runner_id, current_work, completed_data_ids, max_work))
-        await self._sock.send(pack_msg((_MSG_TYPE_REQUEST_WORK,
-                                        [runner_id, current_work, completed_data_ids, max_work])))
+            "Requesting work runner_id=%s current_work=%s completed_data_ids=%s max_work=%s"
+            % (runner_id, current_work, completed_data_ids, max_work)
+        )
+        await self._sock.send(
+            pack_msg(
+                (
+                    _MSG_TYPE_REQUEST_WORK,
+                    [runner_id, current_work, completed_data_ids, max_work],
+                )
+            )
+        )
         msg = unpack_msg(await self._sock.recv())
         return msg
 
