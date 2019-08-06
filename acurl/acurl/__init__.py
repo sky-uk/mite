@@ -379,7 +379,7 @@ class Session:
         response = Response(request, await future, start_time)
 
         if self._response_callback:
-            await self._response_callback(response)
+            self._response_callback(response)
         if allow_redirects and (300 <= response.status_code < 400) and response.redirect_url is not None:
             if remaining_redirects == 0:
                 raise RequestError('Max Redirects')
