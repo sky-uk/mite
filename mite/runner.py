@@ -106,6 +106,13 @@ class Runner:
             del self._work[id]
 
     async def run(self):
+        # FIXME: this design is fundamentally bogus.  We oscillate between
+        # doing actual work and communicating with the controller.  In a fully
+        # async world, the communication with the controller would be just
+        # another async task.  This requires careful thought though (as Jordan
+        # pointed out) -- we want to be sure that we're neither overloading
+        # the runner with undone tasks nor running out of tasks and letting
+        # the runner starve.  So this is very much a future change.
         context_id_gen = count(1)
         config = RunnerConfig()
         runner_id, test_name, config_list = await self._transport.hello()
