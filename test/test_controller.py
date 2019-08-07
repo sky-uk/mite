@@ -1,6 +1,11 @@
 from mite.controller import Controller
 from mite.scenario import ScenarioManager
 from mite.config import ConfigManager
+from werkzeug.wrappers import Response
+import json
+from mite.__main__ import _controller_log_start, _controller_log_end
+from pytest_httpserver.httpserver import HandlerType
+
 
 TESTNAME = "unit_test_name"
 
@@ -13,3 +18,31 @@ def test_controller_hello():
         runner_id, test_name, config_list = controller.hello()
         assert test_name == controller._testname
         assert runner_id == i + 1
+
+
+def test_controller_log_start(httpserver):
+    def handler(req):
+        assert req.data == json.dumps({'id': "testing"}).encode("utf-8")
+        return
+
+    httpserver.expect_request(
+        "/start",
+        "POST",
+        data=json.dumps({'testname': "testing"}),
+        handler_type=HandlerType.ONESHOT,
+    ).respond_with_json({'newid': "testing-id"})
+
+    with httpserver.wait(raise_assertions=True, stop_on_nohandler=True, timeout=5):
+        _controller_log_start("testing", httpserver.url_for("/"))
+
+
+def test_controller_log_end(httpserver):
+    httpserver.expect_request(
+        "/end",
+        "POST",
+        data=json.dumps({'id': "testing-id"}),
+        handler_type=HandlerType.ONESHOT,
+    ).respond_with_response(Response(status=204))
+
+    with httpserver.wait(raise_assertions=True, stop_on_nohandler=True, timeout=5):
+        _controller_log_end("testing-id", httpserver.url_for("/"))
