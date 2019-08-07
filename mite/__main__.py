@@ -4,7 +4,7 @@ Mite Load Test Framewwork.
 Usage:
     mite [options] scenario test SCENARIO_SPEC
     mite [options] journey test JOURNEY_SPEC [DATAPOOL_SPEC]
-    mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET]
+    mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL]
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET]
@@ -51,10 +51,12 @@ Options:
     --collector-roll=NUM_LINES      How many lines per collector output file [default: 100000]
     --recorder-dir=DIRECTORY        Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP              Set the second to await between each request [default: 1]
+    --logging-webhook=URL           URL of an HTTP server to log test runs to
 """
 import sys
 import os
 import asyncio
+import requests
 import docopt
 import threading
 import logging
@@ -298,6 +300,54 @@ def journey_cmd(opts):
         journey_test_cmd(opts)
 
 
+def _controller_log_start(scenario_spec, logging_url):
+    if not logging_url.endswith("/"):
+        logging_url += "/"
+
+    # The design decision has been made to do this logging synchronously,
+    # using the requests library.  The synchronous aspect is because we
+    # want to make sure the log is nailed down before we start doing any
+    # test activity.  Using requests rather than acurl is because acurl
+    # injects its own event loop into a process.  To keep things simple
+    # from a debugging perspective, we want to avoid having this loop
+    # running in the controller process insofar as we can.
+    url = logging_url + "start"
+    logger.info(f"Logging test start to {url}")
+    resp = requests.post(
+        url,
+        json={
+            'testname': scenario_spec,
+            # TODO: log other properties as well,
+            # like the endpoint URLs we are
+            # hitting.
+        },
+    )
+    if resp.status_code == 200:
+        return resp.json()['newid']
+    else:
+        logger.warning(
+            f"Could not complete test start logging; status was {resp.status_code}"
+        )
+    logger.debug("Logging test start complete")
+
+
+def _controller_log_end(logging_id, logging_url):
+    if not logging_url.endswith("/"):
+        logging_url += "/"
+
+    if logging_id is None:
+        return
+
+    url = logging_url + "end"
+    logger.info(f"Logging test end to {url}")
+    resp = requests.post(url, json={'id': logging_id})
+    if resp.status_code != 204:
+        logger.warning(
+            f"Could not complete test end logging; status was {resp.status_code}"
+        )
+    logger.debug("Logging test end complete")
+
+
 def controller(opts):
     scenario_spec = opts['SCENARIO_SPEC']
     scenarios = spec_import(scenario_spec)()
@@ -309,6 +359,15 @@ def controller(opts):
     server = _create_controller_server(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
+    logging_id = None
+    logging_url = opts["--logging-webhook"]
+    if logging_url is None:
+        try:
+            logging_url = os.environ["MITE_LOGGING_URL"]
+        except KeyError:
+            pass
+    if logging_url is not None:
+        logging_id = _controller_log_start(scenario_spec, opts["--logging-webhook"])
 
     async def controller_report():
         while True:
@@ -326,6 +385,9 @@ def controller(opts):
     except KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
+    finally:
+        _controller_log_end(logging_id, logging_url)
+        loop.close()
 
 
 def runner(opts):
