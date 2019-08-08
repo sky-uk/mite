@@ -248,11 +248,15 @@ def _create_scenario_manager(opts):
     )
 
 
-def test_scenarios(test_name, opts, scenarios):
+def test_scenarios(test_name, opts, scenarios_fn):
+    config_manager = _create_config_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
@@ -299,12 +303,16 @@ def journey_cmd(opts):
 
 
 def controller(opts):
+    config_manager = _create_config_manager(opts)
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
+    scenarios_fn = spec_import(scenario_spec)()
     scenario_manager = _create_scenario_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(scenario_spec, scenario_manager, config_manager)
     server = _create_controller_server(opts)
     sender = _create_sender(opts)
