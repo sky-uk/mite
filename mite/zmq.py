@@ -46,7 +46,7 @@ class Sender:
         logger.debug("sender connected to address: %s", address)
 
     def send(self, msg):
-        self._socket.send(pack_msg(msg), flags=zmq.NOBLOCK)
+        self._socket.send(pack_msg(msg))
 
 
 class Receiver:
