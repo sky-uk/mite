@@ -1,6 +1,7 @@
 from collections import deque
 from acurl import EventLoop
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,8 @@ class SessionPool:
     async def _checkout(self, context):
         session = self._el.session()
 
-        async def response_callback(r):
-            await context.send(
+        def response_callback(r):
+            context.send(
                 'http_curl_metrics',
                 start_time=r.start_time,
                 effective_url=r.url,
@@ -60,9 +61,15 @@ class SessionPool:
 
 
 def get_session_pool():
-    if not hasattr(get_session_pool, '_session_pool'):
-        get_session_pool._session_pool = SessionPool()
-    return get_session_pool._session_pool
+    # We memoize the function by event loop.  This is because, in unit tests,
+    # there are multiple event loops in circulation.
+    try:
+        return get_session_pool._session_pools[asyncio.get_event_loop()]
+    except KeyError:
+        sp = SessionPool()
+        get_session_pool._session_pools[asyncio.get_event_loop()] = sp
+        return sp
+get_session_pool._session_pools = {}  # noqa: E305
 
 
 def mite_http(func):

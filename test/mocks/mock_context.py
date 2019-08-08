@@ -2,7 +2,7 @@ class MockContext:
     def __init__(self):
         self.messages = []
 
-    async def send(self, message, **kwargs):
+    def send(self, message, **kwargs):
         self.messages.append((message, kwargs))
 
     @property
