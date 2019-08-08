@@ -248,12 +248,7 @@ def _create_scenario_manager(opts):
     )
 
 
-def test_scenarios(test_name, opts, scenarios_fn):
-    config_manager = _create_config_manager(opts)
-    try:
-        scenarios = scenarios_fn(config_manager)
-    except TypeError:
-        scenarios = scenarios_fn()
+def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
@@ -277,8 +272,13 @@ def test_scenarios(test_name, opts, scenarios_fn):
 
 def scenario_test_cmd(opts):
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
-    test_scenarios(scenario_spec, opts, scenarios)
+    scenarios_fn = spec_import(scenario_spec)
+    config_manager = _create_config_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
+    test_scenarios(scenario_spec, opts, scenarios, config_manager)
 
 
 def journey_test_cmd(opts):
@@ -289,7 +289,12 @@ def journey_test_cmd(opts):
     else:
         datapool = None
     volumemodel = lambda start, end: int(opts['--volume'])
-    test_scenarios(journey_spec, opts, [(journey_spec, datapool, volumemodel)])
+    test_scenarios(
+        journey_spec,
+        opts,
+        [(journey_spec, datapool, volumemodel)],
+        _create_config_manager(opts),
+    )
 
 
 def scenario_cmd(opts):
