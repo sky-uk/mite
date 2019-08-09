@@ -1,8 +1,11 @@
+import pytest
+
 from copy import deepcopy
 
 from mite.har_to_mite import (
     _extract_and_sort_requests,
     _parse_urls,
+    _render_journey_transaction,
     set_expected_status_code,
     set_request_headers_dict,
     set_request_body,
@@ -43,7 +46,7 @@ PAGES_200 = {'log':{'entries':[
 PAGES_MULTIPLE_REDIRECTS = [
     # page with status code = 302 -> index 0
     {'startedDateTime': 'date-time',
-     'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
+        'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
      'response': {'redirectURL': '302_first_redirection.url', 'status': 302}},
     # page with status code = 302 -> index 1
     {'startedDateTime': 'date-time',
@@ -154,3 +157,17 @@ def test_parse_urls():
 def test_extract_and_sort_requests():
     urls =  [page['request']['url'] for page in _extract_and_sort_requests(PAGES_200)]
     assert urls == ['random_page.url', '302_redirection.url', 'a_page.url']
+
+
+@pytest.mark.skip(reason="unfinished")
+def test_render_transaction():
+    assert _render_journey_transaction(PAGES_MULTIPLE_REDIRECTS[0], 'get', '_in_groups',
+            '200', 1) == '    async with ctx.transaction("Request get {{url}}"):\n' \
+            '        resp = await ctx.browser.get(\n' \
+            '            \'{{url}}\',\n' \
+            '            headers={{headers}},\n' \
+            '            {{json}}' \
+            '            )\n' \
+            '        check_status_code{{check_groups}}(resp, {{expected_status}})\n' \
+            '    await sleep({{sleep}})\n\n\n' \
+
