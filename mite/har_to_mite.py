@@ -42,15 +42,25 @@ def set_request_body(method, page):
     return ""
 
 
+def _parse_urls(pages):
+    """Parses urls from pages in hard file"""
+    return [page['title'] for page in pages['log']['pages']]    
+
+
+def _extract_and_sort_requests(pages):
+    """Pull entries from har text and sort into chronological order"""
+    entries = pages['log']['entries']
+    entries.sort(key=lambda n: n["startedDateTime"])
+    return entries
+
 def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     # TODO: accurate sleep times should be made possible by extracting the timestamps from the har file
     base_path = os.getcwd()
     with open(base_path + '/' + file_name.lstrip('/'), 'r') as f:
         temp_pages = json.loads(f.read())
     journey_main = ""
-    page_urls = [page['title'] for page in temp_pages['log']['pages']] 
-    entries = temp_pages['log']['entries']
-    entries.sort(key=lambda n: n["startedDateTime"])
+    page_urls = _parse_urls(temp_pages)
+    entries = _extract_and_sort_requests(temp_pages)
 
     for cur_page in entries:        
         if not cur_page['response']['status'] or not cur_page['request']['url'] in page_urls:
