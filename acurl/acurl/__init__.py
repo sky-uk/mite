@@ -157,7 +157,14 @@ def session_cookie_for_url(
         path = '/'
     # TODO do we need to sanitize netloc for IP and ports?
     return Cookie(
-        http_only, "." + netloc, include_subdomains, path, is_secure, 0, name, value
+        http_only,
+        "." + netloc.split(":")[0],
+        include_subdomains,
+        path,
+        is_secure,
+        0,
+        name,
+        value,
     )
 
 
