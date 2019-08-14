@@ -12,6 +12,8 @@ from pkg_resources import get_distribution, DistributionNotFound
 from .exceptions import MiteError  # noqa: F401
 from .context import Context
 from .runner import RunnerConfig
+import mite.utils
+
 
 try:
     __version__ = get_distribution(__name__).version
@@ -20,6 +22,7 @@ except DistributionNotFound:
     pass
 
 
+# TODO: move to test.py?
 def test_context(extensions=('http',), **config):
     runner_config = RunnerConfig()
     runner_config._update(config.items())
@@ -43,7 +46,7 @@ class ensure_separation_from_callable:
             self._loop = asyncio.get_event_loop()
         sleep_time = self._sleep_time()
         if sleep_time > 0:
-            await asyncio.sleep(sleep_time, loop=self._loop)
+            await mite.utils.sleep(sleep_time, loop=self._loop)
 
 
 def ensure_fixed_separation(separation, loop=None):
