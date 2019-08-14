@@ -4,15 +4,15 @@ import os
 
 
 TEMPLATE = Template(
-            '    async with ctx.transaction("Request {{method}} {{url}}"):\n'
-            '        resp = await ctx.browser.{{method}}(\n'
-            '            \'{{url}}\',\n'
-            '            headers={{headers}},\n'
-            '            {{json}}'
-            '            )\n'
-            '        check_status_code{{check_groups}}(resp, {{expected_status}})\n'
-            '    await sleep({{sleep}})\n\n\n'
-        )
+    '    async with ctx.transaction("Request {{method}} {{url}}"):\n'
+    '        resp = await ctx.browser.{{method}}(\n'
+    '            \'{{url}}\',\n'
+    '            headers={{headers}},\n'
+    '            {{json}}'
+    '            )\n'
+    '        check_status_code{{check_groups}}(resp, {{expected_status}})\n'
+    '    await sleep({{sleep}})\n\n\n'
+)
 
 
 def set_expected_status_code(cur_page, entries):
@@ -21,7 +21,9 @@ def set_expected_status_code(cur_page, entries):
     if code == 302 and cur_page['response']['redirectURL']:
         for other_page in entries:
             if cur_page['response']['redirectURL'] == other_page['request']['url']:
-                cur_page['response']['redirectURL'] = other_page['response']['redirectURL']
+                cur_page['response']['redirectURL'] = other_page['response'][
+                    'redirectURL'
+                ]
                 cur_page['response']['status'] = other_page['response']['status']
                 entries.remove(other_page)
                 code, status_groups = set_expected_status_code(cur_page, entries)
@@ -32,7 +34,11 @@ def set_expected_status_code(cur_page, entries):
 
 
 def set_request_headers_dict(page):
-    return {header['name']:header['value'] for header in page['request']['headers'] if header['name'] != 'Cookie'}
+    return {
+        header['name']: header['value']
+        for header in page['request']['headers']
+        if header['name'] != 'Cookie'
+    }
 
 
 def set_request_body(method, page):
@@ -48,15 +54,20 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     with open(base_path + '/' + file_name.lstrip('/'), 'r') as f:
         temp_pages = json.loads(f.read())
     journey_main = ""
-    page_urls = [page['title'] for page in temp_pages['log']['pages']] 
+    page_urls = [page['title'] for page in temp_pages['log']['pages']]
     entries = temp_pages['log']['entries']
     entries.sort(key=lambda n: n["startedDateTime"])
 
-    for cur_page in entries:        
-        if not cur_page['response']['status'] or not cur_page['request']['url'] in page_urls:
+    for cur_page in entries:
+        if (
+            not cur_page['response']['status']
+            or not cur_page['request']['url'] in page_urls
+        ):
             continue
 
-        expected_status_code, check_groups_status = set_expected_status_code(cur_page, entries)
+        expected_status_code, check_groups_status = set_expected_status_code(
+            cur_page, entries
+        )
         req_method = cur_page['request']['method'].lower()
 
         # main part of the journey
@@ -68,8 +79,8 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
             json=set_request_body(req_method, cur_page),
             check_groups=check_groups_status,
             expected_status=expected_status_code,
-            sleep=sleep_s)
-
+            sleep=sleep_s,
+        )
 
     # first part of the journey
     journey_start = "from .utils import check_status_code, check_status_code_in_groups\n"
@@ -78,7 +89,7 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     journey_start += "from asyncio import sleep\n\n\n"
     journey_start += "@browser_decorator()\n"
     journey_start += "async def journey(ctx):\n"
-    #journey_start += "    # import ipdb; ipdb.set_trace()\n\n"
+    # journey_start += "    # import ipdb; ipdb.set_trace()\n\n"
 
     with open(base_path + '/' + converted_file_name.lstrip('/'), 'w') as nf:
         nf.write(journey_start + journey_main)
