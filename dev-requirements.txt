@@ -1,7 +1,7 @@
 twine~=1.13.0
 keyring~=19.0.2
-tox~=19.0
+tox~=3.13.2
 pre-commit~=1.17.0
 flake8~=3.7.8
 black~=19.3b0
-
+coverage~=4.5.3
