@@ -28,7 +28,7 @@ def test_cookies():
 
 def test_session_cookies():
     s = session()
-    r = _await(s.get('https://httpbin.org/cookies/set?name=value'))
+    _await(s.get('https://httpbin.org/cookies/set?name=value'))
     cookie_list = _await(s.get_cookie_list())
     assert len(cookie_list) == 1
     assert cookie_list[0].name == 'name'
@@ -40,19 +40,28 @@ def test_session_cookies():
 def test_set_cookies():
     s = session()
     r = _await(s.get('https://httpbin.org/cookies/set?name=value'))
-    r = _await(s.get('https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'}))
+    r = _await(
+        s.get('https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'})
+    )
     assert r.cookies == {'name': 'value', 'name2': 'value', 'name3': 'value'}
 
 
 def test_basic_auth():
     s = session()
-    r = _await(s.get('https://httpbin.org/basic-auth/user/password', auth=('user', 'password')))
+    r = _await(
+        s.get('https://httpbin.org/basic-auth/user/password', auth=('user', 'password'))
+    )
     assert r.status_code == 200
 
 
 def test_failed_basic_auth():
     s = session()
-    r = _await(s.get('https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword')))
+    r = _await(
+        s.get(
+            'https://httpbin.org/basic-auth/user/password',
+            auth=('notuser', 'notpassword'),
+        )
+    )
     assert r.status_code == 401
 
 
@@ -61,5 +70,3 @@ def test_redirect():
     url = 'https://httpbin.org/ip'
     r = _await(s.get('https://httpbin.org/redirect-to?' + urlencode({'url': url})))
     assert r.url == url
-
-    
