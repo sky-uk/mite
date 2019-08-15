@@ -2,9 +2,11 @@
 
 python3 --version
 
-ls /usr/lib/python3.6/site-packages
+ls /usr/lib/python3.6
 
 whoami
+
+su -c "echo 'i am root'"
 
 apt list | grep python
 
