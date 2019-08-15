@@ -1,8 +1,10 @@
 #!/bin/sh
 
-#apt update
-#apt list | grep python
-
+# Stolen from https://github.com/sky-uk/core-platform/blob/c33c0edd0dab0b529ba49abc672c7c3e1fe607c0/core-jenkins-slave/Dockerfile#L32
+curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+export PATH="/home/jenkins/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
 pyenv install 3.7.4
 
 pyenv shell 3.7.4
