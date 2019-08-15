@@ -6,8 +6,9 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 import mite_http
 
+# TODO: fix
 EMBEDDED_URL_REGEX = re_compile(
-    "\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE
+    "\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE  # noqa: W605
 )
 
 
