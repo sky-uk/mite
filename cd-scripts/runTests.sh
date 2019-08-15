@@ -1,6 +1,12 @@
 #!/bin/sh
 
-sudo apt install python3-pip
+# Sort out the broken-ass python
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py --user
+~/.local/bin/pip install virtualenv
+~/.local/bin/virtualenv mite-tests
+source mite-tests/bin/activate
+# Now the python environment is sane
 
 pip3 install -r requirements.txt || exit 1
 pip3 install -r dev-requirements.txt || exit 1
