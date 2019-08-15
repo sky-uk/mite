@@ -2,7 +2,9 @@
 
 python3 --version
 
-ls /usr/lib/python*/site-packages
+ls /usr/lib/python3.6/site-packages
+
+apt list | grep python
 
 # Sort out the broken-ass python
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
