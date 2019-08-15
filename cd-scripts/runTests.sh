@@ -3,11 +3,15 @@
 #apt update
 #apt list | grep python
 
-cat > script.py <<EOF
-import pty
-pty.spawn(["su", "-c" "echo 'i am root'"])
-EOF
-python script.py
+pyenv install 3.7.4
+
+pyenv shell 3.7.4
+
+which python3.7
+
+which pip
+
+pip --version
 
 # Sort out the broken-ass python
 # curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
