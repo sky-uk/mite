@@ -4,6 +4,8 @@ python3 --version
 
 ls /usr/lib/python3.6/site-packages
 
+whoami
+
 apt list | grep python
 
 # Sort out the broken-ass python
