@@ -1,6 +1,6 @@
 #!/bin/sh
 
-apt install python3-pip
+sudo apt install python3-pip
 
 pip3 install -r requirements.txt || exit 1
 pip3 install -r dev-requirements.txt || exit 1
