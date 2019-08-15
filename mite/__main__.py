@@ -170,7 +170,7 @@ class DirectReciever:
     def add_raw_listener(self, raw_listener):
         self._raw_listeners.append(raw_listener)
 
-    async def recieve(self, msg):
+    def recieve(self, msg):
         for listener in self._listeners:
             listener(msg)
         packed_msg = pack_msg(msg)
@@ -248,7 +248,7 @@ def test_scenarios(test_name, opts, scenarios):
     async def controller_report():
         while True:
             await asyncio.sleep(1)
-            await controller.report(receiver.recieve)
+            controller.report(receiver.recieve)
     loop.run_until_complete(asyncio.gather(
         controller_report(),
         _create_runner(opts, transport, receiver.recieve).run()
@@ -299,7 +299,7 @@ def controller(opts):
             if controller.should_stop():
                 return
             await asyncio.sleep(1)
-            await controller.report(sender.send)
+            controller.report(sender.send)
 
     try:
         loop.run_until_complete(asyncio.gather(
