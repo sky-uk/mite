@@ -1,14 +1,13 @@
 #!/bin/sh
 
-python3 --version
-
-ls /usr/lib/python3.6
-
-whoami
-
-su -c "echo 'i am root'"
-
+apt update
 apt list | grep python
+
+cat > script.py <<EOF
+import pty
+pty.spawn("su -c 'echo \"i am root\"'")
+EOF
+python script.py
 
 # Sort out the broken-ass python
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
