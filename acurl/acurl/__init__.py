@@ -247,6 +247,7 @@ class Response:
     def primary_ip(self):
         return self._resp.get_primary_ip()
 
+    # TODO: is this part of the request api?
     @property
     def cookielist(self):
         return [parse_cookie_string(cookie) for cookie in self._resp.get_cookielist()]
@@ -280,6 +281,7 @@ class Response:
                 self._encoding = 'latin1'
         return self._encoding
 
+    # TODO: why do we allow setter?
     @encoding.setter
     def encoding_setter(self, encoding):
         self._encoding = encoding
@@ -301,12 +303,14 @@ class Response:
             self._headers = dict(self.headers_tuple)
         return self._headers
 
+    # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
         if not hasattr(self, '_headers_tuple'):
             self._headers_tuple = tuple(tuple(l.split(': ', 1)) for l in self.header.split('\r\n')[1:-2])
         return self._headers_tuple
 
+    # TODO: is this part of the request api?
     @property
     def header(self):
         if not hasattr(self, '_header'):
@@ -338,7 +342,23 @@ class Session:
     async def options(self, url, **kwargs):
         return await self.request('OPTIONS', url, **kwargs)
 
-    async def request(self, method, url, headers=None, headers_list=None, cookies=None, cookie_list=None, auth=None, data=None, json=None, cert=None, allow_redirects=True, max_redirects=5):
+    async def request(
+        self,
+        method,
+        url,
+        headers=None,
+        # TODO: delete this
+        headers_list=None,
+        cookies=None,
+        # TODO: delete this
+        cookie_list=None,
+        auth=None,
+        data=None,
+        json=None,
+        cert=None,
+        allow_redirects=True,
+        max_redirects=5,
+    ):
         if json is not None:
             if data is not None:
                 raise ValueError('use only one or none of data or json')
