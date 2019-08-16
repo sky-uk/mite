@@ -24,6 +24,7 @@ class RecyclableIterableDataPool:
             self._checked_out[dpi.id] = dpi.data
             return dpi
         else:
+            # FIXME: should this raise a DataPoolExhausted exception?
             return None
 
     def checkin(self, id):
@@ -93,5 +94,5 @@ def create_iterable_data_pool(iterable):
     return IterableDataPool(iterable)
 
 
-def iterable_factory_data_pool(fn):
+def iterable_factory_data_pool(fn):  # pragma: nocover
     return IterableFactoryDataPool(fn)
