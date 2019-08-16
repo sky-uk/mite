@@ -76,7 +76,7 @@ class Cookie:
 
     @property
     def has_expired(self):
-        return self.expiration != 0 or time.time() > self.expiration
+        return self.expiration != 0 and time.time() > self.expiration
 
     def format(self):
         bits = []
@@ -384,7 +384,17 @@ class Session:
             for k, v in cookies.items():
                 cookie_list.append(session_cookie_for_url(url, k, v))
 
-        return await self._request(method, url, tuple(headers_list) if headers_list else None, tuple(cookie_list) if cookie_list else None, auth, data, cert, allow_redirects, max_redirects)
+        return await self._request(
+            method,
+            url,
+            tuple(headers_list) if headers_list else (),
+            tuple(cookie_list) if cookie_list else (),
+            auth,
+            data,
+            cert,
+            allow_redirects,
+            max_redirects,
+        )
 
     # TODO: make it a property
     def set_response_callback(self, callback):
