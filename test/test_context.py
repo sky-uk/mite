@@ -6,7 +6,7 @@ test_msg = 'test msg for the unit test'
 
 
 def test_send():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
@@ -17,7 +17,7 @@ def test_send():
 
 
 def test_start_transaction():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
@@ -30,7 +30,7 @@ def test_start_transaction():
 
 
 def test_end_transaction():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
