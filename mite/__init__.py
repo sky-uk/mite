@@ -11,7 +11,6 @@ from pkg_resources import get_distribution, DistributionNotFound
 
 from .exceptions import MiteError  # noqa: F401
 from .context import Context
-from .runner import RunnerConfig
 import mite.utils
 
 
@@ -24,8 +23,8 @@ except DistributionNotFound:
 
 # TODO: move to test.py?
 def test_context(extensions=('http',), **config):
-    runner_config = RunnerConfig()
-    runner_config._update(config.items())
+    runner_config = {}
+    runner_config.update(config.items())
     c = Context(print, runner_config)
     return c
 

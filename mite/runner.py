@@ -40,37 +40,6 @@ class RunnerControllerTransportExample:
         pass
 
 
-class RunnerConfig:
-    def __init__(self):
-        self._config = {}
-
-    def __repr__(self):
-        return "RunnerConfig({})".format(", ".join(["{}={}".format(k, v) for k, v in self._config.items()]))
-
-    def _update(self, kv_list):
-        for k, v in kv_list:
-            self._config[k] = v
-
-    def get(self, key, default=None):
-        try:
-            return self._config[key]
-        except KeyError:
-            if default is not None:
-                return default
-            else:
-                raise
-
-    def get_fallback(self, *keys, default=None):
-        for key in keys:
-            try:
-                return self._config[key]
-            except KeyError:
-                pass
-        if default is not None:
-            return default
-        raise KeyError("None of {} found".format(keys))
-
-
 class Runner:
     def __init__(self, transport, msg_sender, loop_wait_min=0.01, loop_wait_max=0.5, max_work=None, loop=None,
                  debug=False):
@@ -106,9 +75,9 @@ class Runner:
 
     async def run(self):
         context_id_gen = count(1)
-        config = RunnerConfig()
+        config = {}
         runner_id, test_name, config_list = await self._transport.hello()
-        config._update(config_list)
+        config.update(config_list)
         logger.debug("Entering run loop")
         _completed = []
 
@@ -144,7 +113,7 @@ class Runner:
         while not self._stop:
             work, config_list, self._stop = await self._transport.request_work(runner_id, self._current_work(),
                                                                                completed_data_ids, self._max_work)
-            config._update(config_list)
+            config.update(config_list)
             for num, (scenario_id, scenario_data_id, journey_spec, args) in enumerate(work):
                 id_data = {
                     'test': test_name,
@@ -164,7 +133,7 @@ class Runner:
         while self._current_work():
             _, config_list, _ = await self._transport.request_work(runner_id, self._current_work(),
                                                                    completed_data_ids, 0)
-            config._update(config_list)
+            config.update(config_list)
             completed_data_ids = await wait()
         await self._transport.request_work(runner_id, self._current_work(), completed_data_ids, 0)
         await self._transport.bye(runner_id)
