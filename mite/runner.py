@@ -8,7 +8,7 @@ from .utils import spec_import
 logger = logging.getLogger(__name__)
 
 
-class RunnerControllerTransportExample:
+class RunnerControllerTransportExample:  # pragma: nocover
     async def hello(self):
         """Returns:
             runner_id
