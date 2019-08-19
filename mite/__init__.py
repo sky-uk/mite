@@ -21,10 +21,7 @@ except DistributionNotFound:
     pass
 
 
-<<<<<<< HEAD
-=======
 # TODO: move to test.py?
->>>>>>> origin/master
 def test_context(extensions=('http',), **config):
     runner_config = {}
     runner_config.update(config.items())
