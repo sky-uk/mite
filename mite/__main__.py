@@ -31,8 +31,7 @@ Options:
     --version                       Show version
     --debugging                     Drop into IPDB on journey error and exit
     --log-level=LEVEL               Set logger level, one of DEBUG, INFO, WARNING, ERROR, CRITICAL [default: INFO]
-    --config=CONFIG_SPEC            Set a config loader to a callable loaded via a spec""" \
-""" [default: mite.config:default_config_loader]
+    --config=CONFIG_SPEC            Set a config loader to a callable loaded via a spec [default: mite.config:default_config_loader]
     --spawn-rate=NUM_PER_SECOND     Maximum spawn rate [default: 1000]
     --max-loop-delay=SECONDS        Runner internal loop delay maximum [default: 1]
     --min-loop-delay=SECONDS        Runner internal loop delay minimum [default: 0]
@@ -78,9 +77,11 @@ def _msg_backend_module(opts):
     msg_backend = opts['--message-backend']
     if msg_backend == 'nanomsg':
         from . import nanomsg
+
         return nanomsg
     elif msg_backend == 'ZMQ':
         from . import zmq
+
         return zmq
     else:
         raise ValueError('Unsupported backend %r' % (msg_backend,))
@@ -139,7 +140,9 @@ def _create_controller_server(opts):
 
 
 def _create_duplicator(opts):
-    return _msg_backend_module(opts).Duplicator(opts['--message-socket'], opts['OUT_SOCKET'])
+    return _msg_backend_module(opts).Duplicator(
+        opts['--message-socket'], opts['OUT_SOCKET']
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -153,7 +156,9 @@ class DirectRunnerTransport:
         return self._controller.hello()
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return self._controller.request_work(runner_id, current_work, completed_data_ids, max_work)
+        return self._controller.request_work(
+            runner_id, current_work, completed_data_ids, max_work
+        )
 
     async def bye(self, runner_id):
         return self._controller.bye(runner_id)
@@ -193,7 +198,7 @@ def _start_web_in_thread(opts):
     address = opts['--web-address']
     kwargs = {'port': 9301}
     if address.startswith('['):
-            # IPV6 [host]:port
+        # IPV6 [host]:port
         if ']:' in address:
             host, port = address.split(']:')
             kwargs['host'] = host[1:]
@@ -225,20 +230,28 @@ def _create_runner(opts, transport, msg_sender):
     max_work = None
     if opts['--runner-max-journeys']:
         max_work = int(opts['--runner-max-journeys'])
-    return Runner(transport, msg_sender, loop_wait_min=loop_wait_min, loop_wait_max=loop_wait_max,
-                  max_work=max_work, debug=opts['--debugging'])
+    return Runner(
+        transport,
+        msg_sender,
+        loop_wait_min=loop_wait_min,
+        loop_wait_max=loop_wait_max,
+        max_work=max_work,
+        debug=opts['--debugging'],
+    )
 
 
 def _create_scenario_manager(opts):
-    return ScenarioManager(start_delay=float(opts['--delay-start-seconds']), period=float(opts['--max-loop-delay']),
-                           spawn_rate=int(opts['--spawn-rate']))
+    return ScenarioManager(
+        start_delay=float(opts['--delay-start-seconds']),
+        period=float(opts['--max-loop-delay']),
+        spawn_rate=int(opts['--spawn-rate']),
+    )
 
 
-def test_scenarios(test_name, opts, scenarios):
+def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
@@ -249,16 +262,23 @@ def test_scenarios(test_name, opts, scenarios):
         while True:
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
-    loop.run_until_complete(asyncio.gather(
-        controller_report(),
-        _create_runner(opts, transport, receiver.recieve).run()
-    ))
+
+    loop.run_until_complete(
+        asyncio.gather(
+            controller_report(), _create_runner(opts, transport, receiver.recieve).run()
+        )
+    )
 
 
 def scenario_test_cmd(opts):
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
-    test_scenarios(scenario_spec, opts, scenarios)
+    scenarios_fn = spec_import(scenario_spec)
+    config_manager = _create_config_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
+    test_scenarios(scenario_spec, opts, scenarios, config_manager)
 
 
 def journey_test_cmd(opts):
@@ -269,7 +289,12 @@ def journey_test_cmd(opts):
     else:
         datapool = None
     volumemodel = lambda start, end: int(opts['--volume'])
-    test_scenarios(journey_spec, opts, [(journey_spec, datapool, volumemodel)])
+    test_scenarios(
+        journey_spec,
+        opts,
+        [(journey_spec, datapool, volumemodel)],
+        _create_config_manager(opts),
+    )
 
 
 def scenario_cmd(opts):
@@ -283,12 +308,16 @@ def journey_cmd(opts):
 
 
 def controller(opts):
+    config_manager = _create_config_manager(opts)
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
+    scenarios_fn = spec_import(scenario_spec)()
     scenario_manager = _create_scenario_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(scenario_spec, scenario_manager, config_manager)
     server = _create_controller_server(opts)
     sender = _create_sender(opts)
@@ -302,11 +331,12 @@ def controller(opts):
             controller.report(sender.send)
 
     try:
-        loop.run_until_complete(asyncio.gather(
-            controller_report(),
-            server.run(controller, controller.should_stop)
-        ))
-    except  KeyboardInterrupt:
+        loop.run_until_complete(
+            asyncio.gather(
+                controller_report(), server.run(controller, controller.should_stop)
+            )
+        )
+    except KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
 
@@ -314,7 +344,9 @@ def controller(opts):
 def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
-    asyncio.get_event_loop().run_until_complete(_create_runner(opts, transport, sender.send).run())
+    asyncio.get_event_loop().run_until_complete(
+        _create_runner(opts, transport, sender.send).run()
+    )
 
 
 def collector(opts):
@@ -356,7 +388,8 @@ def prometheus_exporter(opts):
 def setup_logging(opts):
     logging.basicConfig(
         level=opts['--log-level'],
-        format='[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s')
+        format='[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s',
+    )
 
 
 def configure_python_path(opts):
@@ -365,7 +398,9 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
-    har_convert_to_mite(opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time'])
+    har_convert_to_mite(
+        opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time']
+    )
 
 
 def main():
