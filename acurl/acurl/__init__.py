@@ -4,6 +4,14 @@ import asyncio
 import ujson
 import time
 from urllib.parse import urlparse
+from pkg_resources import get_distribution, DistributionNotFound
+
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 class RequestError(Exception):
@@ -88,7 +96,7 @@ class Cookie:
 
     @property
     def has_expired(self):
-        return self.expiration != 0 or time.time() > self.expiration
+        return self.expiration != 0 and time.time() > self.expiration
 
     def format(self):
         bits = []
@@ -289,6 +297,7 @@ class Response:
     def primary_ip(self):
         return self._resp.get_primary_ip()
 
+    # TODO: is this part of the request api?
     @property
     def cookielist(self):
         return [parse_cookie_string(cookie) for cookie in self._resp.get_cookielist()]
@@ -327,6 +336,7 @@ class Response:
                 self._encoding = 'latin1'
         return self._encoding
 
+    # TODO: why do we allow setter?
     @encoding.setter
     def encoding_setter(self, encoding):
         self._encoding = encoding
@@ -348,6 +358,7 @@ class Response:
             self._headers = dict(self.headers_tuple)
         return self._headers
 
+    # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
         if not hasattr(self, '_headers_tuple'):
@@ -356,6 +367,7 @@ class Response:
             )
         return self._headers_tuple
 
+    # TODO: is this part of the request api?
     @property
     def header(self):
         if not hasattr(self, '_header'):
@@ -392,8 +404,10 @@ class Session:
         method,
         url,
         headers=None,
+        # TODO: delete this
         headers_list=None,
         cookies=None,
+        # TODO: delete this
         cookie_list=None,
         auth=None,
         data=None,
@@ -432,8 +446,8 @@ class Session:
         return await self._request(
             method,
             url,
-            tuple(headers_list) if headers_list else None,
-            tuple(cookie_list) if cookie_list else None,
+            tuple(headers_list) if headers_list else (),
+            tuple(cookie_list) if cookie_list else (),
             auth,
             data,
             cert,
