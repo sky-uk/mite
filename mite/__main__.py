@@ -56,10 +56,11 @@ Options:
 import sys
 import os
 import asyncio
-import requests
+from urllib.request import urlopen, Request as UrlLibRequest
 import docopt
 import threading
 import logging
+import ujson
 import uvloop
 
 from .scenario import ScenarioManager
@@ -304,26 +305,23 @@ def _controller_log_start(scenario_spec, logging_url):
     if not logging_url.endswith("/"):
         logging_url += "/"
 
-    # The design decision has been made to do this logging synchronously,
-    # using the requests library.  The synchronous aspect is because we
-    # want to make sure the log is nailed down before we start doing any
-    # test activity.  Using requests rather than acurl is because acurl
-    # injects its own event loop into a process.  To keep things simple
-    # from a debugging perspective, we want to avoid having this loop
-    # running in the controller process insofar as we can.
+    # The design decision has been made to do this logging synchronously
+    # rather than using the usual mite data pipeline, because we want to make
+    # sure the log is nailed down before we start doing any test activity.
     url = logging_url + "start"
     logger.info(f"Logging test start to {url}")
-    resp = requests.post(
-        url,
-        json={
-            'testname': scenario_spec,
-            # TODO: log other properties as well,
-            # like the endpoint URLs we are
-            # hitting.
-        },
-    )
-    if resp.status_code == 200:
-        return resp.json()['newid']
+    resp = urlopen(UrlLibRequest(url,
+                                 data=ujson.dumps({
+                                     'testname': scenario_spec,
+                                     # TODO: log other properties as well,
+                                     # like the endpoint URLs we are
+                                     # hitting.
+                                 }).encode(),
+                                 method="POST"
+                                 )
+                   )
+    if resp.status == 200:
+        return ujson.loads(resp.read())['newid']
     else:
         logger.warning(
             f"Could not complete test start logging; status was {resp.status_code}"
@@ -340,8 +338,8 @@ def _controller_log_end(logging_id, logging_url):
 
     url = logging_url + "end"
     logger.info(f"Logging test end to {url}")
-    resp = requests.post(url, json={'id': logging_id})
-    if resp.status_code != 204:
+    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({'id': logging_id}).encode()))
+    if resp.status != 204:
         logger.warning(
             f"Could not complete test end logging; status was {resp.status_code}"
         )

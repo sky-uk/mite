@@ -2,7 +2,7 @@ from mite.controller import Controller
 from mite.scenario import ScenarioManager
 from mite.config import ConfigManager
 from werkzeug.wrappers import Response
-import json
+import ujson
 from mite.__main__ import _controller_log_start, _controller_log_end
 from pytest_httpserver.httpserver import HandlerType
 
@@ -28,7 +28,7 @@ def test_controller_log_start(httpserver):
     httpserver.expect_request(
         "/start",
         "POST",
-        data=json.dumps({'testname': "testing"}),
+        data=ujson.dumps({'testname': "testing"}),
         handler_type=HandlerType.ONESHOT,
     ).respond_with_json({'newid': "testing-id"})
 
@@ -40,7 +40,7 @@ def test_controller_log_end(httpserver):
     httpserver.expect_request(
         "/end",
         "POST",
-        data=json.dumps({'id': "testing-id"}),
+        data=ujson.dumps({'id': "testing-id"}),
         handler_type=HandlerType.ONESHOT,
     ).respond_with_response(Response(status=204))
 
