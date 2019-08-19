@@ -310,16 +310,20 @@ def _controller_log_start(scenario_spec, logging_url):
     # sure the log is nailed down before we start doing any test activity.
     url = logging_url + "start"
     logger.info(f"Logging test start to {url}")
-    resp = urlopen(UrlLibRequest(url,
-                                 data=ujson.dumps({
-                                     'testname': scenario_spec,
-                                     # TODO: log other properties as well,
-                                     # like the endpoint URLs we are
-                                     # hitting.
-                                 }).encode(),
-                                 method="POST"
-                                 )
-                   )
+    resp = urlopen(
+        UrlLibRequest(
+            url,
+            data=ujson.dumps(
+                {
+                    'testname': scenario_spec,
+                    # TODO: log other properties as well,
+                    # like the endpoint URLs we are
+                    # hitting.
+                }
+            ).encode(),
+            method="POST",
+        )
+    )
     if resp.status == 200:
         return ujson.loads(resp.read())['newid']
     else:
