@@ -2,6 +2,8 @@
 
 #define _ACURL_H
 
+#define PY_SSIZE_T_CLEAN
+
 #include "ae/ae.h"
 #include <curl/multi.h>
 #include <Python.h>

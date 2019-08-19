@@ -1,9 +1,9 @@
 import pytest
 from mite.runner import Runner
+from mite import MiteError
 
 from mocks.mock_direct_runner_transport import DirectRunnerTransportMock
-from mocks.mock_direct_receiver import DirectReceiverMock
-from mocks.mock_recorder_msg_http import setup_mock_msg_processors
+from mocks.mock_sender import SenderMock
 
 
 # Inside the runner the directRunnerTransport request the work, what it will receive it should be similar to:
@@ -19,11 +19,54 @@ from mocks.mock_recorder_msg_http import setup_mock_msg_processors
 
 @pytest.mark.asyncio
 async def test_runnner_run():
-    transport = DirectRunnerTransportMock()
-    receiver = DirectReceiverMock()
-    setup_mock_msg_processors(receiver)
     for i in range(10):
-        runner = Runner(transport, receiver)
-        await runner.run()
-        print(transport._completed_data)
+        transport = DirectRunnerTransportMock()
+        runner = Runner(transport, SenderMock().send)
+        while not transport._all_done:
+            await runner.run()
         assert (7, 7) in transport._completed_data
+
+
+async def exception_journey(ctx):
+    raise Exception("test")
+
+
+@pytest.mark.asyncio
+async def test_runner_exception():
+    transport = DirectRunnerTransportMock(
+        work=[(1, 1, "test_runner:exception_journey", ())]
+    )
+    sender = SenderMock()
+    runner = Runner(transport, sender.send)
+    while not transport._all_done:
+        await runner.run()
+    for message in sender.messages:
+        if message['type'] == 'exception':
+            print(message)
+            assert message['ex_type'] == "Exception"
+            assert message['message'] == "test"
+            break
+    else:
+        assert False, "Exception message was not sent"
+
+
+async def mite_error_journey(ctx):
+    raise MiteError("test")
+
+
+@pytest.mark.asyncio
+async def test_runner_mite_error():
+    transport = DirectRunnerTransportMock(
+        work=[(1, 1, "test_runner:mite_error_journey", ())]
+    )
+    sender = SenderMock()
+    runner = Runner(transport, sender.send)
+    while not transport._all_done:
+        await runner.run()
+    for message in sender.messages:
+        if message['type'] == 'error':
+            print(message)
+            assert message['message'] == "test"
+            break
+    else:
+        assert False, "Exception message was not sent"

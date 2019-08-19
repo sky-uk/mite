@@ -1,46 +1,52 @@
+import pytest
+
+from copy import deepcopy
+
 from mite.har_to_mite import (
+    _extract_and_sort_requests,
+    _parse_urls,
+    _render_journey_transaction,
     set_expected_status_code,
-    check_request_url,
     set_request_headers_dict,
     set_request_body,
 )
 
 
 # page with status_code=0
-page_0 = {
+SIMPLE_PAGE = {
     'startedDateTime': 'date-time',
     'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
-    'response': {'redirectURL': '', 'status': 0}
+    'response': {'redirectURL': '', 'status': 200}
 }
 
 # page with status_code=304
-page_304 = {
+PAGE_304 = {
     'startedDateTime': 'date-time',
     'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
     'response': {'redirectURL': '', 'status': 304}
 }
 
 # list for the page with status_code=302
-pages_302 = [
+PAGES_200 = {'log':{'entries':[
     # page with status code = 302 -> index 0
-    {'startedDateTime': 'date-time',
-     'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
+    {'startedDateTime': '2019-08-16T13:00:00.000Z',
+        'request': {'method': '', 'url': 'a_page.url', 'headers': [], 'postData': 'body'},
      'response': {'redirectURL': '302_redirection.url', 'status': 302}},
     # page with status code = 304 -> index 1
-    {'startedDateTime': 'date-time',
+    {'startedDateTime': '2019-08-16T12:59:00.000Z',
      'request': {'method': '', 'url': 'random_page.url', 'headers': [], 'postData': 'body'},
      'response': {'redirectURL': '', 'status': 304}},
     # page with the redirection url for the 302 status code -> index 2
-    {'startedDateTime': 'date-time',
+    {'startedDateTime': '2019-08-16T12:59:30.000Z',
      'request': {'method': '', 'url': '302_redirection.url', 'headers': [], 'postData': 'body'},
-     'response': {'redirectURL': '', 'status': 345}},
-]
+     'response': {'redirectURL': '', 'status': 200}},
+]}}
 
 # list for the page with multiple redirections
-pages_multi_302 = [
+PAGES_MULTIPLE_REDIRECTS = [
     # page with status code = 302 -> index 0
     {'startedDateTime': 'date-time',
-     'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
+        'request': {'method': '', 'url': '', 'headers': [], 'postData': 'body'},
      'response': {'redirectURL': '302_first_redirection.url', 'status': 302}},
     # page with status code = 302 -> index 1
     {'startedDateTime': 'date-time',
@@ -49,11 +55,11 @@ pages_multi_302 = [
     # page with the redirection url for the 302 status code -> index 2
     {'startedDateTime': 'date-time',
      'request': {'method': '', 'url': '302_second_redirection.url', 'headers': [], 'postData': 'body'},
-     'response': {'redirectURL': '', 'status': 345}},
+     'response': {'redirectURL': '', 'status': 200}},
 ]
 
 # page with headers
-page_headers = {
+PAGE_HEADERS = {
     'request': {
         'headers': [
             {"name": "Name0", "value": "value0"},
@@ -65,7 +71,7 @@ page_headers = {
 }
 
 # page with body
-page_body = {
+PAGE_WITH_BODY = {
     'request': {
         'postData': {
             "name0": "value0",
@@ -75,45 +81,93 @@ page_body = {
 }
 
 
+# Block in the har where request urls are pulled from
+PAGE_TITLES = {
+    'log':{
+        'pages':[
+            {'startedDateTime': '2019-08-16T13:24:36.702Z',
+             'id': 'page_3',
+             'title': 'https://search.mysite.co.uk/search?q=sport&scope=',
+             'pageTimings': {
+                 'onContentLoad': 1718.2020000182092,
+                 'onLoad': 2711.600000038743}
+             },
+            {'startedDateTime': '2019-08-16T13:24:27.717Z',
+             'id': 'page_2',
+             'title': 'https://www.mysite.co.uk/news',
+             'pageTimings': {
+                 'onContentLoad': 1239.6070000249892,
+                 'onLoad': 3207.3920000111684}
+             },
+            {'startedDateTime': '2019-08-16T13:24:18.491Z',
+             'id': 'page_1',
+             'title': 'https://www.mysite.co.uk/news/england1',
+             'pageTimings': {
+                 'onContentLoad': 1093.1039999704808,
+                 'onLoad': 1693.9799999818206}
+             }
+            ]
+        }
+    }
+
+
 def test_status_code_is_not_3xx():
-    status, _ = set_expected_status_code(None, page_0, 0, 1, None)
-    assert status == page_0['response']['status']
+    status, _ = set_expected_status_code(SIMPLE_PAGE, [SIMPLE_PAGE])
+    assert status == 200
 
 
-def test_status_code_is_304():
-    status, groups = set_expected_status_code(None, page_304, 0, 1, None)
+def test_status_code_304_behaviour():
+    status, groups = set_expected_status_code(PAGE_304, [PAGE_304])
     assert status == "200, 304"
     assert groups == "_in_groups"
 
 
-def test_status_code_is_302():
-    p_list = list()
-    page_302 = pages_302[0]
-    status, _ = set_expected_status_code(pages_302, page_302, 0, 3, p_list)
-    assert status == pages_302[2]['response']['status']
-    assert pages_302[2]['request']['url'] in p_list
+def test_status_code_after_redirect():
+    entries = deepcopy(PAGES_200)['log']['entries'] # Create a copy
+    status, _ = set_expected_status_code(entries[0], entries)
+    assert status == 200
 
 
-def test_multi_status_code_302():
-    p_list = list()
-    page_302 = pages_multi_302[0]
-    status, _ = set_expected_status_code(pages_multi_302, page_302, 0, 3, p_list)
-    assert status == pages_302[2]['response']['status']
-    assert pages_multi_302[1]['request']['url'] in p_list
-    assert pages_multi_302[2]['request']['url'] in p_list
-
-
-def test_check_url():
-    p_list = ['test.url']
-    check_request_url('test.url', p_list)
-    assert p_list == []
+def test_multi_redirect():
+    status, _ = set_expected_status_code(PAGES_MULTIPLE_REDIRECTS[0], PAGES_MULTIPLE_REDIRECTS)
+    assert status == 200 
 
 
 def test_set_headers():
-    headers = set_request_headers_dict(page_headers)
-    assert 'Cookie' not in headers
+    assert len(set_request_headers_dict(PAGE_HEADERS)) == 3
+    
+
+def test_cookie_not_in_headers():
+    assert 'Cookie' not in set_request_headers_dict(PAGE_HEADERS)
 
 
 def test_set_body():
-    body = set_request_body('post', page_body)
-    assert "json" in body
+    assert "name0" in set_request_body('post', PAGE_WITH_BODY)
+
+
+def test_body_empty_for_get():
+    assert set_request_body('get', PAGE_WITH_BODY) == ""
+
+
+def test_parse_urls():
+    assert _parse_urls(PAGE_TITLES) == ['https://search.mysite.co.uk/search?q=sport&scope=',
+                                        'https://www.mysite.co.uk/news',
+                                        'https://www.mysite.co.uk/news/england1']
+
+def test_extract_and_sort_requests():
+    urls =  [page['request']['url'] for page in _extract_and_sort_requests(PAGES_200)]
+    assert urls == ['random_page.url', '302_redirection.url', 'a_page.url']
+
+
+@pytest.mark.skip(reason="unfinished")
+def test_render_transaction():
+    assert _render_journey_transaction(PAGES_MULTIPLE_REDIRECTS[0], 'get', '_in_groups',
+            '200', 1) == '    async with ctx.transaction("Request get {{url}}"):\n' \
+            '        resp = await ctx.browser.get(\n' \
+            '            \'{{url}}\',\n' \
+            '            headers={{headers}},\n' \
+            '            {{json}}' \
+            '            )\n' \
+            '        check_status_code{{check_groups}}(resp, {{expected_status}})\n' \
+            '    await sleep({{sleep}})\n\n\n' \
+

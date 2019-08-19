@@ -9,3 +9,18 @@ modules:
   mite:
     pipelineShape: simple
     directory: "/"
+    defaultTaskExecution: "./cd-scripts/cdBuild-1.sh"
+
+  mite-ci:
+    pipelineShape: simple
+    directory: "/"
+    defaultTaskExecution: "./cd-scripts/runTests.sh"
+    # TODO not sure which of the following two is better
+    # archiveArtifacts:
+    #   includes: ["coverage_html_report/*"]
+    #   excludes: []
+    htmlReports:
+      - name: Coverage Report
+        directory: coverage_html_report
+        files: ["*"]
+    # TODO: slack notifications, for PRs

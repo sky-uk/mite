@@ -153,18 +153,12 @@ class Context:
         self.send('error', message=str(value), location=location, **value.fields)
 
     def _start_transaction(self, name):
-        msg = {}
         self._transaction_ids.append(next(self._trans_id_gen))
         self._transaction_names.append(name)
-        self._add_context_headers_and_time(msg)
-        msg['type'] = 'start'
-        self._send(msg)
+        self.send('start')
 
     def _end_transaction(self):
-        msg = {}
-        self._add_context_headers_and_time(msg)
-        msg['type'] = 'end'
-        self._send(msg)
+        self.send('end')
         self._transaction_names.pop()
         self._transaction_ids.pop()
 

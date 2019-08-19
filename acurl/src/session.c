@@ -46,7 +46,7 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
     PyObject *auth;
     PyObject *cert;
     PyObject *cookies;
-    int req_data_len = 0;
+    Py_ssize_t req_data_len = 0;
     char *req_data_buf = NULL;
     int dummy;
 

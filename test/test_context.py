@@ -6,18 +6,18 @@ test_msg = 'test msg for the unit test'
 
 
 def test_send():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
     ctx.send('test_type', message=test_msg, transaction='test')
 
-    assert sender.test_result['message'] == test_msg
-    assert sender.test_result['type'] == 'test_type'
+    assert sender.messages[-1]['message'] == test_msg
+    assert sender.messages[-1]['type'] == 'test_type'
 
 
 def test_start_transaction():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
@@ -25,12 +25,12 @@ def test_start_transaction():
 
     ctx._start_transaction(test_transaction_name)
 
-    assert sender.test_result['type'] == 'start'
+    assert sender.messages[-1]['type'] == 'start'
     assert test_transaction_name in ctx._transaction_names
 
 
 def test_end_transaction():
-    config = RunnerConfigMock()
+    config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
@@ -39,5 +39,5 @@ def test_end_transaction():
 
     ctx._end_transaction()
 
-    assert sender.test_result['type'] == 'end'
+    assert sender.messages[-1]['type'] == 'end'
     assert test_transaction_name not in ctx._transaction_names
