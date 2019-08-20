@@ -369,7 +369,7 @@ def controller(opts):
         except KeyError:
             pass
     if logging_url is not None:
-        logging_id = _controller_log_start(scenario_spec, opts["--logging-webhook"])
+        logging_id = _controller_log_start(scenario_spec, logging_url)
 
     async def controller_report():
         while True:
