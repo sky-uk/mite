@@ -324,13 +324,13 @@ def _controller_log_start(scenario_spec, logging_url):
             method="POST",
         )
     )
+    logger.debug("Logging test start complete")
     if resp.status == 200:
         return ujson.loads(resp.read())['newid']
     else:
         logger.warning(
             f"Could not complete test start logging; status was {resp.status_code}"
         )
-    logger.debug("Logging test start complete")
 
 
 def _controller_log_end(logging_id, logging_url):
@@ -389,6 +389,8 @@ def controller(opts):
         logging.info("Received interrupt signal, shutting down")
     finally:
         _controller_log_end(logging_id, logging_url)
+        # TODO: cancel all loop tasks?  Something must be done to stop this
+        # from hanging
         loop.close()
 
 
