@@ -1,9 +1,13 @@
 #!/bin/sh
 
+echo "" | x86_64-linux-gnu-gcc -xc -E -v -
+
 MY_VENV=$HOME/mite-tests
 
 python3.7 -m venv $MY_VENV
 . $MY_VENV/bin/activate
+
+echo "" | x86_64-linux-gnu-gcc -xc -E -v -
 
 pip install -r requirements.txt || exit 1
 pip install -r dev-requirements.txt || exit 1
