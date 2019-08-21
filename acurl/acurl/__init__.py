@@ -2,6 +2,7 @@ import _acurl
 import threading
 import asyncio
 import ujson
+import shlex
 import time
 from urllib.parse import urlparse
 from pkg_resources import get_distribution, DistributionNotFound
@@ -227,6 +228,24 @@ class Request:
     @property
     def cert(self):
         return self._cert
+
+    def to_curl(self):
+        data_arg = ""
+        if self.data is not None:
+            data_arg = "-d " + shlex.quote(self.data.decode("utf-8"))
+        header_args = " ".join(
+            ("-H " + shlex.quote(k + ": " + v) for k, v in self.headers.items())
+        )
+        cookie_args = " ".join(
+            ("--cookie " + shlex.quote(f"{k}={v}") for k, v in self.cookies.items())
+        )
+        auth_arg = ""
+        if self.auth is not None:
+            auth_arg = "--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}")
+        return (
+            f"curl -X {self.method} {header_args} {cookie_args} {auth_arg} {data_arg} "
+            + shlex.quote(self.url)
+        )
 
 
 class Response:
