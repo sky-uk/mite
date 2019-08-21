@@ -1,7 +1,7 @@
 #!/bin/sh
 
-python3.7 -m venv mite-tests
-. mite-tests/bin/activate
+python3.7 -m venv /mite-tests
+. /mite-tests/bin/activate
 
 pip install -r requirements.txt || exit 1
 pip install -r dev-requirements.txt || exit 1
