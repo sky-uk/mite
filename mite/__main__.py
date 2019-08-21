@@ -362,7 +362,7 @@ def _controller_log_end(logging_id, logging_url):
 def controller(opts):
     config_manager = _create_config_manager(opts)
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios_fn = spec_import(scenario_spec)()
+    scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(opts)
     try:
         scenarios = scenarios_fn(config_manager)
