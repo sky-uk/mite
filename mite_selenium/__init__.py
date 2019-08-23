@@ -6,7 +6,8 @@ from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
-class _SeleniumContextManager:
+
+class _SeleniumWrapper:
     def __init__(self, context)
         """Constructor pulls capabilities and other webdriver config from the context
         which should allow user to set whatever browser configuration that they want.
@@ -41,7 +42,7 @@ class _SeleniumContextManager:
             self._capabilities = spec_import(self._capabiltiies)
 
 
-    async def __aenter__(self):
+     def start(self):
         self._context.browser = webdriver.Remote(
                 desired_capbilities=self._capabilities,
                 command_executor=self._command_executor,
@@ -51,6 +52,17 @@ class _SeleniumContextManager:
                 file_detector=self._file_detector,
                 options=self._options)
 
-    async def __aexit__(self):
+    def stop(self):
         self._context.browser.close()
 
+
+class _SeleniumContextManager:
+    def __init__(self, context):
+        self._context = context
+        self._webdriver = _SeleniumWrapper(context)
+
+    async def __aenter__(self):
+        self._webdriver.start()
+
+    async def __aexit__(self):
+        self._webdriver.stop()
