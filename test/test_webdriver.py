@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from mocks.mock_context import MockContext
+from mocks.mock_selenium import MockWebdriver
 from mite_selenium import _SeleniumWrapper
 
 
@@ -56,14 +57,22 @@ def test_webdriver_capabilities_as_dict():
     assert wrapper._capabilities == {"browser": "Chrome"}
 
 
-@patch("mite_selenium.Remote.__init__", return_value=None)
+@patch("mite_selenium.Remote", autospec=True)
 def test_webdriver_start_stop(MockRemote):
     context=MockContext()
     context.config = DICT_CAPABILITIES_CONFIG
-    wrapper = _SeleniumWrapper(context)
-    import pdb; pdb.set_trace()
+    wrapper = _SeleniumWrapper(context)  
     wrapper.start()
+    MockRemote.assert_called_with(
+            browser_profile=None,
+            command_executor='http://127.0.0.1:4444/wd/hub',
+            desired_capabilities={'browser': 'Chrome'},
+            file_detector=None,
+            keep_alive=False,
+            options=None,
+            proxy=None)
     wrapper.stop()
-
-
-
+    # For some reason, calling the Mock makes a refence to the instance
+    # that was created when the mock was previously instantiated
+    MockRemote().close.assert_called()
+     
