@@ -2,3 +2,5 @@
 
 -e ./acurl
 -e .
+
+selenium>=3.141.0

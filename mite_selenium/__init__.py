@@ -1,14 +1,14 @@
 import asyncio
 import logging
 
-from selenium import webdriver
+from selenium.webdriver import Remote
 from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
 
 class _SeleniumWrapper:
-    def __init__(self, context)
+    def __init__(self, context):
         """Constructor pulls capabilities and other webdriver config from the context
         which should allow user to set whatever browser configuration that they want.
         Anything which needs a dictionary or object will be imported from a definition
@@ -29,22 +29,21 @@ class _SeleniumWrapper:
             self._proxy = spec_import(self._proxy)
         
         self._browser_profile = self._context.config.get("webdriver_browser_profile", None)
-        if self._browser_profile
+        if self._browser_profile:
             self._browser_profile = spec_import(self._browser_profile)
 
         self._options = self._context.config.get("webdriver_options", None)
-        if self._options
+        if self._options:
             self._options = spec_import(self._options)
 
         # Required param
         self._capabilities = self._context.config.get('webdriver_capabilities')
-        if not type(self._capabilities) == 'dict':
-            self._capabilities = spec_import(self._capabiltiies)
+        if not type(self._capabilities) == dict:
+            self._capabilities = spec_import(self._capabilities)
 
-
-     def start(self):
-        self._context.browser = webdriver.Remote(
-                desired_capbilities=self._capabilities,
+    def start(self):
+        self._context.browser = Remote(
+                desired_capabilities=self._capabilities,
                 command_executor=self._command_executor,
                 browser_profile=self._browser_profile,
                 proxy=self._proxy,
