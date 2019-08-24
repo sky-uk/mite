@@ -5,8 +5,8 @@ import tempfile
 
 
 data_value = "Data value for the recorder unit test"
-msg_create = {"type": "data_created", "name": "recorderTest", "data": data_value}
-msg_purge = {"type": "purge_data", "name": "recorderTest", "data": data_value}
+msg_create = {"type": "data_created", "name": "recorder_create_test", "data": data_value}
+msg_purge = {"type": "purge_data", "name": "recorder_purge_test"}
 
 
 def test_process_message_file_opening():
