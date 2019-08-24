@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
-from mocks.mock_context import MockContext
-from mocks.mock_selenium import MockWebdriver
-from mite_selenium import _SeleniumWrapper
+import pytest
 
+from mocks.mock_context import MockContext
+from mite_selenium import _SeleniumWrapper, mite_selenium
 
 EXAMPLE_WEBDRIVER_CONFIG = {
         "webdriver_command_executor" : "http://127.0.0.1:4444/wd/test",
@@ -72,7 +72,24 @@ def test_webdriver_start_stop(MockRemote):
             options=None,
             proxy=None)
     wrapper.stop()
-    # For some reason, calling the Mock makes a refence to the instance
+    # For some reason, calling the Mock provides a reference to the instance
     # that was created when the mock was previously instantiated
     MockRemote().close.assert_called()
-     
+
+
+@pytest.mark.asyncio
+async def test_selenium_context_manager():
+    context=MockContext()
+    context.config = DICT_CAPABILITIES_CONFIG
+
+    @mite_selenium
+    async def test(context):
+        pass    
+
+    # patch with async decorator misbehaving
+    with patch('mite_selenium.Remote', autospec=True) as MockRemote:
+        await test(context)
+
+    MockRemote.assert_called()
+    MockRemote().close.assert_called()
+

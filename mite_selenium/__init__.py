@@ -63,5 +63,13 @@ class _SeleniumContextManager:
     async def __aenter__(self):
         self._webdriver.start()
 
-    async def __aexit__(self):
+    async def __aexit__(self, *args):
         self._webdriver.stop()
+
+
+def mite_selenium(func):
+    async def wrapper(ctx, *args, **kwargs):
+        async with _SeleniumContextManager(ctx):
+            return await func(ctx, *args, **kwargs)
+    return wrapper
+
