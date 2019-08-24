@@ -6,7 +6,7 @@ import tempfile
 
 data_value = "Data value for the recorder unit test"
 msg_create = {"type": "data_created", "name": "recorder_create_test", "data": data_value}
-msg_purge = {"type": "purge_data", "name": "recorder_purge_test"}
+msg_purge = {"type": "purge_data", "name": "recorder_purge_test", "data": data_value}
 
 
 def test_process_message_file_opening():
@@ -30,4 +30,4 @@ def test_process_message_remove_file():
             f.write(data_value.encode('utf-8'))
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_purge)
-        assert os.stat(os.path.join(tempdir, msg_create['name'] + '.msgpack')).st_size == 0
+        assert not os.path.isfile(os.path.join(tempdir, msg_create['name'] + '.msgpack'))
