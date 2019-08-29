@@ -9,36 +9,61 @@ check_msg_rollback = " TEST_MSG_5"
 
 
 def test_collector_msg_value():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(temp_dir)
+        for i in range(5):
+            collector.process_raw_message((raw_msg + str(i)).encode())
 
-    temp_dir = tempfile.mkdtemp()
-    collector = Collector(temp_dir)
-    for i in range(5):
-        collector.process_raw_message((raw_msg + str(i)).encode())
+        # Force the buffer to write to the file by removing the open handle
+        del collector
 
-    # Force the buffer to write to the file by removing the open handle
-    del collector
-
-    new_file = temp_dir + '/current'
-    with open(new_file, 'r') as f:
-        last_string = f.readline()
-    assert check_msg_value in last_string
+        new_file = temp_dir + '/current'
+        with open(new_file, 'r') as f:
+            last_string = f.readline()
+        assert check_msg_value in last_string
 
 
 def test_collector_rollback():
-    temp_dir = tempfile.mkdtemp()
-    collector = Collector(temp_dir, 5)
-    for i in range(9):
-        collector.process_raw_message((raw_msg + str(i)).encode())
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(temp_dir, 5)
+        for i in range(9):
+            collector.process_raw_message((raw_msg + str(i)).encode())
 
-    # Force the buffer to write to the dile by removing the open hadle
-    del collector
+        # Force the buffer to write to the dile by removing the open hadle
+        del collector
 
-    new_file = temp_dir + '/current'
-    with open(new_file, 'r') as f:
-        f0_last_string = f.readline()
-    test_dir = temp_dir + '/'
-    new_file = glob.glob(os.path.join(test_dir, '15*0'))[0]
-    with open(new_file, 'r') as f:
-        f1_last_string = f.readline()
-    assert check_msg_rollback in f0_last_string
-    assert check_msg_value in f1_last_string
+        new_file = temp_dir + '/current'
+        with open(new_file, 'r') as f:
+            f0_last_string = f.readline()
+        test_dir = temp_dir + '/'
+        new_file = glob.glob(os.path.join(test_dir, '15*0'))[0]
+        with open(new_file, 'r') as f:
+            f1_last_string = f.readline()
+        assert check_msg_rollback in f0_last_string
+        assert check_msg_value in f1_last_string
+
+
+def test_rotating_file():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(temp_dir)
+        for i in range(1):
+            collector.process_raw_message((raw_msg + str(i)).encode())
+
+        # Force the buffer to write to the file by removing the open handle
+        del collector
+
+        coll_curr_start_time = os.path.join(temp_dir, 'current_start_time')
+        if os.path.isfile(coll_curr_start_time):
+            with open(coll_curr_start_time, "r") as f:
+                start_time = f.read()
+        else:
+            raise Exception
+
+        # Creating a new controler to rotate the current file
+        collector = Collector(temp_dir)
+
+        flag = False
+        for file in os.listdir(temp_dir):
+             if file.split("_")[0] == start_time:
+                  flag = True
+        assert flag
