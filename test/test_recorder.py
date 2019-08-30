@@ -34,5 +34,7 @@ def test_process_message_remove_file():
         try:
             open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb")
             assert False, "the file has not been deleted"
-        except:
+        except FileNotFoundError:
             assert True
+        except:
+            assert False, "An unexpected error occured during the test"
