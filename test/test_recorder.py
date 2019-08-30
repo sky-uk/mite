@@ -20,8 +20,9 @@ def test_process_message_right_content():
     with tempfile.TemporaryDirectory() as tempdir:
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_create)    
-        unpacked = msgpack.Unpacker(open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb"), encoding='utf-8', use_list=False)
-        assert next(unpacked) == data_value
+        with open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb") as f:
+            unpacked = msgpack.Unpacker(f, encoding='utf-8', use_list=False)
+            assert next(unpacked) == data_value
 
 
 def test_process_message_remove_file():
@@ -30,4 +31,8 @@ def test_process_message_remove_file():
             f.write(data_value.encode('utf-8'))
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_purge)
-        assert not os.path.isfile(os.path.join(tempdir, msg_create['name'] + '.msgpack'))
+        try:
+            open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb")
+            assert False, "the file has not been deleted"
+        except:
+            assert True
