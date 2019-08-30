@@ -46,8 +46,7 @@ def test_collector_rollback():
 def test_rotating_file():
     with tempfile.TemporaryDirectory() as temp_dir:
         collector = Collector(temp_dir)
-        for i in range(1):
-            collector.process_raw_message((raw_msg + str(i)).encode())
+        collector.process_raw_message((raw_msg).encode())
 
         # Force the buffer to write to the file by removing the open handle
         del collector
@@ -57,13 +56,9 @@ def test_rotating_file():
             with open(coll_curr_start_time, "r") as f:
                 start_time = f.read()
         else:
-            raise Exception
+            assert False, "The collector_start_time file doen't exist"
 
         # Creating a new controler to rotate the current file
         collector = Collector(temp_dir)
 
-        flag = False
-        for file in os.listdir(temp_dir):
-             if file.split("_")[0] == start_time:
-                  flag = True
-        assert flag
+        assert any(file.startswith(start_time + "_") for file in os.listdir(temp_dir))
