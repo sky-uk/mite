@@ -43,10 +43,10 @@ def test_config_defaults():
     wrapper = _SeleniumWrapper(context)
     assert wrapper._command_executor == "http://127.0.0.1:4444/wd/hub"
     assert wrapper._keep_alive == False
-    assert wrapper._file_detector == None
-    assert wrapper._proxy == None
-    assert wrapper._browser_profile == None
-    assert wrapper._options == None
+    assert wrapper._file_detector is None
+    assert wrapper._proxy is None
+    assert wrapper._browser_profile is None
+    assert wrapper._options is None
     assert wrapper._capabilities == True
 
 
