@@ -20,26 +20,21 @@ class _SeleniumWrapper:
                 "http://127.0.0.1:4444/wd/hub")
         self._keep_alive = self._context.config.get("webdriver_keep_alive", False)
         
-        self._file_detector = self._context.config.get("webdriver_file_detector", None)
-        if self._file_detector:
-            self._file_detector = spec_import(self._file_detector)
-        
-        self._proxy = self._context.config.get("webdriver_proxy", None)
-        if self._proxy:
-            self._proxy = spec_import(self._proxy)
-        
-        self._browser_profile = self._context.config.get("webdriver_browser_profile", None)
-        if self._browser_profile:
-            self._browser_profile = spec_import(self._browser_profile)
-
-        self._options = self._context.config.get("webdriver_options", None)
-        if self._options:
-            self._options = spec_import(self._options)
+        self._file_detector = self._spec_import_if_none("webdriver_file_detector")
+        self._proxy = self._spec_import_if_none("webdriver_proxy")
+        self._browser_profile = self._spec_import_if_none("webdriver_browser_profile")
+        self._options = self._spec_import_if_none("webdriver_options")
 
         # Required param
         self._capabilities = self._context.config.get('webdriver_capabilities')
         if not type(self._capabilities) == dict:
             self._capabilities = spec_import(self._capabilities)
+
+    def _spec_import_if_none(self, config_option):
+        value = self._context.config.get(config_option, None)
+        if value:
+            value = spec_import(value)
+        return value
 
     def start(self):
         self._context.browser = Remote(
