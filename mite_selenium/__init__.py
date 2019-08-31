@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+from contextlib import asynccontextmanager
 from selenium.webdriver import Remote
 from mite.utils import spec_import
 
@@ -50,21 +50,19 @@ class _SeleniumWrapper:
         self._context.browser.close()
 
 
-class _SeleniumContextManager:
-    def __init__(self, context):
-        self._context = context
-        self._webdriver = _SeleniumWrapper(context)
-
-    async def __aenter__(self):
-        self._webdriver.start()
-
-    async def __aexit__(self, *args):
-        self._webdriver.stop()
+@asynccontextmanager
+async def _selenium_context_manager(context):
+    try:
+        sw = _SeleniumWrapper(context)
+        sw.start()
+        yield
+    finally:
+        sw.stop()
 
 
 def mite_selenium(func):
     async def wrapper(ctx, *args, **kwargs):
-        async with _SeleniumContextManager(ctx):
+        async with _selenium_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
     return wrapper
 
