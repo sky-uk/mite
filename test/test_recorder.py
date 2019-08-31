@@ -31,10 +31,5 @@ def test_process_message_remove_file():
             f.write(data_value.encode('utf-8'))
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_purge)
-        try:
-            open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb")
-            assert False, "the file has not been deleted"
-        except FileNotFoundError:
-            assert True
-        except:
-            assert False, "An unexpected error occured during the test"
+        with open(os.path.join(tempdir, msg_purge['name'] + '.msgpack'), "rb") as f:
+            assert len(f.read()) == 0
