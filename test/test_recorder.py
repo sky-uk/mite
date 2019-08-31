@@ -31,5 +31,10 @@ def test_process_message_remove_file():
             f.write(data_value.encode('utf-8'))
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_purge)
-        with open(os.path.join(tempdir, msg_purge['name'] + '.msgpack'), "rb") as f:
-            assert len(f.read()) == 0
+        try:
+            open(os.path.join(tempdir, msg_purge['name'] + '.msgpack'), "rb")
+            assert False, "The file has not been removed"
+        except FileNotFoundError:
+            assert True
+        except Exception as e:
+            assert False, e
