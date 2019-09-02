@@ -1,6 +1,8 @@
 import time
 from collections import defaultdict
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Counter:
     def __init__(self, name, matcher, labels_extractor):
@@ -78,6 +80,7 @@ class Histogram:
 
 def matcher_by_type(*targets):
     def type_matcher(msg):
+        logger.debug("message to match by type: %s", msg)
         return 'type' in msg and msg['type'] in targets
     return type_matcher
 
