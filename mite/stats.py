@@ -80,7 +80,7 @@ class Histogram:
 
 def matcher_by_type(*targets):
     def type_matcher(msg):
-        logger.debug("message to match by type: %s", msg)
+        logger.debug("message to match by type: %s" % (msg))
         return 'type' in msg and msg['type'] in targets
     return type_matcher
 
