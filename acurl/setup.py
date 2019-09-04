@@ -18,4 +18,8 @@ cpy_extension = Extension(
 )
 
 
-setup(setup_requires="setuptools_scm", ext_modules=[cpy_extension])
+setup(
+    ext_modules=[cpy_extension],
+    setup_requires="setuptools_scm",
+    use_scm_version={'root': '..', 'relative_to': __file__},
+)

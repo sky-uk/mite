@@ -1,5 +1,8 @@
 from collections import defaultdict
 import threading
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def format_dict(d):
@@ -100,6 +103,7 @@ class PrometheusMetrics:
         self.stats = {}
 
     def process(self, msg):
+        logger.debug("message to iterate in prometheus metrics: %s" % (msg))
         for stat in msg:
             name = stat['name']
             if name not in self.stats:
