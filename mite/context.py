@@ -1,87 +1,25 @@
-import asyncio
 import logging
+import sys
 import time
 import traceback
-import warnings
 from itertools import count
 
+from contextlib import asynccontextmanager
 from .exceptions import MiteError
 
 
 logger = logging.getLogger(__name__)
 
 
-class HandledException(BaseException):
-    def __init__(self, original_exception, original_tb):
-        self.original_exception = original_exception
-        self.original_tb = original_tb
-
-
-class HandledMiteError(HandledException):
-    pass
-
-
-def drop_to_debugger(traceback):
-    try:
-        import ipdb as pdb
-    except ImportError:
-        warnings.warn('ipdb not available, falling back to pdb')
-        import pdb
-    pdb.post_mortem(traceback)
-
-
-class _TransactionContextManager:
-    def __init__(self, ctx, name):
-        self._ctx = ctx
-        self._name = name
-
-    async def __aenter__(self):
-        self._ctx._start_transaction(self._name)
-
-    async def __aexit__(self, exception_type, exception_val, traceback):
-        try:
-            if exception_val and not isinstance(exception_val, (HandledException, KeyboardInterrupt)):
-                if isinstance(exception_val, MiteError):
-                    self._ctx._send_mite_error(exception_val, traceback)
-                else:
-                    self._ctx._send_exception(exception_val, traceback)
-                if self._ctx._debug:
-                    drop_to_debugger(traceback)
-                if isinstance(exception_val, MiteError):
-                    raise HandledMiteError(exception_val, traceback)
-                else:
-                    raise HandledException(exception_val, traceback)
-        finally:
-            self._ctx._end_transaction()
-
-
-class _ExceptionHandlerContextManager:
-    def __init__(self, ctx):
-        self._ctx = ctx
-
-    async def __aenter__(self):
-        pass
-
-    async def __aexit__(self, exception_type, exception_val, traceback):
-        if exception_val:
-            if isinstance(exception_val, KeyboardInterrupt):
-                return False
-            if not isinstance(exception_val, HandledMiteError):
-                if not isinstance(exception_val, HandledException):
-                    self._ctx._send_exception(exception_val, traceback)
-                    if self._ctx._debug:
-                        drop_to_debugger(traceback)
-                await asyncio.sleep(1)
-            return not self._ctx._debug
-        return True
+def _tb_format_location(tb):
+    f_code = tb.tb_frame.f_code
+    return f"{f_code.co_filename}:{tb.tb_lineno}:{f_code.co_name}"
 
 
 class Context:
-    def __init__(self, send, config, id_data=None, should_stop_func=None, debug=False):
-        self._send = send
+    def __init__(self, send_fn, config, id_data={}, should_stop_func=None, debug=False):
+        self._send_fn = send_fn
         self._config = config
-        if id_data is None:
-            id_data = {}
         self._id_data = id_data
         self._should_stop_func = should_stop_func
         self._transaction_names = []
@@ -99,16 +37,6 @@ class Context:
             return self._should_stop_func()
         return False
 
-    def send(self, type, **content):
-        msg = content
-        msg['type'] = type
-        self._add_context_headers_and_time(msg)
-        self._send(msg)
-        logger.debug("sent message: %s", msg)
-
-    def transaction(self, name):
-        return _TransactionContextManager(self, name)
-
     @property
     def _transaction_name(self):
         # Probably badly named, should be current transaction name
@@ -125,42 +53,55 @@ class Context:
         else:
             return ''
 
-    def _add_context_headers(self, msg):
+    def send(self, type, **msg):
+        msg = dict(msg)
+        msg['type'] = type
+        msg['time'] = time.time()
         msg.update(self._id_data)
         msg['transaction'] = self._transaction_name
         msg['transaction_id'] = self._transaction_id
+        self._send_fn(msg)
+        logger.debug("sent message: %s", msg)
 
-    def _add_context_headers_and_time(self, msg):
-        self._add_context_headers(msg)
-        msg['time'] = time.time()
-
-    def _extract_filename_lineno_funcname(self, tb):
-        f_code = tb.tb_frame.f_code
-        return f_code.co_filename, tb.tb_lineno, f_code.co_name
-
-    def _tb_format_location(self, tb):
-        return '{}:{}:{}'.format(*self._extract_filename_lineno_funcname(tb))
-
-    def _send_exception(self, value, tb):
-        message = str(value)
-        ex_type = type(value).__name__
-        location = self._tb_format_location(tb)
-        stacktrace = ''.join(traceback.format_tb(tb))
-        self.send('exception', message=message, ex_type=ex_type, location=location, stacktrace=stacktrace)
-
-    def _send_mite_error(self, value, tb):
-        location = self._tb_format_location(tb)
-        self.send('error', message=str(value), location=location, **value.fields)
-
-    def _start_transaction(self, name):
+    @asynccontextmanager
+    async def transaction(self, name):
+        # FIXME: instead of a stack (i.e. list), we can probably use something
+        # like a context variable (from py3.7) here.  Alternatively, we might
+        # be able to get away with just using local variables (for the old
+        # values) and a simple (non-stack) instance var (for the current one)
         self._transaction_ids.append(next(self._trans_id_gen))
         self._transaction_names.append(name)
-        self.send('start')
+        start_time = time.time()
 
-    def _end_transaction(self):
-        self.send('end')
-        self._transaction_names.pop()
-        self._transaction_ids.pop()
+        try:
+            yield None
+        except Exception as e:
+            if isinstance(e, MiteError):
+                self._send_mite_error(e)
+            else:
+                self._send_exception(e)
+            if self._debug:  # pragma: no cover
+                breakpoint()
+        finally:
+            self.send('txn', start_time=start_time)
+            self._transaction_names.pop()
+            self._transaction_ids.pop()
 
-    def _exception_handler(self):
-        return _ExceptionHandlerContextManager(self)
+    def _send_exception(self, value):
+        message = str(value)
+        ex_type = type(value).__name__
+        tb = sys.exc_info()[2]
+        location = _tb_format_location(tb)
+        stacktrace = ''.join(traceback.format_tb(tb))
+        self.send(
+            'exception',
+            message=message,
+            ex_type=ex_type,
+            location=location,
+            stacktrace=stacktrace,
+        )
+
+    def _send_mite_error(self, value):
+        tb = sys.exc_info()[2]
+        location = _tb_format_location(tb)
+        self.send('error', message=str(value), location=location, **value.fields)
