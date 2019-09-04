@@ -1,6 +1,5 @@
 from mite.context import Context
 from mocks.mock_sender import SenderMock
-from mocks.mock_runner_conf import RunnerConfigMock
 
 test_msg = 'test msg for the unit test'
 

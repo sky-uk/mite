@@ -6,19 +6,29 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 import mite_http
 
-EMBEDDED_URL_REGEX = re_compile("\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE)
+# TODO: fix
+EMBEDDED_URL_REGEX = re_compile(
+    "\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE  # noqa: W605
+)
+
 
 class OptionError(MiteError):
     def __init__(self, value, options):
-        super().__init__("%r not in options %r" % (value, options), value=value, options=options)
+        super().__init__(
+            "%r not in options %r" % (value, options), value=value, options=options
+        )
 
 
 class ElementNotFoundError(MiteError):
     def __init__(self, **kwargs):
         text = kwargs.pop('text', '').replace("'", "").replace('"', '')
         kwargs['text'] = text
-        super().__init__("Could not find element in page with search terms: {}".format(sorted(kwargs.items())),
-                         **kwargs)
+        super().__init__(
+            "Could not find element in page with search terms: {}".format(
+                sorted(kwargs.items())
+            ),
+            **kwargs,
+        )
 
 
 def url_builder(base_url, *args, **kwargs):
@@ -39,12 +49,15 @@ def browser_decorator(separation=0):
                     result = await func(context, *args, **kwargs)
                 del context.browser
                 return result
+
         return wrapper
+
     return wrapper_factory
 
 
 class Browser:
     """Browser abstraction wraps a session and provides some behaviour that is closer to a real browser."""
+
     def __init__(self, context, embedded_res=False):
         self._ctx = context
         self._session = context.http
@@ -57,10 +70,18 @@ class Browser:
 
     async def _download_resources(self, origin):
         """Downloads embedded resources, will do this recursively when content like iframes are present"""
-        await asyncio.gather(*[self._download_resource(url, origin, rtype)
-                               for url, rtype in origin._embeded_urls])
-        await asyncio.gather(*[self._download_resources(resource)
-                               for resource in origin._resources_with_embedabbles])
+        await asyncio.gather(
+            *[
+                self._download_resource(url, origin, rtype)
+                for url, rtype in origin._embeded_urls
+            ]
+        )
+        await asyncio.gather(
+            *[
+                self._download_resources(resource)
+                for resource in origin._resources_with_embedabbles
+            ]
+        )
 
     async def request(self, method, url, *args, **kwargs):
         """Perform a request and return a page object"""
@@ -69,7 +90,9 @@ class Browser:
         resp = await self._session.request(method, url, *args, **kwargs)
         page = Page(resp, self)
         if embedded_res:
-            async with self._ctx.transaction(self._ctx._transaction_name + " - embedded resources"):
+            async with self._ctx.transaction(
+                self._ctx._transaction_name + " - embedded resources"
+            ):
                 await self._download_resources(page)
         return page
 
@@ -98,6 +121,7 @@ class Browser:
 
 class Resource:
     """Base class for web resources"""
+
     def __init__(self, response, browser):
         self.response = response
         self.browser = browser
@@ -105,6 +129,7 @@ class Resource:
     @property
     def text(self):
         return self.response.text
+
     @property
     def _embeded_urls(self):
         """At the moment there is no reason to look for a url inside the resource source code such an image"""
@@ -118,6 +143,7 @@ class Resource:
 
 class Page(Resource):
     """Page object built from a HTML response."""
+
     def __init__(self, response, browser):
         super().__init__(response, browser)
         self._dom = None
@@ -223,20 +249,28 @@ class Page(Resource):
         href = elem.attrs['href']
         return await self.browser.get(url_builder(self.response.url, href))
 
-    async def xhr_request(self, method, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs):
-        headers = {
-            'Referer': self.response.url,
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+    async def xhr_request(
+        self, method, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs
+    ):
+        headers = {'Referer': self.response.url, 'X-Requested-With': 'XMLHttpRequest'}
         if formdata is not None:
             assert data is None
             data = urlencode(formdata)
             headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
-        return await self.browser._session.request(method, url_builder(self.response.url, rel_or_abs_url),
-                                                   data=data, json=json, headers=headers)
+        return await self.browser._session.request(
+            method,
+            url_builder(self.response.url, rel_or_abs_url),
+            data=data,
+            json=json,
+            headers=headers,
+        )
 
-    async def xhr_post(self, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs):
-        return await self.xhr_request('POST', rel_or_abs_url, formdata=formdata, data=data, json=json, **kwargs)
+    async def xhr_post(
+        self, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs
+    ):
+        return await self.xhr_request(
+            'POST', rel_or_abs_url, formdata=formdata, data=data, json=json, **kwargs
+        )
 
     def __repr__(self):
         return str(self.dom)
@@ -253,6 +287,7 @@ class Script(Resource):
 
 class Stylesheet(Resource):
     """Stylesheet object"""
+
     def __init__(self, response, browser):
         super().__init__(response, browser)
         self.resources = []
@@ -268,7 +303,7 @@ class Stylesheet(Resource):
             yield url_builder(self.response.url, match[2]), "resource"
 
     def _register_resource(self, response, rtype):
-            self.resources.append(Resource(response, self.browser))
+        self.resources.append(Resource(response, self.browser))
 
     @property
     def _resources_with_embedabbles(self):
@@ -299,7 +334,11 @@ class Form:
         supporting files so just data will be submitted.
 
         TODO: Add file support back in when we have acurl sorted"""
-        return {'data': urlencode({name: f.value for name, f in self.fields.items() if not f.disabled})}
+        return {
+            'data': urlencode(
+                {name: f.value for name, f in self.fields.items() if not f.disabled}
+            )
+        }
 
     def _extract_fields_as_subtype(self):
         FIELD_TYPES = ['select', 'textarea', 'input']
@@ -350,11 +389,22 @@ class Form:
         if base_url == '':
             base_url = self._page.response.url
         return await self._page.browser.request(
-            self.method, url_builder(base_url, self.action), embedded_res=embedded_res, **self._serialize(), **kwargs)
+            self.method,
+            url_builder(base_url, self.action),
+            embedded_res=embedded_res,
+            **self._serialize(),
+            **kwargs,
+        )
 
     def __repr__(self):
         return '<%s name=%r method=%r action=%r fields=%r files=%r>' % (
-            self.__class__.__name__, self.name, self.method, self.action, self.fields, self.files)
+            self.__class__.__name__,
+            self.name,
+            self.method,
+            self.action,
+            self.fields,
+            self.files,
+        )
 
 
 def _field_is_disabled(element):
@@ -388,7 +438,12 @@ class BaseFormField:
         self._value = value
 
     def __repr__(self):
-        return '<%s name=%r value=%r disabled=%r>' % (self.__class__.__name__, self.name, self.value, self.disabled)
+        return '<%s name=%r value=%r disabled=%r>' % (
+            self.__class__.__name__,
+            self.name,
+            self.value,
+            self.disabled,
+        )
 
 
 class SelectField(BaseFormField):
@@ -427,6 +482,7 @@ class CheckboxField(BaseFormField):
 
 class RadioField:
     """Radio fields are made up of multiple inputs with the same name but submit only one value."""
+
     def __init__(self, elements):
         self.elements = elements
         self.name = elements[0].attrs.get('name')
@@ -450,8 +506,13 @@ class RadioField:
             raise OptionError(value, self.options)
 
     def __repr__(self):
-        return '<%s name=%r value=%r options=%r disabled=%r>' % (self.__class__.__name__, self.name, self.value,
-                                                                 self.options, self.disabled)
+        return '<%s name=%r value=%r options=%r disabled=%r>' % (
+            self.__class__.__name__,
+            self.name,
+            self.value,
+            self.options,
+            self.disabled,
+        )
 
 
 class FileInputField(BaseFormField):

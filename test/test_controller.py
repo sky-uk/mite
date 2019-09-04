@@ -5,6 +5,7 @@ from werkzeug.wrappers import Response
 import ujson
 from mite.__main__ import _controller_log_start, _controller_log_end
 from pytest_httpserver.httpserver import HandlerType
+import json
 
 
 TESTNAME = "unit_test_name"
