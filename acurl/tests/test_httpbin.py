@@ -1,7 +1,7 @@
 import acurl
-import asyncio
 from urllib.parse import urlencode
 import pytest
+
 
 def session():
     el = acurl.EventLoop()
@@ -28,7 +28,7 @@ async def test_cookies():
 @pytest.mark.asyncio
 async def test_session_cookies():
     s = session()
-    r = await s.get('https://httpbin.org/cookies/set?name=value')
+    await s.get('https://httpbin.org/cookies/set?name=value')
     cookie_list = await s.get_cookie_list()
     assert len(cookie_list) == 1
     assert cookie_list[0].name == 'name'
@@ -41,21 +41,27 @@ async def test_session_cookies():
 async def test_set_cookies():
     s = session()
     await s.get('https://httpbin.org/cookies/set?name=value')
-    r = await s.get('https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'})
+    r = await s.get(
+        'https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'}
+    )
     assert r.cookies == {'name': 'value', 'name2': 'value', 'name3': 'value'}
 
 
 @pytest.mark.asyncio
 async def test_basic_auth():
     s = session()
-    r = await s.get('https://httpbin.org/basic-auth/user/password', auth=('user', 'password'))
+    r = await s.get(
+        'https://httpbin.org/basic-auth/user/password', auth=('user', 'password')
+    )
     assert r.status_code == 200
 
 
 @pytest.mark.asyncio
 async def test_failed_basic_auth():
     s = session()
-    r = await s.get('https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword'))
+    r = await s.get(
+        'https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword')
+    )
     assert r.status_code == 401
 
 

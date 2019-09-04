@@ -5,25 +5,25 @@ from werkzeug.wrappers import Response as WZResponse
 
 @pytest.mark.asyncio
 async def test_request_no_data_raises():
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     with pytest.raises(ValueError):
-        r = await s.request("GET", "http://foo.com", json={}, data="")
+        await s.request("GET", "http://foo.com", json={}, data="")
 
 
 @pytest.mark.skip
 async def test_invalid_method_raises():
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     with pytest.raises(ValueError):
-        r = await s.request("FOO", "http://foo.com")
+        await s.request("FOO", "http://foo.com")
 
 
 @pytest.mark.asyncio
 async def test_get(httpserver):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     r = await s.get(httpserver.url_for("/test"))
 
     assert isinstance(r, acurl.Response)
@@ -37,8 +37,8 @@ async def test_get_headers(httpserver):
     httpserver.expect_oneshot_request(
         "/test", "GET", headers={"My-Header": "is-awesome"}
     ).respond_with_data("hi")
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     r = await s.get(httpserver.url_for("/test"), headers={"My-Header": "is-awesome"})
 
     assert isinstance(r, acurl.Response)
@@ -52,8 +52,8 @@ async def test_post_json(httpserver):
     httpserver.expect_oneshot_request(
         "/test", "POST", data='{"foo":"bar"}'
     ).respond_with_data("hi")
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
 
     r = await s.post(httpserver.url_for("/test"), json={"foo": "bar"})
 
@@ -68,8 +68,8 @@ async def test_post_data(httpserver):
     httpserver.expect_oneshot_request("/test", "POST", data="foobar").respond_with_data(
         "hi"
     )
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
 
     r = await s.post(httpserver.url_for("/test"), data="foobar")
 
@@ -89,8 +89,8 @@ def test_cookies():
 @pytest.mark.asyncio
 async def test_response_callback(httpserver):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     called = False
 
     def response_cb(resp):
@@ -101,7 +101,7 @@ async def test_response_callback(httpserver):
         called = True
 
     s.set_response_callback(response_cb)
-    r = await s.get(httpserver.url_for("/test"))
+    await s.get(httpserver.url_for("/test"))
     assert called
     httpserver.check_assertions()
 
@@ -113,8 +113,8 @@ async def test_redirect(httpserver):
     )
     httpserver.expect_oneshot_request("/test2", "GET").respond_with_data("hi")
 
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     r = await s.get(httpserver.url_for("/test"))
 
     assert r.body == b"hi"
@@ -129,10 +129,10 @@ async def test_max_redirects_raises(httpserver):
         WZResponse(status=301, headers={"Location": "/test2"})
     )
 
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     with pytest.raises(acurl.RequestError):
-        r = await s.get(httpserver.url_for("/test"), max_redirects=0)
+        await s.get(httpserver.url_for("/test"), max_redirects=0)
 
 
 @pytest.mark.asyncio
@@ -141,8 +141,8 @@ async def test_disallow_redirects(httpserver):
         WZResponse(status=301, headers={"Location": "/test2"})
     )
 
-    l = acurl.EventLoop()
-    s = l.session()
+    loop = acurl.EventLoop()
+    s = loop.session()
     r = await s.get(httpserver.url_for("/test"), allow_redirects=False)
 
     assert r.status_code == 301

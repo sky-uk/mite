@@ -28,5 +28,3 @@ class Recorder:
                         os.remove(msg_file)
                     except FileNotFoundError:
                         logger.info("Tried to delete a file that didn't exist, continuing")
-                    finally:
-                        open(msg_file, 'ab').close()

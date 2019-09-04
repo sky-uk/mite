@@ -1,4 +1,7 @@
-class DirectReceiverMock():
+from mite.utils import pack_msg
+
+
+class DirectReceiverMock:
     def __init__(self):
         self._listeners = []
         self._raw_listeners = []
