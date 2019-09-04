@@ -1,9 +1,5 @@
 #!/bin/sh
 
-# echo "" | x86_64-linux-gnu-gcc -xc -E -v -
-
-ls /usr/include/x86_64-linux-gnu
-
 MY_VENV=$HOME/mite-tests
 
 python3.7 -m venv $MY_VENV
