@@ -59,8 +59,10 @@ class Histogram:
         self.name = name
         self.labels = message['labels']
         self.bins = message['bins']
-        self.bin_counts = defaultdict(lambda: [0] * len(self.bins),
-                                      {k: list(v) for k, v in message['bin_counts'].items()})
+        self.bin_counts = defaultdict(
+            lambda: [0] * len(self.bins),
+            {k: list(v) for k, v in message['bin_counts'].items()},
+        )
         self.sums = defaultdict(float, message['sums'])
         self.total_counts = defaultdict(int, message['total_counts'])
 
@@ -84,18 +86,19 @@ class Histogram:
                 total_count = self.total_counts[key]
                 labels = format_dict(dict(zip(self.labels, key)))
                 for bin_label, bin_count in zip(self.bins, bin_counts):
-                    lines.append('%s_bucket{%s,le="%.6f"} %d' % (self.name, labels, bin_label, bin_count))
-                lines.append('%s_bucket{%s,le="+Inf"} %d' % (self.name, labels, total_count))
+                    lines.append(
+                        '%s_bucket{%s,le="%.6f"} %d'
+                        % (self.name, labels, bin_label, bin_count)
+                    )
+                lines.append(
+                    '%s_bucket{%s,le="+Inf"} %d' % (self.name, labels, total_count)
+                )
                 lines.append('%s_sum{%s} %.6f' % (self.name, labels, sum))
                 lines.append('%s_count{%s} %d' % (self.name, labels, total_count))
         return '\n'.join(lines)
 
 
-STAT_TYPES = {
-    'Counter': Counter,
-    'Gauge': Gauge,
-    'Histogram': Histogram,
-}
+STAT_TYPES = {'Counter': Counter, 'Gauge': Gauge, 'Histogram': Histogram}
 
 
 class PrometheusMetrics:
@@ -103,7 +106,7 @@ class PrometheusMetrics:
         self.stats = {}
 
     def process(self, msg):
-        logger.debug("message to iterate in prometheus metrics: %s" % (msg))
+        logger.debug("message to iterate in prometheus metrics: %s" % (msg,))
         for stat in msg:
             name = stat['name']
             if name not in self.stats:
