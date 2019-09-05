@@ -343,11 +343,11 @@ def _controller_log_start(scenario_spec, logging_url):
 
 
 def _controller_log_end(logging_id, logging_url):
-    if not logging_url.endswith("/"):
-        logging_url += "/"
-
     if logging_id is None:
         return
+
+    if not logging_url.endswith("/"):
+        logging_url += "/"
 
     url = logging_url + "end"
     logger.info(f"Logging test end to {url}")
