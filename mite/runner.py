@@ -1,11 +1,17 @@
 import asyncio
 from itertools import count
 import logging
+import functools
 
 from .context import Context
 from .utils import spec_import
 
 logger = logging.getLogger(__name__)
+
+
+@functools.lru_cache(maxsize=None)
+def spec_import_cached(journey_spec):
+    return spec_import(journey_spec)
 
 
 class RunnerControllerTransportExample:  # pragma: nocover
@@ -143,7 +149,7 @@ class Runner:
                      scenario_id, scenario_data_id, journey_spec, args)
         async with context._exception_handler():
             async with context.transaction('__root__'):
-                journey = spec_import(journey_spec)
+                journey = spec_import_cached(journey_spec)
                 if args is None:
                     await journey(context)
                 else:
