@@ -3,16 +3,12 @@ import importlib
 import asyncio
 
 
-_msg_unpacker = msgpack.Unpacker(encoding='utf-8', use_list=False)
-
-
 def unpack_msg(msg):
-    _msg_unpacker.feed(msg)
-    return _msg_unpacker.unpack()
+    return msgpack.unpackb(msg, use_list=False, raw=False)
 
 
-_msg_packer = msgpack.Packer(use_bin_type=True)
-pack_msg = _msg_packer.pack
+def pack_msg(msg):
+    return msgpack.packb(msg, unse_bin_type=True, strict_types=True)
 
 
 def spec_import(spec):
