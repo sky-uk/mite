@@ -59,6 +59,6 @@ def test_rotating_file():
             assert False, "The collector_start_time file doen't exist"
 
         # Creating a new controler to rotate the current file
-        collector = Collector(temp_dir)
+        collector = Collector(temp_dir)  # noqa: F841
 
         assert any(file.startswith(start_time + "_") for file in os.listdir(temp_dir))
