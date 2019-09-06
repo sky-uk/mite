@@ -1,5 +1,4 @@
 import os
-from pytest import raises
 
 from mite.config import ConfigManager, default_config_loader
 
@@ -51,7 +50,7 @@ def test_get():
     assert cm.get("foo") == "bar"
 
 
-def test_nonexistent_get_raises():
+def test_get_with_default():
     cm = ConfigManager()
-    with raises(KeyError):
-        cm.get("foo")
+    foo = cm.get("foo", "bar")
+    assert foo == "bar"
