@@ -22,8 +22,8 @@ class Context:
         self._config = config
         self._id_data = id_data
         self._should_stop_func = should_stop_func
-        self._transaction_names = []
-        self._transaction_ids = []
+        self._transaction_name = ""
+        self._transaction_id = None
         self._debug = debug
         self._trans_id_gen = count(1)
 
@@ -37,22 +37,6 @@ class Context:
             return self._should_stop_func()
         return False
 
-    @property
-    def _transaction_name(self):
-        # Probably badly named, should be current transaction name
-        if self._transaction_names:
-            return self._transaction_names[-1]
-        else:
-            return ''
-
-    @property
-    def _transaction_id(self):
-        # Probably badly named, should be current transaction id
-        if self._transaction_ids:
-            return self._transaction_ids[-1]
-        else:
-            return ''
-
     def send(self, type, **msg):
         msg = dict(msg)
         msg['type'] = type
@@ -65,12 +49,10 @@ class Context:
 
     @asynccontextmanager
     async def transaction(self, name):
-        # FIXME: instead of a stack (i.e. list), we can probably use something
-        # like a context variable (from py3.7) here.  Alternatively, we might
-        # be able to get away with just using local variables (for the old
-        # values) and a simple (non-stack) instance var (for the current one)
-        self._transaction_ids.append(next(self._trans_id_gen))
-        self._transaction_names.append(name)
+        old_transaction_name = self._transaction_name
+        old_transaction_id = self._transaction_id
+        self._transaction_id = next(self._trans_id_gen)
+        self._transaction_name = name
         start_time = time.time()
 
         try:
@@ -83,9 +65,9 @@ class Context:
             if self._debug:  # pragma: no cover
                 breakpoint()
         finally:
-            self.send('txn', start_time=start_time)
-            self._transaction_names.pop()
-            self._transaction_ids.pop()
+            self.send('txn', start_time=start_time, end_time=time.time())
+            self._transaction_name = old_transaction_name
+            self._transaction_id = old_transaction_id
 
     def _send_exception(self, value):
         message = str(value)
