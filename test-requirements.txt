@@ -2,7 +2,8 @@ sanic
 psutil
 pandas
 altair
-pytest
+# Stuck on this version until we are off 3.8 alpha builds
+pytest==5.0.1
 pytest-asyncio
 pytest-cov
 pytest-httpserver

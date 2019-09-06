@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from selenium.webdriver import Remote
@@ -16,10 +15,10 @@ class _SeleniumWrapper:
         self._context = context
         # Should only need the capabilities setting, other options for selenium experts
         self._command_executor = self._context.config.get(
-                "webdriver_command_executor",
-                "http://127.0.0.1:4444/wd/hub")
+            "webdriver_command_executor", "http://127.0.0.1:4444/wd/hub"
+        )
         self._keep_alive = self._context.config.get("webdriver_keep_alive", False)
-        
+
         self._file_detector = self._spec_import_if_none("webdriver_file_detector")
         self._proxy = self._spec_import_if_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_none("webdriver_browser_profile")
@@ -38,13 +37,14 @@ class _SeleniumWrapper:
 
     def start(self):
         self._context.browser = Remote(
-                desired_capabilities=self._capabilities,
-                command_executor=self._command_executor,
-                browser_profile=self._browser_profile,
-                proxy=self._proxy,
-                keep_alive=self._keep_alive,
-                file_detector=self._file_detector,
-                options=self._options)
+            desired_capabilities=self._capabilities,
+            command_executor=self._command_executor,
+            browser_profile=self._browser_profile,
+            proxy=self._proxy,
+            keep_alive=self._keep_alive,
+            file_detector=self._file_detector,
+            options=self._options,
+        )
 
     def stop(self):
         self._context.browser.close()
@@ -64,5 +64,5 @@ def mite_selenium(func):
     async def wrapper(ctx, *args, **kwargs):
         async with _selenium_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
-    return wrapper
 
+    return wrapper

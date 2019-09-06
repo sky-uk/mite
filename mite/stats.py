@@ -139,7 +139,6 @@ def controller_report_extractor(dict_key):
 class Stats:
     def __init__(self, sender):
         self.sender = sender
-        transaction_key = 'test journey transaction'.split()
         self.processors = [
             Counter(
                 'mite_journey_error_total',
@@ -147,14 +146,9 @@ class Stats:
                 labels_extractor('test journey transaction location message'.split()),
             ),
             Counter(
-                'mite_transaction_start_total',
-                matcher_by_type('start'),
-                labels_extractor(transaction_key),
-            ),
-            Counter(
-                'mite_transaction_end_total',
-                matcher_by_type('end'),
-                labels_extractor(transaction_key),
+                'mite_transaction_total',
+                matcher_by_type('txn'),
+                labels_extractor('test journey transaction'.split()),
             ),
             Counter(
                 'mite_http_response_total',
@@ -181,9 +175,6 @@ class Stats:
                 'mite_runner_count',
                 matcher_by_type('controller_report'),
                 labels_and_value_extractor(['test'], 'num_runners'),
-            ),
-            Gauge(
-                'mite_message_delay', matcher_by_type('start', 'end'), time_extractor()
             ),
         ]
         self.dump_timeout = time.time() + 0.25
