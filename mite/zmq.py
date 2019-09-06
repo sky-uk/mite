@@ -168,7 +168,12 @@ class ControllerServer:
 
     def _run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():
-            _type, content = unpack_msg(self._sock.recv())
+            msg = self._sock.recv()
+            try:
+                _type, content = unpack_msg(msg)
+            except Exception:
+                print(f"whoops! msg was {msg}")
+                raise
             if _type == _MSG_TYPE_HELLO:
                 self._sock.send(pack_msg(controller.hello()))
             elif _type == _MSG_TYPE_REQUEST_WORK:
