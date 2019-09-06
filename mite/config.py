@@ -12,7 +12,7 @@ class ConfigManager:
     def __init__(self):
         self._version_id_gen = count(1)
         self._version = 0
-        self._config = {} 
+        self._config = {}
         self._runner_version_map = {}
 
     def _get_changes_since(self, version):
