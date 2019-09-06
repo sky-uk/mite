@@ -13,20 +13,20 @@ def test_process_message_file_opening():
     with tempfile.TemporaryDirectory() as tempdir:
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_create)
-        assert os.path.isfile( os.path.join(tempdir, msg_create['name'] + '.msgpack'))
+        assert os.path.isfile(os.path.join(tempdir, msg_create['name'] + '.msgpack'))
 
 
 def test_process_message_right_content():
     with tempfile.TemporaryDirectory() as tempdir:
         recorder = Recorder(target_dir=tempdir)
-        recorder.process_message(msg_create)    
+        recorder.process_message(msg_create)
         with open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb") as f:
             unpacked = msgpack.Unpacker(f, encoding='utf-8', use_list=False)
             assert next(unpacked) == data_value
 
 
 def test_process_message_remove_file():
-     with tempfile.TemporaryDirectory() as tempdir:
+    with tempfile.TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, msg_purge['name'] + '.msgpack'), "wb") as f:
             f.write(data_value.encode('utf-8'))
         recorder = Recorder(target_dir=tempdir)
