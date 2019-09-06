@@ -175,3 +175,5 @@ class ControllerServer:
                 self._sock.send(pack_msg(controller.request_work(*content)))
             elif _type == _MSG_TYPE_BYE:
                 self._sock.send(pack_msg(controller.bye(content)))
+            else:
+                raise Exception(f"something weird happened! _type is {_type}")
