@@ -37,6 +37,22 @@ def test_to_curl_cookies():
     assert r.to_curl() == "curl -X GET  --cookie 123=456   http://foo.com"
 
 
+def test_to_curl_multiple_cookies():
+    r = Request(
+        "GET",
+        "http://foo.com",
+        (),
+        (
+            acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),
+            acurl.Cookie(False, "foo.com", True, "/", False, 0, "789", "abc"),
+        ),
+        None,
+        None,
+        None,
+    )
+    assert r.to_curl() == "curl -X GET  --cookie '123=456;789=abc'   http://foo.com"
+
+
 @pytest.mark.skip(reason="unimplemented")
 def test_to_curl_cookies_wrong_domain():
     r = Request(
