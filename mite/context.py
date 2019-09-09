@@ -63,7 +63,10 @@ class Context:
             else:
                 self._send_exception(e)
             if self._debug:  # pragma: no cover
-                breakpoint()
+                import ipdb
+
+                ipdb.post_mortem()
+                sys.exit(1)
         finally:
             self.send('txn', start_time=start_time, end_time=time.time())
             self._transaction_name = old_transaction_name
