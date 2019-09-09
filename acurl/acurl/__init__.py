@@ -232,13 +232,18 @@ class Request:
     def to_curl(self):
         data_arg = ""
         if self.data is not None:
-            data_arg = "-d " + shlex.quote(self.data.decode("utf-8"))
+            data = self.data
+            if hasattr(data, "decode"):
+                data = data.decode("utf-8")
+            data_arg = "-d " + shlex.quote(data)
         header_args = " ".join(
             ("-H " + shlex.quote(k + ": " + v) for k, v in self.headers.items())
         )
-        cookie_args = " ".join(
-            ("--cookie " + shlex.quote(f"{k}={v}") for k, v in self.cookies.items())
-        )
+        cookie_args = ""
+        if len(self.cookies) > 0:
+            cookie_args = "--cookie " + shlex.quote(
+                ";".join((f"{k}={v}" for k, v in self.cookies.items()))
+            )
         auth_arg = ""
         if self.auth is not None:
             auth_arg = "--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}")
