@@ -147,8 +147,10 @@ class Stats:
             ),
             Counter(
                 'mite_transaction_total',
+                # TODO: want to dump the labels actually seen on a particular
+                # message here, not just a static set of labels
                 matcher_by_type('txn'),
-                labels_extractor('test journey transaction'.split()),
+                labels_extractor('test journey transaction error'.split()),
             ),
             Counter(
                 'mite_http_response_total',

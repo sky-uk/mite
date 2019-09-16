@@ -53,16 +53,35 @@ class Context:
         old_transaction_id = self._transaction_id
         self._transaction_id = next(self._trans_id_gen)
         self._transaction_name = name
-        start_time = time.time()
-        error = False
+        data = {"start_time": time.time(), "error": False}
 
         try:
             yield None
         except Exception as e:
-            error = True
+            data["error"] = True
+            tb = sys.exc_info()[2]
             if isinstance(e, MiteError):
+                data.update(
+                    {
+                        "message": str(e),
+                        # FIXME: always gets the location of "try: yield None"
+                        # above; may need to go down the stack frame a bit
+                        "location": _tb_format_location(tb),
+                        "stacktrace": traceback.format_tb(tb),
+                        **e.fields,
+                    }
+                )
                 self._send_mite_error(e)
             else:
+                data.update(
+                    {
+                        "message": str(e),
+                        "ex_type": type(e).__name__,
+                        # FIXME: see above
+                        "location": _tb_format_location(tb),
+                        "stacktrace": traceback.format_tb(tb),
+                    }
+                )
                 self._send_exception(e)
             if self._debug:  # pragma: no cover
                 import ipdb
@@ -70,25 +89,8 @@ class Context:
                 ipdb.post_mortem()
                 sys.exit(1)
         finally:
-            self.send('txn', start_time=start_time, end_time=time.time(), error=error)
+            data["end_time"] = time.time()
+            data["total_time"] = data["end_time"] - data["start_time"]
+            self.send('txn', **data)
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
-
-    def _send_exception(self, value):
-        message = str(value)
-        ex_type = type(value).__name__
-        tb = sys.exc_info()[2]
-        location = _tb_format_location(tb)
-        stacktrace = ''.join(traceback.format_tb(tb))
-        self.send(
-            'exception',
-            message=message,
-            ex_type=ex_type,
-            location=location,
-            stacktrace=stacktrace,
-        )
-
-    def _send_mite_error(self, value):
-        tb = sys.exc_info()[2]
-        location = _tb_format_location(tb)
-        self.send('error', message=str(value), location=location, **value.fields)
