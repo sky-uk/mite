@@ -99,3 +99,4 @@ recorder_data/
 collector_data/
 
 coverage_html_report/
+/pip-wheel-metadata/

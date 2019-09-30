@@ -4,7 +4,7 @@ Mite Load Test Framewwork.
 Usage:
     mite [options] scenario test SCENARIO_SPEC
     mite [options] journey test JOURNEY_SPEC [DATAPOOL_SPEC]
-    mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET]
+    mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL]
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET]
@@ -31,8 +31,7 @@ Options:
     --version                       Show version
     --debugging                     Drop into IPDB on journey error and exit
     --log-level=LEVEL               Set logger level, one of DEBUG, INFO, WARNING, ERROR, CRITICAL [default: INFO]
-    --config=CONFIG_SPEC            Set a config loader to a callable loaded via a spec""" \
-""" [default: mite.config:default_config_loader]
+    --config=CONFIG_SPEC            Set a config loader to a callable loaded via a spec [default: mite.config:default_config_loader]
     --spawn-rate=NUM_PER_SECOND     Maximum spawn rate [default: 1000]
     --max-loop-delay=SECONDS        Runner internal loop delay maximum [default: 1]
     --min-loop-delay=SECONDS        Runner internal loop delay minimum [default: 0]
@@ -52,13 +51,16 @@ Options:
     --collector-roll=NUM_LINES      How many lines per collector output file [default: 100000]
     --recorder-dir=DIRECTORY        Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP              Set the second to await between each request [default: 1]
+    --logging-webhook=URL           URL of an HTTP server to log test runs to
 """
 import sys
 import os
 import asyncio
+from urllib.request import urlopen, Request as UrlLibRequest
 import docopt
 import threading
 import logging
+import ujson
 import uvloop
 
 from .scenario import ScenarioManager
@@ -78,9 +80,11 @@ def _msg_backend_module(opts):
     msg_backend = opts['--message-backend']
     if msg_backend == 'nanomsg':
         from . import nanomsg
+
         return nanomsg
     elif msg_backend == 'ZMQ':
         from . import zmq
+
         return zmq
     else:
         raise ValueError('Unsupported backend %r' % (msg_backend,))
@@ -139,7 +143,9 @@ def _create_controller_server(opts):
 
 
 def _create_duplicator(opts):
-    return _msg_backend_module(opts).Duplicator(opts['--message-socket'], opts['OUT_SOCKET'])
+    return _msg_backend_module(opts).Duplicator(
+        opts['--message-socket'], opts['OUT_SOCKET']
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -153,7 +159,9 @@ class DirectRunnerTransport:
         return self._controller.hello()
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return self._controller.request_work(runner_id, current_work, completed_data_ids, max_work)
+        return self._controller.request_work(
+            runner_id, current_work, completed_data_ids, max_work
+        )
 
     async def bye(self, runner_id):
         return self._controller.bye(runner_id)
@@ -193,7 +201,7 @@ def _start_web_in_thread(opts):
     address = opts['--web-address']
     kwargs = {'port': 9301}
     if address.startswith('['):
-            # IPV6 [host]:port
+        # IPV6 [host]:port
         if ']:' in address:
             host, port = address.split(']:')
             kwargs['host'] = host[1:]
@@ -225,20 +233,28 @@ def _create_runner(opts, transport, msg_sender):
     max_work = None
     if opts['--runner-max-journeys']:
         max_work = int(opts['--runner-max-journeys'])
-    return Runner(transport, msg_sender, loop_wait_min=loop_wait_min, loop_wait_max=loop_wait_max,
-                  max_work=max_work, debug=opts['--debugging'])
+    return Runner(
+        transport,
+        msg_sender,
+        loop_wait_min=loop_wait_min,
+        loop_wait_max=loop_wait_max,
+        max_work=max_work,
+        debug=opts['--debugging'],
+    )
 
 
 def _create_scenario_manager(opts):
-    return ScenarioManager(start_delay=float(opts['--delay-start-seconds']), period=float(opts['--max-loop-delay']),
-                           spawn_rate=int(opts['--spawn-rate']))
+    return ScenarioManager(
+        start_delay=float(opts['--delay-start-seconds']),
+        period=float(opts['--max-loop-delay']),
+        spawn_rate=int(opts['--spawn-rate']),
+    )
 
 
-def test_scenarios(test_name, opts, scenarios):
+def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
@@ -249,16 +265,23 @@ def test_scenarios(test_name, opts, scenarios):
         while True:
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
-    loop.run_until_complete(asyncio.gather(
-        controller_report(),
-        _create_runner(opts, transport, receiver.recieve).run()
-    ))
+
+    loop.run_until_complete(
+        asyncio.gather(
+            controller_report(), _create_runner(opts, transport, receiver.recieve).run()
+        )
+    )
 
 
 def scenario_test_cmd(opts):
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
-    test_scenarios(scenario_spec, opts, scenarios)
+    scenarios_fn = spec_import(scenario_spec)
+    config_manager = _create_config_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
+    test_scenarios(scenario_spec, opts, scenarios, config_manager)
 
 
 def journey_test_cmd(opts):
@@ -269,7 +292,12 @@ def journey_test_cmd(opts):
     else:
         datapool = None
     volumemodel = lambda start, end: int(opts['--volume'])
-    test_scenarios(journey_spec, opts, [(journey_spec, datapool, volumemodel)])
+    test_scenarios(
+        journey_spec,
+        opts,
+        [(journey_spec, datapool, volumemodel)],
+        _create_config_manager(opts),
+    )
 
 
 def scenario_cmd(opts):
@@ -282,17 +310,79 @@ def journey_cmd(opts):
         journey_test_cmd(opts)
 
 
+def _controller_log_start(scenario_spec, logging_url):
+    if not logging_url.endswith("/"):
+        logging_url += "/"
+
+    # The design decision has been made to do this logging synchronously
+    # rather than using the usual mite data pipeline, because we want to make
+    # sure the log is nailed down before we start doing any test activity.
+    url = logging_url + "start"
+    logger.info(f"Logging test start to {url}")
+    resp = urlopen(
+        UrlLibRequest(
+            url,
+            data=ujson.dumps(
+                {
+                    'testname': scenario_spec,
+                    # TODO: log other properties as well,
+                    # like the endpoint URLs we are
+                    # hitting.
+                }
+            ).encode(),
+            method="POST",
+        )
+    )
+    logger.debug("Logging test start complete")
+    if resp.status == 200:
+        return ujson.loads(resp.read())['newid']
+    else:
+        logger.warning(
+            f"Could not complete test start logging; status was {resp.status_code}"
+        )
+
+
+def _controller_log_end(logging_id, logging_url):
+    if logging_id is None:
+        return
+
+    if not logging_url.endswith("/"):
+        logging_url += "/"
+
+    url = logging_url + "end"
+    logger.info(f"Logging test end to {url}")
+    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({'id': logging_id}).encode()))
+    if resp.status != 204:
+        logger.warning(
+            f"Could not complete test end logging; status was {resp.status_code}"
+        )
+    logger.debug("Logging test end complete")
+
+
 def controller(opts):
+    config_manager = _create_config_manager(opts)
     scenario_spec = opts['SCENARIO_SPEC']
-    scenarios = spec_import(scenario_spec)()
+    scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(opts)
+    try:
+        scenarios = scenarios_fn(config_manager)
+    except TypeError:
+        scenarios = scenarios_fn()
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    config_manager = _create_config_manager(opts)
     controller = Controller(scenario_spec, scenario_manager, config_manager)
     server = _create_controller_server(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
+    logging_id = None
+    logging_url = opts["--logging-webhook"]
+    if logging_url is None:
+        try:
+            logging_url = os.environ["MITE_LOGGING_URL"]
+        except KeyError:
+            pass
+    if logging_url is not None:
+        logging_id = _controller_log_start(scenario_spec, logging_url)
 
     async def controller_report():
         while True:
@@ -302,19 +392,27 @@ def controller(opts):
             controller.report(sender.send)
 
     try:
-        loop.run_until_complete(asyncio.gather(
-            controller_report(),
-            server.run(controller, controller.should_stop)
-        ))
-    except  KeyboardInterrupt:
+        loop.run_until_complete(
+            asyncio.gather(
+                controller_report(), server.run(controller, controller.should_stop)
+            )
+        )
+    except KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
+    finally:
+        _controller_log_end(logging_id, logging_url)
+        # TODO: cancel all loop tasks?  Something must be done to stop this
+        # from hanging
+        loop.close()
 
 
 def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
-    asyncio.get_event_loop().run_until_complete(_create_runner(opts, transport, sender.send).run())
+    asyncio.get_event_loop().run_until_complete(
+        _create_runner(opts, transport, sender.send).run()
+    )
 
 
 def collector(opts):
@@ -356,7 +454,8 @@ def prometheus_exporter(opts):
 def setup_logging(opts):
     logging.basicConfig(
         level=opts['--log-level'],
-        format='[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s')
+        format='[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s',
+    )
 
 
 def configure_python_path(opts):
@@ -365,7 +464,9 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
-    har_convert_to_mite(opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time'])
+    har_convert_to_mite(
+        opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time']
+    )
 
 
 def main():

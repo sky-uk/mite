@@ -1,6 +1,6 @@
 import acurl
-import asyncio
 from urllib.parse import urlencode
+import pytest
 
 
 def session():
@@ -8,58 +8,66 @@ def session():
     return el.session()
 
 
-def _await(awaitable):
-    return asyncio.get_event_loop().run_until_complete(awaitable)
-
-
-def test_get():
+@pytest.mark.asyncio
+async def test_get():
     s = session()
-    r = _await(s.get('https://httpbin.org/ip'))
-    r.status_code
-    r.headers
-    r.json
+    r = await s.get('https://httpbin.org/ip')
+    assert r.status_code == 200
+    assert isinstance(r.headers, dict)
+    # FIXME: is this a method in the requests api?
+    assert isinstance(r.json(), dict)
 
 
-def test_cookies():
+@pytest.mark.asyncio
+async def test_cookies():
     s = session()
-    r = _await(s.get('https://httpbin.org/cookies/set?name=value'))
+    r = await s.get('https://httpbin.org/cookies/set?name=value')
     assert r.cookies == {'name': 'value'}
 
 
-def test_session_cookies():
+@pytest.mark.asyncio
+async def test_session_cookies():
     s = session()
-    r = _await(s.get('https://httpbin.org/cookies/set?name=value'))
-    cookie_list = _await(s.get_cookie_list())
+    await s.get('https://httpbin.org/cookies/set?name=value')
+    cookie_list = await s.get_cookie_list()
     assert len(cookie_list) == 1
     assert cookie_list[0].name == 'name'
-    _await(s.erase_all_cookies())
-    cookie_list = _await(s.get_cookie_list())
+    await s.erase_all_cookies()
+    cookie_list = await s.get_cookie_list()
     assert len(cookie_list) == 0
 
 
-def test_set_cookies():
+@pytest.mark.asyncio
+async def test_set_cookies():
     s = session()
-    r = _await(s.get('https://httpbin.org/cookies/set?name=value'))
-    r = _await(s.get('https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'}))
+    await s.get('https://httpbin.org/cookies/set?name=value')
+    r = await s.get(
+        'https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'}
+    )
     assert r.cookies == {'name': 'value', 'name2': 'value', 'name3': 'value'}
 
 
-def test_basic_auth():
+@pytest.mark.asyncio
+async def test_basic_auth():
     s = session()
-    r = _await(s.get('https://httpbin.org/basic-auth/user/password', auth=('user', 'password')))
+    r = await s.get(
+        'https://httpbin.org/basic-auth/user/password', auth=('user', 'password')
+    )
     assert r.status_code == 200
 
 
-def test_failed_basic_auth():
+@pytest.mark.asyncio
+async def test_failed_basic_auth():
     s = session()
-    r = _await(s.get('https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword')))
+    r = await s.get(
+        'https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword')
+    )
     assert r.status_code == 401
 
 
-def test_redirect():
+@pytest.mark.asyncio
+async def test_redirect():
     s = session()
     url = 'https://httpbin.org/ip'
-    r = _await(s.get('https://httpbin.org/redirect-to?' + urlencode({'url': url})))
+    r = await s.get('https://httpbin.org/redirect-to?' + urlencode({'url': url}))
     assert r.url == url
-
-    
