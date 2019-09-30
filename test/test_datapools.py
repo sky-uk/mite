@@ -1,5 +1,10 @@
-from mite.datapools import create_iterable_data_pool_with_recycling, create_iterable_data_pool, DataPoolExhausted
+from mite.datapools import (
+    create_iterable_data_pool_with_recycling,
+    create_iterable_data_pool,
+    DataPoolExhausted,
+)
 import mite.datapools as dps
+
 
 def test_recycling():
     iterable = 'abcdefgh'
