@@ -32,8 +32,7 @@ def do_test():
 
     print(f"requests is {total_requests}")
 
-    start_count = 0
-    end_count = 0
+    txn_count = 0
     curl_count = 0
 
     for collector_file in glob.glob("collector_data/*"):
@@ -44,18 +43,18 @@ def do_test():
             unpacker = msgpack.Unpacker(fin, raw=False, use_list=False)
             for row in unpacker:
                 if "type" in row:
-                    if row["type"] == "start":
-                        start_count += 1
-                    elif row["type"] == "end":
-                        end_count += 1
+                    if row["type"] == "txn":
+                        txn_count += 1
                     elif row["type"] == "http_curl_metrics":
                         curl_count += 1
 
-    print(f"journey starts: {start_count}")
-    print(f"journey ends: {end_count}")
+    print(f"journey ends: {txn_count}")
     print(f"curl stats: {curl_count}")
 
-    # TODO: pull from prometheus
+    assert total_requests > 0
+    assert total_requests == txn_count
+    assert total_requests == curl_count
+    # TODO: pull from prometheus and assert equality
 
 
 if __name__ == "__main__":
