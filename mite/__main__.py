@@ -474,7 +474,8 @@ def har_converter(opts):
 
 
 def main():
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    if os.environ.get("MITE_PROFILE", "0") != "1":
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     opts = docopt.docopt(__doc__)
     setup_logging(opts)
     configure_python_path(opts)
