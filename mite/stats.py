@@ -183,7 +183,7 @@ class Stats:
                 [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
             ),
             Counter(
-                'mite_http_selenium_response_time_total',
+                'mite_http_selenium_response_total',
                 matcher_by_type('http_selenium_metrics'),
                 labels_extractor('test journey transaction method transfer_size transfer_start_timing total_time'.split()),
             ),
