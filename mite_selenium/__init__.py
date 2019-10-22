@@ -49,24 +49,27 @@ class _SeleniumWrapper:
     def stop(self):
         self._context.browser.close()
 
-    def get_timings(self):
-        """Maybe would probably need more error handling
-        if somebody tried to use with an incompatible browser"""
-        if self._capabilities['browserName'] != 'chrome':
-            logger.warning('%s is not currently supported', self._capabilities['browserName'])
-        timings = self._context.browser.execute_script(
-                'return performance.getEntriesByType("navigation")')[0]
-        self._context.send(
-                "http_selenium_metrics",
-                dom_complete=timings["domComplete"],
-                dom_interactive=timings["domInteractive"],
-                transfer_size=timings["transferSize"],
-                transfer_start_timings=["requestStart"],
-                tls_time=timings["secureConnectionStart"],
-                dns_time=timings["domainLookupEnd"],
-                connect_time=timings["connectEnd"],
-                total_time=timings["duration"],
-                effective_url=timings["name"])
+
+def get_selenium_times(context):
+    """Maybe would probably need more error handling
+    if somebody tried to use with an incompatible browser"""
+    if context.browser.capabilities['browserName'] != 'chrome':
+        logger.warning('Timing metrics in %s are not currently supported', context.browser.capabilities['browserName'])
+        return
+
+    timings = context.browser.execute_script(
+            'return performance.getEntriesByType("navigation")')[0]
+    context.send(
+            "http_selenium_metrics",
+            dom_complete=timings["domComplete"],
+            dom_interactive=timings["domInteractive"],
+            transfer_size=timings["transferSize"],
+            transfer_start_timings=["requestStart"],
+            tls_time=timings["secureConnectionStart"],
+            dns_time=timings["domainLookupEnd"],
+            connect_time=timings["connectEnd"],
+            total_time=timings["duration"],
+            effective_url=timings["name"])
 
 
 @asynccontextmanager
@@ -76,7 +79,6 @@ async def _selenium_context_manager(context):
         sw.start()
         yield
     finally:
-        sw.get_timings()
         sw.stop()
 
 

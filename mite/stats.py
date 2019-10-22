@@ -185,7 +185,7 @@ class Stats:
             Counter(
                 'mite_http_selenium_response_total',
                 matcher_by_type('http_selenium_metrics'),
-                labels_extractor('test journey transaction method transfer_size transfer_start_timing total_time'.split()),
+                labels_extractor('test journey transaction'.split()),
             ),
         ]
         self.dump_timeout = time.time() + 0.25
