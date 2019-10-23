@@ -1,4 +1,8 @@
-FROM python:3.7.3-alpine3.9 as base
+# TODO: this and the commented lines at the end of the file are for multistage
+# builds, which we can use once core platform pull their finger out.
+# FROM python:3.7.3-alpine3.9 as base
+
+FROM python:3.7.3-alpine3.9
 
 RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev
 
@@ -23,6 +27,5 @@ RUN rm -r /mite/.git
 
 RUN apk del -r gnupg tar gcc cmake make libc-dev g++ zeromq-dev git
 
-FROM python:3.7.3-alpine3.9
-
-COPY --from=base / /
+# FROM python:3.7.3-alpine3.9
+# COPY --from=base / /
