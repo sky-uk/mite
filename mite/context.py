@@ -54,10 +54,11 @@ class Context:
         self._transaction_id = next(self._trans_id_gen)
         self._transaction_name = name
         start_time = time.time()
-
+        error = False
         try:
             yield None
         except Exception as e:
+            error = True
             if isinstance(e, MiteError):
                 self._send_mite_error(e)
             else:
@@ -68,7 +69,7 @@ class Context:
                 ipdb.post_mortem()
                 sys.exit(1)
         finally:
-            self.send('txn', start_time=start_time, end_time=time.time())
+            self.send('txn', start_time=start_time, end_time=time.time(), had_error=error)
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
 
