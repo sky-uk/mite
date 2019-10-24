@@ -148,7 +148,7 @@ class Stats:
             Counter(
                 'mite_transaction_total',
                 matcher_by_type('txn'),
-                labels_extractor('test journey transaction'.split()),
+                labels_extractor('test journey transaction had_error'.split()),
             ),
             Counter(
                 'mite_http_response_total',
