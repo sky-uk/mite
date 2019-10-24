@@ -58,11 +58,10 @@ class Context:
         try:
             yield None
         except Exception as e:
+            error = True
             if isinstance(e, MiteError):
-                error = True
                 self._send_mite_error(e)
             else:
-                error = True
                 self._send_exception(e)
             if self._debug:  # pragma: no cover
                 import ipdb
