@@ -43,7 +43,8 @@ standard.
   * [Arron Canham](https://github.com/arroncanhamskyuk) (Performance Engineer - Sky Identity)
 
 The Mite Maintainers Team are here to help facilitate the process of contributing
-and offer guidance. If you have any questions or concerns please [talk to us](https://sky.slack.com/messages/mite)!
+and offer guidance. If you have any questions or concerns please in[talk to us](https://sky.slack.com/messages/mite)
+or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributers.
 
 ## Creating Issues
 
@@ -87,4 +88,4 @@ For discussion of issues and general project talk, head over to
 
 ## Releases
 
-* Release commits will be tagged by a core maintainer and will be available on PyPi.
+* Release commits will be tagged by a core maintainer and will be available on [PyPi](link pending).
