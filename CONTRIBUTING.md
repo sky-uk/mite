@@ -1,6 +1,6 @@
 # Contributing to the [Mite](https://github.com/sky-uk/mite)
 
-We greatly appreciate and encourage people contributing back into the Mite.
+We greatly appreciate and encourage people contributing back into Mite.
 
 ## Coding Style
 
@@ -53,8 +53,8 @@ repository](https://github.com/sky-uk/mite) for suggestions,
 recommendations, and bugs.
 
 **Please note**: If it’s an issue that’s urgent / you feel you can fix yourself,
-please feel free to make some changes and submit a [pull
-request](https://github.com/sky-uk/mite/pulls). We’d love to see your contributions.
+please feel free to make some changes and submit a [pull request](https://github.com/sky-uk/mite/pulls).
+ We’d love to see your contributions.
 
 ## Git Workflow
 
