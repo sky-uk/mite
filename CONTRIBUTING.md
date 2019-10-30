@@ -43,8 +43,8 @@ standard.
   * [Arron Canham](https://github.com/arroncanhamskyuk) (Performance Engineer - Sky Identity)
 
 The Mite Maintainers Team are here to help facilitate the process of contributing
-and offer guidance. If you have any questions or concerns please in[talk to us](https://sky.slack.com/messages/mite)
-or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributers.
+and offer guidance. If you have any questions or concerns please [talk to us via slack](https://sky.slack.com/messages/mite)
+if you're a sky colleague or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributers.
 
 ## Creating Issues
 
@@ -79,7 +79,10 @@ a pretty simple workflow to follow:
 ## Discussion
 
 For discussion of issues and general project talk, head over to
-[#mite](http://sky.slack.com/messages/mite) on Slack.
+[#mite](http://sky.slack.com/messages/mite) on Slack if you're a Sky colleague.
+
+We still love to hear from you if you're an external contributer, the best way
+to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk).
 
 ## Responsibilities
 

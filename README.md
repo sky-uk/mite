@@ -161,9 +161,9 @@ mite controller mite.example:scenario
 
 ## Maintainers
 
-If you run into any trouble or need support getting to grips with Toolkit,
-reach out in [Slack](https://sky.slack.com/messages/mite) or contact one of
-the maintainers:
+If you run into any trouble or need support getting to grips with Mite,
+reach out on [Slack](https://sky.slack.com/messages/mite) if you work at Sky,
+ or contact one of the maintainers if you're an external contributer:
 
 | [![Jordan Brennan](https://avatars.githubusercontent.com/jb098?s=100)<br />Jordan Brennan](https://github.com/jb098)<br /><sub>💻</sub> | [![Aaron Ecay](https://avatars.githubusercontent.com/aecay?s=100)<br />Aaron Ecay](https://github.com/aecay)<br /><sub>💻</sub> | [![Davide Annunziata](https://avatars.githubusercontent.com/DavAnnunz?s=100)<br />Davide Annunziata](https://github.com/DavAnnunz)<br /><sub>💻</sub> | [![Arron Canham](https://avatars.githubusercontent.com/arroncanhamskyuk?s=100)<br />Arron Canham](https://github.com/arroncanhamskyuk)<br /><sub>💻</sub> |
 | :---: | :---: | :---: | :---: |
