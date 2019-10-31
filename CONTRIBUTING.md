@@ -1,4 +1,4 @@
-# Contributing to the [Mite](https://github.com/sky-uk/mite)
+# Contributing to the [Mite](https://github.com/sky-uk/mite) project
 
 We greatly appreciate and encourage people contributing back into Mite.
 
@@ -7,7 +7,7 @@ We greatly appreciate and encourage people contributing back into Mite.
 Mite code should adhere to the PEP8 standards for Python, with the following
 exceptions that have been agreed upon by the core maintainers:
 
- * Line too long (Max: 100 chars)- E501
+ * Line too long (Max: 100 chars) - E501
  * Line break before binary operator - W503
  * Lambda assignment - E731
 
@@ -28,7 +28,7 @@ standard.
 ### Requirements
 
   * All exisiting unit tests have been run and they either:
-    - [] All pass an no new additions are needed
+    - [] All pass and no new additions are needed
     - [] They all pass and new passing tests have been created for new functionality
     - [] Some failed but this was expected and changes have been made to them to account for new features
   * [] Submission meets coding standards outlined [above](##coding-style)
