@@ -1,0 +1,26 @@
+version: '3.5'
+services:
+  prometheus:
+    image: "prom/prometheus:v2.12.0"
+    user: "1000"
+    network_mode: "host"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus_config_template.yml:/etc/prometheus/prometheus.yml
+      - /var/prometheus:/prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml",
+              "--storage.tsdb.path=/prometheus",
+              "--web.console.libraries=/usr/share/prometheus/console_libraries",
+              "--web.console.templates=/usr/share/prometheus/consoles",
+              "--storage.tsdb.retention.size=10GB"]
+    # TODO: alertmanager; I (AWE) have a config for this somewhere else
+  grafana:
+    image: "grafana/grafana:6.3.5"
+    network_mode: "host"
+    user: "1000"
+    ports:
+      - "3000:3000"
+   depends_on:
+      - prometheus
+
