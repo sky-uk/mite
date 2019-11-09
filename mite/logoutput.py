@@ -82,6 +82,10 @@ class HttpStatsOutput:
             self._resp_time_recent.append(message['total_time'])
             self._req_total += 1
             self._req_recent += 1
+        elif msg_type == 'http_selenium_metrics':
+            self._resp_time_recent.append(message['total_time'])
+            self._req_total += 1
+            self._req_recent += 1
         elif msg_type in ('error', 'exception'):
             self._error_total += 1
             self._error_recent += 1
