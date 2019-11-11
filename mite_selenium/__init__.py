@@ -50,7 +50,7 @@ class _SeleniumWrapper:
         self._context.browser.close()
 
 
-def get_selenium_times(context):
+def send_selenium_times(context):
     """Maybe would probably need more error handling
     if somebody tried to use with an incompatible browser"""
     if context.browser.capabilities['browserName'] != 'chrome':
