@@ -1,3 +1,7 @@
+=====================
+Design and deployment
+=====================
+
 Design of mite
 ==============
 
@@ -18,8 +22,8 @@ The components that make up mite are:
 - exporter*: (aka prometheus exporter) listens for aggregations from the
   stats component, and exposes these via HTTP to a Prometheus instance
   (TODO: link)
-- recorder*?: logs messages appearing on the mite message bus to a file
-- collector*?: listens for special messages on the bus and records them
+- recorder*: logs messages appearing on the mite message bus to a file
+- collector: listens for special messages on the bus and records them
   to a file.  This is used for data creation scenarios (TODO: link)
 - duplicator*: a message router between the controller/runner and their
   downstream components
@@ -28,13 +32,26 @@ The components marked with an asterisk are singletons; the rest can be
 scaled up to meet the demand of the test.  The communication pathways
 between the components are represented in the following diagram:
 
-runner ----\                    +---> stats -----> exporter
-   ^        \                   |
-   |         +---> duplicator---+----> collector
-   v        /                   |
-controller /                    +---> recorder
+.. graphviz::
 
-(TODO: better diagram)
+   digraph architecture {
+
+   runner -> duplicator;
+   controller -> duplicator;
+   duplicator -> stats;
+   duplicator -> collector;
+   duplicator -> recorder;
+   stats -> exporter;
+
+   subgraph rc {
+     rank="same"
+     runner
+     controller
+     runner -> controller [dir=both, label = "    "];
+   }
+
+   }
+
 
 Useful topologies
 =================
@@ -118,13 +135,21 @@ Mite as a distributed system made of discrete units is in many ways
 well-adapted to such an environment.  We have deployed it into the cluster
 with the following resource allocations:
 
-| Component | CPU | Memory |
-TODO: fill out table
 
-For injecting loads of up to 22k tps, we have found N runners to be
-sufficient.  (We have noted that the abstract “CPU” is more performant
-in this environment than in the VMs in the previous section.)  As
-before, the network bandwidth used by mite in this environment is not
-characterized; we have not run into problems with our assumption that
-all the relevant pipes are fat enough for within-cluster communication
-of the scale that we require.
+==========    ========  ====    ======
+Component     Replicas  CPU     Memory
+==========    ========  ====    ======
+Controller    1         2       500MB
+Duplicator    1         2       100MB
+Exporter      1         0.25    100MB
+Runner        50        1       500MB
+Stats         20        1       50MB
+==========    ========  ====    ======
+
+For injecting loads of up to 22k tps, we have found 50 runners and 20
+stats to be more than sufficient.  (We have noted that the abstract
+“CPU” is more performant in this environment than in the VMs in the
+previous section.)  As before, the network bandwidth used by mite in
+this environment is not characterized; we have not run into problems
+with our assumption that all the relevant pipes are fat enough for
+within-cluster communication of the scale that we require.
