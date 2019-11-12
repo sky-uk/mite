@@ -86,8 +86,8 @@ to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-Performanc
 
 ## Responsibilities
 
-* All PRs must have at least one comment by a core maintainer within two working days.
-* All additional comments must be replied to by a core maintainer with two working days
+* All PRs must have at least one comment by a core maintainer within three working days.
+* All additional comments must be replied to by a core maintainer with three working days
 
 ## Releases
 
