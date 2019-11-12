@@ -19,6 +19,19 @@ async def test_mite_amqp_decorator():
 
 
 @pytest.mark.asyncio
+async def test_mite_amqp_decorator_uninstall():
+    context = MockContext()
+
+    @mite_amqp
+    async def dummy_journey(ctx):
+        pass
+
+    await dummy_journey(context)
+
+    assert getattr(context, "amqp", None) is None
+
+
+@pytest.mark.asyncio
 # FIXME new for 3.8
 # @unittest.mock.patch("aio_pika.connect")
 async def test_mite_amqp_connect():
