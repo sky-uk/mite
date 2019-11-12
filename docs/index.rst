@@ -25,6 +25,12 @@ was simple:
 
 
 ..
+   TODO: journey writing – extend the readme
+   ways to specify config (incl env variables in readme, but also beyond that)
+
+
+
+..
    Indices and tables
    ==================
 
