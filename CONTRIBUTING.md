@@ -58,7 +58,7 @@ please feel free to make some changes and submit a [pull request](https://github
 
 ## Git Workflow
 
-With Toolkit being an open source project, we need to take greater care than
+With Mite being an open source project, we need to take greater care than
 ever with our Git workflow and strategy. Please follow the below instructions
 very closely.
 
