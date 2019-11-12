@@ -1,9 +1,10 @@
 import asyncio
 from unittest.mock import patch
 
+import aio_pika
 import pytest
 from asyncmock import AsyncMock
-from mite_amqp import mite_amqp
+from mite_amqp import _AMQPWrapper, mite_amqp
 from mocks.mock_context import MockContext
 
 
@@ -65,3 +66,15 @@ async def test_mite_amqp_connect_robust():
         await dummy_journey(context)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
+
+
+def test_amqp_message():
+    w = _AMQPWrapper()
+    m = w.message(b"hi")
+    assert isinstance(m, aio_pika.Message)
+
+
+def test_amqp_message_string():
+    w = _AMQPWrapper()
+    m = w.message("hi")
+    assert isinstance(m, aio_pika.Message)

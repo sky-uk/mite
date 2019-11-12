@@ -3,8 +3,13 @@ import logging
 from contextlib import asynccontextmanager
 
 import aio_pika
+from mite.exceptions import MiteError
 
 logger = logging.getLogger(__name__)
+
+
+class AMQPError(MiteError):
+    pass
 
 
 class _AMQPWrapper:
@@ -25,6 +30,11 @@ class _AMQPWrapper:
         kwargs.setdefault("loop", self._loop)
         return await aio_pika.connect(*args, **kwargs)
 
+    def message(self, body, **kwargs):
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        return aio_pika.Message(body, **kwargs)
+
 
 @asynccontextmanager
 async def _amqp_context_manager(context):
@@ -32,6 +42,8 @@ async def _amqp_context_manager(context):
     aw.install(context)
     try:
         yield
+    except aio_pika.AMQPException as e:
+        raise AMQPError(f"Received an error from AMQP:\n{e.message}")
     finally:
         aw.uninstall(context)
 
