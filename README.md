@@ -157,3 +157,17 @@ MITE_CONF_test_msg="Hello from mite" mite scenario test mite.example:scenario
 In order to scale up miteʼs capability to inject load, you will need to
 run it as a distributed suite of components.  You can learn more about
 how to accomplish this in the documentation.  <!-- TODO: link -->
+
+## Maintainers
+
+If you run into any trouble or need support getting to grips with Mite,
+reach out on [Slack](https://sky.slack.com/messages/mite) if you work at Sky,
+ or contact one of the maintainers if you're an external contributer:
+
+| [<img src="https://avatars.githubusercontent.com/jb098" width=100 height=100 alt="Jordan Brennan" /><br />Jordan Brennan](https://github.com/jb098)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/aecay" width=100 height=100 alt="Aaron Ecay" /> <br />Aaron Ecay](https://github.com/aecay)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/DavAnnunz" width=100 height=100 alt="Davide Annunziata" /><br />Davide Annunziata](https://github.com/DavAnnunz)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/arroncanhamskyuk" width=100 height=100 alt="Arron Canham" /><br />Arron Canham](https://github.com/arroncanhamskyuk)<br /><sub>💻</sub> |
+| :---: | :---: | :---: | :---: |
+
+
+**Special thanks to the following contributors:**
+
+* [Tony Simpson](https://github.com/tonysimpson)
