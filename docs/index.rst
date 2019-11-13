@@ -21,8 +21,8 @@ was simple:
    components
    journeys
    config
-   prometheus
    design-deployment
+   prometheus
 
 
 
