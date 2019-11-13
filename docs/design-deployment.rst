@@ -15,18 +15,20 @@ environment like Kubernetes) or on different machines entirely.
 The components that make up mite are:
 
 - controller*: manages a test scenario and feeds tasks to the runners.
-  (For more on how mite tests are organized, see TODO)
+  (For more on how mite tests are organized, see the `README`_)
 - runner: responsible for injecting the test load into the target system
 - stats: aggregates raw messages from the controller and runner into
   statistical summaries
 - exporter*: (aka prometheus exporter) listens for aggregations from the
-  stats component, and exposes these via HTTP to a Prometheus instance
-  (TODO: link)
+  stats component, and exposes these via HTTP to a
+  :ref:`Prometheus instance <prometheus>`
 - recorder*: logs messages appearing on the mite message bus to a file
 - collector: listens for special messages on the bus and records them
   to a file.  This is used for data creation scenarios (TODO: link)
 - duplicator*: a message router between the controller/runner and their
   downstream components
+
+.. _README: https://github.com/sky-uk/mite#your-first-scenario
 
 The components marked with an asterisk are singletons; the rest can be
 scaled up to meet the demand of the test.  The communication pathways
@@ -77,6 +79,8 @@ configuration-level view of setting up a mite pipeline, the reader is
 referred to the files in that directory.  In the sections that follow,
 we will discuss a few more abstract considerations for deploying mite in
 different kinds of environments.
+
+.. _vm-deployment:
 
 Virtual machines
 ----------------
