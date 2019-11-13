@@ -2,14 +2,14 @@
 Prometheus and mite
 ===================
 
+.. _prometheus-doc:
+
 Mite is designed to output the data on its performance tests to
-`prometheus`_ (for storage, indexing, and machine-readable retrievability)
-and then `grafana`_ (for data visualization and analysis).  In the
+`prometheus <https://prometheus.io/>`_ (for storage, indexing, and
+machine-readable retrievability) and then `grafana
+<https://grafana.com/>`_ (for data visualization and analysis).  In the
 following sections, weʼll discuss some of the details involved in
 configuring these applications.
-
-.. _prometheus: https://prometheus.io/
-.. _grafana: https://grafana.com/
 
 Prometheus
 ----------

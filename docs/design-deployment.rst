@@ -21,7 +21,7 @@ The components that make up mite are:
   statistical summaries
 - exporter*: (aka prometheus exporter) listens for aggregations from the
   stats component, and exposes these via HTTP to a
-  :ref:`Prometheus instance <prometheus>`
+  :ref:`Prometheus instance <prometheus-doc>`
 - recorder*: logs messages appearing on the mite message bus to a file
 - collector: listens for special messages on the bus and records them
   to a file.  This is used for data creation scenarios (TODO: link)

@@ -88,10 +88,10 @@ Prometheus Exporter
 -------------------
 
 The prometheus exporter provides a http metrics endpoint for the
-`prometheus`_ time series database to scrape, pulling metrics from
-the stats components.  In our case, the stats components will output
-on its default socket and the exporter is configured to read from
-there by default.
+:ref:`prometheus <prometheus-doc>` time series database to scrape,
+pulling metrics from the stats components.  In our case, the stats
+components will output on its default socket and the exporter is
+configured to read from there by default.
 
 .. code-block:: sh
 
