@@ -24,7 +24,7 @@ The components that make up mite are:
   :ref:`Prometheus instance <prometheus-doc>`
 - recorder*: logs messages appearing on the mite message bus to a file
 - collector: listens for special messages on the bus and records them
-  to a file.  This is used for data creation scenarios (TODO: link)
+  to a file.  This is used for :ref:`data creation scenarios <data-creation-scenarios>`.
 - duplicator*: a message router between the controller/runner and their
   downstream components
 

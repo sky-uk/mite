@@ -61,15 +61,17 @@ directories.
 
    mite collector --collector-dir mite-logs
 
+.. _recorder-component:
+
 Recorder
 --------
 
 The mite recorder is an optional component designed to record data to
-disk.  It can be used for storing values created during data creation
-scenarios (TODO: link), handling messages of the type ``data_created``
-to write data and ``purge_data`` to delete old recorded values.  There
-is an optional ``--recorder-dir`` argument to specify a folder where
-files are created.
+disk.  It can be used for storing values created during
+:ref:`data creation scenarios <data-creation-scenarios>`, handling
+messages of the type ``data_created`` to write data and ``purge_data``
+to delete old recorded values.  There is an optional ``--recorder-dir``
+argument to specify a folder where files are created.
 
 .. code-block:: sh
 

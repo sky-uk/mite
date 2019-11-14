@@ -27,9 +27,6 @@ was simple:
 
 
 ..
-   TODO: journey writing – extend the readme
-
-..
    Indices and tables
    ==================
 
