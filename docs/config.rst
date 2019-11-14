@@ -12,7 +12,10 @@ files, has several advantages:
 
 - It is easy to parameterize tests for different environments
 - Sensitive data (IP addresses, passwords) can be stored separately from
-  test journey code and encrypted (we use `git-crypt`_ for this purpose)
+  test journey code and encrypted (we use `git-crypt`_ for this purpose
+  in a dedicated journeys-and-scenarios repository at Sky, where our
+  tests need to use auth credentials to talk to some of the endpoints we
+  test).
 - The configuration can be dynamically modified by scenario functions
 
 .. _git-crypt: https://github.com/AGWA/git-crypt
