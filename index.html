@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mite: the mighty performance testing framework &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Mite components" href="components.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="mite-the-mighty-performance-testing-framework">
+<h1>Mite: the mighty performance testing framework<a class="headerlink" href="#mite-the-mighty-performance-testing-framework" title="Permalink to this headline">¶</a></h1>
+<p>Mite is a performance testing framework created by the performance
+testing in Sky UKʼs Identity group.  The philosophy driving the effort
+was simple:</p>
+<ol class="arabic simple">
+<li><p>Scalability.  The apps that we test are scalable, distributed systems;
+our performance testing framework should be as well.</p></li>
+<li><p>Maintainability.  As software engineers, we have a full arsenal of
+information organization and reuse techniques.  We shoudl treat our
+performance tests as code, and bring these same techniques to bear.</p></li>
+<li><p>Snakiness.  Python is the best language for us to accomplish our
+goals for the project.</p></li>
+</ol>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="components.html#distributed-components">Distributed components</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="journeys.html#journeys">Journeys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="journeys.html#data-creation-scenarios">Data creation scenarios</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#via-environment-variables">Via environment variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#via-a-python-callable">Via a python callable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#single-values-on-the-command-line">Single values on the command line</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html#dynamically-in-the-scenario-function">Dynamically in the scenario function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="design-deployment.html#design-of-mite">Design of mite</a></li>
+<li class="toctree-l2"><a class="reference internal" href="design-deployment.html#useful-topologies">Useful topologies</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="prometheus.html#id1">Prometheus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prometheus.html#id2">Grafana</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">mite</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="components.html" title="next chapter">Mite components</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

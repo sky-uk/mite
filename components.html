@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mite components &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Writing mite journeys and scenarios" href="journeys.html" />
+    <link rel="prev" title="Mite: the mighty performance testing framework" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="mite-components">
+<h1>Mite components<a class="headerlink" href="#mite-components" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="distributed-components">
+<h2>Distributed components<a class="headerlink" href="#distributed-components" title="Permalink to this headline">¶</a></h2>
+<p>In order to achieve high throughput, it’s necessary to split mite into
+discrete components and distribute them across cores/machines.  Mite as
+an entity consists of a number of these components, each with their own
+responsibilities for test control, execution and/or data collection.</p>
+<div class="section" id="duplicator">
+<h3>Duplicator<a class="headerlink" href="#duplicator" title="Permalink to this headline">¶</a></h3>
+<p>The mite duplicator is responsible for ingesting messages from multiple
+sources and then duplicating them to other components.  It ensures that
+messages that arrive at an incoming socket are distributed exactly once
+to each of N outgoing sockets.  It is usually the first component to
+start.  The controller and runners feed their logs into the duplicator
+and cannot run without it.  Only one duplicator can run at a time.</p>
+<p>To start the duplicator with one inbound socket (<code class="docutils literal notranslate"><span class="pre">--message-socket</span></code>)
+and two outbound sockets (the remaining arguments) for the stats and
+collector components, run the following.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite duplicator --message-socket<span class="o">=</span>tcp://0.0.0.0:14302 tcp://127.0.0.1:14303 tcp://127.0.0.1:14304
+</pre></div>
+</div>
+</div>
+<div class="section" id="stats">
+<h3>Stats<a class="headerlink" href="#stats" title="Permalink to this headline">¶</a></h3>
+<p>The mite stats component aggregates statistics out of the messages
+passed from the collector.  As many stats daemons can be run as is
+necessary to achieve desired throughput. It can be passed an optional
+in and out socket, but in our case we’ll just run it with default
+sockets.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite stats
+</pre></div>
+</div>
+<p>The default in socket is <code class="docutils literal notranslate"><span class="pre">tcp://127.0.0.1:14304`</span></code> which we previously
+told our duplicator to output on.  The default output socket is on
+port 14305.</p>
+</div>
+<div class="section" id="collector">
+<h3>Collector<a class="headerlink" href="#collector" title="Permalink to this headline">¶</a></h3>
+<p>The mite collector is an optional component designed to write the raw
+logs to files.  It defaults to writing 10000 log lines to a file before
+rolling and timestamping the file.  The most recent file is named
+<code class="docutils literal notranslate"><span class="pre">current</span></code>.  Again, as many of these can be run as is necessary to
+achieve throughput.  However, each collector must be passed a different
+<code class="docutils literal notranslate"><span class="pre">--collector-dir</span></code>, to avoid them overwriting each otherʼs logs.  The
+log lines will be round-robined across all the collectorsʼ output
+directories.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite collector --collector-dir mite-logs
+</pre></div>
+</div>
+</div>
+<div class="section" id="recorder">
+<span id="recorder-component"></span><h3>Recorder<a class="headerlink" href="#recorder" title="Permalink to this headline">¶</a></h3>
+<p>The mite recorder is an optional component designed to record data to
+disk.  It can be used for storing values created during
+<a class="reference internal" href="journeys.html#data-creation-scenarios"><span class="std std-ref">data creation scenarios</span></a>, handling
+messages of the type <code class="docutils literal notranslate"><span class="pre">data_created</span></code> to write data and <code class="docutils literal notranslate"><span class="pre">purge_data</span></code>
+to delete old recorded values.  There is an optional <code class="docutils literal notranslate"><span class="pre">--recorder-dir</span></code>
+argument to specify a folder where files are created.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite recorder
+</pre></div>
+</div>
+<p>Logs are compressed with <a class="reference external" href="https://msgpack.org/index.html">msgpack</a>; the repo includes a <code class="docutils literal notranslate"><span class="pre">cat_msgpack.py</span></code>
+script for quickly dumping their contents (but the most common usage will
+be to read them in programmatically in test journey files).  We could also
+have specified an optional inbound socket but here we are relying on the
+default of <code class="docutils literal notranslate"><span class="pre">tcp://127.0.0.1:14303</span></code>, previously specified as an output
+socket for the duplicator.</p>
+</div>
+<div class="section" id="prometheus-exporter">
+<h3>Prometheus Exporter<a class="headerlink" href="#prometheus-exporter" title="Permalink to this headline">¶</a></h3>
+<p>The prometheus exporter provides a http metrics endpoint for the
+<a class="reference internal" href="prometheus.html#prometheus-doc"><span class="std std-ref">prometheus</span></a> time series database to scrape,
+pulling metrics from the stats components.  In our case, the stats
+components will output on its default socket and the exporter is
+configured to read from there by default.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite prometheus_exporter
+</pre></div>
+</div>
+</div>
+<div class="section" id="runners">
+<h3>Runners<a class="headerlink" href="#runners" title="Permalink to this headline">¶</a></h3>
+<p>The mite runners are the component responsible for injecting the load
+into the system under test.  As many of these can be created as is
+necessary for the volume of load you are injecting, but for optimum
+performance you should make sure that each has a whole CPU core on
+which to run.  The runner needs two arguments, a socket it can use to
+talk to the controller and a message socket it can use to send messages
+to the duplicator.  In the below instance we’ll let it use the defaults
+of 14301 for communicating with the controller and 14302 for  messages
+out to the duplicator.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite runner
+</pre></div>
+</div>
+</div>
+<div class="section" id="controller">
+<h3>Controller<a class="headerlink" href="#controller" title="Permalink to this headline">¶</a></h3>
+<p>The last component to run is the mite controller.  It dictates the
+scenario to run, loads and distrbutes the config to the runners and is
+responsible for managing the work that the runners are doing.  As all
+our components are set up to use default sockets, we just have to
+specify the scenario to run, in the format of a python importable module
+and a name in that module (separated by a colon).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mite controller mite.example:scenario
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mite</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Mite components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#distributed-components">Distributed components</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Mite: the mighty performance testing framework</a></li>
+      <li>Next: <a href="journeys.html" title="next chapter">Writing mite journeys and scenarios</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/components.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

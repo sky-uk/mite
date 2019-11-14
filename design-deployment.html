@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Design and deployment &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Prometheus and mite" href="prometheus.html" />
+    <link rel="prev" title="Specifying configuration for mite journeys" href="config.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="design-and-deployment">
+<h1>Design and deployment<a class="headerlink" href="#design-and-deployment" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="design-of-mite">
+<h2>Design of mite<a class="headerlink" href="#design-of-mite" title="Permalink to this headline">¶</a></h2>
+<p>Mite is designed as a distributed system made up of several components.
+Some are required, and others are optional.  The components communicate
+over TCP, so you can run them anywhere that they can talk to each other
+in this fashion: as ordinary processes on a single machine, in
+containers (on a single machine or in a cloud container orchestration
+environment like Kubernetes) or on different machines entirely.</p>
+<p>The components that make up mite are:</p>
+<ul class="simple">
+<li><p>controller*: manages a test scenario and feeds tasks to the runners.
+(For more on how mite tests are organized, see the <a class="reference external" href="https://github.com/sky-uk/mite#your-first-scenario">README</a>)</p></li>
+<li><p>runner: responsible for injecting the test load into the target system</p></li>
+<li><p>stats: aggregates raw messages from the controller and runner into
+statistical summaries</p></li>
+<li><p>exporter*: (aka prometheus exporter) listens for aggregations from the
+stats component, and exposes these via HTTP to a
+<a class="reference internal" href="prometheus.html#prometheus-doc"><span class="std std-ref">Prometheus instance</span></a></p></li>
+<li><p>recorder*: logs messages appearing on the mite message bus to a file</p></li>
+<li><p>collector: listens for special messages on the bus and records them
+to a file.  This is used for <a class="reference internal" href="journeys.html#data-creation-scenarios"><span class="std std-ref">data creation scenarios</span></a>.</p></li>
+<li><p>duplicator*: a message router between the controller/runner and their
+downstream components</p></li>
+</ul>
+<p>The components marked with an asterisk are singletons; the rest can be
+scaled up to meet the demand of the test.  The communication pathways
+between the components are represented in the following diagram:</p>
+<div class="graphviz"><img src="_images/graphviz-8c4b894bf07a3507f0a1ad70703cc01deb2af466.png" alt="digraph architecture {
+
+runner -&gt; duplicator;
+controller -&gt; duplicator;
+duplicator -&gt; stats;
+duplicator -&gt; collector;
+duplicator -&gt; recorder;
+stats -&gt; exporter;
+
+subgraph rc {
+  rank=&quot;same&quot;
+  runner
+  controller
+  runner -&gt; controller [dir=both, label = &quot;    &quot;];
+}
+
+}" class="graphviz" /></div>
+</div>
+<div class="section" id="useful-topologies">
+<h2>Useful topologies<a class="headerlink" href="#useful-topologies" title="Permalink to this headline">¶</a></h2>
+<p>While itʼs true that increasing the heft of a test scenario increases
+the load on all miteʼs components, nowhere is the increase more apparent
+than on the runners, the component directly responsible for injecting
+the load on a 1:1 basis into the target system.  Therefore, it makes the
+most sense to separate the runners from the other components of mite.
+This both avoids interference between the components and makes it easy
+to scale the resources devoted to the runners.</p>
+<div class="section" id="a-note-on-resource-usage">
+<h3>A note on resource usage<a class="headerlink" href="#a-note-on-resource-usage" title="Permalink to this headline">¶</a></h3>
+<p>In the following sections, we describe our “real-world” usage of mite.
+This infrastructure is somewhat overprovisioned for our needs, but our
+focus has been on the performance of the applications which we test.
+While not wishing to be profligate, we believe it would be a mistake to
+shrink the injection infrastructure close to its performance limits.
+When resource constraints appear in an NFT exercise, they should stem
+from the system under test and not the test apparatus.  Anything other
+than the most occasional exception to this rule is an indication that
+the NFT is not efficiently organized.</p>
+<p>In fact, we have reason to believe that the peak performance of mite, in
+terms of maximum throughput per CPU and memory devoted to running mite,
+is significantly above what is implied by these numbers.  Furthermore,
+our resource usage already compares favorably with other performance
+engineering teams in Sky using different tools, even without having
+performed a dedicated performance tuning of our injection
+infrastructure.</p>
+</div>
+<div class="section" id="single-machine">
+<h3>Single machine<a class="headerlink" href="#single-machine" title="Permalink to this headline">¶</a></h3>
+<p>In the doc/example/ directory, you will find a docker-compose.yml file
+which will deploy a full mite stack, along with supporting programs, on
+your local machine.  While impractical for running a significant load
+injection exercise (due to the performance limitations of a single
+machine), this serves to illustrate the mechanics of getting the
+components to talk to each other and the outside world.  For a concrete,
+configuration-level view of setting up a mite pipeline, the reader is
+referred to the files in that directory.  In the sections that follow,
+we will discuss a few more abstract considerations for deploying mite in
+different kinds of environments.</p>
+</div>
+<div class="section" id="virtual-machines">
+<span id="vm-deployment"></span><h3>Virtual machines<a class="headerlink" href="#virtual-machines" title="Permalink to this headline">¶</a></h3>
+<p>At Sky, we have run mite in a configuration with 4 virtual machines.  One,
+with 16GB of memory and 16 cores, hosts the controller, duplicator, stats,
+exporter, and (if warranted) collector and recorder.  The other three have
+8GB of memory and 16 cores each, and each host 16 runner processes.  Our
+system under test consists of a 1:1 replica of the production environment,
+deployed with each weekly release candidate.  The underlying hardware is
+in a corporate datacentre (though it could just as easily correspond to
+servers rented from a colocation facility or VM provider).  We regard
+this as fairly typical of a traditional NFT setup in a medium to large
+tech company.</p>
+<p>We have used this infrastructure to inject load of up to 12k tps into
+our system under test across a variety of journeys, including some which
+simulate full user interaction with the platform, i.e. signin → modify
+data → signout.</p>
+<p>(Note that the provisioning of our test injection infrastructure is also
+undercharacterized above: far more important than memory for the runners
+is the bandwidth from them to the system under test – which is also less
+straightforward to quantify in the than VM size.  Our injectors and
+system under test are colocated in the same datacentres, both on the
+inside of the corporate firewall.  This provides ample bandwidth for our
+use case.)</p>
+<p>We hope that this description of our usage will provide you with an idea
+of the scale of infrastructure which mite requires to run, and will help
+you to architect your deployment as well.</p>
+</div>
+<div class="section" id="the-cloud">
+<h3>The Cloud<a class="headerlink" href="#the-cloud" title="Permalink to this headline">¶</a></h3>
+<p>In addition to the traditional VM-based deployment described above, we
+have also used mite in a “cloud” environment – specifically in a
+kubernetes cluster.  As above this is provisioned by the company, but
+could just as easily be part of a hosted kubernetes offering such as
+GKE.</p>
+<p>In addition to the difference in the space into which the applications
+are deployed, this environment also comes with a different release
+cadence: continuous delivery is used with nightly NFT runs (recycling
+the resources that are used to run CI testing during the day as
+developers work on the code).  Finally, the environment also has NFRs
+that are roughly an order of magnitude larger than the traditional
+VM-based one.</p>
+<p>Mite as a distributed system made of discrete units is in many ways
+well-adapted to such an environment.  We have deployed it into the cluster
+with the following resource allocations:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 36%" />
+<col style="width: 29%" />
+<col style="width: 14%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Component</p></th>
+<th class="head"><p>Replicas</p></th>
+<th class="head"><p>CPU</p></th>
+<th class="head"><p>Memory</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Controller</p></td>
+<td><p>1</p></td>
+<td><p>2</p></td>
+<td><p>500MB</p></td>
+</tr>
+<tr class="row-odd"><td><p>Duplicator</p></td>
+<td><p>1</p></td>
+<td><p>2</p></td>
+<td><p>100MB</p></td>
+</tr>
+<tr class="row-even"><td><p>Exporter</p></td>
+<td><p>1</p></td>
+<td><p>0.25</p></td>
+<td><p>100MB</p></td>
+</tr>
+<tr class="row-odd"><td><p>Runner</p></td>
+<td><p>50</p></td>
+<td><p>1</p></td>
+<td><p>500MB</p></td>
+</tr>
+<tr class="row-even"><td><p>Stats</p></td>
+<td><p>20</p></td>
+<td><p>1</p></td>
+<td><p>50MB</p></td>
+</tr>
+</tbody>
+</table>
+<p>For injecting loads of up to 22k tps, we have found 50 runners and 20
+stats to be more than sufficient.  (We have noted that the abstract
+“CPU” is more performant in this environment than in the VMs in the
+previous section.)  As before, the network bandwidth used by mite in
+this environment is not characterized; we have not run into problems
+with our assumption that all the relevant pipes are fat enough for
+within-cluster communication of the scale that we require.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mite</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Design and deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#design-of-mite">Design of mite</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#useful-topologies">Useful topologies</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="config.html" title="previous chapter">Specifying configuration for mite journeys</a></li>
+      <li>Next: <a href="prometheus.html" title="next chapter">Prometheus and mite</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/design-deployment.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

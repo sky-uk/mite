@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Prometheus and mite &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Design and deployment" href="design-deployment.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="prometheus-and-mite">
+<h1>Prometheus and mite<a class="headerlink" href="#prometheus-and-mite" title="Permalink to this headline">¶</a></h1>
+<p id="prometheus-doc">Mite is designed to output the data on its performance tests to
+<a class="reference external" href="https://prometheus.io/">prometheus</a> (for storage, indexing, and
+machine-readable retrievability) and then <a class="reference external" href="https://grafana.com/">grafana</a> (for data visualization and analysis).  In the
+following sections, weʼll discuss some of the details involved in
+configuring these applications.</p>
+<div class="section" id="id1">
+<h2>Prometheus<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Prometheus collects its metrics by scraping an http endpoint at a
+defined interval.  It should be configured to point to port 9301 on the
+machine where the <code class="docutils literal notranslate"><span class="pre">mite</span> <span class="pre">prometheus_exporter</span></code> command runs.  Here is a
+minimal <code class="docutils literal notranslate"><span class="pre">prometheus.yml</span></code> config file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">global</span><span class="p">:</span>
+  <span class="nt">scrape_interval</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1s</span>
+
+<span class="nt">scrape_configs</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">job_name</span><span class="p">:</span> <span class="s">&#39;mite&#39;</span>
+    <span class="nt">static_configs</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">targets</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;127.0.0.1:9301&#39;</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">targets</span></code> is configured on the assumption that the prometheus
+process runs on the same machine as the mite exporter process (as is the
+case in our teamʼs <a class="reference internal" href="design-deployment.html#vm-deployment"><span class="std std-ref">virtual machine deployment</span></a>).
+If this is not the case, you will have to change the localhost IP to an
+actual IP or hostname (as well as making sure that the mite box is
+accessible to the prometheus from a firewall perspective).</p>
+</div>
+<div class="section" id="id2">
+<h2>Grafana<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>The grafana instance you are using will need to be set up with your
+prometheus as a data source.  <a class="reference external" href="https://prometheus.io/docs/visualization/grafana/">The Prometheus documentation</a> has an
+example of how to accomplish this.  We provide <a class="reference external" href="https://github.com/sky-uk/id-mite-nft/blob/master/provisioning/grafana/dashboard-json/mite.json">a dashboard</a> which is
+pre-configured for mite.  The dashboard assumes that you have several
+applications under test, which will have their measurements tagged in
+Prometheus with an <code class="docutils literal notranslate"><span class="pre">application</span></code> label.  You will need to edit the
+<a class="reference external" href="https://grafana.com/docs/reference/templating/">dashboard variables</a> so that they reflect the names of your
+applications.  (Otherwise, you can take out the <code class="docutils literal notranslate"><span class="pre">application=~$app</span></code>
+query from all the dashboard panels).  As the grafana documentation
+points out, you will also need to edit the datasource of the dashboard
+to match the prometheus instance you configured grafana with.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mite</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Prometheus and mite</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Prometheus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Grafana</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="design-deployment.html" title="previous chapter">Design and deployment</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/prometheus.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

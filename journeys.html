@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Writing mite journeys and scenarios &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Specifying configuration for mite journeys" href="config.html" />
+    <link rel="prev" title="Mite components" href="components.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="writing-mite-journeys-and-scenarios">
+<h1>Writing mite journeys and scenarios<a class="headerlink" href="#writing-mite-journeys-and-scenarios" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="journeys">
+<h2>Journeys<a class="headerlink" href="#journeys" title="Permalink to this headline">¶</a></h2>
+<p>The basics of writing mite journey functions are explained in the
+<a class="reference external" href="https://github.com/sky-uk/mite#journeys">README</a>.</p>
+</div>
+<div class="section" id="data-creation-scenarios">
+<span id="id1"></span><h2>Data creation scenarios<a class="headerlink" href="#data-creation-scenarios" title="Permalink to this headline">¶</a></h2>
+<p>For many workloads, it is necessary to populate a test environment with
+some data.  For example, if we are performance testing a web appʼs
+signin, we need to seed the database with some usernames and passwords
+that we can use in our signin HTTP requests.  In mite, this is
+accomplished by <strong>data creation scenarios</strong>.</p>
+<p>Firstly, when running a data creation scenario, we need to activate
+miteʼs <a class="reference internal" href="components.html#recorder-component"><span class="std std-ref">recorder component</span></a>.  This will
+write the data as it is created to a series of <a class="reference external" href="https://msgpack.org/index.html">msgpack</a>-format files
+in a directory called <code class="docutils literal notranslate"><span class="pre">recorder-data</span></code>.  These files will become the
+input for a datapool for the load test journeys (see below).</p>
+<p>Secondly, we need to write some journey functions that use the appʼs
+HTTP APIs to create data.  An example might be as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">mite_http</span> <span class="kn">import</span> <span class="n">mite_http</span>
+
+<span class="nd">@mite_http</span>
+<span class="n">async</span> <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span>
+    <span class="n">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Create user&quot;</span><span class="p">):</span>
+        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/users/create&quot;</span><span class="p">,</span>
+                            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;test1234&quot;</span><span class="p">})</span>
+        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;data_created&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;users&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>We use the python standard library <a class="reference external" href="https://docs.python.org/3/library/uuid.html#module-uuid" title="(in Python v3.8)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">uuid</span> <span class="pre">module</span></code></a> to
+generate random user names, and create the users with a fixed password.
+We then send a message with the type <code class="docutils literal notranslate"><span class="pre">data_created</span></code> and the name
+<code class="docutils literal notranslate"><span class="pre">users</span></code>.  This will be read by the recorder process, which listens
+to messages with type <code class="docutils literal notranslate"><span class="pre">data_created</span></code>.  It will read the <code class="docutils literal notranslate"><span class="pre">name</span></code> of
+all such messages.  For each message, the <code class="docutils literal notranslate"><span class="pre">data</span></code> is written as a
+msgpack dictionary into the file <code class="docutils literal notranslate"><span class="pre">recorder-data/{name}.msgpack</span></code>.</p>
+<p>We create a scenario that runs this journey for a specific amount of
+time at a specific rate, which will generate our test users.  If we have
+other types of data that need to be populated in the environment, we can
+write multiple journeys and run them as part of the same scenario.  By
+giving a different <code class="docutils literal notranslate"><span class="pre">name</span></code> to each kind of data we create, we will get
+different output files for each type of data.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The suggested approach to run the data creation journey for a
+specific time and TPS will generate an approximate number of test
+users.  If precise control of the number of users generated is
+needed, you should instead use a (nonrecyclable) datapool as input
+to the creation scenario.  The scenario will then be run once for
+each item in the data pool, creating a precisely specified number
+of users.</p>
+</div>
+<p>The next step is to create a data pool for the usernames:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mite.datapools</span> <span class="kn">import</span> <span class="n">RecyclableIterableDataPool</span>
+
+<span class="n">usernames</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;recorder-data&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">Unpacker</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">use_list</span><span class="o">=</span><span class="bp">False</span><span class="p">)):</span>
+        <span class="n">usernames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">msg</span><span class="p">[</span><span class="s2">&quot;username&quot;</span><span class="p">],))</span>
+
+<span class="n">username_datapool</span> <span class="o">=</span> <span class="n">RecyclableIterableDataPool</span><span class="p">(</span><span class="n">usernames</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The datapool items (which are appended to the <code class="docutils literal notranslate"><span class="pre">usernames</span></code> variable)
+are tuples; this is required by miteʼs data pool framework.</p>
+</div>
+<p>Finally, we can use this datapool in our scenario:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@mite_http</span>
+<span class="n">async</span> <span class="k">def</span> <span class="nf">signin</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="n">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Log in&quot;</span><span class="p">):</span>
+        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/login&quot;</span><span class="p">,</span>
+                            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;test1234&quot;</span><span class="p">})</span>
+
+<span class="k">def</span> <span class="nf">my_scenario</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">[[</span><span class="s2">&quot;my_file:signin&quot;</span><span class="p">,</span> <span class="n">usernames_datapool</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="mi">100</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mite</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing mite journeys and scenarios</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#journeys">Journeys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-creation-scenarios">Data creation scenarios</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="components.html" title="previous chapter">Mite components</a></li>
+      <li>Next: <a href="config.html" title="next chapter">Specifying configuration for mite journeys</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/journeys.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
