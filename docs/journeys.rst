@@ -29,6 +29,8 @@ write the data as it is created to a series of `msgpack`_-format files
 in a directory called ``recorder-data``.  These files will become the
 input for a datapool for the load test journeys (see below).
 
+.. _msgpack: https://msgpack.org/index.html
+
 Secondly, we need to write some journey functions that use the appʼs
 HTTP APIs to create data.  An example might be as follows:
 
@@ -46,7 +48,7 @@ HTTP APIs to create data.  An example might be as follows:
            await ctx.send("data_created", name="users", data={"username": username})
 
 
-We use the python standard library :ref:`uuid module <python:uuid>` to
+We use the python standard library :py:mod:`uuid module <uuid>` to
 generate random user names, and create the users with a fixed password.
 We then send a message with the type ``data_created`` and the name
 ``users``.  This will be read by the recorder process, which listens
