@@ -66,6 +66,28 @@ most sense to separate the runners from the other components of mite.
 This both avoids interference between the components and makes it easy
 to scale the resources devoted to the runners.
 
+A note on resource usage
+------------------------
+
+In the following sections, we describe our “real-world” usage of mite.
+This infrastructure is somewhat overprovisioned for our needs, but our
+focus has been on the performance of the applications which we test.
+While not wishing to be profligate, we believe it would be a mistake to
+shrink the injection infrastructure close to its performance limits.
+When resource constraints appear in an NFT exercise, they should stem
+from the system under test and not the test apparatus.  Anything other
+than the most occasional exception to this rule is an indication that
+the NFT is not efficiently organized.
+
+In fact, we have reason to believe that the peak performance of mite, in
+terms of maximum throughput per CPU and memory devoted to running mite,
+is significantly above what is implied by these numbers.  Furthermore,
+our resource usage already compares favorably with other performance
+engineering teams in Sky using different tools, even without having
+performed a dedicated performance tuning of our injection
+infrastructure.
+
+
 Single machine
 --------------
 
@@ -96,17 +118,12 @@ servers rented from a colocation facility or VM provider).  We regard
 this as fairly typical of a traditional NFT setup in a medium to large
 tech company.
 
-We have used this infrastructure to inject load of up to 10k tps into our
-system under test.  This infrastructure is somewhat overprovisioned for
-our needs, but our focus has been on the performance of the applications
-which we test.  While not wishing to be profligate, we believe it would be
-a mistake to shrink the injection infrastructure close to its performance
-limits.  When resource constraints appear in an NFT exercise, they should
-stem from the system under test and not the test apparatus.  Anything
-other than the most occasional exception to this rule is an indication
-that the NFT is not efficiently organized.
+We have used this infrastructure to inject load of up to 12k tps into
+our system under test across a variety of journeys, including some which
+simulate full user interaction with the platform, i.e. signin → modify
+data → signout.
 
-(Note that the provisioning of our test injection infrastrucutre is also
+(Note that the provisioning of our test injection infrastructure is also
 undercharacterized above: far more important than memory for the runners
 is the bandwidth from them to the system under test – which is also less
 straightforward to quantify in the than VM size.  Our injectors and
