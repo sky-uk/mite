@@ -1,0 +1,37 @@
+language: python
+cache: pip
+python:
+  - "3.7"
+
+stages:
+  - pre-check
+  - test
+  - name: docs
+    if: branch = master
+  - name: deploy
+    if: branch = master
+
+jobs:
+  include:
+    - stage: pre-check
+      name: Check the format of files in the repo
+      script: pre-commit run --all-files
+    - stage: test
+      name: Unit tests
+      script: pytest
+      python:
+        - "3.7"
+        - "3.8"
+    - stage: docs
+      name: Build docs
+      script: cd docs; make html
+
+install:
+  - pip install -r requirements.txt -r test-requirements.txt
+
+deploy:
+  - provider: pages
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    keep_history: true
+    local_dir: docs/_build
