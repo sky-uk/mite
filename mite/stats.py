@@ -148,7 +148,7 @@ class Stats:
             Counter(
                 'mite_transaction_total',
                 matcher_by_type('txn'),
-                labels_extractor('test journey transaction'.split()),
+                labels_extractor('test journey transaction had_error'.split()),
             ),
             Counter(
                 'mite_http_response_total',
@@ -175,6 +175,17 @@ class Stats:
                 'mite_runner_count',
                 matcher_by_type('controller_report'),
                 labels_and_value_extractor(['test'], 'num_runners'),
+            ),
+            Histogram(
+                'mite_http_selenium_response_time_seconds',
+                matcher_by_type('http_selenium_metrics'),
+                labels_and_value_extractor(['transaction'], 'total_time'),
+                [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
+            ),
+            Counter(
+                'mite_http_selenium_response_total',
+                matcher_by_type('http_selenium_metrics'),
+                labels_extractor('test journey transaction'.split()),
             ),
         ]
         self.dump_timeout = time.time() + 0.25

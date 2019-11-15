@@ -58,11 +58,13 @@ def ensure_fixed_separation(separation, loop=None):
         loop: Event loop to apply the wait to, defaults to asyncio.get_event_loop()
 
     Example usage:
-    >>> with ensure_fixed_separation(5):
+    >>> async with ensure_fixed_separation(5):
     >>>     do_something()
    """
+
     def fixed_separation():
         return separation
+
     return ensure_separation_from_callable(fixed_separation, loop=loop)
 
 
@@ -81,7 +83,7 @@ def ensure_average_separation(mean_separation, plus_minus=None, loop=None):
     >>>     do_something()
    """
     if plus_minus is None:
-        plus_minus = mean_separation * .25
+        plus_minus = mean_separation * 0.25
 
     def average_separation():
         return mean_separation + (random.random() * plus_minus * 2) - plus_minus
