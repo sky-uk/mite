@@ -59,3 +59,9 @@ def do_test():
 
 if __name__ == "__main__":
     do_test()
+
+    # 9/30/19: issues to fix:
+    # - prometheus can't find its config file (from piepline.py)
+    # - iterating over the recorder data fails
+    # - should refactor tyo use the pipeline creation stuff from the
+    #   provisioning changes to id-mite-nft
