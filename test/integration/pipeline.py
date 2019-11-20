@@ -1,12 +1,18 @@
-import psutil
+import logging
+import os
 import subprocess
 import tempfile
-import os
+
+import psutil
 
 
-def start_mite(job_name, debug, *args):
+def start_mite(job_name, debug, *args, log_file=None):
+    if log_file is None:
+        log_file = job_name
+    if not log_file.endswith(".log"):
+        log_file += ".log"
     if debug:
-        out = open(job_name + ".log", "w")
+        out = open(log_file, "w")
         cmd = ("mite", job_name, "--log-level=DEBUG", *args)
         kwargs = {'stdout': out, 'stderr': subprocess.STDOUT}
     else:
@@ -37,7 +43,9 @@ def create(n_runners=1, collector=True, stats=False, debug=False):
         raise Exception("Must have either collector or stats!")
     processes["duplicator"] = start_mite("duplicator", debug, *args)
 
-    runners = [start_mite(f"runner{i}", debug) for i in range(n_runners)]
+    runners = [
+        start_mite("runner", debug, log_file=f"runner{i}") for i in range(n_runners)
+    ]
     processes["runners"] = runners
 
     if collector:
@@ -47,6 +55,7 @@ def create(n_runners=1, collector=True, stats=False, debug=False):
         processes["stats"] = start_mite("stats", debug)
         processes["prometheus_exporter"] = start_mite("prometheus_exporter", debug)
         td = tempfile.TemporaryDirectory()
+        processes["tempdir"] = td
         with open(os.path.join(td.name, "prometheus.yml"), "w") as tf:
             tf.write(
                 """\
@@ -59,8 +68,9 @@ scrape_configs:
        - targets: ['127.0.0.1:9301']
 """
             )
-        print("wrote " + os.path.join(td.name, "prometheus.yml"))
+        logging.info("wrote " + os.path.join(td.name, "prometheus.yml"))
         os.makedirs(os.path.join(td.name, "prometheus"), exist_ok=True)
+        prom_log = open("prometheus.log", "w")
         processes["prometheus"] = psutil.Popen(
             (
                 "prometheus",
@@ -69,7 +79,9 @@ scrape_configs:
                 "--config.file=" + os.path.join(td.name, "prometheus.yml"),
                 "--web.listen-address=127.0.0.1:9090",
                 "--storage.tsdb.path=" + os.path.join(td.name, "prometheus"),
-            )
+            ),
+            stdout=prom_log,
+            stderr=subprocess.STDOUT,
         )
 
     return processes

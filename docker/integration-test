@@ -1,0 +1,15 @@
+FROM mite:latest
+
+RUN apt-get install -y prometheus gcc cmake make libc-dev g++
+
+ADD test-requirements.txt /test-requirements.txt
+
+RUN pip install -r /test-requirements.txt
+
+RUN apt-get remove -y gcc cmake make libc-dev g++
+
+ADD test/integration /integration-test
+
+WORKDIR /integration-test
+
+CMD python integration.py

@@ -2,9 +2,10 @@
 # builds, which we can use once core platform pull their finger out.
 # FROM python:3.7.3-alpine3.9 as base
 
-FROM python:3.7.3-alpine3.9
+FROM python:3.7.3
 
-RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev
+RUN apt-get update
+RUN apt-get install -y ca-certificates gcc cmake make libc-dev g++ git libcurl4-openssl-dev
 
 # This little bit of magic caches the dependencies in a docker layer, so that
 # rebuilds locally are not so expensive
@@ -25,7 +26,7 @@ RUN pip install --no-cache-dir -e .
 # the scm-version
 RUN rm -r /mite/.git
 
-RUN apk del -r gnupg tar gcc cmake make libc-dev g++ zeromq-dev git
+RUN apt-get remove -y gcc cmake make libc-dev g++ git libcurl4-openssl-dev
 
 # FROM python:3.7.3-alpine3.9
 # COPY --from=base / /
