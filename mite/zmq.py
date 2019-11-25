@@ -1,8 +1,10 @@
-import zmq
-
-from .utils import pack_msg, unpack_msg
 import asyncio
 import logging
+
+import zmq
+import zmq.asyncio as azmq
+
+from .utils import pack_msg, unpack_msg
 
 logger = logging.getLogger(__name__)
 
@@ -155,30 +157,24 @@ class RunnerTransport:
 
 
 class ControllerServer:
-    def __init__(self, socket_address, loop=None):
-        self._zmq_context = zmq.Context()
+    def __init__(self, socket_address):
+        self._zmq_context = azmq.Context()
         self._sock = self._zmq_context.socket(zmq.REP)
         self._sock.bind(socket_address)
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
 
     async def run(self, controller, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, controller, stop_func)
-
-    def _run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():
-            msg = self._sock.recv()
+            msg = await self._sock.recv()
             try:
                 _type, content = unpack_msg(msg)
             except Exception:
                 print(f"whoops! msg was {msg}")
                 raise
             if _type == _MSG_TYPE_HELLO:
-                self._sock.send(pack_msg(controller.hello()))
+                await self._sock.send(pack_msg(controller.hello()))
             elif _type == _MSG_TYPE_REQUEST_WORK:
-                self._sock.send(pack_msg(controller.request_work(*content)))
+                await self._sock.send(pack_msg(controller.request_work(*content)))
             elif _type == _MSG_TYPE_BYE:
-                self._sock.send(pack_msg(controller.bye(content)))
+                await self._sock.send(pack_msg(controller.bye(content)))
             else:
                 raise Exception(f"something weird happened! _type is {_type}")
