@@ -9,7 +9,7 @@ Usage:
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET]
     mite [options] recorder [--recorder-socket=SOCKET]
-    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
+    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--scenario-spec=SPEC]
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite --help
@@ -42,6 +42,7 @@ Options:
     --collector-socket=SOCKET         Socket [default: tcp://127.0.0.1:14303]
     --stats-in-socket=SOCKET          Socket [default: tcp://127.0.0.1:14304]
     --stats-out-socket=SOCKET         Socket [default: tcp://127.0.0.1:14305]
+    --scenario-spec=SPEC              Importable spec for the scenario function, used to add stats
     --recorder-socket=SOCKET          Socket [default: tcp://127.0.0.1:14306]
     --delay-start-seconds=DELAY       Delay start allowing others to connect [default: 0]
     --volume=VOLUME                   Volume to run journey at [default: 1]
@@ -54,41 +55,30 @@ Options:
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
 """
-import sys
-import os
 import asyncio
-from urllib.request import urlopen, Request as UrlLibRequest
-import docopt
-import threading
 import logging
+import os
+import sys
+import threading
+from urllib.request import Request as UrlLibRequest
+from urllib.request import urlopen
+
+import docopt
 import ujson
+
 import uvloop
 
-from .scenario import ScenarioManager
+from .cli.stats import stats
+from .collector import Collector
 from .config import ConfigManager
 from .controller import Controller
-from .runner import Runner
-from .collector import Collector
-from .recorder import Recorder
-from .utils import spec_import, pack_msg
-from .web import app, prometheus_metrics
-from .logoutput import MsgOutput, HttpStatsOutput
-from .stats import Stats
 from .har_to_mite import har_convert_to_mite
-
-
-def _msg_backend_module(opts):
-    msg_backend = opts['--message-backend']
-    if msg_backend == 'nanomsg':
-        from . import nanomsg
-
-        return nanomsg
-    elif msg_backend == 'ZMQ':
-        from . import zmq
-
-        return zmq
-    else:
-        raise ValueError('Unsupported backend %r' % (msg_backend,))
+from .logoutput import HttpStatsOutput, MsgOutput
+from .recorder import Recorder
+from .runner import Runner
+from .scenario import ScenarioManager
+from .utils import _msg_backend_module, pack_msg, spec_import
+from .web import app, prometheus_metrics
 
 
 def _collector_receiver(opts):
@@ -110,20 +100,6 @@ def _create_sender(opts):
     sender = _msg_backend_module(opts).Sender()
     sender.connect(socket)
     return sender
-
-
-def _create_stats_sender(opts):
-    socket = opts['--stats-out-socket']
-    sender = _msg_backend_module(opts).Sender()
-    sender.connect(socket)
-    return sender
-
-
-def _create_stats_receiver(opts):
-    socket = opts['--stats-in-socket']
-    receiver = _msg_backend_module(opts).Receiver()
-    receiver.connect(socket)
-    return receiver
 
 
 def _create_prometheus_exporter_receiver(opts):
@@ -436,15 +412,6 @@ def recorder(opts):
 def duplicator(opts):
     duplicator = _create_duplicator(opts)
     asyncio.get_event_loop().run_until_complete(duplicator.run())
-
-
-def stats(opts):
-    receiver = _create_stats_receiver(opts)
-    agg_sender = _create_stats_sender(opts)
-    stats = Stats(sender=agg_sender.send)
-    receiver.add_listener(stats.process)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(receiver.run())
 
 
 def prometheus_exporter(opts):

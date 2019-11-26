@@ -147,84 +147,47 @@ def controller_report_extractor(dict_key):
 
 
 class Stats:
+    _ALL_STATS = [
+        Counter(
+            name='mite_journey_error_total',
+            matcher=matcher_by_type('error', 'exception'),
+            label_extractor=label_extractor(
+                'test journey transaction location message'.split()
+            ),
+        ),
+        Counter(
+            name='mite_transaction_total',
+            matcher=matcher_by_type('txn'),
+            label_extractor=label_extractor('test journey transaction had_error'.split()),
+        ),
+        Gauge(
+            name='mite_actual_count',
+            matcher=matcher_by_type('controller_report'),
+            label_extractor=controller_report_extractor('actual'),
+        ),
+        Gauge(
+            'mite_required_count',
+            matcher_by_type('controller_report'),
+            controller_report_extractor('required'),
+        ),
+        Gauge(
+            'mite_runner_count',
+            matcher_by_type('controller_report'),
+            label_extractor=label_extractor(['test']),
+            value_extractor=lambda x: x['num_runners'],
+        ),
+    ]
+
+    @classmethod
+    def register(cls, stats):
+        cls._ALL_STATS += stats
+
     def __init__(self, sender):
         self.sender = sender
-        self.processors = [
-            Counter(
-                name='mite_journey_error_total',
-                matcher=matcher_by_type('error', 'exception'),
-                label_extractor=label_extractor(
-                    'test journey transaction location message'.split()
-                ),
-            ),
-            Counter(
-                name='mite_transaction_total',
-                matcher=matcher_by_type('txn'),
-                label_extractor=label_extractor(
-                    'test journey transaction had_error'.split()
-                ),
-            ),
-            Counter(
-                name='mite_http_response_total',
-                matcher=matcher_by_type('http_curl_metrics'),
-                label_extractor=label_extractor(
-                    'test journey transaction method response_code'.split()
-                ),
-            ),
-            Histogram(
-                name='mite_http_response_time_seconds',
-                matcher=matcher_by_type('http_curl_metrics'),
-                label_extractor=label_extractor(['transaction']),
-                value_extractor=lambda x: x['total_time'],
-                bins=[
-                    0.0001,
-                    0.001,
-                    0.01,
-                    0.05,
-                    0.1,
-                    0.2,
-                    0.4,
-                    0.8,
-                    1,
-                    2,
-                    4,
-                    8,
-                    16,
-                    32,
-                    64,
-                ],
-            ),
-            Gauge(
-                name='mite_actual_count',
-                matcher=matcher_by_type('controller_report'),
-                label_extractor=controller_report_extractor('actual'),
-            ),
-            Gauge(
-                'mite_required_count',
-                matcher_by_type('controller_report'),
-                controller_report_extractor('required'),
-            ),
-            Gauge(
-                'mite_runner_count',
-                matcher_by_type('controller_report'),
-                labels_and_value_extractor(['test'], 'num_runners'),
-            ),
-            Histogram(
-                'mite_http_selenium_response_time_seconds',
-                matcher_by_type('http_selenium_metrics'),
-                labels_and_value_extractor(['transaction'], 'total_time'),
-                [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
-            ),
-            Counter(
-                'mite_http_selenium_response_total',
-                matcher_by_type('http_selenium_metrics'),
-                label_extractor('test journey transaction'.split()),
-            ),
-        ]
         self.dump_timeout = time.time() + 0.25
 
     def process(self, msg):
-        for processor in self.processors:
+        for processor in self._ALL_STATS:
             processor.process(msg)
         t = time.time()
         if t > self.dump_timeout:
