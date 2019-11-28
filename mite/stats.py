@@ -2,22 +2,23 @@ import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, DefaultDict, Sequence
+from numbers import Number
+from typing import Any, Callable, DefaultDict, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class LabelExtractor:
+class Extractor:
     labels: Sequence[str]
-    extract: Callable[[Any], Sequence[str]]
+    extract: Callable[[Any], Sequence[Tuple[str, Number]]]
 
 
 @dataclass
 class Stat:
     name: str
     matcher: Callable[[Any], bool]
-    label_extractor: LabelExtractor
+    extractor: Extractor
 
 
 @dataclass
@@ -28,8 +29,8 @@ class Counter(Stat):
 
     def process(self, msg):
         if self.matcher(msg):
-            key = self.label_extractor.extract(msg)
-            self.metrics[key] += 1
+            for key, _ in self.extractor.extract(msg):
+                self.metrics[key] += 1
 
     def dump(self):
         metrics = dict(self.metrics)
@@ -38,21 +39,20 @@ class Counter(Stat):
             "type": "Counter",
             "name": self.name,
             "metrics": metrics,
-            "labels": self.label_extractor.labels,
+            "labels": self.extractor.labels,
         }
 
 
 @dataclass
 class Gauge(Stat):
-    value_extractor: Callable[[Any], float]
     metrics: DefaultDict[Any, float] = field(
         default_factory=lambda: defaultdict(float), init=False
     )
 
     def process(self, msg):
         if self.matcher(msg):
-            key = self.label_extractor.extract(msg)
-            self.metrics[key] += self.value_extractor(msg)
+            for key, value in self.extractor.extract(msg):
+                self.metrics[key] += value
 
     def dump(self):
         metrics = dict(self.metrics)
@@ -61,13 +61,12 @@ class Gauge(Stat):
             "type": "Gauge",
             "name": self.name,
             "metrics": metrics,
-            "labels": self.label_extractor.labels,
+            "labels": self.extractor.labels,
         }
 
 
 @dataclass
 class Histogram(Stat):
-    value_extractor: Callable[[Any], float]
     bins: Sequence[float]
 
     def __post_init__(self):
@@ -78,14 +77,12 @@ class Histogram(Stat):
 
     def process(self, msg):
         if self.matcher(msg):
-            key = self.label_extractor.extract(msg)
-            value = self.value_extractor(msg)
-
-            self.sums[key] += value
-            self.total_counts[key] += 1
-            for i, bin in enumerate(self.bins):
-                if bin <= value:
-                    self.bin_counts[key][i] += 1
+            for key, value in self.extractor.extract(msg):
+                self.sums[key] += value
+                self.total_counts[key] += 1
+                for i, bin in enumerate(self.bins):
+                    if bin <= value:
+                        self.bin_counts[key][i] += 1
 
     def dump(self):
         bin_counts = dict(self.bin_counts)
@@ -102,7 +99,7 @@ class Histogram(Stat):
             "sums": sums,
             "total_counts": total_counts,
             "bins": self.bins,
-            "labels": self.label_extractor.labels,
+            "labels": self.extractor.labels,
         }
 
 
@@ -114,27 +111,12 @@ def matcher_by_type(*targets):
     return type_matcher
 
 
-def label_extractor(labels):
-    return LabelExtractor(
-        labels=labels, extract=lambda msg: tuple(msg.get(label, "") for label in labels)
-    )
-
-
-# FIXME WIP: remove these three
-def labels_and_value_extractor(labels, value_key):
+def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield tuple(msg.get(i, '') for i in labels), msg[value_key]
+        yield (msg.get(i, "") for i in labels), 1 if value_key is None else msg[value_key]
 
     extract_items.labels = labels
-    return extract_items
-
-
-def time_extractor():
-    def extract_items(msg):
-        yield (), time.time() - msg['time']
-
-    extract_items.labels = ''
-    return extract_items
+    return Extractor(labels=labels, extract=extract_items)
 
 
 def controller_report_extractor(dict_key):
@@ -142,8 +124,7 @@ def controller_report_extractor(dict_key):
         for scenario_id, value in msg[dict_key].items():
             yield (msg.get('test', ''), scenario_id), value
 
-    extract_items.labels = ('test', 'scenario_id')
-    return extract_items
+    return Extractor(labels=('test', 'scenario_id'), extract=extract_items)
 
 
 class Stats:
@@ -151,30 +132,27 @@ class Stats:
         Counter(
             name='mite_journey_error_total',
             matcher=matcher_by_type('error', 'exception'),
-            label_extractor=label_extractor(
-                'test journey transaction location message'.split()
-            ),
+            extractor=extractor('test journey transaction location message'.split()),
         ),
         Counter(
             name='mite_transaction_total',
             matcher=matcher_by_type('txn'),
-            label_extractor=label_extractor('test journey transaction had_error'.split()),
+            extractor=extractor('test journey transaction had_error'.split()),
         ),
         Gauge(
             name='mite_actual_count',
             matcher=matcher_by_type('controller_report'),
-            label_extractor=controller_report_extractor('actual'),
+            extractor=controller_report_extractor('actual'),
         ),
         Gauge(
-            'mite_required_count',
-            matcher_by_type('controller_report'),
-            controller_report_extractor('required'),
+            name='mite_required_count',
+            matcher=matcher_by_type('controller_report'),
+            extractor=controller_report_extractor('required'),
         ),
         Gauge(
-            'mite_runner_count',
-            matcher_by_type('controller_report'),
-            label_extractor=label_extractor(['test']),
-            value_extractor=lambda x: x['num_runners'],
+            name='mite_runner_count',
+            matcher=matcher_by_type('controller_report'),
+            extractor=extractor(['test'], 'num_runners'),
         ),
     ]
 

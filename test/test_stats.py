@@ -1,4 +1,4 @@
-from mite.stats import Counter, Gauge, Histogram, LabelExtractor, label_extractor
+from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
 TXN_MSG = {
     'start_time': 1572604344.7903123,
@@ -18,33 +18,42 @@ TXN_MSG = {
 
 
 def test_label_extractor_txn_msg():
-    extractor = label_extractor("test journey transaction had_error".split())
-    labels = extractor.extract(TXN_MSG)
+    ex = extractor("test journey transaction had_error".split())
+    ls = list(ex.extract(TXN_MSG))
+    assert len(ls) == 1
+    labels, _ = ls[0]
     expected_value = (
         "mite_project.file:scenario",
         "mite_project.file:journey",
         "txn_name",
         True,
     )
-    assert labels == expected_value
+    assert tuple(labels) == expected_value
+
+
+class TestModularity:
+    def test_modularity(self):
+        import mite_http  # noqa
+
+        assert all(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
 
 
 class TestCounter:
-    dummy_lx = LabelExtractor(labels=("bar",), extract=lambda x: "foo")
+    dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 1),))
 
     def test_process(self):
-        counter = Counter("test", lambda x: True, self.dummy_lx)
+        counter = Counter("test", lambda x: True, self.dummy_extractor)
         counter.process(None)
         assert dict(counter.metrics) == {"foo": 1}
 
     def test_process_additivity(self):
-        counter = Counter("test", lambda x: True, self.dummy_lx)
+        counter = Counter("test", lambda x: True, self.dummy_extractor)
         counter.process(None)
         counter.process(None)
         assert dict(counter.metrics) == {"foo": 2}
 
     def test_dump(self):
-        counter = Counter("test", lambda x: True, self.dummy_lx)
+        counter = Counter("test", lambda x: True, self.dummy_extractor)
         counter.process(None)
         assert counter.dump() == {
             "type": "Counter",
@@ -55,7 +64,7 @@ class TestCounter:
         assert dict(counter.metrics) == {}
 
     def test_process_after_dump(self):
-        counter = Counter("test", lambda x: True, self.dummy_lx)
+        counter = Counter("test", lambda x: True, self.dummy_extractor)
         counter.process(None)
         counter.dump()
         counter.process(None)
@@ -63,21 +72,21 @@ class TestCounter:
 
 
 class TestGauge:
-    dummy_lx = LabelExtractor(labels=("bar",), extract=lambda x: "foo")
+    dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 3),))
 
     def test_process(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_lx, lambda x: 3.0)
+        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
         gauge.process(None)
         assert dict(gauge.metrics) == {"foo": 3.0}
 
     def test_process_additivity(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_lx, lambda x: 3.0)
+        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
         gauge.process(None)
         gauge.process(None)
         assert dict(gauge.metrics) == {"foo": 6.0}
 
     def test_dump(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_lx, lambda x: 3.0)
+        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
         gauge.process(None)
         assert gauge.dump() == {
             "type": "Gauge",
@@ -88,7 +97,7 @@ class TestGauge:
         assert dict(gauge.metrics) == {}
 
     def test_process_after_dump(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_lx, lambda x: 3.0)
+        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
         gauge.process(None)
         gauge.dump()
         gauge.process(None)
@@ -96,17 +105,17 @@ class TestGauge:
 
 
 class TestHistogram:
-    dummy_lx = LabelExtractor(labels=("bar",), extract=lambda x: "foo")
+    dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 3),))
 
     def test_process(self):
-        hist = Histogram("test", lambda _: True, self.dummy_lx, lambda x: 3, (1, 2, 3, 4))
+        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
         assert dict(hist.bin_counts) == {"foo": [1, 1, 1, 0]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}
 
     def test_process_additivity(self):
-        hist = Histogram("test", lambda _: True, self.dummy_lx, lambda x: 3, (1, 2, 3, 4))
+        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
         hist.process(None)
         assert dict(hist.bin_counts) == {"foo": [2, 2, 2, 0]}
@@ -114,7 +123,7 @@ class TestHistogram:
         assert dict(hist.total_counts) == {"foo": 2}
 
     def test_dump(self):
-        hist = Histogram("test", lambda _: True, self.dummy_lx, lambda x: 3, (1, 2, 3, 4))
+        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
         assert hist.dump() == {
             "type": "Histogram",
@@ -130,7 +139,7 @@ class TestHistogram:
         assert dict(hist.bin_counts) == {}
 
     def test_process_after_dump(self):
-        hist = Histogram("test", lambda _: True, self.dummy_lx, lambda x: 3, (1, 2, 3, 4))
+        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
         hist.dump()
         hist.process(None)

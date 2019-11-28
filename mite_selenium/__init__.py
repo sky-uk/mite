@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from mite.stats import Counter, Histogram, Stats, label_extractor, matcher_by_type
+from mite.stats import Counter, Histogram, Stats, extractor, matcher_by_type
 from mite.utils import spec_import
 from selenium.webdriver import Remote
 
@@ -12,14 +12,13 @@ _MITE_STATS = (
     Histogram(
         'mite_http_selenium_response_time_seconds',
         matcher_by_type('http_selenium_metrics'),
-        label_extractor=label_extractor(['transaction']),
-        value_extractor=lambda x: x['total_time'],
+        extractor=extractor(['transaction'], 'total_time'),
         bins=[0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
     ),
     Counter(
         'mite_http_selenium_response_total',
         matcher_by_type('http_selenium_metrics'),
-        label_extractor('test journey transaction'.split()),
+        extractor('test journey transaction'.split()),
     ),
 )
 Stats.register(_MITE_STATS)
