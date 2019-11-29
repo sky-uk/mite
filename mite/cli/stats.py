@@ -22,7 +22,7 @@ def stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
         scenario_fn = spec_import(scenario_spec)
-        for _ in scenario_fn():
+        for _ in scenario_fn({}):  # FIXME: hack for passing the actual config object...want a better way
             # What we're doing here is a little weird.  We have arranged so
             # that the mite_* driver modules (http, selenium, amqp) will, as a
             # side effect of being imported, register their specific stats
