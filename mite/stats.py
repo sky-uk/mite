@@ -113,7 +113,7 @@ def matcher_by_type(*targets):
 
 def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield (msg.get(i, "") for i in labels), 1 if value_key is None else msg[value_key]
+        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[value_key]
 
     extract_items.labels = labels
     return Extractor(labels=labels, extract=extract_items)
