@@ -1,5 +1,5 @@
 from ..config import ConfigManager
-from .utils import spec_import
+from ..utils import spec_import
 
 
 def _create_config_manager(opts):
