@@ -68,9 +68,9 @@ import ujson
 
 import uvloop
 
+from .cli.common import _create_config_manager
 from .cli.stats import stats
 from .collector import Collector
-from .config import ConfigManager
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .logoutput import HttpStatsOutput, MsgOutput
@@ -194,17 +194,6 @@ def _start_web_in_thread(opts):
     t = threading.Thread(target=app.run, name='mite.web', kwargs=kwargs)
     t.daemon = True
     t.start()
-
-
-def _create_config_manager(opts):
-    config_manager = ConfigManager()
-    config = spec_import(opts['--config'])()
-    for k, v in config.items():
-        config_manager.set(k, v)
-    for value in opts["--add-to-config"]:
-        k, v = value.split(":")
-        config_manager.set(k, v)
-    return config_manager
 
 
 def _create_runner(opts, transport, msg_sender):

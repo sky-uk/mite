@@ -2,6 +2,7 @@ import asyncio
 
 from ..stats import Stats
 from ..utils import _msg_backend_module, spec_import
+from .common import _create_config_manager
 
 
 def _create_sender(opts):
@@ -22,7 +23,9 @@ def stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
         scenario_fn = spec_import(scenario_spec)
-        for _ in scenario_fn({}):  # FIXME: hack for passing the actual config object...want a better way
+        for _ in scenario_fn(_create_config_manager(opts)):
+            # FIXME: not sure if passing the config object is TRT here
+
             # What we're doing here is a little weird.  We have arranged so
             # that the mite_* driver modules (http, selenium, amqp) will, as a
             # side effect of being imported, register their specific stats
