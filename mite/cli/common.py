@@ -1,4 +1,4 @@
-from .config import ConfigManager
+from ..config import ConfigManager
 from .utils import spec_import
 
 
