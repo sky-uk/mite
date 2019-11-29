@@ -173,4 +173,4 @@ class Stats:
             self.dump_timeout = t + 0.25
 
     def dump(self):
-        return [i.dump() for i in self.processors]
+        return [i.dump() for i in self._ALL_STATS]
