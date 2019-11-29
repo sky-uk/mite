@@ -174,3 +174,10 @@ class Stats:
 
     def dump(self):
         return [i.dump() for i in self._ALL_STATS]
+
+
+def with_stats(*args):
+    def wrapper(f):
+        f.mite_required_stats = tuple(args)
+        return f
+    return wrapper
