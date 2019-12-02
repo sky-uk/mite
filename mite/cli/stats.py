@@ -31,7 +31,7 @@ def _register_stats(opts):
             stat_module = import_module(stat_module_name)
             to_register = stat_module.__dict__.get("_MITE_STATS", ())
             logging.debug(f"Adding {len(to_register)} stats from {stat_module_name}")
-            Stats.register()
+            Stats.register(to_register)
 
     # We'll also unconditionally add the mite_http stats, because they are
     # important enough to be always available
