@@ -48,8 +48,9 @@ class Counter(_CounterBase):
                 self.metrics[key] += 1
 
     def dump(self):
-        super().dump()
+        r = super().dump()
         self.metrics.clear()
+        return r
 
 
 @dataclass
