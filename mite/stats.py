@@ -32,6 +32,7 @@ class _CounterBase(Stat):
 
     def dump(self):
         metrics = dict(self.metrics)
+        self.metrics.clear()
         return {
             "type": "Counter",
             "name": self.name,
@@ -46,11 +47,6 @@ class Counter(_CounterBase):
         if self.matcher(msg):
             for key, _ in self.extractor.extract(msg):
                 self.metrics[key] += 1
-
-    def dump(self):
-        r = super().dump()
-        self.metrics.clear()
-        return r
 
 
 @dataclass
