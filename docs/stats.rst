@@ -74,11 +74,57 @@ of the included ``mite.stats.matcher_by_type`` function.  (However, the
 matcher receives the entire message dict as an argument, and can perform
 arbitrary computation on its contents if it wishes.)
 
-The extractor function operates on the messges that have been selected
+The extractor function operates on the messages that have been selected
 by the matcher.  The extractor pulls out some labels from the message,
 which will be added as labels to the time series in prometheus.  It is
 also, in most cases, responsible for extracting a numerical value from
 the message.  (The exception is stats of the Counter type, which count
 the occurrences of a particular message type.  There, no value dependent
 on the message is needed, as the value of the counter is always
-incremented by one).
+incremented by one).  The built-in ``mite.stats.extractor`` function
+covers most use-cases.  It takes two arguments.  The first is a sequence
+of strings, which will be extracted as keys from the message
+dictionary.  The values of these keys will be used as the labels on the
+prometheus metric.  The second argument is a single string, which names
+the dictionary key containing the numeric value to be accumulated.  For
+more advanced usages, it will be necessary to construct a
+``mite.stats.Extractor`` class directly.  See
+``mite.stats.controller_report_extractor`` for an example of this.
+
+Here is an example of a custom stat from our work on AMQP testing:
+
+.. code-block:: python
+
+   def _amqp_extract(msg):
+       for key, value in msg["total_received"].items():
+           yield (key,), value
+
+
+   _MITE_STATS = [
+       Gauge(
+           "mite_amqp_tx_stats",
+           matcher_by_type("amqp_tx_stats"),
+           extractor(["message_name"], "total_sent")
+       ),
+       Gauge(
+           "mite_amqp_rx_stats",
+           matcher_by_type("amqp_rx_stats"),
+           Extractor(labels=["message_name"], extract=_amqp_extract)
+       )
+   ]
+
+In our AMQP injection functions, we send two messages.  The first,
+``amqp_tx_stats``, names a ``message_name`` and contains a
+``total_sent`` value.  That is extracted into a Gauge by the first
+stat.  Because each ``message_name`` is represented by a separate
+message, this is a simple stat.  The second is the ``mite_rx_stats``.
+This message is send by the worker coroutine that drains the AMQP
+queues.  Once a second, it reports on the total number of messages it
+has received – of all types.  Therefore, we need to write a custom
+``_amqp_extract`` function, which will yield a sequence of ``(key,
+value)`` tuples.
+
+The ``_MITE_STATS`` variable name is a convention.  As discussed in the
+previous section, it is possible to mark journey functions with a list
+of modules from which extra stats will be imported.  This is implemented
+by inspecting the ``_MITE_STATS`` attribute of each of these modules.
