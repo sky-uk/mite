@@ -24,7 +24,7 @@ def stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
         scenario_fn = spec_import(scenario_spec)
-        required_stats = scenario_fn.get("mite_required_stats", ())
+        required_stats = scenario_fn.__dict__.get("mite_required_stats", ())
         for stat_module_name in required_stats:
             stat_module = spec_import(stat_module_name)
             Stats.register(stat_module.get("_MITE_STATS", ()))
