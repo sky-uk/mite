@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import mite_http
 
@@ -20,20 +21,24 @@ def _create_receiver(opts):
     return receiver
 
 
-def stats(opts):
+def _register_stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
         scenario_fn = spec_import(scenario_spec)
         required_stats = scenario_fn.__dict__.get("mite_required_stats", ())
         for stat_module_name in required_stats:
             stat_module = spec_import(stat_module_name)
-            Stats.register(stat_module.get("_MITE_STATS", ()))
+            to_register = stat_module.get("_MITE_STATS", ())
+            logging.debug(f"Adding {len(to_register)} stats from {stat_module_name}")
+            Stats.register()
 
     # We'll also unconditionally add the mite_http stats, because they are
     # important enough to be always available
     Stats.register(mite_http._MITE_STATS)
 
-    # Now for the "real" body of the function
+
+def stats(opts):
+    _register_stats(opts)
     receiver = _create_receiver(opts)
     agg_sender = _create_sender(opts)
     stats = Stats(sender=agg_sender.send)

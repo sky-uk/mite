@@ -158,7 +158,10 @@ class Stats:
 
     @classmethod
     def register(cls, stats):
-        cls._ALL_STATS += stats
+        for stat in stats:
+            if not any(x.name == stat.name for x in cls._ALL_STATS):
+                logging.info(f"Registering stat {stat.name}")
+                cls._ALL_STATS.append(stat)
 
     def __init__(self, sender):
         self.sender = sender
