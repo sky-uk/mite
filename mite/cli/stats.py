@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from importlib import import_module
 
 import mite_http
 
@@ -25,7 +24,7 @@ def _create_receiver(opts):
 def _register_stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
-        scenario_fn = import_module(scenario_spec)
+        scenario_fn = spec_import(scenario_spec)
         required_stats = scenario_fn.__dict__.get("mite_required_stats", ())
         for stat_module_name in required_stats:
             stat_module = spec_import(stat_module_name)
