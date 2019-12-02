@@ -22,25 +22,42 @@ class Stat:
 
 
 @dataclass
-class Counter(Stat):
+class _CounterBase(Stat):
     metrics: DefaultDict[Any, int] = field(
         default_factory=lambda: defaultdict(int), init=False
     )
 
     def process(self, msg):
-        if self.matcher(msg):
-            for key, _ in self.extractor.extract(msg):
-                self.metrics[key] += 1
+        raise NotImplementedError
 
     def dump(self):
         metrics = dict(self.metrics)
-        self.metrics.clear()
         return {
             "type": "Counter",
             "name": self.name,
             "metrics": metrics,
             "labels": self.extractor.labels,
         }
+
+
+@dataclass
+class Counter(_CounterBase):
+    def process(self, msg):
+        if self.matcher(msg):
+            for key, _ in self.extractor.extract(msg):
+                self.metrics[key] += 1
+
+    def dump(self):
+        super().dump()
+        self.metrics.clear()
+
+
+@dataclass
+class Accumulator(_CounterBase):
+    def process(self, msg):
+        if self.matcher(msg):
+            for key, value in self.extractor.extract(msg):
+                self.metrics[key] += value
 
 
 @dataclass
