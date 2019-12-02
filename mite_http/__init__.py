@@ -21,7 +21,6 @@ _MITE_STATS = (
         bins=[0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
     ),
 )
-Stats.register(_MITE_STATS)
 
 
 class _SessionPoolContextManager:

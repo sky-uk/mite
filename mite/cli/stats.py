@@ -1,8 +1,9 @@
 import asyncio
 
+import mite_http
+
 from ..stats import Stats
 from ..utils import _msg_backend_module, spec_import
-from .common import _create_config_manager
 
 
 def _create_sender(opts):
@@ -23,27 +24,14 @@ def stats(opts):
     scenario_spec = opts.get("--scenario-spec")
     if scenario_spec is not None:
         scenario_fn = spec_import(scenario_spec)
-        for _ in scenario_fn(_create_config_manager(opts)):
-            # FIXME: not sure if passing the config object is TRT here
+        required_stats = scenario_fn.get("mite_required_stats", ())
+        for stat_module_name in required_stats:
+            stat_module = spec_import(stat_module_name)
+            Stats.register(stat_module.get("_MITE_STATS", ()))
 
-            # What we're doing here is a little weird.  We have arranged so
-            # that the mite_* driver modules (http, selenium, amqp) will, as a
-            # side effect of being imported, register their specific stats
-            # (in the sense of `Stats.register` in mite/stats.py, q.v.)  So
-            # here, we want to import the scenario function and (if it's a
-            # generator) consume it all, so that any side effects of
-            # importation are triggered.  This sort of relies on scenarios
-            # being otherwise side-effect free (FIXME: document this
-            # assumption).  As to why do this at all: it comes from the fact
-            # that the controller and the stats are separate processes.  An
-            # alternative architecture would be to have the controller tell
-            # the stats processor what stats to use...but that means stats
-            # need to be serializable, and it adds a new message type to the
-            # mite IPC zoo, so I think I disperfer that choice
-            pass
-    # We'll also unconditionally import mite_http, because the HTTP stats are
-    # judged important enough to be always available
-    import mite_http  # noqa
+    # We'll also unconditionally add the mite_http stats, because they are
+    # important enough to be always available
+    Stats.register(mite_http._MITE_STATS)
 
     # Now for the "real" body of the function
     receiver = _create_receiver(opts)

@@ -21,7 +21,6 @@ _MITE_STATS = (
         extractor('test journey transaction'.split()),
     ),
 )
-Stats.register(_MITE_STATS)
 
 
 class _SeleniumWrapper:
