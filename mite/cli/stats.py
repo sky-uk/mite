@@ -29,7 +29,7 @@ def _register_stats(opts):
         required_stats = scenario_fn.__dict__.get("mite_required_stats", ())
         for stat_module_name in required_stats:
             stat_module = import_module(stat_module_name)
-            to_register = stat_module.get("_MITE_STATS", ())
+            to_register = stat_module.__dict__.get("_MITE_STATS", ())
             logging.debug(f"Adding {len(to_register)} stats from {stat_module_name}")
             Stats.register()
 
