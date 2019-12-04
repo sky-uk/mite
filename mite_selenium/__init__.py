@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from mite.stats import Counter, Histogram, Stats, extractor, matcher_by_type
+from mite.stats import Counter, Histogram, extractor, matcher_by_type
 from mite.utils import spec_import
 from selenium.webdriver import Remote
 

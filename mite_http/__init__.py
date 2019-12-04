@@ -3,7 +3,7 @@ import logging
 from collections import deque
 
 from acurl import EventLoop
-from mite.stats import Counter, Histogram, Stats, extractor, matcher_by_type
+from mite.stats import Counter, Histogram, extractor, matcher_by_type
 
 logger = logging.getLogger(__name__)
 

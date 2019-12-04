@@ -1,3 +1,4 @@
+import mite_http
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
 TXN_MSG = {
@@ -33,9 +34,10 @@ def test_label_extractor_txn_msg():
 
 class TestModularity:
     def test_modularity(self):
-        import mite_http  # noqa
-
+        assert not any(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
+        Stats.register(mite_http._MITE_STATS)
         assert all(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
+
 
 
 class TestCounter:
