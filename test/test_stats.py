@@ -39,7 +39,6 @@ class TestModularity:
         assert all(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
 
 
-
 class TestCounter:
     dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 1),))
 
