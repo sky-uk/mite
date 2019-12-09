@@ -6,7 +6,12 @@ logger = logging.getLogger(__name__)
 
 
 def format_dict(d):
-    return ','.join(['%s="%s"' % (k, v) for k, v in d.items()])
+    return ','.join(
+        [
+            '%s="%s"' % (k, str(v).replace("\\", "\\\\").replace('"', '\\"'))
+            for k, v in d.items()
+        ]
+    )
 
 
 class Counter:
