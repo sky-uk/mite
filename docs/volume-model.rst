@@ -43,4 +43,4 @@ minutes, maintain for 50 minutes, ramp down for 5 minutes):
    from mite.volume_model import Constant, Ramp
 
    volume_model = Constant(tps=1, duration=60) + Ramp(duration=300) + \
-       Constant(tps=1000, duration=50) + Ramp(duration=300, to=0)
+       Constant(tps=1000, duration=50 * 60) + Ramp(duration=300, to=0)
