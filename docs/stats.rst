@@ -9,40 +9,12 @@ on the behavior of the stats component.  Therefore, when customizing the
 statistics that mite exports, it is sufficient to work on the stats
 component; the prometheus exporter will do the right thing.
 
-Registering stats for a scenario
---------------------------------
+Mite stats are registered as `entry points`_ in python.  Therefore, any
+modules that you install that extend miteʼs stats will automatically be
+picked up when the stats process starts.  It logs a message for each
+moduleʼs stats that it finds, so you will know exactly what is loaded.
 
-In addition to the mite core statistics, the http statistics are always
-available.  In order to pull in additional statistics, you will need to
-use the ``with_stats`` decorator on your scenario function, passing it
-the name(s) of the modules with custom stats that you want to be
-included:
-
-.. code-block:: python
-
-   from mite.stats import with_stats
-
-   @with_stats("mite_selenium")
-   def my_scenario(config):
-       return [...a list of journeys...]
-
-Once you have set up the scenario function in this way, you will also
-need to pass its name on the command line of the stats component:
-
-.. code-block:: shell
-
-   mite stats --journey-spec my.module:my_scenario
-
-Then, the stats component will know which additional stats you wish to
-use.
-
-The following mite modules provide their own statistics:
-
-- ``mite_selenium``
-
-You can also write your own statistics; see the following section for
-instructions on how.
-
+.. _entry points: https://amir.rachum.com/blog/2017/07/28/python-entry-points/
 
 Writing custom stats
 --------------------
@@ -124,7 +96,18 @@ has received – of all types.  Therefore, we need to write a custom
 ``_amqp_extract`` function, which will yield a sequence of ``(key,
 value)`` tuples.
 
-The ``_MITE_STATS`` variable name is a convention.  As discussed in the
-previous section, it is possible to mark journey functions with a list
-of modules from which extra stats will be imported.  This is implemented
-by inspecting the ``_MITE_STATS`` attribute of each of these modules.
+We also need to inform mite about our stats, using pythonʼs entry points
+mechanism.  To do so, we add a section to the ``setup.cfg`` file for our
+package:
+
+.. code-block:: cfg
+
+   [options.entry_points]
+   mite_stats =
+       mite_amqp = id_mite_nft.amqp:_MITE_STATS
+
+
+.. note::
+
+   It is also possible to specify the equivalent information in
+   ``setup.py`` if that is the configuration file your project uses.

@@ -9,7 +9,7 @@ Usage:
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET]
     mite [options] recorder [--recorder-socket=SOCKET]
-    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--scenario-spec=SPEC]
+    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite --help
@@ -42,7 +42,6 @@ Options:
     --collector-socket=SOCKET         Socket [default: tcp://127.0.0.1:14303]
     --stats-in-socket=SOCKET          Socket [default: tcp://127.0.0.1:14304]
     --stats-out-socket=SOCKET         Socket [default: tcp://127.0.0.1:14305]
-    --scenario-spec=SPEC              Importable spec for the scenario function, used to add stats
     --recorder-socket=SOCKET          Socket [default: tcp://127.0.0.1:14306]
     --delay-start-seconds=DELAY       Delay start allowing others to connect [default: 0]
     --volume=VOLUME                   Volume to run journey at [default: 1]
