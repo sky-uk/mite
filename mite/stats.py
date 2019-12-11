@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from numbers import Number
 from typing import Any, Callable, DefaultDict, Sequence, Tuple
 
+import pkg_resources
+
 logger = logging.getLogger(__name__)
 
 
@@ -127,7 +129,9 @@ def matcher_by_type(*targets):
 
 def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[value_key]
+        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[
+            value_key
+        ]
 
     extract_items.labels = labels
     return Extractor(labels=labels, extract=extract_items)
@@ -141,48 +145,47 @@ def controller_report_extractor(dict_key):
     return Extractor(labels=('test', 'scenario_id'), extract=extract_items)
 
 
+_MITE_STATS = [
+    Counter(
+        name='mite_journey_error_total',
+        matcher=matcher_by_type('error', 'exception'),
+        extractor=extractor('test journey transaction location message'.split()),
+    ),
+    Counter(
+        name='mite_transaction_total',
+        matcher=matcher_by_type('txn'),
+        extractor=extractor('test journey transaction had_error'.split()),
+    ),
+    Gauge(
+        name='mite_actual_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=controller_report_extractor('actual'),
+    ),
+    Gauge(
+        name='mite_required_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=controller_report_extractor('required'),
+    ),
+    Gauge(
+        name='mite_runner_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=extractor(['test'], 'num_runners'),
+    ),
+]
+
+
 class Stats:
-    _ALL_STATS = [
-        Counter(
-            name='mite_journey_error_total',
-            matcher=matcher_by_type('error', 'exception'),
-            extractor=extractor('test journey transaction location message'.split()),
-        ),
-        Counter(
-            name='mite_transaction_total',
-            matcher=matcher_by_type('txn'),
-            extractor=extractor('test journey transaction had_error'.split()),
-        ),
-        Gauge(
-            name='mite_actual_count',
-            matcher=matcher_by_type('controller_report'),
-            extractor=controller_report_extractor('actual'),
-        ),
-        Gauge(
-            name='mite_required_count',
-            matcher=matcher_by_type('controller_report'),
-            extractor=controller_report_extractor('required'),
-        ),
-        Gauge(
-            name='mite_runner_count',
-            matcher=matcher_by_type('controller_report'),
-            extractor=extractor(['test'], 'num_runners'),
-        ),
-    ]
-
-    @classmethod
-    def register(cls, stats):
-        for stat in stats:
-            if not any(x.name == stat.name for x in cls._ALL_STATS):
-                logging.info(f"Registering stat {stat.name}")
-                cls._ALL_STATS.append(stat)
-
     def __init__(self, sender):
+        self._all_stats = []
+        for entry_point in pkg_resources.iter_entry_points("mite_stats"):
+            logging.info(f"Registering stats processors from {entry_point.name}")
+            self._all_stats += entry_point.load()
+
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
 
     def process(self, msg):
-        for processor in self._ALL_STATS:
+        for processor in self._all_stats:
             processor.process(msg)
         t = time.time()
         if t > self.dump_timeout:
@@ -190,11 +193,12 @@ class Stats:
             self.dump_timeout = t + 0.25
 
     def dump(self):
-        return [i.dump() for i in self._ALL_STATS]
+        return [i.dump() for i in self._all_stats]
 
 
 def with_stats(*args):
     def wrapper(f):
         f.mite_required_stats = tuple(args)
         return f
+
     return wrapper

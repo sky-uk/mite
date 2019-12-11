@@ -1,4 +1,5 @@
-import mite_http
+import unittest.mock as mock
+
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
 TXN_MSG = {
@@ -32,11 +33,24 @@ def test_label_extractor_txn_msg():
     assert tuple(labels) == expected_value
 
 
+class EntryPointMock:
+    name = "EntryPointMock"
+
+    def load(self):
+        return ["x"]
+
+
 class TestModularity:
     def test_modularity(self):
-        assert not any(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
-        Stats.register(mite_http._MITE_STATS)
-        assert all(x in Stats._ALL_STATS for x in mite_http._MITE_STATS)
+        with mock.patch("logging.info") as logging_info, mock.patch(
+            "pkg_resources.iter_entry_points", return_value=[EntryPointMock()]
+        ) as iter_entry_points:
+            s = Stats(None)
+            iter_entry_points.assert_called_once()
+            logging_info.assert_called_with(
+                "Registering stats processors from EntryPointMock"
+            )
+            assert s._all_stats == ["x"]
 
 
 class TestCounter:
