@@ -20,6 +20,7 @@ was simple:
 
    components
    journeys
+   volume-model
    config
    design-deployment
    prometheus
