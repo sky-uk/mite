@@ -1,130 +1,140 @@
+import logging
 import time
 from collections import defaultdict
-import logging
+from dataclasses import dataclass, field
+from numbers import Number
+from typing import Any, Callable, DefaultDict, Sequence, Tuple
+
+import pkg_resources
 
 logger = logging.getLogger(__name__)
 
 
-class Counter:
-    def __init__(self, name, matcher, labels_extractor):
-        self._name = name
-        self._matcher = matcher
-        self._labels_extractor = labels_extractor
-        self._metrics = defaultdict(int)
+@dataclass
+class Extractor:
+    labels: Sequence[str]
+    extract: Callable[[Any], Sequence[Tuple[str, Number]]]
+
+
+@dataclass
+class Stat:
+    name: str
+    matcher: Callable[[Any], bool]
+    extractor: Extractor
+
+
+@dataclass
+class _CounterBase(Stat):
+    metrics: DefaultDict[Any, int] = field(
+        default_factory=lambda: defaultdict(int), init=False
+    )
 
     def process(self, msg):
-        if self._matcher(msg):
-            for key in self._labels_extractor(msg):
-                self._metrics[key] += 1
+        raise NotImplementedError
 
     def dump(self):
-        metrics = dict(self._metrics)
-        self._metrics.clear()
+        metrics = dict(self.metrics)
+        self.metrics.clear()
         return {
-            'type': 'Counter',
-            'name': self._name,
-            'metrics': metrics,
-            'labels': self._labels_extractor.labels,
+            "type": "Counter",
+            "name": self.name,
+            "metrics": metrics,
+            "labels": self.extractor.labels,
         }
 
 
-class Gauge:
-    def __init__(self, name, matcher, labels_and_value_extractor):
-        self._name = name
-        self._matcher = matcher
-        self._labels_and_value_extractor = labels_and_value_extractor
-        self._metrics = defaultdict(float)
+@dataclass
+class Counter(_CounterBase):
+    def process(self, msg):
+        if self.matcher(msg):
+            for key, _ in self.extractor.extract(msg):
+                self.metrics[key] += 1
+
+
+@dataclass
+class Accumulator(_CounterBase):
+    def process(self, msg):
+        if self.matcher(msg):
+            for key, value in self.extractor.extract(msg):
+                self.metrics[key] += value
+
+
+@dataclass
+class Gauge(Stat):
+    metrics: DefaultDict[Any, float] = field(
+        default_factory=lambda: defaultdict(float), init=False
+    )
 
     def process(self, msg):
-        if self._matcher(msg):
-            for key, value in self._labels_and_value_extractor(msg):
-                self._metrics[key] += value
+        if self.matcher(msg):
+            for key, value in self.extractor.extract(msg):
+                self.metrics[key] += value
 
     def dump(self):
-        metrics = dict(self._metrics)
-        self._metrics.clear()
+        metrics = dict(self.metrics)
+        self.metrics.clear()
         return {
-            'type': 'Gauge',
-            'name': self._name,
-            'metrics': metrics,
-            'labels': self._labels_and_value_extractor.labels,
+            "type": "Gauge",
+            "name": self.name,
+            "metrics": metrics,
+            "labels": self.extractor.labels,
         }
 
 
-class Histogram:
-    def __init__(self, name, matcher, labels_and_value_extractor, bins):
-        self._name = name
-        self._matcher = matcher
-        self._labels_and_value_extractor = labels_and_value_extractor
-        self._bin_counts = {}
-        self._sums = {}
-        self._total_counts = {}
-        self._bins = bins
+@dataclass
+class Histogram(Stat):
+    bins: Sequence[float]
+
+    def __post_init__(self):
+        self.bins = sorted(self.bins)
+        self.bin_counts = defaultdict(lambda: [0 for _ in range(len(self.bins))])
+        self.total_counts = defaultdict(int)
+        self.sums = defaultdict(int)
 
     def process(self, msg):
-        if self._matcher(msg):
-            for key, value in self._labels_and_value_extractor(msg):
-                if key not in self._bin_counts:
-                    bins = [0 for _ in self._bins]
-                    self._bin_counts[key] = bins
-                    self._sums[key] = value
-                    self._total_counts[key] = 1
-                else:
-                    bins = self._bin_counts[key]
-                    self._sums[key] += value
-                    self._total_counts[key] += 1
-                for i, bin_value in enumerate(self._bins):
-                    if value <= bin_value:
-                        bins[i] += 1
+        if self.matcher(msg):
+            for key, value in self.extractor.extract(msg):
+                self.sums[key] += value
+                self.total_counts[key] += 1
+                for i, bin in enumerate(self.bins):
+                    if bin <= value:
+                        self.bin_counts[key][i] += 1
 
     def dump(self):
-        bin_counts = dict(self._bin_counts)
-        sums = dict(self._sums)
-        total_counts = dict(self._total_counts)
-        self._bin_counts.clear()
-        self._sums.clear()
-        self._total_counts.clear()
+        bin_counts = dict(self.bin_counts)
+        sums = dict(self.sums)
+        total_counts = dict(self.total_counts)
+        self.bin_counts.clear()
+        self.sums.clear()
+        self.total_counts.clear()
+
         return {
-            'type': 'Histogram',
-            'name': self._name,
-            'bin_counts': bin_counts,
-            'sums': sums,
-            'total_counts': total_counts,
-            'bins': self._bins,
-            'labels': self._labels_and_value_extractor.labels,
+            "type": "Histogram",
+            "name": self.name,
+            "bin_counts": bin_counts,
+            "sums": sums,
+            "total_counts": total_counts,
+            "bins": self.bins,
+            "labels": self.extractor.labels,
         }
 
 
 def matcher_by_type(*targets):
     def type_matcher(msg):
         logger.debug("message to match by type: %s" % (msg,))
-        return 'type' in msg and msg['type'] in targets
+        return msg.get("type", None) in targets
 
     return type_matcher
 
 
-def labels_extractor(labels):
+def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield tuple(msg.get(i, '') for i in labels)
+        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[
+            value_key
+        ]
 
     extract_items.labels = labels
-    return extract_items
-
-
-def labels_and_value_extractor(labels, value_key):
-    def extract_items(msg):
-        yield tuple(msg.get(i, '') for i in labels), msg[value_key]
-
-    extract_items.labels = labels
-    return extract_items
-
-
-def time_extractor():
-    def extract_items(msg):
-        yield (), time.time() - msg['time']
-
-    extract_items.labels = ''
-    return extract_items
+    return Extractor(labels=labels, extract=extract_items)
 
 
 def controller_report_extractor(dict_key):
@@ -132,66 +142,50 @@ def controller_report_extractor(dict_key):
         for scenario_id, value in msg[dict_key].items():
             yield (msg.get('test', ''), scenario_id), value
 
-    extract_items.labels = ('test', 'scenario_id')
-    return extract_items
+    return Extractor(labels=('test', 'scenario_id'), extract=extract_items)
+
+
+_MITE_STATS = [
+    Counter(
+        name='mite_journey_error_total',
+        matcher=matcher_by_type('error', 'exception'),
+        extractor=extractor('test journey transaction location message'.split()),
+    ),
+    Counter(
+        name='mite_transaction_total',
+        matcher=matcher_by_type('txn'),
+        extractor=extractor('test journey transaction had_error'.split()),
+    ),
+    Gauge(
+        name='mite_actual_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=controller_report_extractor('actual'),
+    ),
+    Gauge(
+        name='mite_required_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=controller_report_extractor('required'),
+    ),
+    Gauge(
+        name='mite_runner_count',
+        matcher=matcher_by_type('controller_report'),
+        extractor=extractor(['test'], 'num_runners'),
+    ),
+]
 
 
 class Stats:
     def __init__(self, sender):
+        self._all_stats = []
+        for entry_point in pkg_resources.iter_entry_points("mite_stats"):
+            logging.info(f"Registering stats processors from {entry_point.name}")
+            self._all_stats += entry_point.load()
+
         self.sender = sender
-        self.processors = [
-            Counter(
-                'mite_journey_error_total',
-                matcher_by_type('error', 'exception'),
-                labels_extractor('test journey transaction location message'.split()),
-            ),
-            Counter(
-                'mite_transaction_total',
-                matcher_by_type('txn'),
-                labels_extractor('test journey transaction had_error'.split()),
-            ),
-            Counter(
-                'mite_http_response_total',
-                matcher_by_type('http_curl_metrics'),
-                labels_extractor('test journey transaction method response_code'.split()),
-            ),
-            Histogram(
-                'mite_http_response_time_seconds',
-                matcher_by_type('http_curl_metrics'),
-                labels_and_value_extractor(['transaction'], 'total_time'),
-                [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
-            ),
-            Gauge(
-                'mite_actual_count',
-                matcher_by_type('controller_report'),
-                controller_report_extractor('actual'),
-            ),
-            Gauge(
-                'mite_required_count',
-                matcher_by_type('controller_report'),
-                controller_report_extractor('required'),
-            ),
-            Gauge(
-                'mite_runner_count',
-                matcher_by_type('controller_report'),
-                labels_and_value_extractor(['test'], 'num_runners'),
-            ),
-            Histogram(
-                'mite_http_selenium_response_time_seconds',
-                matcher_by_type('http_selenium_metrics'),
-                labels_and_value_extractor(['transaction'], 'total_time'),
-                [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
-            ),
-            Counter(
-                'mite_http_selenium_response_total',
-                matcher_by_type('http_selenium_metrics'),
-                labels_extractor('test journey transaction'.split()),
-            ),
-        ]
         self.dump_timeout = time.time() + 0.25
 
     def process(self, msg):
-        for processor in self.processors:
+        for processor in self._all_stats:
             processor.process(msg)
         t = time.time()
         if t > self.dump_timeout:
@@ -199,4 +193,4 @@ class Stats:
             self.dump_timeout = t + 0.25
 
     def dump(self):
-        return [i.dump() for i in self.processors]
+        return [i.dump() for i in self._all_stats]

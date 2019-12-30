@@ -54,41 +54,30 @@ Options:
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
 """
-import sys
-import os
 import asyncio
-from urllib.request import urlopen, Request as UrlLibRequest
-import docopt
-import threading
 import logging
+import os
+import sys
+import threading
+from urllib.request import Request as UrlLibRequest
+from urllib.request import urlopen
+
+import docopt
 import ujson
+
 import uvloop
 
-from .scenario import ScenarioManager
-from .config import ConfigManager
-from .controller import Controller
-from .runner import Runner
+from .cli.common import _create_config_manager
+from .cli.stats import stats
 from .collector import Collector
-from .recorder import Recorder
-from .utils import spec_import, pack_msg
-from .web import app, prometheus_metrics
-from .logoutput import MsgOutput, HttpStatsOutput
-from .stats import Stats
+from .controller import Controller
 from .har_to_mite import har_convert_to_mite
-
-
-def _msg_backend_module(opts):
-    msg_backend = opts['--message-backend']
-    if msg_backend == 'nanomsg':
-        from . import nanomsg
-
-        return nanomsg
-    elif msg_backend == 'ZMQ':
-        from . import zmq
-
-        return zmq
-    else:
-        raise ValueError('Unsupported backend %r' % (msg_backend,))
+from .logoutput import HttpStatsOutput, MsgOutput
+from .recorder import Recorder
+from .runner import Runner
+from .scenario import ScenarioManager
+from .utils import _msg_backend_module, pack_msg, spec_import
+from .web import app, prometheus_metrics
 
 
 def _collector_receiver(opts):
@@ -110,20 +99,6 @@ def _create_sender(opts):
     sender = _msg_backend_module(opts).Sender()
     sender.connect(socket)
     return sender
-
-
-def _create_stats_sender(opts):
-    socket = opts['--stats-out-socket']
-    sender = _msg_backend_module(opts).Sender()
-    sender.connect(socket)
-    return sender
-
-
-def _create_stats_receiver(opts):
-    socket = opts['--stats-in-socket']
-    receiver = _msg_backend_module(opts).Receiver()
-    receiver.connect(socket)
-    return receiver
 
 
 def _create_prometheus_exporter_receiver(opts):
@@ -218,17 +193,6 @@ def _start_web_in_thread(opts):
     t = threading.Thread(target=app.run, name='mite.web', kwargs=kwargs)
     t.daemon = True
     t.start()
-
-
-def _create_config_manager(opts):
-    config_manager = ConfigManager()
-    config = spec_import(opts['--config'])()
-    for k, v in config.items():
-        config_manager.set(k, v)
-    for value in opts["--add-to-config"]:
-        k, v = value.split(":")
-        config_manager.set(k, v)
-    return config_manager
 
 
 def _create_runner(opts, transport, msg_sender):
@@ -436,15 +400,6 @@ def recorder(opts):
 def duplicator(opts):
     duplicator = _create_duplicator(opts)
     asyncio.get_event_loop().run_until_complete(duplicator.run())
-
-
-def stats(opts):
-    receiver = _create_stats_receiver(opts)
-    agg_sender = _create_stats_sender(opts)
-    stats = Stats(sender=agg_sender.send)
-    receiver.add_listener(stats.process)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(receiver.run())
 
 
 def prometheus_exporter(opts):

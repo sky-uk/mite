@@ -24,7 +24,7 @@ was simple:
    config
    design-deployment
    prometheus
-
+   stats
 
 
 ..

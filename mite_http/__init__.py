@@ -1,9 +1,26 @@
-from collections import deque
-from acurl import EventLoop
-import logging
 import asyncio
+import logging
+from collections import deque
+
+from acurl import EventLoop
+from mite.stats import Counter, Histogram, extractor, matcher_by_type
 
 logger = logging.getLogger(__name__)
+
+
+_MITE_STATS = (
+    Counter(
+        name='mite_http_response_total',
+        matcher=matcher_by_type('http_curl_metrics'),
+        extractor=extractor('test journey transaction method response_code'.split()),
+    ),
+    Histogram(
+        name='mite_http_response_time_seconds',
+        matcher=matcher_by_type('http_curl_metrics'),
+        extractor=extractor(['transaction'], 'total_time'),
+        bins=[0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64],
+    ),
+)
 
 
 class _SessionPoolContextManager:
@@ -22,6 +39,7 @@ class _SessionPoolContextManager:
 class SessionPool:
     """No longer actually goes pooling as this is built into acurl. API just left in place.
     Will need a refactor"""
+
     def __init__(self):
         self._el = EventLoop()
         self._pool = deque()
@@ -33,6 +51,7 @@ class SessionPool:
         async def wrapper(ctx, *args, **kwargs):
             async with self.session_context(ctx):
                 return await func(ctx, *args, **kwargs)
+
         return wrapper
 
     async def _checkout(self, context):
@@ -51,8 +70,9 @@ class SessionPool:
                 first_byte_time=r.starttransfer_time,
                 total_time=r.total_time,
                 primary_ip=r.primary_ip,
-                method=r.request.method
+                method=r.request.method,
             )
+
         session.set_response_callback(response_callback)
         return session
 
@@ -69,6 +89,8 @@ def get_session_pool():
         sp = SessionPool()
         get_session_pool._session_pools[asyncio.get_event_loop()] = sp
         return sp
+
+
 get_session_pool._session_pools = {}  # noqa: E305
 
 

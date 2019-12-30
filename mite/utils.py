@@ -1,6 +1,7 @@
-import msgpack
-import importlib
 import asyncio
+import importlib
+
+import msgpack
 
 
 def unpack_msg(msg):
@@ -18,3 +19,17 @@ def spec_import(spec):
 
 async def sleep(delay, always=False, **kwargs):
     await asyncio.sleep(delay, **kwargs)
+
+
+def _msg_backend_module(opts):
+    msg_backend = opts['--message-backend']
+    if msg_backend == 'nanomsg':
+        from . import nanomsg
+
+        return nanomsg
+    elif msg_backend == 'ZMQ':
+        from . import zmq
+
+        return zmq
+    else:
+        raise ValueError('Unsupported backend %r' % (msg_backend,))
