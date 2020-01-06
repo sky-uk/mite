@@ -164,9 +164,6 @@ class ControllerServer:
         self._loop = loop
 
     async def run(self, controller, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, controller, stop_func)
-
-    def _run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():
             msg = self._sock.recv()
             try:
@@ -177,7 +174,7 @@ class ControllerServer:
             if _type == _MSG_TYPE_HELLO:
                 self._sock.send(pack_msg(controller.hello()))
             elif _type == _MSG_TYPE_REQUEST_WORK:
-                self._sock.send(pack_msg(controller.request_work(*content)))
+                await self._sock.send(pack_msg(controller.request_work(*content)))
             elif _type == _MSG_TYPE_BYE:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
