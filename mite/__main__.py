@@ -135,7 +135,7 @@ class DirectRunnerTransport:
         return self._controller.hello()
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return self._controller.request_work(
+        return await self._controller.request_work(
             runner_id, current_work, completed_data_ids, max_work
         )
 
