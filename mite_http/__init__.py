@@ -58,8 +58,11 @@ class SessionPool:
         session = self._el.session()
 
         def response_callback(r):
-            additional_metrics = getattr(context, "additional_http_metrics", {})
-            delattr(context, "additional_http_metrics")
+            additional_metrics = {}
+            if hasattr(context, "additional_http_metrics"):
+                additional_metrics = getattr(context, "additional_http_metrics")
+                delattr(context, "additional_http_metrics")
+
             context.send(
                 'http_metrics',
                 start_time=r.start_time,
