@@ -58,8 +58,9 @@ class SessionPool:
         session = self._el.session()
 
         def response_callback(r):
+            additional_metrics = getattr(context, "additional_http_metrics", {})
             context.send(
-                'http_curl_metrics',
+                'http_metrics',
                 start_time=r.start_time,
                 effective_url=r.url,
                 response_code=r.status_code,
@@ -71,6 +72,7 @@ class SessionPool:
                 total_time=r.total_time,
                 primary_ip=r.primary_ip,
                 method=r.request.method,
+                **additional_metrics,
             )
 
         session.set_response_callback(response_callback)
