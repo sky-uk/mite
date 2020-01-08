@@ -59,6 +59,7 @@ class SessionPool:
 
         def response_callback(r):
             additional_metrics = getattr(context, "additional_http_metrics", {})
+            delattr(context, "additional_http_metrics")
             context.send(
                 'http_metrics',
                 start_time=r.start_time,
