@@ -56,12 +56,11 @@ class SessionPool:
 
     async def _checkout(self, context):
         session = self._el.session()
+        session.additional_metrics = {}
 
         def response_callback(r):
-            additional_metrics = {}
-            if hasattr(context, "additional_http_metrics"):
-                additional_metrics = getattr(context, "additional_http_metrics")
-                delattr(context, "additional_http_metrics")
+            additional_metrics = session.additional_metrics
+            session.additional_metrics = {}
 
             context.send(
                 'http_metrics',
