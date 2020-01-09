@@ -22,7 +22,7 @@ class Duplicator:
         if loop is None:
             loop = asyncio.get_event_loop()
         self._loop = loop
-        self._debug_messages = 0
+        self._debug_messages_to_dump = 0
 
     async def run(self, stop_func=None):
         return await self._loop.run_in_executor(None, self._run, stop_func)
@@ -30,9 +30,9 @@ class Duplicator:
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
             msg = self._in_socket.recv()
-            if self._debug_messages > 0:
+            if self._debug_messages_to_dump > 0:
                 sys.stdout.write(str(unpack_msg(msg)) + "\n")
-                self._debug_messages -= 1
+                self._debug_messages_to_dump -= 1
             for address, socket in self._out_sockets:
                 try:
                     socket.send(msg, flags=zmq.NOBLOCK)
