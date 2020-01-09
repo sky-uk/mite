@@ -125,7 +125,7 @@ class TestHistogram:
     def test_process(self):
         hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
-        assert dict(hist.bin_counts) == {"foo": [1, 1, 1, 0]}
+        assert dict(hist.bin_counts) == {"foo": [0, 0, 1, 1]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}
 
@@ -133,7 +133,7 @@ class TestHistogram:
         hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
         hist.process(None)
         hist.process(None)
-        assert dict(hist.bin_counts) == {"foo": [2, 2, 2, 0]}
+        assert dict(hist.bin_counts) == {"foo": [0, 0, 2, 2]}
         assert dict(hist.sums) == {"foo": 6}
         assert dict(hist.total_counts) == {"foo": 2}
 
@@ -143,7 +143,7 @@ class TestHistogram:
         assert hist.dump() == {
             "type": "Histogram",
             "name": "test",
-            "bin_counts": {"foo": [1, 1, 1, 0]},
+            "bin_counts": {"foo": [0, 0, 1, 1]},
             "sums": {"foo": 3},
             "total_counts": {"foo": 1},
             "bins": [1, 2, 3, 4],
@@ -158,6 +158,6 @@ class TestHistogram:
         hist.process(None)
         hist.dump()
         hist.process(None)
-        assert dict(hist.bin_counts) == {"foo": [1, 1, 1, 0]}
+        assert dict(hist.bin_counts) == {"foo": [0, 0, 1, 1]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}

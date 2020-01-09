@@ -97,7 +97,7 @@ class Histogram(Stat):
                 self.sums[key] += value
                 self.total_counts[key] += 1
                 for i, bin in enumerate(self.bins):
-                    if bin <= value:
+                    if value <= bin:
                         self.bin_counts[key][i] += 1
 
     def dump(self):
