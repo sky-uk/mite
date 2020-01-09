@@ -2,6 +2,8 @@
 
 cd `git rev-parse --show-toplevel`
 
+mkdir -p test/perf/output
+
 # if ! git diff-index --quiet HEAD -- ; then
 #     echo "Repo is dirty!!!"
 #     exit 1
