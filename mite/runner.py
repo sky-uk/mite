@@ -1,7 +1,9 @@
 import asyncio
-from itertools import count
-import logging
 import functools
+import logging
+from itertools import count
+
+import ipdb
 
 from .context import Context
 from .utils import spec_import
@@ -174,10 +176,16 @@ class Runner:
             journey_spec,
             args,
         )
-        async with context.transaction('__root__'):
-            journey = spec_import_cached(journey_spec)
-            if args is None:
-                await journey(context)
-            else:
-                await journey(context, *args)
+        journey = spec_import_cached(journey_spec)
+        try:
+            async with context.transaction('__root__'):
+                if args is None:
+                    await journey(context)
+                else:
+                    await journey(context, *args)
+        except Exception as e:
+            if not getattr(e, "handled", False):
+                if self._debug:
+                    ipdb.set_trace()
+                    raise
         return scenario_id, scenario_data_id
