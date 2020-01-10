@@ -407,7 +407,7 @@ def duplicator(opts):
 
 def cat(opts):
     with open(opts['MSGPACK_FILE_PATH'], 'rb') as file_in:
-        unpacker = msgpack.Unpacker(file_in, encoding='utf-8',use_list=False)
+        unpacker = msgpack.Unpacker(file_in, encoding='utf-8', use_list=False)
         for row in unpacker:
             print(row)
 
