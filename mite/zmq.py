@@ -1,10 +1,8 @@
-import asyncio
-import logging
-import sys
-
 import zmq
 
 from .utils import pack_msg, unpack_msg
+import asyncio
+import logging
 
 logger = logging.getLogger(__name__)
 

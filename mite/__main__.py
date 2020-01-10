@@ -71,7 +71,6 @@ import uvloop
 import msgpack
 
 from .cli.common import _create_config_manager
-from .cli.duplicator import duplicator
 from .cli.stats import stats
 from .collector import Collector
 from .controller import Controller
@@ -120,6 +119,12 @@ def _create_runner_transport(opts):
 def _create_controller_server(opts):
     socket = opts['--controller-socket']
     return _msg_backend_module(opts).ControllerServer(socket)
+
+
+def _create_duplicator(opts):
+    return _msg_backend_module(opts).Duplicator(
+        opts['--message-socket'], opts['OUT_SOCKET']
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -400,6 +405,11 @@ def cat(opts):
         unpacker = msgpack.Unpacker(file_in, encoding='utf-8', use_list=False)
         for row in unpacker:
             print(row)
+
+
+def duplicator(opts):
+    duplicator = _create_duplicator(opts)
+    asyncio.get_event_loop().run_until_complete(duplicator.run())
 
 
 def prometheus_exporter(opts):
