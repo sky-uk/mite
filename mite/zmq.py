@@ -174,7 +174,8 @@ class ControllerServer:
             if _type == _MSG_TYPE_HELLO:
                 self._sock.send(pack_msg(controller.hello()))
             elif _type == _MSG_TYPE_REQUEST_WORK:
-                await self._sock.send(pack_msg(controller.request_work(*content)))
+                work = await controller.request_work(*content)
+                self._sock.send(pack_msg(work))
             elif _type == _MSG_TYPE_BYE:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
