@@ -3,14 +3,9 @@ context: identity
 triggering: multibranch
 
 defaultNodes:
-  default: id-small-slave
+  default: id-mite-slave
 
 modules:
-  mite:
-    pipelineShape: simple
-    directory: "/"
-    defaultTaskExecution: "./cd-scripts/cdBuild-1.sh"
-
   mite-ci:
     pipelineShape: simple
     directory: "/"
@@ -22,5 +17,5 @@ modules:
     htmlReports:
       - name: Coverage Report
         directory: coverage_html_report
-        files: ["*"]
+        files: ["index.html"]
     # TODO: slack notifications, for PRs

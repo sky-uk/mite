@@ -12,6 +12,8 @@ Usage:
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
+    mite [options] cat MSGPACK_FILE_PATH
+
     mite --help
     mite --version
 
@@ -66,8 +68,10 @@ import docopt
 import ujson
 
 import uvloop
+import msgpack
 
 from .cli.common import _create_config_manager
+from .cli.duplicator import duplicator
 from .cli.stats import stats
 from .collector import Collector
 from .controller import Controller
@@ -116,12 +120,6 @@ def _create_runner_transport(opts):
 def _create_controller_server(opts):
     socket = opts['--controller-socket']
     return _msg_backend_module(opts).ControllerServer(socket)
-
-
-def _create_duplicator(opts):
-    return _msg_backend_module(opts).Duplicator(
-        opts['--message-socket'], opts['OUT_SOCKET']
-    )
 
 
 logger = logging.getLogger(__name__)
@@ -397,9 +395,11 @@ def recorder(opts):
     asyncio.get_event_loop().run_until_complete(receiver.run())
 
 
-def duplicator(opts):
-    duplicator = _create_duplicator(opts)
-    asyncio.get_event_loop().run_until_complete(duplicator.run())
+def cat(opts):
+    with open(opts['MSGPACK_FILE_PATH'], 'rb') as file_in:
+        unpacker = msgpack.Unpacker(file_in, encoding='utf-8', use_list=False)
+        for row in unpacker:
+            print(row)
 
 
 def prometheus_exporter(opts):
@@ -454,6 +454,8 @@ def main():
         recorder(opts)
     elif opts['har']:
         har_converter(opts)
+    elif opts['cat']:
+        cat(opts)
 
 
 if __name__ == '__main__':
