@@ -1,3 +1,5 @@
+import pytest
+
 from collections import namedtuple, defaultdict
 from mite.scenario import ScenarioManager
 
@@ -71,14 +73,15 @@ def test_upadate_required_work():
         assert scenario_manager._required[k] == k
 
 
-def test_get_work():
+@pytest.mark.asyncio
+async def test_get_work():
 
     scenario_manager = ScenarioManager()
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
     scenario_manager._update_required_and_period(5, 10)
     scenario_manager._required = test_scenario_manager_required
-    work, scenario_volume_map = scenario_manager.get_work(
+    work, scenario_volume_map = await scenario_manager.get_work(
         test_current_work, test_num_runner_current_work, test_num_runners, None, 0.2
     )
 

@@ -16,9 +16,11 @@ class DataPoolExhausted(BaseException):
 class RecyclableIterableDataPool:
     def __init__(self, iterable):
         self._checked_out = {}
-        self._available = deque(DataPoolItem(id, data) for id, data in enumerate(iterable, 1))
+        self._available = deque(
+            DataPoolItem(id, data) for id, data in enumerate(iterable, 1)
+        )
 
-    def checkout(self):
+    async def checkout(self):
         if self._available:
             dpi = self._available.popleft()
             self._checked_out[dpi.id] = dpi.data
@@ -27,7 +29,7 @@ class RecyclableIterableDataPool:
             # FIXME: should this raise a DataPoolExhausted exception?
             return None
 
-    def checkin(self, id):
+    async def checkin(self, id):
         data = self._checked_out[id]
         self._available.append(DataPoolItem(id, data))
 
@@ -50,7 +52,7 @@ class IterableFactoryDataPool:
             _id = next(counter)
             yield _id, data
 
-    def checkout(self):
+    async def checkout(self):
         if not hasattr(self, '_cycle_gen_iter'):
             self._cycle_gen_iter = self._cycle()
         last_id = 0
@@ -63,7 +65,7 @@ class IterableFactoryDataPool:
                 return None
             last_id = _id
 
-    def checkin(self, id):
+    async def checkin(self, id):
         self._checked_out.remove(id)
 
 
@@ -72,7 +74,7 @@ class IterableDataPool:
         self._iter = iter(iterable)
         self._id_gen = count(1)
 
-    def checkout(self):
+    async def checkout(self):
         try:
             data = next(self._iter)
         except StopIteration:
@@ -82,7 +84,7 @@ class IterableDataPool:
             dpi = DataPoolItem(id, data)
             return dpi
 
-    def checkin(self, id):
+    async def checkin(self, id):
         pass
 
 
