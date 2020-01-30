@@ -1,5 +1,5 @@
 """\
-Mite Load Test Framewwork.
+Mite Load Test Framework.
 
 Usage:
     mite [options] scenario test [--add-to-config=NEW_VALUE]... SCENARIO_SPEC
@@ -23,7 +23,7 @@ Arguments:
     JOURNEY_SPEC            Identifier for journey async callable
     VOLUME_MODEL_SPEC       Identifier for volume model callable
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
-    CONVERTED_FILE_PATH     Path for the file where will be saved the conversion from har file to mite journey
+    CONVERTED_FILE_PATH     Path to write the converted mite script to when coverting a har file
 
 Examples:
     mite scenario test mite.example:scenario
