@@ -24,7 +24,7 @@ mite.  In order to get a shell in a container with mite installed, run
 these commands (assuming you have docker installed on your machine):
 ```
 docker build -t mite .
-docker run --rm -it mite bash
+docker run --rm -it mite sh
 ```
 
 Run `mite --help` for a full list of commands
