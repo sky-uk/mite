@@ -4,6 +4,8 @@ import time
 import logging
 import random
 
+from .cli.common import _create_config_manager
+
 from .datapools import DataPoolExhausted
 
 logger = logging.getLogger(__name__)
@@ -27,14 +29,19 @@ def _volume_dicts_remove_a_from_b(a, b):
 
 
 class ScenarioManager:
-    def __init__(self, start_delay=0, period=1, spawn_rate=None):
-        self._period = period
+    def __init__(self, opts=None):
+        self._opts = opts
+        self._period = float(opts.get('--max-loop-delay', 1))
         self._scenario_id_gen = count(1)
-        self._in_start = start_delay > 0
-        self._start_delay = start_delay
+        self._start_delay = float(opts.get('--delay-start-seconds', 0))
+        self._in_start = self._start_delay > 0
         self._start_time = time.time()
         self._current_period_end = 0
-        self._spawn_rate = spawn_rate
+        spawn_rate = opts.get('--spawn-rate', None)
+        if spawn_rate:
+            self._spawn_rate = int(spawn_rate)
+        else:
+            self._spawn_rate = None
         self._required = {}
         self._scenarios = {}
 
@@ -124,7 +131,9 @@ class ScenarioManager:
                     work.append((scenario_id, None, scenario.journey_spec, None))
                 else:
                     try:
-                        dpi = await scenario.datapool.checkout()
+                        dpi = await scenario.datapool.checkout(
+                            opt=_create_config_manager(self._opts)
+                        )
                     except DataPoolExhausted:
                         logger.info(
                             'Removed scenario %d because data pool exhausted', scenario_id
