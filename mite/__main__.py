@@ -210,7 +210,12 @@ def _create_runner(opts, transport, msg_sender):
 
 
 def _create_scenario_manager(opts):
-    return ScenarioManager(opts=opts)
+    return ScenarioManager(
+        start_delay=float(opts['--delay-start-seconds']),
+        period=float(opts['--max-loop-delay']),
+        spawn_rate=int(opts['--spawn-rate']),
+        config_manager=_create_config_manager(opts),
+    )
 
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
