@@ -29,7 +29,7 @@ def _volume_dicts_remove_a_from_b(a, b):
 
 
 class ScenarioManager:
-    def __init__(self, opts=None):
+    def __init__(self, opts=dict()):
         self._opts = opts
         self._period = float(opts.get('--max-loop-delay', 1))
         self._scenario_id_gen = count(1)
