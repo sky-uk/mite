@@ -36,9 +36,10 @@ class Duplicator:
             for address, socket in self._out_sockets:
                 try:
                     socket.send(msg, flags=zmq.NOBLOCK)
-                except zmq.ZMQError:
+                except zmq.ZMQError as e:
                     logger.error(
-                        "Duplicator message buffer full for address %s" % (address,)
+                        f"Duplicator message buffer full for address {address}; "
+                        f"error is {e.errno}: {e.msg}"
                     )
 
 
