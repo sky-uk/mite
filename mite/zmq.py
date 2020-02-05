@@ -39,7 +39,7 @@ class Duplicator:
                 except zmq.ZMQError as e:
                     logger.error(
                         f"Duplicator message buffer full for address {address}; "
-                        f"error is {e.errno}: {e.msg}"
+                        f"error is {e.errno}: {e.strerror}"
                     )
 
 
