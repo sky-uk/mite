@@ -28,6 +28,8 @@ def run_test(scenario):
             )
         )
         duplicator = psutil.Popen(("mite", "duplicator", "tcp://127.0.0.1:14303"))
+        # TODO: we should make sure that the collector has a tmpfs in RAM to
+        # run in, so that disk performance doesn't get into the mix...
         collector = psutil.Popen(("mite", "collector"))
         controller = psutil.Popen(
             (

@@ -1,5 +1,5 @@
 """\
-Mite Load Test Framewwork.
+Mite Load Test Framework.
 
 Usage:
     mite [options] scenario test [--add-to-config=NEW_VALUE]... SCENARIO_SPEC
@@ -23,7 +23,7 @@ Arguments:
     JOURNEY_SPEC            Identifier for journey async callable
     VOLUME_MODEL_SPEC       Identifier for volume model callable
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
-    CONVERTED_FILE_PATH     Path for the file where will be saved the conversion from har file to mite journey
+    CONVERTED_FILE_PATH     Path to write the converted mite script to when coverting a har file
 
 Examples:
     mite scenario test mite.example:scenario
@@ -71,6 +71,7 @@ import uvloop
 import msgpack
 
 from .cli.common import _create_config_manager
+from .cli.duplicator import duplicator
 from .cli.stats import stats
 from .collector import Collector
 from .controller import Controller
@@ -121,12 +122,6 @@ def _create_controller_server(opts):
     return _msg_backend_module(opts).ControllerServer(socket)
 
 
-def _create_duplicator(opts):
-    return _msg_backend_module(opts).Duplicator(
-        opts['--message-socket'], opts['OUT_SOCKET']
-    )
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -138,7 +133,7 @@ class DirectRunnerTransport:
         return self._controller.hello()
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return self._controller.request_work(
+        return await self._controller.request_work(
             runner_id, current_work, completed_data_ids, max_work
         )
 
@@ -398,11 +393,6 @@ def recorder(opts):
     recorder = Recorder(opts['--recorder-dir'])
     receiver.add_listener(recorder.process_message)
     asyncio.get_event_loop().run_until_complete(receiver.run())
-
-
-def duplicator(opts):
-    duplicator = _create_duplicator(opts)
-    asyncio.get_event_loop().run_until_complete(duplicator.run())
 
 
 def cat(opts):

@@ -1,8 +1,10 @@
+import asyncio
+import logging
+import sys
+
 import zmq
 
 from .utils import pack_msg, unpack_msg
-import asyncio
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class Duplicator:
         if loop is None:
             loop = asyncio.get_event_loop()
         self._loop = loop
+        self._debug_messages_to_dump = 0
 
     async def run(self, stop_func=None):
         return await self._loop.run_in_executor(None, self._run, stop_func)
@@ -27,6 +30,9 @@ class Duplicator:
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
             msg = self._in_socket.recv()
+            if self._debug_messages_to_dump > 0:
+                sys.stdout.write(str(unpack_msg(msg)) + "\n")
+                self._debug_messages_to_dump -= 1
             for address, socket in self._out_sockets:
                 try:
                     socket.send(msg, flags=zmq.NOBLOCK)
@@ -164,9 +170,6 @@ class ControllerServer:
         self._loop = loop
 
     async def run(self, controller, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, controller, stop_func)
-
-    def _run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():
             msg = self._sock.recv()
             try:
@@ -177,7 +180,8 @@ class ControllerServer:
             if _type == _MSG_TYPE_HELLO:
                 self._sock.send(pack_msg(controller.hello()))
             elif _type == _MSG_TYPE_REQUEST_WORK:
-                self._sock.send(pack_msg(controller.request_work(*content)))
+                work = await controller.request_work(*content)
+                self._sock.send(pack_msg(work))
             elif _type == _MSG_TYPE_BYE:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:

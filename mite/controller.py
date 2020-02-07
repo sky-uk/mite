@@ -93,22 +93,24 @@ class Controller:
     def _add_assumed(self, runner_id, work):
         self._work_tracker.add_assumed(runner_id, work)
 
-    def _required_work_for_runner(self, runner_id, max_work=None):
+    async def _required_work_for_runner(self, runner_id, max_work=None):
         runner_total = self._work_tracker.get_runner_total(runner_id)
         active_runner_ids = self._runner_tracker.get_active()
         current_work = self._work_tracker.get_total_work(active_runner_ids)
         hit_rate = self._runner_tracker.get_hit_rate()
-        work, scenario_volume_map = self._scenario_manager.get_work(
+        work, scenario_volume_map = await self._scenario_manager.get_work(
             current_work, runner_total, len(active_runner_ids), max_work, hit_rate
         )
         self._add_assumed(runner_id, scenario_volume_map)
         return work
 
-    def request_work(self, runner_id, current_work, completed_data_ids, max_work=None):
+    async def request_work(
+        self, runner_id, current_work, completed_data_ids, max_work=None
+    ):
         self._set_actual(runner_id, current_work)
         self._runner_tracker.update(runner_id)
-        self._scenario_manager.checkin_data(completed_data_ids)
-        work = self._required_work_for_runner(runner_id, max_work)
+        await self._scenario_manager.checkin_data(completed_data_ids)
+        work = await self._required_work_for_runner(runner_id, max_work)
         return (
             work,
             self._config_manager.get_changes_for_runner(runner_id),
