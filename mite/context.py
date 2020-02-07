@@ -59,6 +59,9 @@ class Context:
             yield None
         except Exception as e:
             error = True
+            if hasattr(e, "handled"):
+                raise
+
             if isinstance(e, MiteError):
                 self._send_mite_error(e)
             else:
@@ -68,6 +71,9 @@ class Context:
 
                 ipdb.post_mortem()
                 sys.exit(1)
+            else:
+                e.handled = True
+                raise
         finally:
             self.send('txn', start_time=start_time, end_time=time.time(), had_error=error)
             self._transaction_name = old_transaction_name

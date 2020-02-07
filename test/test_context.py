@@ -1,8 +1,10 @@
-from mite.context import Context
-from mocks.mock_sender import SenderMock
 from unittest.mock import Mock
-from mite.exceptions import MiteError
+
 import pytest
+from mite.context import Context
+from mite.exceptions import MiteError
+from mocks.mock_sender import SenderMock
+from pytest import raises
 
 test_msg = 'test msg for the unit test'
 
@@ -76,8 +78,9 @@ async def test_exception():
     send_fn = Mock()
     context = Context(send_fn, {})
 
-    async with context.transaction("test"):
-        raise MyException()
+    with raises(MyException):
+        async with context.transaction("test"):
+            raise MyException()
 
     assert send_fn.call_count == 2
 
@@ -93,9 +96,10 @@ async def test_exception_not_sent_twice():
     send_fn = Mock()
     context = Context(send_fn, {})
 
-    async with context.transaction("test"):
-        async with context.transaction("inner"):
-            raise MyException()
+    with raises(MyException):
+        async with context.transaction("test"):
+            async with context.transaction("inner"):
+                raise MyException()
 
     assert send_fn.call_count == 3  # exception, plus 2 txns
 
@@ -109,8 +113,9 @@ async def test_mite_error():
     send_fn = Mock()
     context = Context(send_fn, {})
 
-    async with context.transaction("test"):
-        raise MiteError("foo", bar="quux")
+    with raises(MiteError):
+        async with context.transaction("test"):
+            raise MiteError("foo", bar="quux")
 
     assert send_fn.call_count == 2
 

@@ -9,5 +9,6 @@ pytest-cov
 pytest-httpserver
 werkzeug
 # For 3.7 compatibility, can move to stdlib-only solution on 3.8
+mock==3.0.5
 asyncmock
 pre-commit
