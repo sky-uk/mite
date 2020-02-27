@@ -71,8 +71,7 @@ class RunnerTracker:
 
 
 class Controller:
-    def __init__(self, testname, scenario_manager, config_manager):
-        self._testname = testname
+    def __init__(self, scenario_manager, config_manager):
         self._scenario_manager = scenario_manager
         self._runner_id_gen = count(1)
         self._work_tracker = WorkTracker()
@@ -83,7 +82,7 @@ class Controller:
         runner_id = next(self._runner_id_gen)
         return (
             runner_id,
-            self._testname,
+            self._scenario_manager.spec,
             self._config_manager.get_changes_for_runner(runner_id),
         )
 
@@ -125,7 +124,7 @@ class Controller:
             {
                 'type': 'controller_report',
                 'time': time.time(),
-                'test': self._testname,
+                'test': self._scenario_manager.spec,
                 'required': required,
                 'actual': dict(actual),
                 'num_runners': len(active_runner_ids),

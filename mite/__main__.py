@@ -62,25 +62,21 @@ import logging
 import os
 import sys
 import threading
-from urllib.request import Request as UrlLibRequest
-from urllib.request import urlopen
 
 import docopt
 import msgpack
-import ujson
 
 import uvloop
 
-from .cli.common import (_create_config_manager, _create_runner,
-                         _create_scenario_manager)
+from .cli.common import _create_runner, _create_sender
+from .cli.controller import controller
 from .cli.duplicator import duplicator
 from .cli.stats import stats
 from .cli.test import journey_cmd, scenario_cmd
 from .collector import Collector
-from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
-from .utils import _msg_backend_module, spec_import
+from .utils import _msg_backend_module
 from .web import app, prometheus_metrics
 
 
@@ -98,13 +94,6 @@ def _recorder_receiver(opts):
     return receiver
 
 
-def _create_sender(opts):
-    socket = opts['--message-socket']
-    sender = _msg_backend_module(opts).Sender()
-    sender.connect(socket)
-    return sender
-
-
 def _create_prometheus_exporter_receiver(opts):
     socket = opts['--stats-out-socket']
     receiver = _msg_backend_module(opts).Receiver()
@@ -115,11 +104,6 @@ def _create_prometheus_exporter_receiver(opts):
 def _create_runner_transport(opts):
     socket = opts['--controller-socket']
     return _msg_backend_module(opts).RunnerTransport(socket)
-
-
-def _create_controller_server(opts):
-    socket = opts['--controller-socket']
-    return _msg_backend_module(opts).ControllerServer(socket)
 
 
 logger = logging.getLogger(__name__)
@@ -145,103 +129,6 @@ def _start_web_in_thread(opts):
     t = threading.Thread(target=app.run, name='mite.web', kwargs=kwargs)
     t.daemon = True
     t.start()
-
-
-def _controller_log_start(scenario_spec, logging_url):
-    if not logging_url.endswith("/"):
-        logging_url += "/"
-
-    # The design decision has been made to do this logging synchronously
-    # rather than using the usual mite data pipeline, because we want to make
-    # sure the log is nailed down before we start doing any test activity.
-    url = logging_url + "start"
-    logger.info(f"Logging test start to {url}")
-    resp = urlopen(
-        UrlLibRequest(
-            url,
-            data=ujson.dumps(
-                {
-                    'testname': scenario_spec,
-                    # TODO: log other properties as well,
-                    # like the endpoint URLs we are
-                    # hitting.
-                }
-            ).encode(),
-            method="POST",
-        )
-    )
-    logger.debug("Logging test start complete")
-    if resp.status == 200:
-        return ujson.loads(resp.read())['newid']
-    else:
-        logger.warning(
-            f"Could not complete test start logging; status was {resp.status_code}"
-        )
-
-
-def _controller_log_end(logging_id, logging_url):
-    if logging_id is None:
-        return
-
-    if not logging_url.endswith("/"):
-        logging_url += "/"
-
-    url = logging_url + "end"
-    logger.info(f"Logging test end to {url}")
-    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({'id': logging_id}).encode()))
-    if resp.status != 204:
-        logger.warning(
-            f"Could not complete test end logging; status was {resp.status_code}"
-        )
-    logger.debug("Logging test end complete")
-
-
-def controller(opts):
-    config_manager = _create_config_manager(opts)
-    scenario_spec = opts['SCENARIO_SPEC']
-    scenarios_fn = spec_import(scenario_spec)
-    scenario_manager = _create_scenario_manager(opts)
-    try:
-        scenarios = scenarios_fn(config_manager)
-    except TypeError:
-        scenarios = scenarios_fn()
-    for journey_spec, datapool, volumemodel in scenarios:
-        scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    controller = Controller(scenario_spec, scenario_manager, config_manager)
-    server = _create_controller_server(opts)
-    sender = _create_sender(opts)
-    loop = asyncio.get_event_loop()
-    logging_id = None
-    logging_url = opts["--logging-webhook"]
-    if logging_url is None:
-        try:
-            logging_url = os.environ["MITE_LOGGING_URL"]
-        except KeyError:
-            pass
-    if logging_url is not None:
-        logging_id = _controller_log_start(scenario_spec, logging_url)
-
-    async def controller_report():
-        while True:
-            if controller.should_stop():
-                return
-            await asyncio.sleep(1)
-            controller.report(sender.send)
-
-    try:
-        loop.run_until_complete(
-            asyncio.gather(
-                controller_report(), server.run(controller, controller.should_stop)
-            )
-        )
-    except KeyboardInterrupt:
-        # TODO: kill runners, do other shutdown tasks
-        logging.info("Received interrupt signal, shutting down")
-    finally:
-        _controller_log_end(logging_id, logging_url)
-        # TODO: cancel all loop tasks?  Something must be done to stop this
-        # from hanging
-        loop.close()
 
 
 def runner(opts):

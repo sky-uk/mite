@@ -1,7 +1,7 @@
 from ..config import ConfigManager
 from ..runner import Runner
 from ..scenario import ScenarioManager
-from ..utils import spec_import
+from ..utils import spec_import, _msg_backend_module
 
 
 def _create_config_manager(opts):
@@ -15,8 +15,9 @@ def _create_config_manager(opts):
     return config_manager
 
 
-def _create_scenario_manager(opts):
+def _create_scenario_manager(spec, opts):
     return ScenarioManager(
+        spec=spec,
         start_delay=float(opts['--delay-start-seconds']),
         period=float(opts['--max-loop-delay']),
         spawn_rate=int(opts['--spawn-rate']),
@@ -37,3 +38,10 @@ def _create_runner(opts, transport, msg_sender):
         max_work=max_work,
         debug=opts['--debugging'],
     )
+
+
+def _create_sender(opts):
+    socket = opts['--message-socket']
+    sender = _msg_backend_module(opts).Sender()
+    sender.connect(socket)
+    return sender

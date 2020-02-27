@@ -27,7 +27,8 @@ def _volume_dicts_remove_a_from_b(a, b):
 
 
 class ScenarioManager:
-    def __init__(self, start_delay=0, period=1, spawn_rate=None):
+    def __init__(self, spec, start_delay=0, period=1, spawn_rate=None):
+        self._spec = spec
         self._period = period
         self._scenario_id_gen = count(1)
         self._in_start = start_delay > 0
@@ -37,6 +38,10 @@ class ScenarioManager:
         self._spawn_rate = spawn_rate
         self._required = {}
         self._scenarios = {}
+
+    @property
+    def spec(self):
+        return self._spec
 
     def _now(self):
         return time.time() - self._start_time
@@ -167,3 +172,10 @@ class ScenarioManager:
         for scenario_id, scenario_data_id in ids:
             if scenario_id in self._scenarios:
                 await self._scenarios[scenario_id].datapool.checkin(scenario_data_id)
+
+
+def time_function(tf_name):
+    def decorator_inner(fn):
+        fn._mite_time_function = tf_name
+        return fn
+    return decorator_inner

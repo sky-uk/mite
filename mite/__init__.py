@@ -9,6 +9,7 @@ import asyncio
 import random
 from pkg_resources import get_distribution, DistributionNotFound
 
+from .scenario import time_function  # noqa: F401
 from .exceptions import MiteError  # noqa: F401
 from .context import Context
 import mite.utils
@@ -29,7 +30,7 @@ def test_context(extensions=('http',), **config):
     return c
 
 
-class ensure_separation_from_callable:
+class _ensure_separation_from_callable:
     def __init__(self, sep_callable, loop=None):
         self._sep_callable = sep_callable
         self._loop = loop
@@ -65,7 +66,7 @@ def ensure_fixed_separation(separation, loop=None):
     def fixed_separation():
         return separation
 
-    return ensure_separation_from_callable(fixed_separation, loop=loop)
+    return _ensure_separation_from_callable(fixed_separation, loop=loop)
 
 
 def ensure_average_separation(mean_separation, plus_minus=None, loop=None):
@@ -88,4 +89,4 @@ def ensure_average_separation(mean_separation, plus_minus=None, loop=None):
     def average_separation():
         return mean_separation + (random.random() * plus_minus * 2) - plus_minus
 
-    return ensure_separation_from_callable(average_separation, loop=loop)
+    return _ensure_separation_from_callable(average_separation, loop=loop)
