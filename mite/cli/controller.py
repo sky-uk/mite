@@ -39,10 +39,8 @@ async def _run_controller(server, controller, start_event, end_event):
     end_event.set()
 
 
-def controller(opts):
+def _run(scenario_spec, opts, scenarios_fn, server, sender, get_controller=Controller, extra_tasks=()):
     config_manager = _create_config_manager(opts)
-    scenario_spec = opts['SCENARIO_SPEC']
-    scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(scenario_spec, opts)
     try:
         scenarios = scenarios_fn(config_manager)
@@ -50,16 +48,15 @@ def controller(opts):
         scenarios = scenarios_fn()
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    controller = Controller(scenario_manager, config_manager)
-    server = _create_controller_server(opts)
-    sender = _create_sender(opts)
-    loop = asyncio.get_event_loop()
-    start_event = asyncio.Event()
-    end_event = asyncio.Event()
+    controller_object = get_controller(scenario_manager, config_manager)
 
     time_fn = getattr(scenarios_fn, "_mite_time_function", None)
     if time_fn is not None:
         time_fn = partial(time_fn, scenario_spec, config_manager)
+
+    loop = asyncio.get_event_loop()
+    start_event = asyncio.Event()
+    end_event = asyncio.Event()
 
     time_fn_task = asyncio.create_task(_run_time_function(
         time_fn, start_event, end_event
@@ -69,8 +66,9 @@ def controller(opts):
         loop.run_until_complete(
             asyncio.gather(
                 _send_controller_report(sender),
-                _run_controller(server, controller, start_event, end_event),
-                time_fn_task
+                _run_controller(server, controller_object, start_event, end_event),
+                time_fn_task,
+                *extra_tasks,
             )
         )
     except KeyboardInterrupt:
@@ -83,3 +81,12 @@ def controller(opts):
         # TODO: cancel all loop tasks?  Something must be done to stop this
         # from hanging
         loop.close()
+
+
+def controller(opts):
+    server = _create_controller_server(opts)
+    sender = _create_sender(opts)
+    scenario_spec = opts['SCENARIO_SPEC']
+    scenarios_fn = spec_import(scenario_spec)
+
+    _run(scenario_spec, opts, scenarios_fn, server, sender)

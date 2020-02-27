@@ -1,18 +1,14 @@
-import asyncio
 import logging
 
 from ..collector import Collector
 from ..controller import Controller
 from ..recorder import Recorder
 from ..utils import pack_msg, spec_import
-from .common import (_create_config_manager, _create_runner,
-                     _create_scenario_manager)
+from .common import _create_config_manager, _create_runner
+from .controller import _run as _run_controller
 
 
 class DirectRunnerTransport:
-    def __init__(self, controller):
-        self._controller = controller
-
     async def hello(self):
         return self._controller.hello()
 
@@ -63,37 +59,31 @@ def _setup_msg_processors(receiver, opts):
             logging.error(f"Class {processor.__name__} does not have a process(_raw)_message method!")
 
 
-def test_scenarios(test_name, opts, scenarios, config_manager):
-    scenario_manager = _create_scenario_manager(opts)
-    for journey_spec, datapool, volumemodel in scenarios:
-        scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
-    controller = Controller(test_name, scenario_manager, config_manager)
-    transport = DirectRunnerTransport(controller)
-    receiver = DirectReciever()
-    _setup_msg_processors(receiver, opts)
-    loop = asyncio.get_event_loop()
+def test_scenarios(scenario_spec, opts, scenario_fn):
+    server = FIXME
+    sender = DirectReciever()
+    transport = DirectRunnerTransport()
 
-    async def controller_report():
-        while True:
-            await asyncio.sleep(1)
-            controller.report(receiver.recieve)
+    def get_controller(*args, **kwargs):
+        c = Controller(*args, **kwargs)
+        transport._controller = c
+        return c
 
-    loop.run_until_complete(
-        asyncio.gather(
-            controller_report(), _create_runner(opts, transport, receiver.recieve).run()
-        )
+    _setup_msg_processors(sender, opts)
+    _run_controller(
+        scenario_spec,
+        opts,
+        server,
+        sender,
+        get_controller=get_controller,
+        extra_tasks=(_create_runner(opts, transport, sender.recieve).run(),)
     )
 
 
 def scenario_test_cmd(opts):
     scenario_spec = opts['SCENARIO_SPEC']
     scenarios_fn = spec_import(scenario_spec)
-    config_manager = _create_config_manager(opts)
-    try:
-        scenarios = scenarios_fn(config_manager)
-    except TypeError:
-        scenarios = scenarios_fn()
-    test_scenarios(scenario_spec, opts, scenarios, config_manager)
+    test_scenarios(scenario_spec, opts, scenarios_fn)
 
 
 def journey_test_cmd(opts):
@@ -104,11 +94,14 @@ def journey_test_cmd(opts):
     else:
         datapool = None
     volumemodel = lambda start, end: int(opts['--volume'])
+
+    def dummy_scenario():
+        return [(journey_spec, datapool, volumemodel)]
+
     test_scenarios(
         journey_spec,
         opts,
-        [(journey_spec, datapool, volumemodel)],
-        _create_config_manager(opts),
+        dummy_scenario,
     )
 
 
