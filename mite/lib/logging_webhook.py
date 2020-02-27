@@ -51,5 +51,11 @@ def _controller_log_end(logging_id, logging_url):
     logging.debug("Logging test end complete")
 
 
-def time_function(scenario_spec, config_manager, start_event, end_event):
-    _controller_log_start()
+def log(scenario_spec, config_manager, start_event, end_event):
+    url = config_manager.get("logging_webhook_url")
+    logging_id = _controller_log_start(scenario_spec, url)
+    start_event.set()
+    try:
+        await end_event.wait()
+    finally:
+        _controller_log_end(logging_id, url)
