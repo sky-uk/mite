@@ -1,10 +1,11 @@
+import asyncio
 import logging
 
 from ..collector import Collector
 from ..controller import Controller
 from ..recorder import Recorder
 from ..utils import pack_msg, spec_import
-from .common import _create_config_manager, _create_runner
+from .common import _create_runner
 from .controller import _run as _run_controller
 
 
@@ -40,6 +41,12 @@ class DirectReciever:
             raw_listener(packed_msg)
 
 
+class DummyServer:
+    async def run(controller, stop_func):
+        while stop_func is None or not stop_func():
+            await asyncio.sleep(5)
+
+
 def _setup_msg_processors(receiver, opts):
     collector = Collector(opts['--collector-dir'], int(opts['--collector-roll']))
     recorder = Recorder(opts['--recorder-dir'])
@@ -60,7 +67,7 @@ def _setup_msg_processors(receiver, opts):
 
 
 def test_scenarios(scenario_spec, opts, scenario_fn):
-    server = FIXME
+    server = DummyServer()
     sender = DirectReciever()
     transport = DirectRunnerTransport()
 
