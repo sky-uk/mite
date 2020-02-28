@@ -25,17 +25,17 @@ async def _run_time_function(time_fn, start_event, end_event):
         await end_event.wait()
 
 
-async def _send_controller_report(sender):
+async def _send_controller_report(sender, controller_obj):
     while True:
-        if controller.should_stop():
+        if controller_obj.should_stop():
             return
         await asyncio.sleep(1)
-        controller.report(sender.send)
+        controller_obj.report(sender.send)
 
 
-async def _run_controller(server, controller, start_event, end_event):
+async def _run_controller(server, controller_obj, start_event, end_event):
     await start_event.wait()
-    await server.run(controller, controller.should_stop)
+    await server.run(controller_obj, controller_obj.should_stop)
     end_event.set()
 
 
@@ -58,14 +58,14 @@ def _run(scenario_spec, opts, scenarios_fn, server, sender, get_controller=Contr
     start_event = asyncio.Event()
     end_event = asyncio.Event()
 
-    time_fn_task = asyncio.create_task(_run_time_function(
+    time_fn_task = loop.create_task(_run_time_function(
         time_fn, start_event, end_event
     ))
 
     try:
         loop.run_until_complete(
             asyncio.gather(
-                _send_controller_report(sender),
+                _send_controller_report(sender, controller_object),
                 _run_controller(server, controller_object, start_event, end_event),
                 time_fn_task,
                 *extra_tasks,

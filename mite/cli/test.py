@@ -22,7 +22,7 @@ class DirectRunnerTransport:
         return self._controller.bye(runner_id)
 
 
-class DirectReciever:
+class DirectReceiver:
     def __init__(self):
         self._listeners = []
         self._raw_listeners = []
@@ -33,16 +33,19 @@ class DirectReciever:
     def add_raw_listener(self, raw_listener):
         self._raw_listeners.append(raw_listener)
 
-    def recieve(self, msg):
+    def receive(self, msg):
         for listener in self._listeners:
             listener(msg)
         packed_msg = pack_msg(msg)
         for raw_listener in self._raw_listeners:
             raw_listener(packed_msg)
 
+    def send(self, msg):
+        self.receive(msg)
+
 
 class DummyServer:
-    async def run(controller, stop_func):
+    async def run(self, controller, stop_func):
         while stop_func is None or not stop_func():
             await asyncio.sleep(5)
 
@@ -68,7 +71,7 @@ def _setup_msg_processors(receiver, opts):
 
 def test_scenarios(scenario_spec, opts, scenario_fn):
     server = DummyServer()
-    sender = DirectReciever()
+    sender = DirectReceiver()
     transport = DirectRunnerTransport()
 
     def get_controller(*args, **kwargs):
@@ -80,10 +83,11 @@ def test_scenarios(scenario_spec, opts, scenario_fn):
     _run_controller(
         scenario_spec,
         opts,
+        scenario_fn,
         server,
         sender,
         get_controller=get_controller,
-        extra_tasks=(_create_runner(opts, transport, sender.recieve).run(),)
+        extra_tasks=(_create_runner(opts, transport, sender.receive).run(),)
     )
 
 
