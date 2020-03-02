@@ -53,5 +53,7 @@ class TestRunTimeFunction:
             assert s.is_set()
             assert e.is_set()
             assert m.call_args_list == [
-                call('The time function exited before the scenario ended, which seems like a bug'),
+                call(
+                    'The time function exited before the scenario ended, which seems like a bug'
+                ),
             ]

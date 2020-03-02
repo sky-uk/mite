@@ -178,4 +178,5 @@ def time_function(tf_name):
     def decorator_inner(fn):
         fn._mite_time_function = tf_name
         return fn
+
     return decorator_inner

@@ -56,17 +56,16 @@ def _setup_msg_processors(receiver, opts):
     receiver.add_listener(recorder.process_message)
     receiver.add_raw_listener(collector.process_raw_message)
 
-    extra_processors = [
-        spec_import(x)()
-        for x in opts["--message-processors"].split(",")
-    ]
+    extra_processors = [spec_import(x)() for x in opts["--message-processors"].split(",")]
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)
         elif hasattr(processor, "process_raw_message"):
             receiver.add_raw_listener(processor.process_raw_message)
         else:
-            logging.error(f"Class {processor.__name__} does not have a process(_raw)_message method!")
+            logging.error(
+                f"Class {processor.__name__} does not have a process(_raw)_message method!"
+            )
 
 
 def test_scenarios(scenario_spec, opts, scenario_fn):
@@ -87,7 +86,7 @@ def test_scenarios(scenario_spec, opts, scenario_fn):
         server,
         sender,
         get_controller=get_controller,
-        extra_tasks=(_create_runner(opts, transport, sender.receive).run(),)
+        extra_tasks=(_create_runner(opts, transport, sender.receive).run(),),
     )
 
 
@@ -110,9 +109,7 @@ def journey_test_cmd(opts):
         return [(journey_spec, datapool, volumemodel)]
 
     test_scenarios(
-        journey_spec,
-        opts,
-        dummy_scenario,
+        journey_spec, opts, dummy_scenario,
     )
 
 

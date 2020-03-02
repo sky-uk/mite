@@ -4,8 +4,7 @@ from functools import partial
 
 from ..controller import Controller
 from ..utils import _msg_backend_module, spec_import
-from .common import (_create_config_manager, _create_scenario_manager,
-                     _create_sender)
+from .common import _create_config_manager, _create_scenario_manager, _create_sender
 
 
 def _create_controller_server(opts):
@@ -39,7 +38,15 @@ async def _run_controller(server, controller_obj, start_event, end_event):
     end_event.set()
 
 
-def _run(scenario_spec, opts, scenarios_fn, server, sender, get_controller=Controller, extra_tasks=()):
+def _run(
+    scenario_spec,
+    opts,
+    scenarios_fn,
+    server,
+    sender,
+    get_controller=Controller,
+    extra_tasks=(),
+):
     config_manager = _create_config_manager(opts)
     scenario_manager = _create_scenario_manager(scenario_spec, opts)
     try:
@@ -58,9 +65,7 @@ def _run(scenario_spec, opts, scenarios_fn, server, sender, get_controller=Contr
     start_event = asyncio.Event()
     end_event = asyncio.Event()
 
-    time_fn_task = loop.create_task(_run_time_function(
-        time_fn, start_event, end_event
-    ))
+    time_fn_task = loop.create_task(_run_time_function(time_fn, start_event, end_event))
 
     try:
         loop.run_until_complete(
