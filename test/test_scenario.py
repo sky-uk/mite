@@ -57,7 +57,7 @@ test_num_runners = 1
 
 
 def test_add_scenario():
-    scenario_manager = ScenarioManager()
+    scenario_manager = ScenarioManager("test")
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
     for i in scenario_manager._scenarios:
@@ -65,7 +65,7 @@ def test_add_scenario():
 
 
 def test_upadate_required_work():
-    scenario_manager = ScenarioManager()
+    scenario_manager = ScenarioManager("test")
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
     scenario_manager._update_required_and_period(5, 10)
@@ -76,7 +76,7 @@ def test_upadate_required_work():
 @pytest.mark.asyncio
 async def test_get_work():
 
-    scenario_manager = ScenarioManager()
+    scenario_manager = ScenarioManager("test")
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
     scenario_manager._update_required_and_period(5, 10)

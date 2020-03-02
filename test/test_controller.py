@@ -3,21 +3,18 @@ from mite.scenario import ScenarioManager
 from mite.config import ConfigManager
 from werkzeug.wrappers import Response
 import ujson
-from mite.__main__ import _controller_log_start, _controller_log_end
+from mite.lib.logging_webhook import _controller_log_start, _controller_log_end
 from pytest_httpserver.httpserver import HandlerType
 import json
 
 
-TESTNAME = "unit_test_name"
-
-
 def test_controller_hello():
-    scenario_manager = ScenarioManager()
+    scenario_manager = ScenarioManager("test_123")
     config_manager = ConfigManager()
-    controller = Controller(TESTNAME, scenario_manager, config_manager)
+    controller = Controller(scenario_manager, config_manager)
     for i in range(5):
         runner_id, test_name, config_list = controller.hello()
-        assert test_name == controller._testname
+        assert test_name == "test_123"
         assert runner_id == i + 1
 
 
