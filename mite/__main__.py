@@ -205,14 +205,14 @@ def controller(opts):
     # Inject arguments into the scenario
     scenarios_kwargs = {}
     scenarios_signature = inspect.signature(scenarios_fn)
-    for param in scenarios_signature.parameters:
-        if param.name == "config":
+    for param_name in scenarios_signature.parameters:
+        if param_name == "config":
             scenarios_kwargs["config"] = config_manager
-        elif param.name == "sender":
+        elif param_name == "sender":
             scenarios_kwargs["sender"] = sender
         else:
             raise Exception(
-                f"Don't know how to inject {param.name} into a scenario function!"
+                f"Don't know how to inject {param_name} into a scenario function!"
             )
     scenarios = scenarios_fn(**scenarios_kwargs)
     for journey_spec, datapool, volumemodel in scenarios:
