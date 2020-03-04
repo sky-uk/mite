@@ -68,7 +68,7 @@ class Gauge(Stat):
     def process(self, msg):
         if self.matcher(msg):
             for key, value in self.extractor.extract(msg):
-                self.metrics[key] += value
+                self.metrics[key] = value
 
     def dump(self):
         metrics = dict(self.metrics)
