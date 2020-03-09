@@ -187,4 +187,7 @@ class ControllerServer:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
                 raise Exception(f"something weird happened! _type is {_type}")
+            # Insert a zero-length sleep to allow asyncio to service other
+            # coroutines.  Notably, this allows the controller report sending
+            # coroutine to run.
             await asyncio.sleep(0)
