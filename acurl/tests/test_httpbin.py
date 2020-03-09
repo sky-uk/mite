@@ -1,5 +1,6 @@
-import acurl
 from urllib.parse import urlencode
+
+import acurl
 import pytest
 
 
@@ -9,6 +10,7 @@ def session():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_get():
     s = session()
     r = await s.get('https://httpbin.org/ip')
@@ -19,6 +21,7 @@ async def test_get():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_cookies():
     s = session()
     r = await s.get('https://httpbin.org/cookies/set?name=value')
@@ -26,6 +29,7 @@ async def test_cookies():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_session_cookies():
     s = session()
     await s.get('https://httpbin.org/cookies/set?name=value')
@@ -38,6 +42,7 @@ async def test_session_cookies():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_set_cookies():
     s = session()
     await s.get('https://httpbin.org/cookies/set?name=value')
@@ -48,6 +53,7 @@ async def test_set_cookies():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_basic_auth():
     s = session()
     r = await s.get(
@@ -57,6 +63,7 @@ async def test_basic_auth():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_failed_basic_auth():
     s = session()
     r = await s.get(
@@ -66,6 +73,7 @@ async def test_failed_basic_auth():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_redirect():
     s = session()
     url = 'https://httpbin.org/ip'
