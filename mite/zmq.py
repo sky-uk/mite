@@ -187,3 +187,4 @@ class ControllerServer:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
                 raise Exception(f"something weird happened! _type is {_type}")
+            await asyncio.sleep(0)
