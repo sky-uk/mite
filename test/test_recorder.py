@@ -21,7 +21,7 @@ def test_process_message_right_content():
         recorder = Recorder(target_dir=tempdir)
         recorder.process_message(msg_create)
         with open(os.path.join(tempdir, msg_create['name'] + '.msgpack'), "rb") as f:
-            unpacked = msgpack.Unpacker(f, encoding='utf-8', use_list=False)
+            unpacked = msgpack.Unpacker(f, raw=False, use_list=False)
             assert next(unpacked) == data_value
 
 
