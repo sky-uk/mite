@@ -1,10 +1,9 @@
 from unittest.mock import patch
 
 import pytest
+from mocks.mock_context import MockContext
 
 from mite_selenium import _SeleniumWrapper, mite_selenium
-
-from .mocks.mock_context import MockContext
 
 EXAMPLE_WEBDRIVER_CONFIG = {
     "webdriver_command_executor": "http://127.0.0.1:4444/wd/test",

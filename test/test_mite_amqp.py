@@ -4,10 +4,9 @@ from unittest.mock import patch
 import aio_pika
 import pytest
 from asyncmock import AsyncMock
+from mocks.mock_context import MockContext
 
 from mite_amqp import _AMQPWrapper, mite_amqp
-
-from .mocks.mock_context import MockContext
 
 
 @pytest.mark.asyncio

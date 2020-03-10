@@ -1,11 +1,10 @@
 import os
 
 import pytest
+from mocks.mock_context import MockContext
 
 import mite_http as mite_http_module
 from mite_http import mite_http
-
-from .mocks.mock_context import MockContext
 
 
 @pytest.mark.asyncio
