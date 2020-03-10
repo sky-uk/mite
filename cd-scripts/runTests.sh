@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 
 MY_VENV=$HOME/mite-tests
 
@@ -23,4 +23,4 @@ coverage html
 # - documentation coverage
 # - docs build (on master only)
 
-[ $TOX_EXIT_CODE -eq 0 -a $FLAKE8_EXIT_CODE -eq 0 ] || exit 1
+[ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
