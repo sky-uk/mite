@@ -1,10 +1,12 @@
 from unittest.mock import Mock
 
 import pytest
+from pytest import raises
+
 from mite.context import Context
 from mite.exceptions import MiteError
-from mocks.mock_sender import SenderMock
-from pytest import raises
+
+from .mocks.mock_sender import SenderMock
 
 test_msg = 'test msg for the unit test'
 

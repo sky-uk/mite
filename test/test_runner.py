@@ -1,10 +1,10 @@
 import pytest
-from mite.runner import Runner
+
 from mite import MiteError
+from mite.runner import Runner
 
-from mocks.mock_direct_runner_transport import DirectRunnerTransportMock
-from mocks.mock_sender import SenderMock
-
+from .mocks.mock_direct_runner_transport import DirectRunnerTransportMock
+from .mocks.mock_sender import SenderMock
 
 # Inside the runner the directRunnerTransport request the work, what it will receive it should be similar to:
 #     [(1, 1, 'test.legacy:journeytest1', ('1',)),
