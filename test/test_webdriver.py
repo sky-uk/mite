@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-
 from mocks.mock_context import MockContext
+
 from mite_selenium import _SeleniumWrapper, mite_selenium
 
 EXAMPLE_WEBDRIVER_CONFIG = {

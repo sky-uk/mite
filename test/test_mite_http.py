@@ -1,9 +1,10 @@
 import os
 
 import pytest
+from mocks.mock_context import MockContext
+
 import mite_http as mite_http_module
 from mite_http import mite_http
-from mocks.mock_context import MockContext
 
 
 @pytest.mark.asyncio
@@ -41,7 +42,23 @@ def test_default_histogram_bins():
         del os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"]
 
     stats = mite_http_module._generate_stats()
-    assert stats[1].bins == [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64]
+    assert stats[1].bins == [
+        0.0001,
+        0.001,
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.8,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+    ]
 
 
 def test_non_default_bins():
