@@ -58,6 +58,7 @@ Options:
     --message-processors=PROCESSORS   Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
 """
 import asyncio
+import inspect
 import logging
 import os
 import sys
@@ -71,8 +72,7 @@ import ujson
 
 import uvloop
 
-from .cli.common import (_create_config_manager, _create_runner,
-                         _create_scenario_manager)
+from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
 from .cli.stats import stats
 from .cli.test import journey_cmd, scenario_cmd
@@ -201,15 +201,25 @@ def controller(opts):
     scenario_spec = opts['SCENARIO_SPEC']
     scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(opts)
-    try:
-        scenarios = scenarios_fn(config_manager)
-    except TypeError:
-        scenarios = scenarios_fn()
+    sender = _create_sender(opts)
+    # Inject arguments into the scenario
+    scenarios_kwargs = {}
+    scenarios_signature = inspect.signature(scenarios_fn)
+    for param_name in scenarios_signature.parameters:
+        if param_name == "config":
+            scenarios_kwargs["config"] = config_manager
+        elif param_name == "sender":
+            scenarios_kwargs["sender"] = sender
+        else:
+            raise Exception(
+                f"Don't know how to inject {param_name} into a scenario function!"
+            )
+    scenarios = scenarios_fn(**scenarios_kwargs)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
+    # Done setting up scenarios
     controller = Controller(scenario_spec, scenario_manager, config_manager)
     server = _create_controller_server(opts)
-    sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
     logging_id = None
     logging_url = opts["--logging-webhook"]
