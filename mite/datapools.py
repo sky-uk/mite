@@ -20,7 +20,7 @@ class RecyclableIterableDataPool:
             DataPoolItem(id, data) for id, data in enumerate(iterable, 1)
         )
 
-    async def checkout(self):
+    async def checkout(self, config):
         if self._available:
             dpi = self._available.popleft()
             self._checked_out[dpi.id] = dpi.data
@@ -52,7 +52,7 @@ class IterableFactoryDataPool:
             _id = next(counter)
             yield _id, data
 
-    async def checkout(self):
+    async def checkout(self, config):
         if not hasattr(self, '_cycle_gen_iter'):
             self._cycle_gen_iter = self._cycle()
         last_id = 0
@@ -74,7 +74,7 @@ class IterableDataPool:
         self._iter = iter(iterable)
         self._id_gen = count(1)
 
-    async def checkout(self):
+    async def checkout(self, config):
         try:
             data = next(self._iter)
         except StopIteration:
