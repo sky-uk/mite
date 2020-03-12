@@ -94,11 +94,11 @@ class TestGauge:
         gauge.process(None)
         assert dict(gauge.metrics) == {"foo": 3.0}
 
-    def test_process_additivity(self):
+    def test_process_non_additivity(self):
         gauge = Gauge("test", lambda x: True, self.dummy_extractor)
         gauge.process(None)
         gauge.process(None)
-        assert dict(gauge.metrics) == {"foo": 6.0}
+        assert dict(gauge.metrics) == {"foo": 3.0}
 
     def test_dump(self):
         gauge = Gauge("test", lambda x: True, self.dummy_extractor)

@@ -1,12 +1,19 @@
-from mite.controller import Controller
-from mite.scenario import ScenarioManager
-from mite.config import ConfigManager
-from werkzeug.wrappers import Response
-import ujson
-from mite.__main__ import _controller_log_start, _controller_log_end
-from pytest_httpserver.httpserver import HandlerType
 import json
+from multiprocessing import Process
+from unittest import mock
 
+import ujson
+
+import pytest
+from mite.__main__ import _controller_log_end, _controller_log_start
+from mite.__main__ import controller as main_controller
+from mite.__main__ import duplicator as main_duplicator
+from mite.__main__ import runner as main_runner
+from mite.config import ConfigManager
+from mite.controller import Controller
+from mite.scenario import ScenarioManager, StopScenario
+from pytest_httpserver.httpserver import HandlerType
+from werkzeug.wrappers import Response
 
 TESTNAME = "unit_test_name"
 
@@ -53,3 +60,58 @@ def test_controller_log_end(httpserver):
 # called at both beginning and end).  I haven't yet figured out how to get the
 # controller stuff in __main__.py to work properly without hanging, which is
 # a prerequisite of this
+
+
+class DummySender:
+    def __init__(self, *args, **kwargs):
+        self._received = []
+
+    def send(self, msg):
+        self._received.append(msg)
+
+
+def dummy_vm(s, e):
+    if s > 10:
+        raise StopScenario
+    return 1
+
+
+async def dummy_journey(ctx):
+    pass
+
+
+def dummy_scenario():
+    return [("test_controller:dummy_journey", None, dummy_vm)]
+
+
+@pytest.mark.slow
+def test_controller_report():
+    # breakpoint()
+    ds = DummySender()
+    opts = {
+        "SCENARIO_SPEC": "test_controller:dummy_scenario",
+        '--delay-start-seconds': 0,
+        '--min-loop-delay': 0,
+        '--max-loop-delay': 0,
+        '--spawn-rate': 2000,
+        "--message-backend": "ZMQ",
+        "--config": "mite.config:default_config_loader",
+        "--add-to-config": (),
+        "--controller-socket": "tcp://127.0.0.1:14301",
+        "--logging-webhook": None,
+        "--message-socket": "tcp://127.0.0.1:14302",
+        "--runner-max-journeys": None,
+        "--debugging": None,
+        "OUT_SOCKET": (),
+    }
+    runner = Process(target=main_runner, args=(opts,))
+    runner.start()
+    duplicator = Process(target=main_duplicator, args=(opts,))
+    duplicator.start()
+    with mock.patch("mite.__main__._create_sender", return_value=ds):
+        main_controller(opts)
+    runner.terminate()
+    duplicator.terminate()
+    # Even in a broken condition, we get one controller report.  So we check
+    # that we have more than that...
+    assert sum(x["type"] == "controller_report" for x in ds._received) > 1
