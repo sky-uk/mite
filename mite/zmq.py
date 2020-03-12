@@ -36,9 +36,10 @@ class Duplicator:
             for address, socket in self._out_sockets:
                 try:
                     socket.send(msg, flags=zmq.NOBLOCK)
-                except zmq.ZMQError:
+                except zmq.ZMQError as e:
                     logger.error(
-                        "Duplicator message buffer full for address %s" % (address,)
+                        f"Duplicator message buffer full for address {address}; "
+                        f"error is {e.errno}: {e.strerror}"
                     )
 
 
@@ -186,3 +187,7 @@ class ControllerServer:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
                 raise Exception(f"something weird happened! _type is {_type}")
+            # Insert a zero-length sleep to allow asyncio to service other
+            # coroutines.  Notably, this allows the controller report sending
+            # coroutine to run.
+            await asyncio.sleep(0)
