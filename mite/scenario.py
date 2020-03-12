@@ -27,7 +27,7 @@ def _volume_dicts_remove_a_from_b(a, b):
 
 
 class ScenarioManager:
-    def __init__(self, start_delay=0, period=1, spawn_rate=None):
+    def __init__(self, start_delay=0, period=1, spawn_rate=None, config_manager=None):
         self._period = period
         self._scenario_id_gen = count(1)
         self._in_start = start_delay > 0
@@ -37,6 +37,7 @@ class ScenarioManager:
         self._spawn_rate = spawn_rate
         self._required = {}
         self._scenarios = {}
+        self._config_manager = config_manager
 
     def _now(self):
         return time.time() - self._start_time
@@ -124,7 +125,9 @@ class ScenarioManager:
                     work.append((scenario_id, None, scenario.journey_spec, None))
                 else:
                     try:
-                        dpi = await scenario.datapool.checkout()
+                        dpi = await scenario.datapool.checkout(
+                            config=self._config_manager
+                        )
                     except DataPoolExhausted:
                         logger.info(
                             'Removed scenario %d because data pool exhausted', scenario_id
