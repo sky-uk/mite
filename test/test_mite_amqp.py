@@ -51,8 +51,6 @@ async def test_mite_amqp_connect():
     with patch("aio_pika.connect", new=connect_mock):
         await dummy_journey(context)
 
-    breakpoint()
-
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 
