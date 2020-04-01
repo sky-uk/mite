@@ -93,7 +93,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
             if controller.should_stop():
-                if http_stats_output.req_total <= 0 or http_stats_output.error_total > 0:
+                if http_stats_output.error_total > 0:
                     sys.exit(1)
                 return
 
