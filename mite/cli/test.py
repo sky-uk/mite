@@ -73,8 +73,7 @@ def _setup_msg_processors(receiver, opts):
 
 def _get_http_stats_output(receiver):
     listeners = receiver.filter_listeners(HttpStatsOutput)
-    assert len(listeners) == 1
-    return listeners[0].__self__
+    return listeners[0].__self__ if len(listeners) == 1 else None
 
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
@@ -93,7 +92,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
             if controller.should_stop():
-                if http_stats_output.error_total > 0:
+                if http_stats_output is not None and http_stats_output.error_total > 0:
                     sys.exit(1)
                 return
 
