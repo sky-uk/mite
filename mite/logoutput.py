@@ -48,6 +48,10 @@ class HttpStatsOutput:
             interpolated_amount = (b - a) * offset
             return "%.6f" % (a + interpolated_amount,)
 
+    @property
+    def error_total(self):
+        return self._error_total
+
     def process_message(self, message):
         if 'type' not in message:
             return
