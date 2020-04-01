@@ -49,10 +49,6 @@ class HttpStatsOutput:
             return "%.6f" % (a + interpolated_amount,)
 
     @property
-    def req_total(self):
-        return self._req_total
-
-    @property
     def error_total(self):
         return self._error_total
 
