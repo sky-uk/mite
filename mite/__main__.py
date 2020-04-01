@@ -2,7 +2,7 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [(--should-stop=BOOL | (--should-stop=BOOL --allowed-errors=NUMBER | --should-stop=BOOL --allowed-errors-pct=NUMBER))] SCENARIO_SPEC
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] SCENARIO_SPEC
     mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -56,9 +56,6 @@ Options:
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS   Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
-    --should-stop=BOOL                Stop scenario test if controller should stop. True or False. [default: False]
-    --allowed-errors=NUMBER           On scenarion test stop, if total requests was 0 or more than allowed nr. of errors occurred, exit with status code `1`. NUMBER >= 0. (used with --should-stop, requires mite.logoutput:HttpStatsOutput message processor)
-    --allowed-errors-pct=NUMBER       On scenarion test stop, if total requests was 0 or more than allowed % of total requests were errors, exit with status code `1`. NUMBER between 0 and 100. (used with --should-stop, requires mite.logoutput:HttpStatsOutput message processor)
 """
 import asyncio
 import inspect
@@ -324,29 +321,10 @@ def har_converter(opts):
     )
 
 
-def validate_opts(opts):
-
-    try:
-        assert opts['--should-stop'] in ['True', 'False']
-    except Exception:
-        raise docopt.DocoptExit("--should-stop has to be True or False")
-
-    try:
-        assert (lambda e: e is None or int(e) >= 0)(opts['--allowed-errors'])
-    except Exception:
-        raise docopt.DocoptExit("--allowed-errors has to be >= 0")
-
-    try:
-        assert (lambda e: e is None or 0 <= float(e) <= 100)(opts['--allowed-errors-pct'])
-    except Exception:
-        raise docopt.DocoptExit("--allowed-errors-pct has to be between 0.0 and 100.0")
-
-
 def main():
     if os.environ.get("MITE_PROFILE", "0") != "1":
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     opts = docopt.docopt(__doc__)
-    validate_opts(opts)
     setup_logging(opts)
     configure_python_path(opts)
     if opts['scenario']:

@@ -78,15 +78,6 @@ def _get_http_stats_output(receiver):
 
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
-    should_stop = opts['--should-stop'] == 'True'
-    allowed_errors = (
-        int(opts['--allowed-errors']) if opts['--allowed-errors'] is not None else None
-    )
-    allowed_errors_pct = (
-        float(opts['--allowed-errors-pct'])
-        if opts['--allowed-errors-pct'] is not None
-        else None
-    )
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
@@ -94,30 +85,16 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
     _setup_msg_processors(receiver, opts)
-    http_stats_output = None
-    if allowed_errors is not None or allowed_errors_pct is not None:
-        http_stats_output = _get_http_stats_output(receiver)
+    http_stats_output = _get_http_stats_output(receiver)
     loop = asyncio.get_event_loop()
 
     async def controller_report():
         while True:
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
-            if should_stop and controller.should_stop():
-                if allowed_errors is not None:
-                    if (
-                        http_stats_output.get_req_total() <= 0
-                        or http_stats_output.get_error_total() > allowed_errors
-                    ):
-                        sys.exit(1)
-                elif allowed_errors_pct is not None:
-                    if http_stats_output.get_req_total() <= 0 or (
-                        100
-                        * http_stats_output.get_error_total()
-                        / http_stats_output.get_req_total()
-                        > allowed_errors_pct
-                    ):
-                        sys.exit(1)
+            if controller.should_stop():
+                if http_stats_output.req_total <= 0 or http_stats_output.error_total > 0:
+                    sys.exit(1)
                 return
 
     loop.run_until_complete(
