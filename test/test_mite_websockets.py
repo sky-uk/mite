@@ -1,13 +1,11 @@
-import asyncio
 from unittest.mock import patch
 
 import pytest
 from asyncmock import AsyncMock
 from mocks.mock_context import MockContext
 
-import websockets
 from websockets.exceptions import WebSocketException
-from mite_websocket import _WebsocketWrapper, mite_websocket, WebsocketError
+from mite_websocket import mite_websocket, WebsocketError
 
 
 @pytest.mark.asyncio
@@ -63,5 +61,3 @@ async def test_mite_websocket_exception_handling():
 
     with pytest.raises(WebsocketError):
         await dummy_journey(context)
-
-

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -8,10 +7,10 @@ from websockets.exceptions import WebSocketException
 from mite.exceptions import MiteError
 
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 
 
-class WebsocketError(MiteError): 
+class WebsocketError(MiteError):
     pass
 
 
@@ -27,7 +26,7 @@ class _WebsocketWrapper:
 
     async def connect(self, *args, **kwargs):
         self.connection = await websockets.connect(*args, **kwargs)
-        return self.connection 
+        return self.connection
 
     async def send(self, body, **kwargs):
         await self.connection.send(body)
