@@ -22,12 +22,14 @@ async def test_mite_websocket_decorator():
 @pytest.mark.asyncio
 async def test_mite_websocket_decorator_uninstall():
     context = MockContext()
+    connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
-        pass
+        await ctx.websocket.connect("wss://foo.bar")
 
-    await dummy_journey(context)
+    with patch("websockets.connect", new=connect_mock):
+        await dummy_journey(context)
 
     assert getattr(context, "websocket", None) is None
 

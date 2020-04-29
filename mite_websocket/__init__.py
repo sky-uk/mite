@@ -21,7 +21,9 @@ class _WebsocketWrapper:
     def install(self, context):
         context.websocket = self
 
-    def uninstall(self, context):
+    async def uninstall(self, context):
+        if self.connection:
+            await self.connection.close()
         del context.websocket
 
     async def connect(self, *args, **kwargs):
@@ -41,7 +43,7 @@ async def _websocket_context_manager(context):
     except WebSocketException as e:
         raise WebsocketError(e) from e
     finally:
-        ww.uninstall(context)
+        await ww.uninstall(context)
 
 
 def mite_websocket(func):
