@@ -9,8 +9,7 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 
 EMBEDDED_URL_REGEX = re.compile(
-    "\\(\\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\\.[^\"':.]*)[\\]?[\"']\\s*\\)",
-    re.IGNORECASE,  # noqa: W605
+    r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE,
 )
 
 
