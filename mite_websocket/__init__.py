@@ -6,7 +6,6 @@ from websockets.exceptions import WebSocketException
 
 from mite.exceptions import MiteError
 
-
 logger = logging.getLogger(__name__)
 
 

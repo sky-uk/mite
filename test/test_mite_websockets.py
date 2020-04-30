@@ -3,9 +3,9 @@ from unittest.mock import patch
 import pytest
 from asyncmock import AsyncMock
 from mocks.mock_context import MockContext
-
 from websockets.exceptions import WebSocketException
-from mite_websocket import mite_websocket, WebsocketError
+
+from mite_websocket import WebsocketError, mite_websocket
 
 
 @pytest.mark.asyncio
