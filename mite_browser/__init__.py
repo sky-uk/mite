@@ -1,14 +1,16 @@
 import asyncio
-from bs4 import BeautifulSoup
+import re
 from urllib.parse import urlencode, urljoin
-from re import compile as re_compile, IGNORECASE
+
+from bs4 import BeautifulSoup
+
+import mite_http
 from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
-import mite_http
 
-# TODO: fix
-EMBEDDED_URL_REGEX = re_compile(
-    "\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE  # noqa: W605
+EMBEDDED_URL_REGEX = re.compile(
+    "\\(\\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\\.[^\"':.]*)[\\]?[\"']\\s*\\)",
+    re.IGNORECASE,  # noqa: W605
 )
 
 
