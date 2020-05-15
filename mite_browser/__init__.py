@@ -1,5 +1,6 @@
 import asyncio
 import re
+from contextlib import asynccontextmanager
 from urllib.parse import urlencode, urljoin
 
 from bs4 import BeautifulSoup
@@ -9,7 +10,7 @@ from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 
 EMBEDDED_URL_REGEX = re.compile(
-    r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE,
+    r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE
 )
 
 
@@ -409,8 +410,11 @@ class Form:
 
 
 def _field_is_disabled(element):
-    status = element.get('disabled')
-    return status is not None and status.lower() in ['disabled', 'true']
+    status = element.attrs.get('disabled')
+    if status and status.lower() in ['disabled', 'true']:
+        return True
+    else:
+        return False
 
 
 class BaseFormField:
