@@ -1,6 +1,5 @@
 import asyncio
 import re
-from contextlib import asynccontextmanager
 from urllib.parse import urlencode, urljoin
 
 from bs4 import BeautifulSoup
