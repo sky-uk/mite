@@ -5,8 +5,8 @@ from mite_browser import (
     CheckboxField,
     FakeFormField,
     FileInputField,
-    _field_is_disabled
-    )
+    _field_is_disabled,
+)
 
 
 def test_fake_form_field_create():
@@ -36,13 +36,13 @@ def _create_element():
 def test_disabled_element_parsing_true():
     element = _create_element()
     element.attrs['disabled'] = 'true'
-    assert _field_is_disabled(element) == True
+    assert _field_is_disabled(element) is True
 
 
 def test_disabled_element_parsing_disabled():
     element = _create_element()
     element.attrs['disabled'] = 'disabled'
-    assert _field_is_disabled(element) == True
+    assert _field_is_disabled(element) is True
 
 
 def test_base_form_field_create():
@@ -75,9 +75,9 @@ def test_base_form_enable_disable():
 
 def test_checkbox_field():
     field = CheckboxField(_create_element())
-    assert field._checked == False
+    assert field._checked is False
     field.toggle()
-    assert field._checked == True
+    assert field._checked is True
 
 
 def test_file_input_field():
