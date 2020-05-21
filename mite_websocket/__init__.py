@@ -32,6 +32,9 @@ class _WebsocketWrapper:
     async def send(self, body, **kwargs):
         await self.connection.send(body)
 
+    async def recv(self):
+        return await self.connection.recv()
+
 
 @asynccontextmanager
 async def _websocket_context_manager(context):
