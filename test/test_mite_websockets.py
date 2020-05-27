@@ -29,7 +29,7 @@ async def test_mite_websocket_decorator_uninstall():
         await ctx.websocket.connect("wss://foo.bar")
 
     with patch("websockets.connect", new=connect_mock):
-        wb = await dummy_journey(context)
+        await dummy_journey(context)
 
     assert getattr(context, "websocket", None) is None
 

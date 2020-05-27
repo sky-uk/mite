@@ -37,7 +37,6 @@ class _WebsocketWrapper:
     async def close_connection(self, conn):
         await conn.close()
         self.connections.remove(conn)
-        del conn
 
 
 @asynccontextmanager
