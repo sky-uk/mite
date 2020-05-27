@@ -51,6 +51,39 @@ async def test_mite_websocket_connect():
 
 
 @pytest.mark.asyncio
+async def test_mite_websocket_connect_and_send():
+    context = MockContext()
+    url = "wss://foo.bar"
+    msg = "bar"
+    connect_mock = AsyncMock()
+
+    @mite_websocket
+    async def dummy_journey(ctx):
+        return await ctx.websocket.connect(url)
+
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
+    await wb.send(msg)
+    connect_mock.return_value.send.assert_called_once_with(msg)
+
+
+@pytest.mark.asyncio
+async def test_mite_websocket_connect_and_recv():
+    context = MockContext()
+    url = "wss://foo.bar"
+    connect_mock = AsyncMock()
+
+    @mite_websocket
+    async def dummy_journey(ctx):
+        return await ctx.websocket.connect(url)
+
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
+    await wb.recv()
+    connect_mock.return_value.recv.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_mite_websocket_exception_handling():
     context = MockContext()
 
