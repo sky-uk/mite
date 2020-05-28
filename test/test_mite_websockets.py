@@ -35,22 +35,52 @@ async def test_mite_websocket_decorator_uninstall():
 
 
 @pytest.mark.asyncio
-async def test_mite_websocket_connect_and_send():
+async def test_mite_websocket_connect():
     context = MockContext()
     url = "wss://foo.bar"
-    message = "baz"
     connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
         await ctx.websocket.connect(url)
-        await ctx.websocket.send(message)
 
     with patch("websockets.connect", new=connect_mock):
         await dummy_journey(context)
 
     connect_mock.assert_called_once_with(url)
-    connect_mock.return_value.send.assert_called_once_with(message)
+
+
+@pytest.mark.asyncio
+async def test_mite_websocket_connect_and_send():
+    context = MockContext()
+    url = "wss://foo.bar"
+    msg = "bar"
+    connect_mock = AsyncMock()
+
+    @mite_websocket
+    async def dummy_journey(ctx):
+        return await ctx.websocket.connect(url)
+
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
+    await wb.send(msg)
+    connect_mock.return_value.send.assert_called_once_with(msg)
+
+
+@pytest.mark.asyncio
+async def test_mite_websocket_connect_and_recv():
+    context = MockContext()
+    url = "wss://foo.bar"
+    connect_mock = AsyncMock()
+
+    @mite_websocket
+    async def dummy_journey(ctx):
+        return await ctx.websocket.connect(url)
+
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
+    await wb.recv()
+    connect_mock.return_value.recv.assert_called_once()
 
 
 @pytest.mark.asyncio

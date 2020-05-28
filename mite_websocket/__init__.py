@@ -15,22 +15,28 @@ class WebsocketError(MiteError):
 
 class _WebsocketWrapper:
     def __init__(self):
-        self.connection = None
+        self.connections = []
 
     def install(self, context):
         context.websocket = self
 
     async def uninstall(self, context):
-        if self.connection:
-            await self.connection.close()
+        for conn in self.connections:
+            if conn:
+                await self.close_connection(conn)
         del context.websocket
 
     async def connect(self, *args, **kwargs):
-        self.connection = await websockets.connect(*args, **kwargs)
-        return self.connection
+        conn = await websockets.connect(*args, **kwargs)
+        self.connections.append(conn)
+        return conn
 
-    async def send(self, body, **kwargs):
-        await self.connection.send(body)
+    def get_connections(self):
+        return self.connections
+
+    async def close_connection(self, conn):
+        await conn.close()
+        self.connections.remove(conn)
 
 
 @asynccontextmanager
