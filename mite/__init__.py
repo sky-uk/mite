@@ -32,7 +32,6 @@ def test_context(extensions=('http',), **config):
 class ensure_separation_from_callable:
     def __init__(self, sep_callable, loop=None):
         self._sep_callable = sep_callable
-        self._loop = loop
 
     async def __aenter__(self):
         self._start = time.time()
@@ -41,14 +40,12 @@ class ensure_separation_from_callable:
         return self._sep_callable() - (time.time() - self._start)
 
     async def __aexit__(self, *args):
-        if self._loop is None:
-            self._loop = asyncio.get_event_loop()
         sleep_time = self._sleep_time()
         if sleep_time > 0:
-            await mite.utils.sleep(sleep_time, loop=self._loop)
+            await mite.utils.sleep(sleep_time)
 
 
-def ensure_fixed_separation(separation, loop=None):
+def ensure_fixed_separation(separation):
     """Context manager which will ensure calls to a callable are separated by a fixed wait time of separation value
 
     Args:
@@ -65,10 +62,10 @@ def ensure_fixed_separation(separation, loop=None):
     def fixed_separation():
         return separation
 
-    return ensure_separation_from_callable(fixed_separation, loop=loop)
+    return ensure_separation_from_callable(fixed_separation)
 
 
-def ensure_average_separation(mean_separation, plus_minus=None, loop=None):
+def ensure_average_separation(mean_separation, plus_minus=None):
     """Context manager which will ensure calls to a callable are separated by an average wait time of separation value
 
     Args:
@@ -88,4 +85,4 @@ def ensure_average_separation(mean_separation, plus_minus=None, loop=None):
     def average_separation():
         return mean_separation + (random.random() * plus_minus * 2) - plus_minus
 
-    return ensure_separation_from_callable(average_separation, loop=loop)
+    return ensure_separation_from_callable(average_separation)
