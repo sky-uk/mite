@@ -1,7 +1,8 @@
 from urllib.parse import urlencode
 
-import acurl
 import pytest
+
+import acurl
 
 
 def session():
@@ -26,6 +27,14 @@ async def test_cookies():
     s = session()
     r = await s.get('https://httpbin.org/cookies/set?name=value')
     assert r.cookies == {'name': 'value'}
+
+
+@pytest.mark.asyncio
+@pytest.mark.slow
+async def test_cookies_in_request():
+    s = session()
+    resp = await s.get("https://httpbin.org/cookies", cookies={"foo": "bar"})
+    assert resp.json() == {"cookies": {"foo": "bar"}}
 
 
 @pytest.mark.asyncio
