@@ -157,12 +157,14 @@ class Runner:
                 )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
+        logger.info("Waiting for work completion")
         while self._current_work():
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
             config.update(config_list)
             completed_data_ids = await wait()
+        logger.info("All work completed")
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
         )

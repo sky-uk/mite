@@ -261,7 +261,7 @@ def runner(opts):
     # Under rare conditions, we've seen a race condition on the runner's exit
     # that leads to an exception like:
     # RuntimeError: Event loop stopped before Future completed.
-    # I think this comes about becasue of a race where the callback scheduled
+    # I think this comes about because of a race where the callback scheduled
     # by RunnerTransport.bye does not get serviced before the above
     # run_until_complete returns.  I'm mystified as to how this can occur
     # (because bye awaits the callback, so it should complete....)
@@ -270,7 +270,9 @@ def runner(opts):
     # give the loop 5 seconds to complete any network ops that are outstanding
     # before calling the close method which will cancel any scheduled
     # callbacks and should ensure that the porgrma exits cleanly.
+    logger.info("Runner.run complete")
     loop.run_until_complete(asyncio.sleep(5))
+    logger.info("Closing event loop")
     loop.close()
 
 
