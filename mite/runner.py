@@ -96,17 +96,16 @@ class Runner:
         config.update(config_list)
         logger.debug("Entering run loop")
         _completed = []
+        journey_specs_by_scenario_id = {}
 
         def on_completion(f):
             nonlocal waiter, _completed
             _completed.append(f)
-            logger.info("On Completion ")
             if not waiter.done():
                 waiter.set_result(None)
 
         def stop_waiting():
             nonlocal waiter
-            logger.info("Stop waiting")
             if not waiter.done():
                 waiter.set_result(None)
 
@@ -128,11 +127,11 @@ class Runner:
         timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
         waiter = self._loop.create_future()
         completed_data_ids = []
+        journey_specs_by_scenario_id = {}
         while not self._stop:
             work, config_list, self._stop = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, self._max_work
             )
-            logger.info("GOT WORK")
             config.update(config_list)
             for num, (scenario_id, scenario_data_id, journey_spec, args) in enumerate(
                 work
@@ -152,6 +151,7 @@ class Runner:
                     should_stop_func=self.should_stop,
                     debug=self._debug,
                 )
+                journey_specs_by_scenario_id[scenario_id] = journey_spec
                 self._inc_work(scenario_id)
                 future = asyncio.ensure_future(
                     self._execute(
@@ -162,14 +162,12 @@ class Runner:
             completed_data_ids = await wait()
         logger.info("Waiting for work completion")
         while self._current_work():
-            logger.info("Before request work")
+            logger.info("Waiting on " + ", ".join(["|".join((str(journey_specs_by_scenario_id[sc_id]), str(sc_id), str(count))) for sc_id, count in self._current_work().items()]))
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
-            logger.info("After request work")
             config.update(config_list)
             completed_data_ids = await wait()
-            logger.info("After wait")
         logger.info("All work completed")
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
