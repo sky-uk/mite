@@ -160,11 +160,14 @@ class Runner:
             completed_data_ids = await wait()
         logger.info("Waiting for work completion")
         while self._current_work():
+            logger.info("Before request work")
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
+            logger.info("After request work")
             config.update(config_list)
             completed_data_ids = await wait()
+            print("After wait")
         logger.info("All work completed")
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
