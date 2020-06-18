@@ -100,11 +100,13 @@ class Runner:
         def on_completion(f):
             nonlocal waiter, _completed
             _completed.append(f)
+            logger.info("On Completion ")
             if not waiter.done():
                 waiter.set_result(None)
 
         def stop_waiting():
             nonlocal waiter
+            logger.info("Stop waiting")
             if not waiter.done():
                 waiter.set_result(None)
 
@@ -167,7 +169,7 @@ class Runner:
             logger.info("After request work")
             config.update(config_list)
             completed_data_ids = await wait()
-            print("After wait")
+            logger.info("After wait")
         logger.info("All work completed")
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
