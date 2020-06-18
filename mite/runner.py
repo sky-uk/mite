@@ -100,7 +100,7 @@ class Runner:
 
         def on_completion(f):
             nonlocal waiter, _completed
-            logger.info("Received completion notice for scenario_id " + f.result()[0])
+            logger.info("Received completion notice for scenario_id " + str(f.result()[0]))
             _completed.append(f)
             if not waiter.done():
                 waiter.set_result(None)
@@ -152,7 +152,7 @@ class Runner:
                     debug=self._debug,
                 )
                 journey_specs_by_scenario_id[scenario_id] = journey_spec
-                logger.info("Starting scenario_id " + scenario_id)
+                logger.info("Starting scenario_id " + str(scenario_id))
                 self._inc_work(scenario_id)
                 future = asyncio.ensure_future(
                     self._execute(
