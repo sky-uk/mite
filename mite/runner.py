@@ -100,6 +100,7 @@ class Runner:
 
         def on_completion(f):
             nonlocal waiter, _completed
+            logger.info("Received completion notice for scenario_id " + f.result()[0])
             _completed.append(f)
             if not waiter.done():
                 waiter.set_result(None)
@@ -127,7 +128,6 @@ class Runner:
         timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
         waiter = self._loop.create_future()
         completed_data_ids = []
-        journey_specs_by_scenario_id = {}
         while not self._stop:
             work, config_list, self._stop = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, self._max_work
@@ -152,6 +152,7 @@ class Runner:
                     debug=self._debug,
                 )
                 journey_specs_by_scenario_id[scenario_id] = journey_spec
+                logger.info("Starting scenario_id " + scenario_id)
                 self._inc_work(scenario_id)
                 future = asyncio.ensure_future(
                     self._execute(
