@@ -100,7 +100,7 @@ class Runner:
 
         def on_completion(f):
             nonlocal waiter, _completed
-            logger.info("Received completion notice for scenario_id " + str(f.result()[0]))
+            # logger.info("Received completion notice for scenario_id " + str(f.result()[0]))
             _completed.append(f)
             if not waiter.done():
                 waiter.set_result(None)
@@ -152,7 +152,7 @@ class Runner:
                     debug=self._debug,
                 )
                 journey_specs_by_scenario_id[scenario_id] = journey_spec
-                logger.info("Starting scenario_id " + str(scenario_id))
+                # logger.info("Starting scenario_id " + str(scenario_id))
                 self._inc_work(scenario_id)
                 future = asyncio.ensure_future(
                     self._execute(
@@ -163,7 +163,21 @@ class Runner:
             completed_data_ids = await wait()
         logger.info("Waiting for work completion")
         while self._current_work():
-            logger.info("Waiting on " + ", ".join(["|".join((str(journey_specs_by_scenario_id[sc_id]), str(sc_id), str(count))) for sc_id, count in self._current_work().items()]))
+            logger.info(
+                "Waiting on "
+                + ", ".join(
+                    [
+                        "|".join(
+                            (
+                                str(journey_specs_by_scenario_id[sc_id]),
+                                str(sc_id),
+                                str(count),
+                            )
+                        )
+                        for sc_id, count in self._current_work().items()
+                    ]
+                )
+            )
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
