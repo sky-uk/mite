@@ -63,6 +63,7 @@ import logging
 import os
 import sys
 import threading
+from io import StringIO
 from urllib.request import Request as UrlLibRequest
 from urllib.request import urlopen
 
@@ -257,22 +258,54 @@ def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(_create_runner(opts, transport, sender.send).run())
-    # Under rare conditions, we've seen a race condition on the runner's exit
-    # that leads to an exception like:
-    # RuntimeError: Event loop stopped before Future completed.
-    # I think this comes about because of a race where the callback scheduled
-    # by RunnerTransport.bye does not get serviced before the above
-    # run_until_complete returns.  I'm mystified as to how this can occur
-    # (because bye awaits the callback, so it should complete....)
-    # Nonetheless, the exception happens, and I believe that this is the
-    # cause.  So, this is an attempt to defend against that error case.  We
-    # give the loop 5 seconds to complete any network ops that are outstanding
-    # before calling the close method which will cancel any scheduled
-    # callbacks and should ensure that the porgrma exits cleanly.
-    logger.info("Runner.run complete")
-    loop.run_until_complete(asyncio.sleep(5))
-    logger.info("Closing event loop")
+    runner_task = asyncio.create_task(_create_runner(opts, transport, sender.send).run())
+    try:
+        loop.run_until_complete(runner_task)
+    except RuntimeError as e:
+        if e.args[0] == "Event loop stopped before Future completed.":
+            logger.error("RuntimeError for uncompleted coroutine was hit")
+            # Under rare conditions, we've seen a race condition on the runner's exit
+            # that leads to an exception like:
+            # RuntimeError: Event loop stopped before Future completed.  This
+            # comes from this line of uvloop:
+            # https://github.com/MagicStack/uvloop/blob/0e72f817ebb99cf432f72e9d7478e482c6ca0f3e/uvloop/loop.pyx#L1454
+            # I think this comes about when some kind of exception is thrown
+            # into the loop, possibly a KeyboardInterrupt (from SIGINT) during
+            # a k8s shutdown sequence (but why are we shutting down in the
+            # first place?  who knows).  Now we'll try to print some
+            # diagnostic info and recover(???)
+            logger.info(f"canceled is: {runner_task.cancelled()}")
+            logger.info(  # This better be false or I'll be quite sad...
+                f"done is: {runner_task.done()}"
+            )
+            try:
+                logger.info(f"exception is: {runner_task.exception()}")
+            except asyncio.CancelledError:
+                logger.info("CancelledError trying to get the exception")
+            except asyncio.InvalidStateError:
+                logger.info("InvalidStateError trying to get the exception")
+            logger.info("task dump")
+            for task in asyncio.all_tasks():
+                # This absurd dance is because kibana reorders the log lines,
+                # so we want the stacktrace to be all on a single line per task
+                sio = StringIO()
+                task.print_stack(file=sio)
+                stack = sio.getvalue().replace("\n", " ;; ")
+                logger.info(f"- {task}: {stack}")
+            # Now we've got all the debuggin info I can think of (for the
+            # moment); let's see if we can recover
+            try:
+                logger.info("retrying now")
+                loop.run_until_complete(runner_task)
+                logger.info("retrying worked!")
+            except RuntimeError:
+                logger.error("retrying failed! :(")
+                raise
+        else:
+            # *shrug*
+            raise
+
+    logger.info("Runner.run complete; closing event loop")
     loop.close()
 
 
