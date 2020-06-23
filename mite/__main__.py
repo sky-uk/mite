@@ -258,7 +258,7 @@ def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
-    runner_task = asyncio.create_task(_create_runner(opts, transport, sender.send).run())
+    runner_task = loop.create_task(_create_runner(opts, transport, sender.send).run())
     try:
         loop.run_until_complete(runner_task)
     except RuntimeError as e:
