@@ -285,7 +285,7 @@ def runner(opts):
             except asyncio.InvalidStateError:
                 logger.info("InvalidStateError trying to get the exception")
             logger.info("task dump")
-            for task in asyncio.all_tasks():
+            for task in asyncio.all_tasks(loop):
                 # This absurd dance is because kibana reorders the log lines,
                 # so we want the stacktrace to be all on a single line per task
                 sio = StringIO()
