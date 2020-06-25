@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
@@ -19,61 +19,65 @@ async def test_mite_websocket_decorator():
 
 
 @pytest.mark.asyncio
-@patch("websockets.connect")
-async def test_mite_websocket_decorator_uninstall(connect_mock):
+async def test_mite_websocket_decorator_uninstall():
     context = MockContext()
+    connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
         await ctx.websocket.connect("wss://foo.bar")
 
-    await dummy_journey(context)
+    with patch("websockets.connect", new=connect_mock):
+        await dummy_journey(context)
 
     assert getattr(context, "websocket", None) is None
 
 
 @pytest.mark.asyncio
-@patch("websockets.connect")
-async def test_mite_websocket_connect(connect_mock):
+async def test_mite_websocket_connect():
     context = MockContext()
     url = "wss://foo.bar"
+    connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
         await ctx.websocket.connect(url)
 
-    await dummy_journey(context)
+    with patch("websockets.connect", new=connect_mock):
+        await dummy_journey(context)
 
     connect_mock.assert_called_once_with(url)
 
 
 @pytest.mark.asyncio
-@patch("websockets.connect")
-async def test_mite_websocket_connect_and_send(connect_mock):
+async def test_mite_websocket_connect_and_send():
     context = MockContext()
     url = "wss://foo.bar"
     msg = "bar"
+    connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
         return await ctx.websocket.connect(url)
 
-    wb = await dummy_journey(context)
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
     await wb.send(msg)
     connect_mock.return_value.send.assert_called_once_with(msg)
 
 
 @pytest.mark.asyncio
-@patch("websockets.connect")
-async def test_mite_websocket_connect_and_recv(connect_mock):
+async def test_mite_websocket_connect_and_recv():
     context = MockContext()
     url = "wss://foo.bar"
+    connect_mock = AsyncMock()
 
     @mite_websocket
     async def dummy_journey(ctx):
         return await ctx.websocket.connect(url)
 
-    wb = await dummy_journey(context)
+    with patch("websockets.connect", new=connect_mock):
+        wb = await dummy_journey(context)
     await wb.recv()
     connect_mock.return_value.recv.assert_called_once()
 

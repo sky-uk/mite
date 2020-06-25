@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import aio_pika
 import pytest
@@ -33,12 +33,15 @@ async def test_mite_amqp_decorator_uninstall():
 
 
 @pytest.mark.asyncio
-@patch("aio_pika.connect")
+# FIXME new for 3.8
+# @unittest.mock.patch("aio_pika.connect")
 # FIXME this test fails under tox, passes(?) otherwise
 @pytest.mark.xfail(strict=False)
-async def test_mite_amqp_connect(connect_mock):
+async def test_mite_amqp_connect():
     context = MockContext()
     url = "amqp://foo.bar"
+
+    connect_mock = AsyncMock()
 
     @mite_amqp
     async def dummy_journey(ctx):
@@ -51,12 +54,13 @@ async def test_mite_amqp_connect(connect_mock):
 
 
 @pytest.mark.asyncio
-@patch("aio_pika.connect")
 # FIXME this test fails under tox, passes(?) otherwise
 @pytest.mark.xfail(strict=False)
-async def test_mite_amqp_connect_robust(connect_mock):
+async def test_mite_amqp_connect_robust():
     context = MockContext()
     url = "amqp://foo.bar"
+
+    connect_mock = AsyncMock()
 
     @mite_amqp
     async def dummy_journey(ctx):
