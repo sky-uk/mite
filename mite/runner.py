@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import logging
+import inspect
 from itertools import count
 
 import ipdb
@@ -46,6 +47,25 @@ class RunnerControllerTransportExample:  # pragma: nocover
             runner_id
         """
         pass
+
+
+class RunLoopLogger:
+
+    def __init__(self):
+        self._enabled = False
+        self._condition = None
+        # Add an index to the log lines, allowing some manual
+        # ordering of the output in kibana
+        self._idx = count(1)
+
+    def enable(self, condition):
+        self._enabled = True
+        self._condition = condition
+
+    def __call__(self):
+        if self._enabled and self._condition():
+            caller = inspect.stack()[1]
+            logger.info(f"{next(self._idx)}: {caller.function}:{caller.lineno}")
 
 
 class Runner:
@@ -97,28 +117,42 @@ class Runner:
         logger.debug("Entering run loop")
         _completed = []
         journey_specs_by_scenario_id = {}
+        __RUN_LOOP_LOG = RunLoopLogger()
 
         def on_completion(f):
             nonlocal waiter, _completed
             # logger.info("Received completion notice for scenario_id " + str(f.result()[0]))
             _completed.append(f)
+            __RUN_LOOP_LOG()
             if not waiter.done():
+                __RUN_LOOP_LOG()
                 waiter.set_result(None)
+            __RUN_LOOP_LOG()
 
         def stop_waiting():
             nonlocal waiter
+            __RUN_LOOP_LOG()
             if not waiter.done():
+                __RUN_LOOP_LOG()
                 waiter.set_result(None)
+            __RUN_LOOP_LOG()
 
         async def wait():
             nonlocal waiter, timeout_handle, _completed
+            __RUN_LOOP_LOG()
             await waiter
+            __RUN_LOOP_LOG()
             timeout_handle.cancel()
+            __RUN_LOOP_LOG()
             timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
+            __RUN_LOOP_LOG()
             waiter = self._loop.create_future()
             c = []
+            __RUN_LOOP_LOG()
             for f in _completed:
+                __RUN_LOOP_LOG()
                 scenario_id, scenario_data_id = f.result()
+                __RUN_LOOP_LOG()
                 self._dec_work(scenario_id)
                 if scenario_data_id is not None:
                     c.append((scenario_id, scenario_data_id))
@@ -162,6 +196,8 @@ class Runner:
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
         logger.info("Waiting for work completion")
+        __RUN_LOOP_LOG.enable(lambda: sum(self._current_work().values()) < 4)
+        self._loop.set_debug(True)
         while self._current_work():
             logger.info(
                 "Waiting on "
@@ -178,16 +214,22 @@ class Runner:
                     ]
                 )
             )
+            __RUN_LOOP_LOG()
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
+            __RUN_LOOP_LOG()
             config.update(config_list)
             completed_data_ids = await wait()
+            __RUN_LOOP_LOG()
         logger.info("All work completed")
+        __RUN_LOOP_LOG()
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
         )
+        __RUN_LOOP_LOG()
         await self._transport.bye(runner_id)
+        __RUN_LOOP_LOG()
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
         logger.debug(
