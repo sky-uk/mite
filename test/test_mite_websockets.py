@@ -1,7 +1,6 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from asyncmock import AsyncMock
 from mocks.mock_context import MockContext
 from websockets.exceptions import WebSocketException
 

@@ -38,7 +38,7 @@ volume model.
 ### Journeys
 
 Journeys are async python functions, and are where you put the logic of
-what you'rew trying to achieve.  Below is a simple example:
+what you're trying to achieve.  Below is a simple example:
 
 ```python
 import asyncio
