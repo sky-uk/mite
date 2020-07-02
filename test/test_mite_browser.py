@@ -1,11 +1,16 @@
 from unittest.mock import Mock
 
+import pytest
+from mocks.mock_context import MockContext
+
 from mite_browser import (
     BaseFormField,
+    Browser,
     CheckboxField,
     FakeFormField,
     FileInputField,
     _field_is_disabled,
+    browser_decorator,
 )
 
 
@@ -85,3 +90,12 @@ def test_file_input_field():
     assert field._value == []
     field.value = "foo"
     assert field._value == ["foo"]
+
+
+@pytest.mark.asyncio
+async def test_decorator():
+    @browser_decorator()
+    async def journey(ctx):
+        assert isinstance(ctx.browser, Browser)
+
+    await journey(MockContext())
