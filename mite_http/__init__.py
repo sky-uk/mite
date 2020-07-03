@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from collections import deque
+from contextlib import asynccontextmanager
 
 from acurl import EventLoop
 from mite.stats import Counter, Histogram, extractor, matcher_by_type
@@ -14,7 +15,7 @@ def _generate_stats():
         float(x)
         for x in os.environ.get(
             "MITE_HTTP_HISTOGRAM_BUCKETS",
-            "0.0001,0.001,0.01,0.05,0.1,0.2,0.4,0.8,1,2,4,8,16,32,64"
+            "0.0001,0.001,0.01,0.05,0.1,0.2,0.4,0.8,1,2,4,8,16,32,64",
         ).split(",")
     ]
 
@@ -36,33 +37,38 @@ def _generate_stats():
 _MITE_STATS = _generate_stats()
 
 
-class _SessionPoolContextManager:
-    def __init__(self, session_pool, context):
-        self._session_pool = session_pool
-        self._context = context
-
-    async def __aenter__(self):
-        self._context.http = await self._session_pool._checkout(self._context)
-
-    async def __aexit__(self, *args):
-        await self._session_pool._checkin(self._context.http)
-        del self._context.http
+@asynccontextmanager
+async def _session_pool_context_manager(session_pool, context):
+    context.http = await session_pool._checkout(context)
+    yield
+    await session_pool._checkin(context.http)
+    del context.http
 
 
 class SessionPool:
     """No longer actually goes pooling as this is built into acurl. API just left in place.
     Will need a refactor"""
 
+    # A memoization cache for instances of this class per event loop
+    _session_pools = {}
+
     def __init__(self):
         self._el = EventLoop()
         self._pool = deque()
 
     def session_context(self, context):
-        return _SessionPoolContextManager(self, context)
+        return _session_pool_context_manager(self, context)
 
-    def decorator(self, func):
+    @classmethod
+    def decorator(cls, func):
         async def wrapper(ctx, *args, **kwargs):
-            async with self.session_context(ctx):
+            loop = asyncio.get_event_loop()
+            try:
+                instance = cls._session_pools[loop]
+            except KeyError:
+                instance = cls()
+                cls._session_pools[loop] = instance
+            async with instance.session_context(ctx):
                 return await func(ctx, *args, **kwargs)
 
         return wrapper
@@ -98,19 +104,5 @@ class SessionPool:
         pass
 
 
-def get_session_pool():
-    # We memoize the function by event loop.  This is because, in unit tests,
-    # there are multiple event loops in circulation.
-    try:
-        return get_session_pool._session_pools[asyncio.get_event_loop()]
-    except KeyError:
-        sp = SessionPool()
-        get_session_pool._session_pools[asyncio.get_event_loop()] = sp
-        return sp
-
-
-get_session_pool._session_pools = {}  # noqa: E305
-
-
 def mite_http(func):
-    return get_session_pool().decorator(func)
+    return SessionPool.decorator(func)
