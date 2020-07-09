@@ -66,8 +66,14 @@ class Gauge(Stat):
     )
 
     def process(self, msg):
+        if self.name == "mite_dc_flip":
+            print("GAUGE PROCESSING ", str(msg))
         if self.matcher(msg):
+            if self.name == "mite_dc_flip":
+                print("GAUGE MATCHED ", str(msg))
             for key, value in self.extractor.extract(msg):
+                if self.name == "mite_dc_flip":
+                    print("GAUGE EXTRACTED ", str(key), str(value))
                 self.metrics[key] = value
 
     def dump(self):
