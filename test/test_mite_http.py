@@ -1,9 +1,11 @@
 import os
+from unittest.mock import patch
 
 import pytest
-import mite_http as mite_http_module
-from mite_http import mite_http
 from mocks.mock_context import MockContext
+
+import mite_http as mite_http_module
+from mite_http import SessionPool, mite_http
 
 
 @pytest.mark.asyncio
@@ -41,10 +43,57 @@ def test_default_histogram_bins():
         del os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"]
 
     stats = mite_http_module._generate_stats()
-    assert stats[1].bins == [0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 4, 8, 16, 32, 64]
+    assert stats[1].bins == [
+        0.0001,
+        0.001,
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.8,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+    ]
 
 
 def test_non_default_bins():
     os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"] = "1,2,3"
     stats = mite_http_module._generate_stats()
     assert stats[1].bins == [1, 2, 3]
+
+
+def test_decorator_without_async_loop_running():
+    with patch("asyncio.get_event_loop", side_effect=Exception("oops")):
+
+        @mite_http
+        async def foo():
+            pass
+
+        # This test just wants to ensure we can execute the decorator without
+        # calling get_event_loop, so there are no assertions; the lack of the
+        # exception is enough
+
+
+@pytest.mark.asyncio
+async def test_decorator_eventloop_memoization():
+    @mite_http
+    async def foo(ctx):
+        pass
+
+    class MockContext:
+        pass
+
+    with patch("mite_http.asyncio") as asyncio_mock:
+        # slightly tricksy: we only patch the copy of get_event_loop that is
+        # imported into mite_http, so that other code continues to function
+        # normally
+        asyncio_mock.get_event_loop.return_value = "foo"
+        await foo(MockContext())
+
+    assert "foo" in SessionPool._session_pools

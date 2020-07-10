@@ -10,7 +10,7 @@ def _create_config_manager(opts):
     for k, v in config.items():
         config_manager.set(k, v)
     for value in opts["--add-to-config"]:
-        k, v = value.split(":")
+        k, v = value.split(":", 1)
         config_manager.set(k, v)
     return config_manager
 

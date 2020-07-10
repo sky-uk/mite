@@ -1,5 +1,6 @@
-from .context import Context
 from collections import defaultdict
+
+from .context import Context
 
 
 class _InterceptHttp:
@@ -72,19 +73,20 @@ def http_spy(journey):
         spy = _InterceptHttp(_NewHttp(requests), ctx)
         await journey(spy, *args)
         return {'http': requests}
+
     return wrapper
 
 
 async def run_single_journey(config, journey, datapool=None):
     messages = []
 
-    async def _send(message, **kwargs):
+    def _send(message, **kwargs):
         messages.append((message, kwargs))
 
     ctx = Context(_send, config)
 
     if datapool is not None:
-        dpi = datapool.checkout()
+        dpi = await datapool.checkout()
         result = await journey(ctx, *dpi.data)
     else:
         result = await journey(ctx)

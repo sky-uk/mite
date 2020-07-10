@@ -1,12 +1,14 @@
 import asyncio
 import logging
+import sys
+
+from mite.logoutput import HttpStatsOutput
 
 from ..collector import Collector
 from ..controller import Controller
 from ..recorder import Recorder
 from ..utils import pack_msg, spec_import
-from .common import (_create_config_manager, _create_runner,
-                     _create_scenario_manager)
+from .common import _create_config_manager, _create_runner, _create_scenario_manager
 
 
 class DirectRunnerTransport:
@@ -33,6 +35,13 @@ class DirectReciever:
     def add_listener(self, listener):
         self._listeners.append(listener)
 
+    def filter_listeners(self, clazz):
+        return list(
+            filter(
+                lambda listener: isinstance(listener.__self__, clazz), self._listeners,
+            )
+        )
+
     def add_raw_listener(self, raw_listener):
         self._raw_listeners.append(raw_listener)
 
@@ -50,17 +59,21 @@ def _setup_msg_processors(receiver, opts):
     receiver.add_listener(recorder.process_message)
     receiver.add_raw_listener(collector.process_raw_message)
 
-    extra_processors = [
-        spec_import(x)()
-        for x in opts["--message-processors"].split(",")
-    ]
+    extra_processors = [spec_import(x)() for x in opts["--message-processors"].split(",")]
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)
         elif hasattr(processor, "process_raw_message"):
             receiver.add_raw_listener(processor.process_raw_message)
         else:
-            logging.error(f"Class {processor.__name__} does not have a process(_raw)_message method!")
+            logging.error(
+                f"Class {processor.__name__} does not have a process(_raw)_message method!"
+            )
+
+
+def _get_http_stats_output(receiver):
+    listeners = receiver.filter_listeners(HttpStatsOutput)
+    return listeners[0].__self__ if len(listeners) == 1 else None
 
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
@@ -71,12 +84,17 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
     _setup_msg_processors(receiver, opts)
+    http_stats_output = _get_http_stats_output(receiver)
     loop = asyncio.get_event_loop()
 
     async def controller_report():
         while True:
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
+            if controller.should_stop():
+                if http_stats_output is not None and http_stats_output.error_total > 0:
+                    sys.exit(1)
+                return
 
     loop.run_until_complete(
         asyncio.gather(

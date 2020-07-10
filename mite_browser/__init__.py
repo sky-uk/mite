@@ -1,14 +1,15 @@
 import asyncio
-from bs4 import BeautifulSoup
+import re
 from urllib.parse import urlencode, urljoin
-from re import compile as re_compile, IGNORECASE
+
+from bs4 import BeautifulSoup
+
 from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
-import mite_http
+from mite_http import mite_http
 
-# TODO: fix
-EMBEDDED_URL_REGEX = re_compile(
-    "\(\s*[\\]?[\"']([^\"':.]*:)?([^\"':.]*\.[^\"':.]*)[\\]?[\"']\s*\)", IGNORECASE  # noqa: W605
+EMBEDDED_URL_REGEX = re.compile(
+    r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE
 )
 
 
@@ -42,13 +43,13 @@ def url_builder(base_url, *args, **kwargs):
 
 def browser_decorator(separation=0):
     def wrapper_factory(func):
+        @mite_http
         async def wrapper(context, *args, **kwargs):
-            async with mite_http.get_session_pool().session_context(context):
-                context.browser = Browser(context)
-                async with ensure_fixed_separation(separation):
-                    result = await func(context, *args, **kwargs)
-                del context.browser
-                return result
+            context.browser = Browser(context)
+            async with ensure_fixed_separation(separation):
+                result = await func(context, *args, **kwargs)
+            del context.browser
+            return result
 
         return wrapper
 
@@ -408,8 +409,11 @@ class Form:
 
 
 def _field_is_disabled(element):
-    status = element.get('disabled')
-    return status is not None and status.lower() in ['disabled', 'true']
+    status = element.attrs.get('disabled')
+    if status and status.lower() in ['disabled', 'true']:
+        return True
+    else:
+        return False
 
 
 class BaseFormField:
