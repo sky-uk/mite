@@ -30,10 +30,11 @@ def _generate_stats():
             extractor=extractor(['transaction'], 'total_time'),
             bins=bins,
         ),
-        Gauge(
+        Histogram(
             name='mite_dns_time',
             matcher=matcher_by_type('http_metrics'),
             extractor=extractor(['transaction'], 'dns_time'),
+            bins=bins,
         ),
     )
 
