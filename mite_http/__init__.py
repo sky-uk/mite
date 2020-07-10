@@ -35,6 +35,7 @@ def _generate_stats():
             matcher=matcher_by_type('http_metrics'),
             extractor=extractor(['transaction'], 'dns_time'),
             bins=bins,
+        ),
     )
 
 
