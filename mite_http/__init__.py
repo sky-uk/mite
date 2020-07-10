@@ -4,7 +4,7 @@ import os
 from collections import deque
 
 from acurl import EventLoop
-from mite.stats import Counter, Histogram, extractor, matcher_by_type
+from mite.stats import Counter, Histogram, extractor, matcher_by_type, Gauge
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def _generate_stats():
             extractor=extractor(['transaction'], 'total_time'),
             bins=bins,
         ),
-        Counter(
+        Gauge(
             name='mite_dns_time',
             matcher=matcher_by_type('http_metrics'),
             extractor=extractor(['transaction'], 'dns_time'),
