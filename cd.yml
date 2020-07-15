@@ -3,9 +3,19 @@ context: identity
 triggering: multibranch
 
 defaultNodes:
-  default: id-small-slave
+  default: id-mite-slave
 
 modules:
-  mite:
+  mite-ci:
     pipelineShape: simple
     directory: "/"
+    defaultTaskExecution: "./cd-scripts/runTests.sh"
+    # TODO not sure which of the following two is better
+    # archiveArtifacts:
+    #   includes: ["coverage_html_report/*"]
+    #   excludes: []
+    htmlReports:
+      - name: Coverage Report
+        directory: coverage_html_report
+        files: ["index.html"]
+    # TODO: slack notifications, for PRs

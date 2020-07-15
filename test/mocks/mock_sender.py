@@ -1,6 +1,6 @@
-class SenderMock():
+class SenderMock:
     def __init__(self):
-        self.test_result = None
+        self.messages = []
 
-    async def send(self, msg):
-        self.test_result = msg
+    def send(self, msg):
+        self.messages.append(msg)

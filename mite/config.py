@@ -1,13 +1,13 @@
-from itertools import count
 import logging
 import os
-
+from itertools import count
 
 logger = logging.getLogger()
 
 
 class ConfigManager:
     """Shares config between runners"""
+
     def __init__(self):
         self._version_id_gen = count(1)
         self._version = 0
@@ -31,9 +31,14 @@ class ConfigManager:
         self._version = next(self._version_id_gen)
         self._config[name] = (value, self._version)
 
+    def get(self, name, default=None):
+        return self._config.get(name, [default])[0]
+
     def __repr__(self):
         return "ConfigManager(version={}, {})".format(
-            self._version, " ,".join(["{}={}".format(k, v) for k, v in self._config.items()]))
+            self._version,
+            " ,".join(["{}={}".format(k, v) for k, v in self._config.items()]),
+        )
 
     def __str__(self):
         self.__repr__()
@@ -44,10 +49,10 @@ def default_config_loader():
     for name, value in os.environ.items():
         if name.startswith('MITE_CONF_'):
             key_name = name[10:]
-            logger.info('Setting config from ENV variable [%s] %s=%r', name, key_name, value)
+            logger.info(f'Setting config "{key_name}" from environment variable')
             result[key_name] = value
         if name.startswith('MITE_EVAL_CONF_'):
             key_name = name[15:]
-            logger.info('Setting config from ENV variable and eval\'ing value [%s] %s=%r', name, key_name, value)
+            logger.info(f'Setting config "{key_name}" by eval\'ing environment variable')
             result[key_name] = eval(value)
     return result

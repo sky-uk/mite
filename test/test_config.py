@@ -1,11 +1,16 @@
 import os
+
 from mite.config import ConfigManager, default_config_loader
 
-TEST_DICT = dict({"key1": "value1",
-                  "key2": "value2",
-                  "key3": "value3",
-                  "key4": "value4",
-                  "key5": "value5"})
+TEST_DICT = dict(
+    {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3",
+        "key4": "value4",
+        "key5": "value5",
+    }
+)
 
 
 def test_config_manager():
@@ -37,3 +42,15 @@ def test_default_config_loader():
     assert default_conf["TEST3"] == os.environ["MITE_CONF_TEST3"]
     assert default_conf["TEST4"] == os.environ["MITE_CONF_TEST4"]
     assert default_conf["TEST5"] == os.environ["MITE_CONF_TEST5"]
+
+
+def test_get():
+    cm = ConfigManager()
+    cm.set("foo", "bar")
+    assert cm.get("foo") == "bar"
+
+
+def test_get_with_default():
+    cm = ConfigManager()
+    foo = cm.get("foo", "bar")
+    assert foo == "bar"

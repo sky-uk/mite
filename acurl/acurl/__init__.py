@@ -2,8 +2,17 @@ import _acurl
 import threading
 import asyncio
 import ujson
+import shlex
 import time
 from urllib.parse import urlparse
+from pkg_resources import get_distribution, DistributionNotFound
+
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
 
 
 class RequestError(Exception):
@@ -16,7 +25,17 @@ _FALSE_TRUE = ['FALSE', 'TRUE']
 class Cookie:
     __slots__ = '_http_only _domain _include_subdomains _path _is_secure _expiration _name _value'.split()
 
-    def __init__(self, http_only, domain, include_subdomains, path, is_secure, expiration, name, value):
+    def __init__(
+        self,
+        http_only,
+        domain,
+        include_subdomains,
+        path,
+        is_secure,
+        expiration,
+        name,
+        value,
+    ):
         self._http_only = http_only
         self._domain = domain
         self._include_subdomains = include_subdomains
@@ -27,8 +46,10 @@ class Cookie:
         self._value = value
 
     def __repr__(self):
-        return ("Cookie(http_only={}, domain={}, include_subdomains={}, path={}, is_secure={}, "
-                "expiration={}, name={}, value={})").format(
+        return (
+            "Cookie(http_only={}, domain={}, include_subdomains={}, path={}, is_secure={}, "
+            "expiration={}, name={}, value={})"
+        ).format(
             self._http_only,
             self._domain,
             self._include_subdomains,
@@ -37,7 +58,7 @@ class Cookie:
             self._expiration,
             self._name,
             self._value,
-            )
+        )
 
     def __str__(self):
         return self.__repr__()
@@ -76,7 +97,7 @@ class Cookie:
 
     @property
     def has_expired(self):
-        return self.expiration != 0 or time.time() > self.expiration
+        return self.expiration != 0 and time.time() > self.expiration
 
     def format(self):
         bits = []
@@ -111,19 +132,49 @@ def parse_cookie_string(cookie_string):
         value = ''
     else:
         domain, include_subdomains, path, is_secure, expiration, name, value = parts
-    return Cookie(http_only, domain, include_subdomains == 'TRUE', path, is_secure == 'TRUE', int(expiration), name, value)
+    return Cookie(
+        http_only,
+        domain,
+        include_subdomains == 'TRUE',
+        path,
+        is_secure == 'TRUE',
+        int(expiration),
+        name,
+        value,
+    )
 
 
 def parse_cookie_list_string(cookie_list_string):
-    return [parse_cookie_string(line) for line in cookie_list_string.splitlines() if line.strip()]
+    return [
+        parse_cookie_string(line)
+        for line in cookie_list_string.splitlines()
+        if line.strip()
+    ]
 
 
-def session_cookie_for_url(url, name, value, http_only=False, include_subdomains=True, is_secure=False, include_url_path=False):
+def session_cookie_for_url(
+    url,
+    name,
+    value,
+    http_only=False,
+    include_subdomains=True,
+    is_secure=False,
+    include_url_path=False,
+):
     scheme, netloc, path, params, query, fragment = urlparse(url)
     if not include_url_path:
         path = '/'
     # TODO do we need to sanitize netloc for IP and ports?
-    return Cookie(http_only, '.' + netloc, include_subdomains, path, is_secure, 0, name, value)
+    return Cookie(
+        http_only,
+        "." + netloc.split(":")[0],
+        include_subdomains,
+        path,
+        is_secure,
+        0,
+        name,
+        value,
+    )
 
 
 def _cookie_list_to_cookie_dict(cookie_list):
@@ -177,6 +228,29 @@ class Request:
     @property
     def cert(self):
         return self._cert
+
+    def to_curl(self):
+        data_arg = ""
+        if self.data is not None:
+            data = self.data
+            if hasattr(data, "decode"):
+                data = data.decode("utf-8")
+            data_arg = "-d " + shlex.quote(data)
+        header_args = " ".join(
+            ("-H " + shlex.quote(k + ": " + v) for k, v in self.headers.items())
+        )
+        cookie_args = ""
+        if len(self.cookies) > 0:
+            cookie_args = "--cookie " + shlex.quote(
+                ";".join((f"{k}={v}" for k, v in self.cookies.items()))
+            )
+        auth_arg = ""
+        if self.auth is not None:
+            auth_arg = "--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}")
+        return (
+            f"curl -X {self.method} {header_args} {cookie_args} {auth_arg} {data_arg} "
+            + shlex.quote(self.url)
+        )
 
 
 class Response:
@@ -247,6 +321,7 @@ class Response:
     def primary_ip(self):
         return self._resp.get_primary_ip()
 
+    # TODO: is this part of the request api?
     @property
     def cookielist(self):
         return [parse_cookie_string(cookie) for cookie in self._resp.get_cookielist()]
@@ -274,12 +349,18 @@ class Response:
     @property
     def encoding(self):
         if not hasattr(self, '_encoding'):
-            if 'Content-Type' in self.headers and 'charset=' in self.headers['Content-Type']:
-                self._encoding = self.headers['Content-Type'].split('charset=')[-1].split()[0]
+            if (
+                'Content-Type' in self.headers
+                and 'charset=' in self.headers['Content-Type']
+            ):
+                self._encoding = (
+                    self.headers['Content-Type'].split('charset=')[-1].split()[0]
+                )
             else:
                 self._encoding = 'latin1'
         return self._encoding
 
+    # TODO: why do we allow setter?
     @encoding.setter
     def encoding_setter(self, encoding):
         self._encoding = encoding
@@ -301,12 +382,16 @@ class Response:
             self._headers = dict(self.headers_tuple)
         return self._headers
 
+    # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
         if not hasattr(self, '_headers_tuple'):
-            self._headers_tuple = tuple(tuple(l.split(': ', 1)) for l in self.header.split('\r\n')[1:-2])
+            self._headers_tuple = tuple(
+                tuple(l.split(': ', 1)) for l in self.header.split('\r\n')[1:-2]
+            )
         return self._headers_tuple
 
+    # TODO: is this part of the request api?
     @property
     def header(self):
         if not hasattr(self, '_header'):
@@ -338,7 +423,23 @@ class Session:
     async def options(self, url, **kwargs):
         return await self.request('OPTIONS', url, **kwargs)
 
-    async def request(self, method, url, headers=None, headers_list=None, cookies=None, cookie_list=None, auth=None, data=None, json=None, cert=None, allow_redirects=True, max_redirects=5):
+    async def request(
+        self,
+        method,
+        url,
+        headers=None,
+        # TODO: delete this
+        headers_list=None,
+        cookies=None,
+        # TODO: delete this
+        cookie_list=None,
+        auth=None,
+        data=None,
+        json=None,
+        cert=None,
+        allow_redirects=True,
+        max_redirects=5,
+    ):
         if json is not None:
             if data is not None:
                 raise ValueError('use only one or none of data or json')
@@ -347,7 +448,9 @@ class Session:
             if headers and 'Content-Type' in headers:
                 content_type_set = True
             elif headers_list:
-                content_type_set = any(1 for i in headers_list if i.startswith('Content-Type: '))
+                content_type_set = any(
+                    1 for i in headers_list if i.startswith('Content-Type: ')
+                )
             if not content_type_set:
                 if headers_list is None:
                     headers_list = []
@@ -364,36 +467,101 @@ class Session:
             for k, v in cookies.items():
                 cookie_list.append(session_cookie_for_url(url, k, v))
 
-        return await self._request(method, url, tuple(headers_list) if headers_list else None, tuple(cookie_list) if cookie_list else None, auth, data, cert, allow_redirects, max_redirects)
+        return await self._request(
+            method,
+            url,
+            tuple(headers_list) if headers_list else (),
+            tuple(cookie_list) if cookie_list else (),
+            auth,
+            data,
+            cert,
+            allow_redirects,
+            max_redirects,
+        )
 
     # TODO: make it a property
     def set_response_callback(self, callback):
         self._response_callback = callback
 
-    async def _request(self, method, url, header_tuple, cookie_tuple, auth, data, cert, allow_redirects, remaining_redirects):
+    async def _request(
+        self,
+        method,
+        url,
+        header_tuple,
+        cookie_tuple,
+        auth,
+        data,
+        cert,
+        allow_redirects,
+        remaining_redirects,
+    ):
         start_time = time.time()
         request = Request(method, url, header_tuple, cookie_tuple, auth, data, cert)
 
         future = self._loop.create_future()
-        self._session.request(future, method, url, headers=header_tuple, cookies=tuple(c.format() for c in cookie_tuple) if cookie_tuple else None, auth=auth, data=data, dummy=False, cert=cert)
+        self._session.request(
+            future,
+            method,
+            url,
+            headers=header_tuple,
+            cookies=tuple(c.format() for c in cookie_tuple) if cookie_tuple else None,
+            auth=auth,
+            data=data,
+            dummy=False,
+            cert=cert,
+        )
         response = Response(request, await future, start_time)
 
         if self._response_callback:
-            await self._response_callback(response)
-        if allow_redirects and (300 <= response.status_code < 400) and response.redirect_url is not None:
+            self._response_callback(response)
+        if (
+            allow_redirects
+            and (300 <= response.status_code < 400)
+            and response.redirect_url is not None
+        ):
             if remaining_redirects == 0:
                 raise RequestError('Max Redirects')
             elif response.status_code in {301, 302, 303}:
-                redir_response = await self._request('GET', response.redirect_url, header_tuple, None, auth, None, cert, allow_redirects, remaining_redirects - 1)
+                redir_response = await self._request(
+                    'GET',
+                    response.redirect_url,
+                    header_tuple,
+                    None,
+                    auth,
+                    None,
+                    cert,
+                    allow_redirects,
+                    remaining_redirects - 1,
+                )
             else:
-                redir_response = await self._request(method, response.redirect_url, header_tuple, None, auth, data, cert, allow_redirects, remaining_redirects - 1)
+                redir_response = await self._request(
+                    method,
+                    response.redirect_url,
+                    header_tuple,
+                    None,
+                    auth,
+                    data,
+                    cert,
+                    allow_redirects,
+                    remaining_redirects - 1,
+                )
             redir_response._prev = response
             return redir_response
         return response
 
     async def _dummy_request(self, cookies):
         future = asyncio.futures.Future(loop=self._loop)
-        self._session.request(future, 'GET', '', headers=tuple(), cookies=cookies, auth=None, data=None, dummy=True, cert=None)
+        self._session.request(
+            future,
+            'GET',
+            '',
+            headers=tuple(),
+            cookies=cookies,
+            auth=None,
+            data=None,
+            dummy=True,
+            cert=None,
+        )
         return await future
 
     async def erase_all_cookies(self):

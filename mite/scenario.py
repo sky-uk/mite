@@ -27,7 +27,7 @@ def _volume_dicts_remove_a_from_b(a, b):
 
 
 class ScenarioManager:
-    def __init__(self, start_delay=0, period=1, spawn_rate=None):
+    def __init__(self, start_delay=0, period=1, spawn_rate=None, config_manager=None):
         self._period = period
         self._scenario_id_gen = count(1)
         self._in_start = start_delay > 0
@@ -37,6 +37,7 @@ class ScenarioManager:
         self._spawn_rate = spawn_rate
         self._required = {}
         self._scenarios = {}
+        self._config_manager = config_manager
 
     def _now(self):
         return time.time() - self._start_time
@@ -44,8 +45,13 @@ class ScenarioManager:
     def add_scenario(self, journey_spec, datapool, volumemodel):
         scenario_id = next(self._scenario_id_gen)
         self._scenarios[scenario_id] = Scenario(journey_spec, datapool, volumemodel)
-        logger.info('Added scenario id=%d journey_spec=%r datapool=%r volumemodel=%r',
-                    scenario_id, journey_spec, datapool, volumemodel)
+        logger.info(
+            'Added scenario id=%d journey_spec=%r datapool=%r volumemodel=%r',
+            scenario_id,
+            journey_spec,
+            datapool,
+            volumemodel,
+        )
 
     def _update_required_and_period(self, start_of_period, end_of_period):
         required = {}
@@ -53,7 +59,10 @@ class ScenarioManager:
             try:
                 number = int(scenario.volumemodel(start_of_period, end_of_period))
             except StopScenario:
-                logger.info('Removed scenario %d because volume model raised StopScenario', scenario_id)
+                logger.info(
+                    'Removed scenario %d because volume model raised StopScenario',
+                    scenario_id,
+                )
                 del self._scenarios[scenario_id]
             else:
                 required[scenario_id] = number
@@ -69,10 +78,19 @@ class ScenarioManager:
                 return self._required
         now = self._now()
         if now >= self._current_period_end:
-            self._update_required_and_period(self._current_period_end, int(now + self._period))
+            self._update_required_and_period(
+                self._current_period_end, int(now + self._period)
+            )
         return self._required
 
-    def get_work(self, current_work, num_runner_current_work, num_runners, runner_self_limit, hit_rate):
+    async def get_work(
+        self,
+        current_work,
+        num_runner_current_work,
+        num_runners,
+        runner_self_limit,
+        hit_rate,
+    ):
         required = self.get_required_work()
         diff = _volume_dicts_remove_a_from_b(current_work, required)
         total = sum(required.values())
@@ -93,6 +111,7 @@ class ScenarioManager:
             for k, v in diff.items():
                 for i in range(v):
                     yield k
+
         scenario_ids = list(_yield(diff))
         random.shuffle(scenario_ids)
         work = []
@@ -106,15 +125,21 @@ class ScenarioManager:
                     work.append((scenario_id, None, scenario.journey_spec, None))
                 else:
                     try:
-                        dpi = scenario.datapool.checkout()
+                        dpi = await scenario.datapool.checkout(
+                            config=self._config_manager
+                        )
                     except DataPoolExhausted:
-                        logger.info('Removed scenario %d because data pool exhausted', scenario_id)
+                        logger.info(
+                            'Removed scenario %d because data pool exhausted', scenario_id
+                        )
                         del self._scenarios[scenario_id]
                         continue
                     else:
                         if dpi is None:
                             continue
-                        work.append((scenario_id, dpi.id, scenario.journey_spec, dpi.data))
+                        work.append(
+                            (scenario_id, dpi.id, scenario.journey_spec, dpi.data)
+                        )
                 if scenario_id in scenario_volume_map:
                     scenario_volume_map[scenario_id] += 1
                 else:
@@ -122,16 +147,26 @@ class ScenarioManager:
         logger.debug(
             'current=%r required=%r diff=%r limit=%r runners_share_limit=%r spawn_limit=%r runner_self_limit=%r'
             'num_runners=%r spawn_rate=%r hit_rate=%r num_runner_current_work=%r len_work=%r',
-            sum(current_work.values()), sum(required.values()), sum(diff.values()), limit, runners_share_limit,
-            spawn_limit, runner_self_limit, num_runners, self._spawn_rate, hit_rate, num_runner_current_work,
-            len(work))
+            sum(current_work.values()),
+            sum(required.values()),
+            sum(diff.values()),
+            limit,
+            runners_share_limit,
+            spawn_limit,
+            runner_self_limit,
+            num_runners,
+            self._spawn_rate,
+            hit_rate,
+            num_runner_current_work,
+            len(work),
+        )
 
         return work, scenario_volume_map
 
     def is_active(self):
         return self._in_start or bool(self._scenarios)
 
-    def checkin_data(self, ids):
+    async def checkin_data(self, ids):
         for scenario_id, scenario_data_id in ids:
             if scenario_id in self._scenarios:
-                self._scenarios[scenario_id].datapool.checkin(scenario_data_id)
+                await self._scenarios[scenario_id].datapool.checkin(scenario_data_id)

@@ -1,0 +1,10 @@
+sanic
+psutil
+pandas
+altair
+pytest
+pytest-asyncio
+pytest-cov
+pytest-httpserver
+werkzeug
+pre-commit

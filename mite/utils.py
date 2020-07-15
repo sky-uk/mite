@@ -1,19 +1,35 @@
-import msgpack
+import asyncio
 import importlib
 
-
-_msg_unpacker = msgpack.Unpacker(encoding='utf-8', use_list=False)
+import msgpack
 
 
 def unpack_msg(msg):
-    _msg_unpacker.feed(msg)
-    return _msg_unpacker.unpack()
+    return msgpack.unpackb(msg, use_list=False, raw=False)
 
 
-_msg_packer = msgpack.Packer(use_bin_type=True)
-pack_msg = _msg_packer.pack
+def pack_msg(msg):
+    return msgpack.packb(msg, use_bin_type=True)
 
 
 def spec_import(spec):
     module, attr = spec.split(':', 1)
     return getattr(importlib.import_module(module), attr)
+
+
+async def sleep(delay, always=False, **kwargs):
+    await asyncio.sleep(delay, **kwargs)
+
+
+def _msg_backend_module(opts):
+    msg_backend = opts['--message-backend']
+    if msg_backend == 'nanomsg':
+        from . import nanomsg
+
+        return nanomsg
+    elif msg_backend == 'ZMQ':
+        from . import zmq
+
+        return zmq
+    else:
+        raise ValueError('Unsupported backend %r' % (msg_backend,))

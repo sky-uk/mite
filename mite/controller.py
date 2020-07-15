@@ -81,7 +81,11 @@ class Controller:
 
     def hello(self):
         runner_id = next(self._runner_id_gen)
-        return runner_id, self._testname, self._config_manager.get_changes_for_runner(runner_id)
+        return (
+            runner_id,
+            self._testname,
+            self._config_manager.get_changes_for_runner(runner_id),
+        )
 
     def _set_actual(self, runner_id, current_work):
         self._work_tracker.set_actual(runner_id, current_work)
@@ -89,40 +93,53 @@ class Controller:
     def _add_assumed(self, runner_id, work):
         self._work_tracker.add_assumed(runner_id, work)
 
-    def _required_work_for_runner(self, runner_id, max_work=None):
+    async def _required_work_for_runner(self, runner_id, max_work=None):
         runner_total = self._work_tracker.get_runner_total(runner_id)
         active_runner_ids = self._runner_tracker.get_active()
         current_work = self._work_tracker.get_total_work(active_runner_ids)
         hit_rate = self._runner_tracker.get_hit_rate()
-        work, scenario_volume_map = self._scenario_manager.get_work(current_work, runner_total,
-                                                                    len(active_runner_ids), max_work, hit_rate)
+        work, scenario_volume_map = await self._scenario_manager.get_work(
+            current_work, runner_total, len(active_runner_ids), max_work, hit_rate
+        )
         self._add_assumed(runner_id, scenario_volume_map)
         return work
 
-    def request_work(self, runner_id, current_work, completed_data_ids, max_work=None):
+    async def request_work(
+        self, runner_id, current_work, completed_data_ids, max_work=None
+    ):
         self._set_actual(runner_id, current_work)
         self._runner_tracker.update(runner_id)
-        self._scenario_manager.checkin_data(completed_data_ids)
-        work = self._required_work_for_runner(runner_id, max_work)
-        return work, self._config_manager.get_changes_for_runner(runner_id), not self._scenario_manager.is_active()
+        await self._scenario_manager.checkin_data(completed_data_ids)
+        work = await self._required_work_for_runner(runner_id, max_work)
+        return (
+            work,
+            self._config_manager.get_changes_for_runner(runner_id),
+            not self._scenario_manager.is_active(),
+        )
 
-    async def report(self, sender):
+    def report(self, sender):
         required = self._scenario_manager.get_required_work()
         active_runner_ids = self._runner_tracker.get_active()
         actual = self._work_tracker.get_total_work(active_runner_ids)
-        await sender({
-            'type': 'controller_report',
-            'time': time.time(),
-            'test': self._testname,
-            'required': required,
-            'actual': actual,
-            'num_runners': len(active_runner_ids)
-        })
+        sender(
+            {
+                'type': 'controller_report',
+                'time': time.time(),
+                'test': self._testname,
+                'required': required,
+                'actual': dict(actual),
+                'num_runners': len(active_runner_ids),
+            }
+        )
 
     def should_stop(self):
-        logger.debug("Scenario manager active: %s" % (self._scenario_manager.is_active(),))
+        logger.debug(
+            "Scenario manager active: %s" % (self._scenario_manager.is_active(),)
+        )
         logger.debug("Active runners: %s" % (self._runner_tracker.get_active_count(),))
-        return (not self._scenario_manager.is_active()) and self._runner_tracker.get_active_count() == 0
+        return (
+            not self._scenario_manager.is_active()
+        ) and self._runner_tracker.get_active_count() == 0
 
     def bye(self, runner_id):
         self._runner_tracker.remove_runner(runner_id)

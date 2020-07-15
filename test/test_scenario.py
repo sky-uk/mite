@@ -1,3 +1,5 @@
+import pytest
+
 from collections import namedtuple, defaultdict
 from mite.scenario import ScenarioManager
 
@@ -5,6 +7,7 @@ from mite.scenario import ScenarioManager
 def baseline_rumpup_mock(peak, ramp_over=5, sustain=60):
     def volumemodel(start, end):
         return peak
+
     return volumemodel
 
 
@@ -20,15 +23,30 @@ test_scenarios = [
 
 test_scenario_manager_scenarios = {
     1: Scenario(
-        journey_spec='test_scenario_01', datapool=None, volumemodel=baseline_rumpup_mock(1)),
+        journey_spec='test_scenario_01',
+        datapool=None,
+        volumemodel=baseline_rumpup_mock(1),
+    ),
     2: Scenario(
-        journey_spec='test_scenario_02', datapool=None, volumemodel=baseline_rumpup_mock(2)),
+        journey_spec='test_scenario_02',
+        datapool=None,
+        volumemodel=baseline_rumpup_mock(2),
+    ),
     3: Scenario(
-        journey_spec='test_scenario_03', datapool=None, volumemodel=baseline_rumpup_mock(3)),
+        journey_spec='test_scenario_03',
+        datapool=None,
+        volumemodel=baseline_rumpup_mock(3),
+    ),
     4: Scenario(
-        journey_spec='test_scenario_04', datapool=None, volumemodel=baseline_rumpup_mock(4)),
+        journey_spec='test_scenario_04',
+        datapool=None,
+        volumemodel=baseline_rumpup_mock(4),
+    ),
     5: Scenario(
-        journey_spec='test_scenario_05', datapool=None, volumemodel=baseline_rumpup_mock(5))
+        journey_spec='test_scenario_05',
+        datapool=None,
+        volumemodel=baseline_rumpup_mock(5),
+    ),
 }
 
 test_scenario_manager_required = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
@@ -55,18 +73,17 @@ def test_upadate_required_work():
         assert scenario_manager._required[k] == k
 
 
-def test_get_work():
+@pytest.mark.asyncio
+async def test_get_work():
 
     scenario_manager = ScenarioManager()
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
     scenario_manager._update_required_and_period(5, 10)
     scenario_manager._required = test_scenario_manager_required
-    work, scenario_volume_map = scenario_manager.get_work(test_current_work, test_num_runner_current_work,
-                                                          test_num_runners, None, 0.2)
-
-    print(work)
-    print(scenario_volume_map)
+    work, scenario_volume_map = await scenario_manager.get_work(
+        test_current_work, test_num_runner_current_work, test_num_runners, None, 0.2
+    )
 
     assert work.count((4, None, 'test_scenario_04', None)) == 4
     assert work.count((1, None, 'test_scenario_01', None)) == 1

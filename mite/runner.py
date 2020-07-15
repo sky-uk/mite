@@ -1,6 +1,9 @@
 import asyncio
-from itertools import count
+import functools
 import logging
+from itertools import count
+
+import ipdb
 
 from .context import Context
 from .utils import spec_import
@@ -8,7 +11,12 @@ from .utils import spec_import
 logger = logging.getLogger(__name__)
 
 
-class RunnerControllerTransportExample:
+@functools.lru_cache(maxsize=None)
+def spec_import_cached(journey_spec):
+    return spec_import(journey_spec)
+
+
+class RunnerControllerTransportExample:  # pragma: nocover
     async def hello(self):
         """Returns:
             runner_id
@@ -38,39 +46,6 @@ class RunnerControllerTransportExample:
             runner_id
         """
         pass
-
-
-class RunnerConfig:
-    def __init__(self):
-        self._config = {}
-
-    def __repr__(self):
-        return "RunnerConfig({})".format(
-            ", ".join(["{}={}".format(k, v) for k, v in self._config.items()])
-        )
-
-    def _update(self, kv_list):
-        for k, v in kv_list:
-            self._config[k] = v
-
-    def get(self, key, default=None):
-        try:
-            return self._config[key]
-        except KeyError:
-            if default is not None:
-                return default
-            else:
-                raise
-
-    def get_fallback(self, *keys, default=None):
-        for key in keys:
-            try:
-                return self._config[key]
-            except KeyError:
-                pass
-        if default is not None:
-            return default
-        raise KeyError("None of {} found".format(keys))
 
 
 class Runner:
@@ -114,9 +89,9 @@ class Runner:
         # the runner with undone tasks nor running out of tasks and letting
         # the runner starve.  So this is very much a future change.
         context_id_gen = count(1)
-        config = RunnerConfig()
+        config = {}
         runner_id, test_name, config_list = await self._transport.hello()
-        config._update(config_list)
+        config.update(config_list)
         logger.debug("Entering run loop")
 
         async def do_work(scenario_id, scenario_data_id, journey_spec, args):
@@ -191,10 +166,16 @@ class Runner:
             journey_spec,
             args,
         )
-        async with context.transaction('__root__'):
-            journey = spec_import(journey_spec)
-            if args is None:
-                await journey(context)
-            else:
-                await journey(context, *args)
+        journey = spec_import_cached(journey_spec)
+        try:
+            async with context.transaction('__root__'):
+                if args is None:
+                    await journey(context)
+                else:
+                    await journey(context, *args)
+        except Exception as e:
+            if not getattr(e, "handled", False):
+                if self._debug:
+                    ipdb.set_trace()
+                    raise
         return scenario_id, scenario_data_id
