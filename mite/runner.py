@@ -53,7 +53,6 @@ class Runner:
         self,
         transport,
         msg_sender,
-        loop_wait_min=0.01,
         loop_wait_max=0.5,
         max_work=None,
         loop=None,
@@ -62,9 +61,7 @@ class Runner:
         self._transport = transport
         self._msg_sender = msg_sender
         self._work = {}
-        self._datapool_proxies = {}
         self._stop = False
-        self._loop_wait_min = loop_wait_min
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
         if loop is None:
@@ -82,9 +79,6 @@ class Runner:
         self._work[id] -= 1
         if self._work[id] == 0:
             del self._work[id]
-
-    def _current_work(self):
-        return self._work
 
     def should_stop(self):
         return self._stop
@@ -128,7 +122,7 @@ class Runner:
         completed_data_ids = []
         while not self._stop:
             work, config_list, self._stop = await self._transport.request_work(
-                runner_id, self._current_work(), completed_data_ids, self._max_work
+                runner_id, self._work, completed_data_ids, self._max_work
             )
             config.update(config_list)
             for num, (scenario_id, scenario_data_id, journey_spec, args) in enumerate(
@@ -157,15 +151,13 @@ class Runner:
                 )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
-        while self._current_work():
+        while self._work:
             _, config_list, _ = await self._transport.request_work(
-                runner_id, self._current_work(), completed_data_ids, 0
+                runner_id, self._work, completed_data_ids, 0
             )
             config.update(config_list)
             completed_data_ids = await wait()
-        await self._transport.request_work(
-            runner_id, self._current_work(), completed_data_ids, 0
-        )
+        await self._transport.request_work(runner_id, self._work, completed_data_ids, 0)
         await self._transport.bye(runner_id)
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
