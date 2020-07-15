@@ -7,7 +7,7 @@ from mite_http import SessionPool
 
 logger = logging.getLogger(__name__)
 
-def _generate_stats():
+def _generate_dns_stats():
     bins = [
         float(x)
         for x in os.environ.get(
@@ -15,7 +15,6 @@ def _generate_stats():
             "0.0001,0.001,0.01,0.05,0.1,0.2,0.4,0.8,1,2,4,8,16,32,64",
         ).split(",")
     ]
-
 
     return (
         Histogram(
@@ -27,7 +26,7 @@ def _generate_stats():
     )
 
 
-_MITE_STATS = _generate_stats()
+_MITE_STATS = _generate_dns_stats()
 
 @asynccontextmanager
 async def _session_pool_context_manager(session_pool, context):
