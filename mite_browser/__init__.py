@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 from mite_http import mite_http
+from mite_dns import mite_dns
 
 EMBEDDED_URL_REGEX = re.compile(
     r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE
@@ -44,6 +45,7 @@ def url_builder(base_url, *args, **kwargs):
 def browser_decorator(separation=0):
     def wrapper_factory(func):
         @mite_http
+        @mite_dns
         async def wrapper(context, *args, **kwargs):
             context.browser = Browser(context)
             async with ensure_fixed_separation(separation):
