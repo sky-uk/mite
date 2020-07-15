@@ -5,7 +5,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 
 from acurl import EventLoop
-from mite.stats import Counter, Histogram, extractor, matcher_by_type, Gauge
+from mite.stats import Counter, Histogram, extractor, matcher_by_type
 
 logger = logging.getLogger(__name__)
 
