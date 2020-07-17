@@ -18,13 +18,7 @@ def spec_import_cached(journey_spec):
 
 class Runner:
     def __init__(
-        self,
-        transport,
-        msg_sender,
-        loop_wait_max=0.5,
-        max_work=None,
-        loop=None,
-        debug=False,
+        self, transport, msg_sender, loop_wait_max=0.5, max_work=None, debug=False,
     ):
         self._transport = transport
         self._msg_sender = msg_sender
@@ -32,9 +26,6 @@ class Runner:
         self._stop = False
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
         self._debug = debug
 
     def _inc_work(self, id):
