@@ -22,110 +22,103 @@ class Runner:
     ):
         self._transport = transport
         self._msg_sender = msg_sender
-        self._work = {}
-        self._stop = False
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
         self._debug = debug
+        self.initialize_run_variables()
+
+    def initialize_run_variables(self):
+        self.config = {}
+        self.runner_id = None
+        self.test_name = None
+        self.context_id_gen = count(1)
+        self.work = {}
+        self.stopping = False
 
     def _inc_work(self, id):
         if id in self._work:
-            self._work[id] += 1
+            self.work[id] += 1
         else:
-            self._work[id] = 1
+            self.work[id] = 1
 
     def _dec_work(self, id):
-        self._work[id] -= 1
-        if self._work[id] == 0:
-            del self._work[id]
+        self.work[id] -= 1
+        if self.work[id] == 0:
+            del self.work[id]
 
     def should_stop(self):
-        return self._stop
+        return self.stopping
 
     async def run(self):
-        context_id_gen = count(1)
-        config = {}
-        runner_id, test_name, config_list = await self._transport.hello()
-        config.update(config_list)
+        if self.runner_id is not None:
+            raise Exception("Runner.run() called while already running")
+        self.runner_id, self.test_name, config_list = await self._transport.hello()
+        self.config.update(config_list)
         logger.debug("Entering run loop")
-        _completed = []
 
-        def on_completion(f):
-            nonlocal waiter, _completed
-            _completed.append(f)
-            if not waiter.done():
-                waiter.set_result(None)
-
-        def stop_waiting():
-            nonlocal waiter
-            if not waiter.done():
-                waiter.set_result(None)
-
-        async def wait():
-            nonlocal waiter, timeout_handle, _completed
-            await waiter
-            timeout_handle.cancel()
-            timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
-            waiter = self._loop.create_future()
-            c = []
-            for f in _completed:
-                scenario_id, scenario_data_id = f.result()
+        completed_data_ids = []
+        pending = []
+        while not self.stopping or self.work:
+            new_work, config_list, self.stopping = await self._transport.request_work(
+                self.runner_id,
+                self.work,
+                completed_data_ids,
+                self._max_work if not self.stopping else 0,
+            )
+            self.config.update(config_list)
+            for work_item in new_work:
+                scenario_id = work_item[0]
+                self._inc_work(scenario_id)
+                pending.append(asyncio.create_task(self.do_work, *work_item))
+            await asyncio.wait(
+                pending, return_when=asyncio.FIRST_COMPLETED, timeout=self._loop_wait_max
+            )
+            # In principle, we could use the result of asyncio.wait to get the
+            # list of done coroutines.  But I think there's a subtle reason
+            # not to.  I think with FIRST_COMPLETED we will get a single
+            # result in the done set.  But we won't resume execution until
+            # it's our turn, during which time more coroutines might have
+            # completed.  So we should instead filter for doneness when
+            # control returns to us, and not trust the (possibly outdated)
+            # ersult of the wait function.  Note, I haven't teested this
+            # behavior experimentally, just reasonsed about it...
+            done = [x for x in pending if x.done()]
+            pending = [x for x in pending if not x.done()]
+            completed_data_ids = []
+            for x in done:
+                scenario_id, scenario_data_id = x.result()
                 self._dec_work(scenario_id)
                 if scenario_data_id is not None:
-                    c.append((scenario_id, scenario_data_id))
-            del _completed[:]
-            return c
+                    completed_data_ids.append((scenario_id, scenario_data_id))
 
-        timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
-        waiter = self._loop.create_future()
-        completed_data_ids = []
-        while not self._stop:
-            work, config_list, self._stop = await self._transport.request_work(
-                runner_id, self._work, completed_data_ids, self._max_work
-            )
-            config.update(config_list)
-            for num, (scenario_id, scenario_data_id, journey_spec, args) in enumerate(
-                work
-            ):
-                id_data = {
-                    'test': test_name,
-                    'runner_id': runner_id,
-                    'journey': journey_spec,
-                    'context_id': next(context_id_gen),
-                    'scenario_id': scenario_id,
-                    'scenario_data_id': scenario_data_id,
-                }
-                context = Context(
-                    self._msg_sender,
-                    config,
-                    id_data=id_data,
-                    should_stop_func=self.should_stop,
-                    debug=self._debug,
-                )
-                self._inc_work(scenario_id)
-                future = asyncio.ensure_future(
-                    self._execute(
-                        context, scenario_id, scenario_data_id, journey_spec, args
-                    )
-                )
-                future.add_done_callback(on_completion)
-            completed_data_ids = await wait()
-        while self._work:
-            _, config_list, _ = await self._transport.request_work(
-                runner_id, self._work, completed_data_ids, 0
-            )
-            config.update(config_list)
-            completed_data_ids = await wait()
-        await self._transport.request_work(runner_id, self._work, completed_data_ids, 0)
-        await self._transport.bye(runner_id)
+        # One last time, to send the last batch of results
+        await self._transport.request_work(
+            self.runner_id, self.work, completed_data_ids, 0
+        )
+        await self._transport.bye(self.runner_id)
 
-    async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
+    async def _execute(self, scenario_id, scenario_data_id, journey_spec, args):
         logger.debug(
             'Runner._execute starting scenario_id=%r scenario_data_id=%r journey_spec=%r args=%r',
             scenario_id,
             scenario_data_id,
             journey_spec,
             args,
+        )
+        id_data = {
+            'test': self.test_name,
+            'runner_id': self.runner_id,
+            'journey': journey_spec,
+            'context_id': next(self.context_id_gen),
+            'scenario_id': scenario_id,
+            'scenario_data_id': scenario_data_id,
+        }
+        context = Context(
+            self._msg_sender,
+            self.config,
+            id_data=id_data,
+            should_stop_func=self.should_stop,
+            debug=self._debug,
         )
         journey = spec_import_cached(journey_spec)
         try:
