@@ -123,6 +123,11 @@ class RunnerTransport:
         return unpack_msg(self._sock.recv())
 
     async def hello(self):
+        """Returns:
+            runner_id
+            test_name
+            config_list - k, v pairs
+            """
         return await self._loop.run_in_executor(None, self._hello)
 
     def _request_work(self, runner_id, current_work, completed_data_ids, max_work):
@@ -139,6 +144,18 @@ class RunnerTransport:
         return result
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
+        """\
+        Takes:
+            runner_id
+            current_work - dict of scenario_id, current volume
+            completed_data_ids - list of scenario_id, scenario_data_id pairs
+            max_work - may be None to indicate no limit
+        Returns:
+            work - list of (scenario_id, scenario_data_id,
+                            journey_spec, args) - args and scenario_data_id may be None together
+            config_list - k, v pairs
+            stop
+        """
         logger.debug(
             "Requesting work runner_id=%s current_work=%s completed_data_ids=%s max_work=%s"
             % (runner_id, current_work, completed_data_ids, max_work)
@@ -157,6 +174,10 @@ class RunnerTransport:
         return unpack_msg(self._sock.recv())
 
     async def bye(self, runner_id):
+        """\
+        Takes:
+            runner_id
+        """
         logger.debug("Saying bye")
         return await self._loop.run_in_executor(None, self._bye, runner_id)
 

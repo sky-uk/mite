@@ -16,38 +16,6 @@ def spec_import_cached(journey_spec):
     return spec_import(journey_spec)
 
 
-class RunnerControllerTransportExample:  # pragma: nocover
-    async def hello(self):
-        """Returns:
-            runner_id
-            test_name
-            config_list - k, v pairs
-            """
-        pass
-
-    async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        """\
-        Takes:
-            runner_id
-            current_work - dict of scenario_id, current volume
-            completed_data_ids - list of scenario_id, scenario_data_id pairs
-            max_work - may be None to indicate no limit
-        Returns:
-            work - list of (scenario_id, scenario_data_id,
-                            journey_spec, args) - args and scenario_data_id may be None together
-            config_list - k, v pairs
-            stop
-        """
-        pass
-
-    async def bye(self, runner_id):
-        """\
-        Takes:
-            runner_id
-        """
-        pass
-
-
 class Runner:
     def __init__(
         self,
