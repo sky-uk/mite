@@ -1,11 +1,7 @@
 import os
-import logging
-from contextlib import asynccontextmanager
 
 from mite.stats import Histogram, extractor, matcher_by_type
-from mite_http import SessionPool
 
-logger = logging.getLogger(__name__)
 
 def _generate_dns_stats():
     bins = [
@@ -27,14 +23,3 @@ def _generate_dns_stats():
 
 
 _MITE_STATS = _generate_dns_stats()
-
-@asynccontextmanager
-async def _session_pool_context_manager(session_pool, context):
-    context.http = await session_pool._checkout(context)
-    yield
-    await session_pool._checkin(context.http)
-    del context.http
-
-
-def mite_dns(func):
-    return SessionPool.decorator(func)
