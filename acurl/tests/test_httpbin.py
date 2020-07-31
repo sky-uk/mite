@@ -1,7 +1,8 @@
 from urllib.parse import urlencode
 
-import acurl
 import pytest
+
+import acurl
 
 
 def session():
@@ -74,6 +75,7 @@ async def test_failed_basic_auth():
 
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.xfail(strict=False)  # https://github.com/postmanlabs/httpbin/issues/617
 async def test_redirect():
     s = session()
     url = 'https://httpbin.org/ip'
