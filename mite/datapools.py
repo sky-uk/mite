@@ -96,5 +96,5 @@ def create_iterable_data_pool(iterable):
     return IterableDataPool(iterable)
 
 
-def iterable_factory_data_pool(fn):  # pragma: nocover
+def iterable_factory_data_pool(fn):  # pragma: no cover
     return IterableFactoryDataPool(fn)

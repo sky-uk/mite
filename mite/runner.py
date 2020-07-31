@@ -16,7 +16,7 @@ def spec_import_cached(journey_spec):
     return spec_import(journey_spec)
 
 
-class RunnerControllerTransportExample:  # pragma: nocover
+class RunnerControllerTransportExample:  # pragma: no cover
     async def hello(self):
         """Returns:
             runner_id
