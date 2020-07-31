@@ -1,7 +1,6 @@
-from collections import namedtuple, deque
-from itertools import count
 import logging
-
+from collections import deque, namedtuple
+from itertools import count
 
 logger = logging.getLogger(__name__)
 
