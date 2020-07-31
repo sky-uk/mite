@@ -21,4 +21,4 @@ def _generate_dns_stats():
     )
 
 
-_MITE_STATS = _generate_dns_stats()
+_MITE_DNS_STATS = _generate_dns_stats()
