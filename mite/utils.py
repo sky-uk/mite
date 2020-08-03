@@ -4,11 +4,11 @@ import importlib
 import msgpack
 
 
-def unpack_msg(msg):
+def unpack_msg(msg):  # pragma: no cover
     return msgpack.unpackb(msg, use_list=False, raw=False)
 
 
-def pack_msg(msg):
+def pack_msg(msg):  # pragma: no cover
     return msgpack.packb(msg, use_bin_type=True)
 
 
@@ -17,7 +17,7 @@ def spec_import(spec):
     return getattr(importlib.import_module(module), attr)
 
 
-async def sleep(delay, always=False, **kwargs):
+async def sleep(delay, always=False, **kwargs):  # pragma: no cover
     await asyncio.sleep(delay, **kwargs)
 
 

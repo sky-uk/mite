@@ -1,7 +1,6 @@
-from collections import namedtuple, deque
-from itertools import count
 import logging
-
+from collections import deque, namedtuple
+from itertools import count
 
 logger = logging.getLogger(__name__)
 
@@ -96,5 +95,5 @@ def create_iterable_data_pool(iterable):
     return IterableDataPool(iterable)
 
 
-def iterable_factory_data_pool(fn):  # pragma: nocover
+def iterable_factory_data_pool(fn):  # pragma: no cover
     return IterableFactoryDataPool(fn)
