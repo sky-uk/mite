@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from mocks.mock_context import MockContext
 
-import mite_http as mite_http_module
+import mite_http.stats
 from mite_http import SessionPool, mite_http
 
 
@@ -42,7 +42,7 @@ def test_default_histogram_bins():
     if "MITE_HTTP_HISTOGRAM_BUCKETS" in os.environ:
         del os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"]
 
-    stats = mite_http_module._generate_stats()
+    stats = mite_http.stats._generate_stats()
     assert stats[1].bins == [
         0.0001,
         0.001,
@@ -64,7 +64,7 @@ def test_default_histogram_bins():
 
 def test_non_default_bins():
     os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"] = "1,2,3"
-    stats = mite_http_module._generate_stats()
+    stats = mite_http.stats._generate_stats()
     assert stats[1].bins == [1, 2, 3]
 
 
