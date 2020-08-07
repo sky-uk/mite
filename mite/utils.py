@@ -5,7 +5,7 @@ import msgpack
 
 
 def unpack_msg(msg):  # pragma: no cover
-    return msgpack.unpackb(msg, use_list=False, raw=False)
+    return msgpack.unpackb(msg, use_list=False, raw=False, strict_map_key=False)
 
 
 def pack_msg(msg):  # pragma: no cover
