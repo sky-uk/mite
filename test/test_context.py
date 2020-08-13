@@ -1,3 +1,4 @@
+import os
 from unittest.mock import Mock
 
 import pytest
@@ -126,3 +127,17 @@ async def test_mite_error():
 
     end_msg = send_fn.call_args_list[1][0][0]
     assert end_msg["type"] == "txn"
+
+
+@pytest.mark.asyncio
+async def test_mite_error_backtrace_points_to_exn_source():
+    send_fn = Mock()
+    context = Context(send_fn, {})
+
+    with raises(Exception):
+        async with context.transaction("test"):
+            raise Exception("foo")
+
+    assert send_fn.call_args_list[0][0][0]["location"].startswith(
+        os.path.abspath(__file__)
+    )
