@@ -13,6 +13,7 @@ Usage:
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat MSGPACK_FILE_PATH
+    mite [options] uncat
 
     mite --help
     mite --version
@@ -67,10 +68,10 @@ from urllib.request import Request as UrlLibRequest
 from urllib.request import urlopen
 
 import docopt
-import msgpack
 import ujson
 import uvloop
 
+from .cli.cat import cat, uncat
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
 from .cli.stats import stats
@@ -288,13 +289,6 @@ def recorder(opts):
     asyncio.get_event_loop().run_until_complete(receiver.run())
 
 
-def cat(opts):
-    with open(opts['MSGPACK_FILE_PATH'], 'rb') as file_in:
-        unpacker = msgpack.Unpacker(file_in, encoding='utf-8', use_list=False)
-        for row in unpacker:
-            print(row)
-
-
 def prometheus_exporter(opts):
     receiver = _create_prometheus_exporter_receiver(opts)
     receiver.add_listener(prometheus_metrics.process)
@@ -349,6 +343,8 @@ def main():
         har_converter(opts)
     elif opts['cat']:
         cat(opts)
+    elif opts['uncat']:
+        uncat(opts)
 
 
 if __name__ == '__main__':
