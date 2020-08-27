@@ -10,6 +10,7 @@ Usage:
     mite [options] collector [--collector-socket=SOCKET]
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
+    mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]... [--raw-processor=RAW_PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat MSGPACK_FILE_PATH
@@ -24,7 +25,9 @@ Arguments:
     JOURNEY_SPEC            Identifier for journey async callable
     VOLUME_MODEL_SPEC       Identifier for volume model callable
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
-    CONVERTED_FILE_PATH     Path to write the converted mite script to when coverting a har file
+    CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
+    PROCESSOR               Function to execute for message handling, receives unpacked messages
+    RAW_PROCESSOR           Function to execute for message handling, receives raw, packed messages
 
 Examples:
     mite scenario test mite.example:scenario
@@ -74,7 +77,7 @@ import uvloop
 from .cli.cat import cat, uncat
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
-from .cli.stats import stats
+from .cli import stats
 from .cli.test import journey_cmd, scenario_cmd
 from .collector import Collector
 from .controller import Controller
@@ -282,6 +285,23 @@ def collector(opts):
     asyncio.get_event_loop().run_until_complete(receiver.run())
 
 
+def generic_receiver(opts):
+    loop = asyncio.get_event_loop()
+
+    receiver = _msg_backend_module(opts).Receiver()
+    receiver.connect(opts['RECEIVE_SOCKET'])
+
+    for listener_spec in opts['--processor']:
+        handler_fn = spec_import(listener_spec)
+        receiver.add_listener(handler_fn)
+
+    for listener_spec in opts['--raw-processor']:
+        handler_fn = spec_import(listener_spec)
+        receiver.add_raw_listener(handler_fn)
+
+    loop.run_until_complete(receiver.run())
+
+
 def recorder(opts):
     receiver = _recorder_receiver(opts)
     recorder = Recorder(opts['--recorder-dir'])
@@ -334,7 +354,9 @@ def main():
     elif opts['duplicator']:
         duplicator(opts)
     elif opts['stats']:
-        stats(opts)
+        stats.stats(opts)
+    elif opts['receiver']:
+        generic_receiver(opts)
     elif opts['prometheus_exporter']:
         prometheus_exporter(opts)
     elif opts['recorder']:

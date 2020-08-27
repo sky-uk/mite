@@ -43,15 +43,9 @@ class Sender:
 class Receiver:
     def __init__(self, listeners=None, raw_listeners=None, loop=None):
         self._socket = nanomsg.Socket(nanomsg.PULL)
-        if listeners is None:
-            listeners = []
-        self._listeners = listeners
-        if raw_listeners is None:
-            raw_listeners = []
-        self._raw_listeners = raw_listeners
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
+        self._listeners = listeners or []
+        self._raw_listeners = raw_listeners or []
+        self._loop = loop or asyncio.get_event_loop()
 
     def bind(self, address):
         self._socket.bind(address)
