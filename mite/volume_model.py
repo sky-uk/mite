@@ -137,3 +137,23 @@ class Compound(_VolumeModel):
             return c[1](start - c[0], end - c[0])
         except StopIteration:  # pragma: no cover
             raise Exception("should never happen!")
+
+
+def oneshot_vm(when=-1, stop_scenario=False):
+    """A volume model that returns 1 after ``when`` seconds, and zero before.
+
+    For true oneshot-ness needs to be combined with `SingleRunDataPool`
+
+    """
+    has_run = False
+
+    def _vm(s, e):
+        nonlocal has_run
+        if s > when and not has_run:
+            has_run = True
+            return 1
+        if stop_scenario:
+            raise StopScenario
+        return 0
+
+    return _vm

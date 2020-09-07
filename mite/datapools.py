@@ -97,3 +97,33 @@ def create_iterable_data_pool(iterable):
 
 def iterable_factory_data_pool(fn):  # pragma: no cover
     return IterableFactoryDataPool(fn)
+
+
+class SingleRunDataPool:
+    def __init__(self, data_item):
+        self.has_ran = False
+        self.data_item = data_item
+
+    async def checkin(self, id):
+        pass
+
+    async def checkout(self, config):
+        if not self.has_ran:
+            self.has_ran = True
+            return DataPoolItem(1, (self.data_item,))
+        raise DataPoolExhausted()
+
+
+class SingleRunDataPoolWrapper:
+    def __init__(self, data_pool):
+        self.has_ran = False
+        self.data_pool = data_pool
+
+    async def checkin(self, id):
+        pass
+
+    async def checkout(self, config):
+        if not self.has_ran:
+            self.has_ran = True
+            return await self.data_pool.checkout(config)
+        raise DataPoolExhausted()
