@@ -46,8 +46,8 @@ class Context:
         self._config = config
         self._id_data = id_data
         self._should_stop_func = should_stop_func
-        self._transaction_name = ""
         self._transaction_id = None
+        self._transaction_name = None
         self._debug = debug
         self._trans_id_gen = count(1)
 
@@ -99,7 +99,12 @@ class Context:
                 e.handled = True
                 raise
         finally:
-            self.send('txn', start_time=start_time, end_time=time.time(), had_error=error)
+            self.send(
+                'txn',
+                start_time=start_time,
+                end_time=time.time(),
+                had_error=error,
+            )
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
 

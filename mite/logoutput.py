@@ -22,6 +22,16 @@ class MsgOutput:
             self._logger.debug("%s %s", start, end)
 
 
+class DebugMessageOutput:
+    def __init__(self):
+        self._logger = logging.getLogger('Debug Logger')
+
+    def process_message(self, message):
+        text = message.get("text")
+        if message.get('type') == "debug_console_message" and text:
+            self._logger.info(text)
+
+
 class HttpStatsOutput:
     def __init__(self, period=2):
         self._period = period

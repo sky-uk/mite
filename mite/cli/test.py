@@ -2,12 +2,14 @@ import asyncio
 import logging
 import sys
 
-from mite.logoutput import HttpStatsOutput
+from mite.datapools import SingleRunDataPoolWrapper
+from mite.logoutput import DebugMessageOutput, HttpStatsOutput
 
 from ..collector import Collector
 from ..controller import Controller
 from ..recorder import Recorder
 from ..utils import pack_msg, spec_import
+from ..volume_model import oneshot_vm
 from .common import _create_config_manager, _create_runner, _create_scenario_manager
 
 
@@ -38,7 +40,8 @@ class DirectReciever:
     def filter_listeners(self, clazz):
         return list(
             filter(
-                lambda listener: isinstance(listener.__self__, clazz), self._listeners,
+                lambda listener: isinstance(listener.__self__, clazz),
+                self._listeners,
             )
         )
 
@@ -83,17 +86,22 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
+    debug_message_output = DebugMessageOutput()
+    receiver.add_listener(debug_message_output.process_message)
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
     loop = asyncio.get_event_loop()
 
+    has_error = False
+
     async def controller_report():
+        nonlocal has_error
         while True:
             await asyncio.sleep(1)
             controller.report(receiver.recieve)
             if controller.should_stop():
                 if http_stats_output is not None and http_stats_output.error_total > 0:
-                    sys.exit(1)
+                    has_error = True
                 return
 
     loop.run_until_complete(
@@ -101,6 +109,8 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             controller_report(), _create_runner(opts, transport, receiver.recieve).run()
         )
     )
+
+    sys.exit(int(has_error))
 
 
 def scenario_test_cmd(opts):
@@ -130,6 +140,22 @@ def journey_test_cmd(opts):
     )
 
 
+def journey_run_cmd(opts):
+    journey_spec = opts['JOURNEY_SPEC']
+    datapool_spec = opts['DATAPOOL_SPEC']
+    if datapool_spec:
+        datapool = SingleRunDataPoolWrapper(spec_import(datapool_spec))
+    else:
+        datapool = None
+    volume_model = oneshot_vm(stop_scenario=True)
+    test_scenarios(
+        journey_spec,
+        opts,
+        [(journey_spec, datapool, volume_model)],
+        _create_config_manager(opts),
+    )
+
+
 def scenario_cmd(opts):
     if opts['test']:
         scenario_test_cmd(opts)
@@ -138,3 +164,5 @@ def scenario_cmd(opts):
 def journey_cmd(opts):
     if opts['test']:
         journey_test_cmd(opts)
+    elif opts['run']:
+        journey_run_cmd(opts)
