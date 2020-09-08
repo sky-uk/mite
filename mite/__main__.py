@@ -76,7 +76,7 @@ import uvloop
 from .cli.cat import cat, uncat
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
-from .cli import stats
+from .cli import stats, receiver
 from .cli.test import journey_cmd, scenario_cmd
 from .collector import Collector
 from .controller import Controller
@@ -284,36 +284,6 @@ def collector(opts):
     asyncio.get_event_loop().run_until_complete(receiver.run())
 
 
-def generic_receiver(opts):
-    loop = asyncio.get_event_loop()
-
-    receiver = _msg_backend_module(opts).Receiver()
-    receiver.connect(opts['RECEIVE_SOCKET'])
-
-    for processor_spec in opts['--processor']:
-        handler_class = spec_import(processor_spec)
-
-        try:
-            handler = handler_class()
-            process_message = getattr(handler, 'process_message', None)
-            process_raw_message = getattr(handler, 'process_raw_message', None)
-            assert process_message or process_raw_message
-            assert not process_message or callable(process_message)
-            assert not process_raw_message or callable(process_raw_message)
-        except (TypeError, AssertionError):
-            logger.error(f"Error with processor '{processor_spec}'")
-            logger.error(f"Processors must have one or both of 'process_message' and 'process_raw_message' methods")
-            return
-
-        if process_message:
-            receiver.add_listener(process_message)
-
-        if process_raw_message:
-            receiver.add_listener(process_raw_message)
-
-    loop.run_until_complete(receiver.run())
-
-
 def recorder(opts):
     receiver = _recorder_receiver(opts)
     recorder = Recorder(opts['--recorder-dir'])
@@ -368,7 +338,7 @@ def main():
     elif opts['stats']:
         stats.stats(opts)
     elif opts['receiver']:
-        generic_receiver(opts)
+        receiver.generic_receiver(opts)
     elif opts['prometheus_exporter']:
         prometheus_exporter(opts)
     elif opts['recorder']:
