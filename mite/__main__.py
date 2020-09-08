@@ -10,7 +10,7 @@ Usage:
     mite [options] collector [--collector-socket=SOCKET]
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
-    mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]... [--raw-processor=RAW_PROCESSOR]...
+    mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat MSGPACK_FILE_PATH
@@ -26,8 +26,7 @@ Arguments:
     VOLUME_MODEL_SPEC       Identifier for volume model callable
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
     CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
-    PROCESSOR               Function to execute for message handling, receives unpacked messages
-    RAW_PROCESSOR           Function to execute for message handling, receives raw, packed messages
+    PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
 
 Examples:
     mite scenario test mite.example:scenario
@@ -291,13 +290,26 @@ def generic_receiver(opts):
     receiver = _msg_backend_module(opts).Receiver()
     receiver.connect(opts['RECEIVE_SOCKET'])
 
-    for listener_spec in opts['--processor']:
-        handler_fn = spec_import(listener_spec)
-        receiver.add_listener(handler_fn)
+    for processor_spec in opts['--processor']:
+        handler_class = spec_import(processor_spec)
 
-    for listener_spec in opts['--raw-processor']:
-        handler_fn = spec_import(listener_spec)
-        receiver.add_raw_listener(handler_fn)
+        try:
+            handler = handler_class()
+            process_message = getattr(handler, 'process_message', None)
+            process_raw_message = getattr(handler, 'process_raw_message', None)
+            assert process_message or process_raw_message
+            assert not process_message or callable(process_message)
+            assert not process_raw_message or callable(process_raw_message)
+        except (TypeError, AssertionError):
+            logger.error(f"Error with processor '{processor_spec}'")
+            logger.error(f"Processors must have one or both of 'process_message' and 'process_raw_message' methods")
+            return
+
+        if process_message:
+            receiver.add_listener(process_message)
+
+        if process_raw_message:
+            receiver.add_listener(process_raw_message)
 
     loop.run_until_complete(receiver.run())
 
