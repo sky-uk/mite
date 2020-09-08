@@ -1,8 +1,7 @@
-import time
-import os
-from itertools import count
 import logging
-
+import os
+import time
+from itertools import count
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +46,15 @@ class Collector:
             c = next(self._file_counter)
             fn = os.path.join(
                 self._target_dir,
-                '_'.join(str(x) for x in (
-                    start_time,
-                    end_time,
-                    *([self._collector_id] if self._collector_id else []),
-                    c
-                ))
+                '_'.join(
+                    str(x)
+                    for x in (
+                        start_time,
+                        end_time,
+                        *([self._collector_id] if self._collector_id else []),
+                        c,
+                    )
+                ),
             )
             logger.warning('moving old current %s to %s', self._current_fn, fn)
             os.rename(self._current_fn, fn)

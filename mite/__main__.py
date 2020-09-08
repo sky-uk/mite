@@ -73,10 +73,10 @@ import docopt
 import ujson
 import uvloop
 
+from .cli import receiver, stats
 from .cli.cat import cat, uncat
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
-from .cli import stats, receiver
 from .cli.test import journey_cmd, scenario_cmd
 from .collector import Collector
 from .controller import Controller

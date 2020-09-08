@@ -24,7 +24,9 @@ def generic_receiver(opts):
             assert not process_raw_message or callable(process_raw_message)
         except (TypeError, AssertionError):
             logger.error(f"Error with processor '{processor_spec}'")
-            logger.error(f"Processors must have one or both of 'process_message' and 'process_raw_message' methods")
+            logger.error(
+                "Processors must have one or both of 'process_message' and 'process_raw_message' methods"
+            )
             return
 
         if process_message:
