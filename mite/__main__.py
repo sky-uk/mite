@@ -11,6 +11,7 @@ Usage:
     mite [options] collector [--collector-socket=SOCKET]
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
+    mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat MSGPACK_FILE_PATH
@@ -25,7 +26,8 @@ Arguments:
     JOURNEY_SPEC            Identifier for journey async callable
     VOLUME_MODEL_SPEC       Identifier for volume model callable
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
-    CONVERTED_FILE_PATH     Path to write the converted mite script to when coverting a har file
+    CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
+    PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
 
 Examples:
     mite scenario test mite.example:scenario
@@ -72,10 +74,10 @@ import docopt
 import ujson
 import uvloop
 
+from .cli import receiver, stats
 from .cli.cat import cat, uncat
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
-from .cli.stats import stats
 from .cli.test import journey_cmd, scenario_cmd
 from .collector import Collector
 from .controller import Controller
@@ -335,7 +337,9 @@ def main():
     elif opts['duplicator']:
         duplicator(opts)
     elif opts['stats']:
-        stats(opts)
+        stats.stats(opts)
+    elif opts['receiver']:
+        receiver.generic_receiver(opts)
     elif opts['prometheus_exporter']:
         prometheus_exporter(opts)
     elif opts['recorder']:

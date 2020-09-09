@@ -1,8 +1,9 @@
+import asyncio
+import logging
+
 import nanomsg
 
 from .utils import pack_msg, unpack_msg
-import asyncio
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +44,9 @@ class Sender:
 class Receiver:
     def __init__(self, listeners=None, raw_listeners=None, loop=None):
         self._socket = nanomsg.Socket(nanomsg.PULL)
-        if listeners is None:
-            listeners = []
-        self._listeners = listeners
-        if raw_listeners is None:
-            raw_listeners = []
-        self._raw_listeners = raw_listeners
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
+        self._listeners = listeners or []
+        self._raw_listeners = raw_listeners or []
+        self._loop = loop or asyncio.get_event_loop()
 
     def bind(self, address):
         self._socket.bind(address)
@@ -102,13 +97,26 @@ class RunnerTransport:
         return await self._loop.run_in_executor(None, self._hello)
 
     def _request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        self._sock.send(pack_msg((_MSG_TYPE_REQUEST_WORK, [runner_id, current_work, completed_data_ids, max_work])))
+        self._sock.send(
+            pack_msg(
+                (
+                    _MSG_TYPE_REQUEST_WORK,
+                    [runner_id, current_work, completed_data_ids, max_work],
+                )
+            )
+        )
         result = unpack_msg(self._sock.recv())
         return result
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return await self._loop.run_in_executor(None, self._request_work, runner_id, current_work,
-                                                completed_data_ids, max_work)
+        return await self._loop.run_in_executor(
+            None,
+            self._request_work,
+            runner_id,
+            current_work,
+            completed_data_ids,
+            max_work,
+        )
 
     def _bye(self, runner_id):
         self._sock.send(pack_msg((_MSG_TYPE_BYE, runner_id)))
