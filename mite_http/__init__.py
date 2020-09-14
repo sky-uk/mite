@@ -8,12 +8,24 @@ from acurl import EventLoop
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def _session_pool_context_manager(session_pool, context):
-    context.http = await session_pool._checkout(context)
-    yield
-    await session_pool._checkin(context.http)
-    del context.http
+class AcurlSessionWrapper:
+    def __init__(self, session):
+        self.__session = session
+        self.__callback = None
+        self.additional_metrics = {}
+
+    def getattr(self, attrname):
+        r = object.__getattr__(self, attrname)
+        if r is not None:
+            return r
+        return getattr(self.__session, attrname)
+
+    def set_response_callback(self, cb):
+        self.__callback = cb
+
+    @property
+    def _response_callback(self):
+        return self.__callback
 
 
 class SessionPool:
@@ -27,8 +39,12 @@ class SessionPool:
         self._el = EventLoop()
         self._pool = deque()
 
+    @asynccontextmanager
     def session_context(self, context):
-        return _session_pool_context_manager(self, context)
+        context.http = await self._checkout(context)
+        yield
+        await self._checkin(context.http)
+        del context.http
 
     @classmethod
     def decorator(cls, func):
@@ -46,11 +62,11 @@ class SessionPool:
 
     async def _checkout(self, context):
         session = self._el.session()
-        session.additional_metrics = {}
+        session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
-            additional_metrics = session.additional_metrics
-            session.additional_metrics = {}
+            if session_wrapper._response_callback is not None:
+                session_wrapper._response_callback(r, session_wrapper.additional_metrics)
 
             context.send(
                 'http_metrics',
@@ -65,7 +81,7 @@ class SessionPool:
                 total_time=r.total_time,
                 primary_ip=r.primary_ip,
                 method=r.request.method,
-                **additional_metrics,
+                **session_wrapper.additional_metrics,
             )
 
         session.set_response_callback(response_callback)
@@ -73,6 +89,21 @@ class SessionPool:
 
     async def _checkin(self, session):
         pass
+
+
+######
+
+
+def cb(resp, addl_metrics):
+    addl_metrics['request-id'] = resp.headers["x-sky-reqid"]
+
+
+def _request(ctx):
+    ctx.http.set_response_callback(cb)
+    await ctx.http.post("whatever")
+
+
+#####
 
 
 def mite_http(func):
