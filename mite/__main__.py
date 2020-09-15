@@ -199,6 +199,11 @@ def _controller_log_end(logging_id, logging_url):
     logger.debug("Logging test end complete")
 
 
+async def _sleep_loop(delay):
+    while True:
+        await asyncio.sleep(delay)
+
+
 def controller(opts):
     config_manager = _create_config_manager(opts)
     scenario_spec = opts['SCENARIO_SPEC']
@@ -236,17 +241,30 @@ def controller(opts):
 
     async def controller_report():
         while True:
-            if controller.should_stop():
-                return
             await asyncio.sleep(1)
             controller.report(sender.send)
 
-    try:
-        loop.run_until_complete(
-            asyncio.gather(
-                controller_report(), server.run(controller, controller.should_stop)
-            )
+    tasks = tuple(
+        asyncio.create_task(x)
+        for x in (
+            # 331 and 337 are prime (and a fortiori relatively prime), so they
+            # should coincide in expiring at the same time only once every ~30
+            # hours (modulo rescheduling jitter/drift...).  This is to prevent
+            # the bug where the controller sometimes fails to exit cleanly.
+            _sleep_loop(331),
+            _sleep_loop(337),
+            controller_report(),
+            server.run(controller, controller.should_stop),
         )
+    )
+
+    try:
+        done, pending = loop.run_until_complete(
+            asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        )
+        for task in pending:
+            task.cancel()
+        loop.stop()
     except KeyboardInterrupt:
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
