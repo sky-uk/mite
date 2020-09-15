@@ -84,7 +84,7 @@ focus has been on the performance of the applications which we test.
 While not wishing to be profligate, we believe it would be a mistake to
 shrink the injection infrastructure close to its performance limits.
 When resource constraints appear in an NFT exercise, they should stem
-
+from the system under test and not the test apparatus.  Anything other
 than the most occasional exception to this rule is an indication that
 the NFT is not efficiently organized.
 
