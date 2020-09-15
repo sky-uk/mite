@@ -17,17 +17,17 @@ The components that make up mite are:
 - controller*: manages a test scenario and feeds tasks to the runners.
   (For more on how mite tests are organized, see the `README`_)
 - runner: responsible for injecting the test load into the target system
+- duplicator*: a message router between the controller/runner and their
+  downstream components
+- collector: logs messages appearing on the mite message bus to a file
+- receiver: dispatches incoming messages to connected ``processors``
+- recorder*: listens for special messages on the bus and records them
+  to a file. This is used for :ref:`data creation scenarios <data-creation-scenarios>`.
 - stats: aggregates raw messages from the controller and runner into
   statistical summaries
 - exporter*: (aka prometheus exporter) listens for aggregations from the
   stats component, and exposes these via HTTP to a
   :ref:`Prometheus instance <prometheus-doc>`
-- recorder*: logs messages appearing on the mite message bus to a file
-- collector: listens for special messages on the bus and records them
-  to a file.  This is used for :ref:`data creation scenarios <data-creation-scenarios>`.
-- receiver*: dispatches incoming messages to connected ``processors``
-- duplicator*: a message router between the controller/runner and their
-  downstream components
 
 .. _README: https://github.com/sky-uk/mite#your-first-scenario
 
@@ -45,7 +45,14 @@ between the components are represented in the following diagram:
    duplicator -> collector;
    duplicator -> recorder;
    stats -> exporter;
-   duplicator -> receiver1 -> receiver2;
+
+   subgraph cluster_receiver {
+     graph[style=dotted];
+     node [style=filled];
+     stats collector;
+     label = "receiver                                   ";
+     color=black;
+   }
 
    subgraph rc {
      rank="same"

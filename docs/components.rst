@@ -100,17 +100,19 @@ dispatch incoming messages to them.
 
 .. code-block:: sh
 
-   POD_NAME=1 mite receiver tcp://127.0.0.1:14303 \
+   mite receiver tcp://127.0.0.1:14303 \
     --processor=my.custom.processors:StatsProcessor \
     --processor=my.custom.processors:CollectorProcessor
 
-   mite receiver tcp://127.0.0.1:14310 --processor=my.custom.processors:PrintProcessor
+   mite receiver tcp://127.0.0.1:14310 \
+    --processor=my.custom.processors:PrintProcessor
 
 **Example custom processors:**
 
 .. code-block:: python
 
     import os
+    from uuid import uuid4
 
     from mite import collector
     from mite.cli import stats
@@ -128,7 +130,7 @@ dispatch incoming messages to them.
 
     class CollectorProcessor:
         def __init__(self):
-            self.collector = collector.Collector(collector_id=os.environ["POD_NAME"])
+            self.collector = collector.Collector(collector_id=str(uuid4()))
 
         def process_raw_message(self, message):
             return self.collector.process_raw_message(message)
