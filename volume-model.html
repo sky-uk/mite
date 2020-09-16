@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Volume model specification &#8212; mite  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Specifying configuration for mite journeys" href="config.html" />
+    <link rel="prev" title="Writing mite journeys and scenarios" href="journeys.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="volume-model-specification">
+<h1>Volume model specification<a class="headerlink" href="#volume-model-specification" title="Permalink to this headline">¶</a></h1>
+<p>A mite volume model should be a callable accepting two arguments, the
+start and end times (in seconds).  It should return an integer,
+indicating the number of transaction per second to run during this
+interval.  There are several ways to specify the volume model for a
+scenario.</p>
+<p>The simplest is by using an anonymous (lambda) function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">lambda</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="k">return</span> <span class="mi">10</span>
+</pre></div>
+</div>
+<p>More complex named functions can also be used.</p>
+<p>Mite also provides a simple DSL for specifying volume models, in the
+<code class="docutils literal notranslate"><span class="pre">mite.volume_model</span></code> module.  The components of the DSL are:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Nothing(duration=1)</span></code></dt><dd><p>Zero TPS for the specified duration</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">Constant(tps=1,</span> <span class="pre">duration=10)</span></code></dt><dd><p>A constant number of tps for the specified duration</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">Ramp(duration=10)</span></code></dt><dd><p>A smooth (linear) transition between the two volume model components
+on either side of the ramp term.  If the ramp appears between two
+components, then the from and to values are automatically computed to
+match those.  If the ramp is the first component in a chain, then
+pass the <code class="docutils literal notranslate"><span class="pre">frm</span></code> argument in addition to <code class="docutils literal notranslate"><span class="pre">duration</span></code>; if it is the
+last in a chain pass the <code class="docutils literal notranslate"><span class="pre">to</span></code> argument.</p>
+</dd>
+</dl>
+<p>You can combine pieces of this DSL using the addition operator.  For
+example, here is a volume model which runs an initial 1-minute warm-up
+period, followed by an hour-long trapezoidal load pattern (ramp up for 5
+minutes, maintain for 50 minutes, ramp down for 5 minutes):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mite.volume_model</span> <span class="kn">import</span> <span class="n">Constant</span><span class="p">,</span> <span class="n">Ramp</span>
+
+<span class="n">volume_model</span> <span class="o">=</span> <span class="n">Constant</span><span class="p">(</span><span class="n">tps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span> <span class="o">+</span> <span class="n">Ramp</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span> <span class="o">+</span> \
+    <span class="n">Constant</span><span class="p">(</span><span class="n">tps</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span> <span class="o">+</span> <span class="n">Ramp</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mite</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=sky-uk&repo=mite&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
+<li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Volume model specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="journeys.html" title="previous chapter">Writing mite journeys and scenarios</a></li>
+      <li>Next: <a href="config.html" title="next chapter">Specifying configuration for mite journeys</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Sky UK - Identity performance engineers.
+      
+      |
+      <a href="_sources/volume-model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/sky-uk/mite" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
