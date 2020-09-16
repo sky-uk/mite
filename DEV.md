@@ -27,16 +27,17 @@ See the documentation in `DEV.md` in the `id-mite-nft` repo.
 To push a new version of the docs
 
 ```
+pip install sphinx
 # somewhere on your machine
 MITE_DOCS_PATH=`pwd`
 git clone git@github.com:sky-uk/mite.git mite-docs
 cd mite-docs
 git checkout gh-pages
-# in this directory
+# cd back to the mite checkout
 cd docs
 make html
 cp -rn _build/html/* $MITE_DOCS_PATH/mite-docs
-cd $MITE_DOCS_PATH
+cd $MITE_DOCS_PATH/mite-docs
 git add .
 git commit -m "update docs"
 git push
