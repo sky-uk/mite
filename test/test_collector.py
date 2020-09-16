@@ -1,6 +1,7 @@
-import os
 import glob
+import os
 import tempfile
+
 from mite.collector import Collector
 
 raw_msg = "  TEST_MSG_"
@@ -36,7 +37,7 @@ def test_collector_rollback():
         with open(new_file, 'r') as f:
             f0_last_string = f.readline()
         test_dir = temp_dir + '/'
-        new_file = glob.glob(os.path.join(test_dir, '15*0'))[0]
+        new_file = glob.glob(os.path.join(test_dir, '16*0'))[0]
         with open(new_file, 'r') as f:
             f1_last_string = f.readline()
         assert check_msg_rollback in f0_last_string
