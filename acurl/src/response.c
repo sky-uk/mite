@@ -62,6 +62,9 @@ void start_request(struct aeEventLoop *UNUSED(eventLoop), int UNUSED(fd), void *
     if(rd->auth != NULL) {
         curl_easy_setopt(rd->curl, CURLOPT_USERPWD, rd->auth);
     }
+    // An empty string enables the cookie engine without adding any
+    // cookies: https://curl.haxx.se/libcurl/c/CURLOPT_COOKIEFILE.html
+    curl_easy_setopt(rd->curl, CURLOPT_COOKIEFILE, "");
     for(int i=0; i < rd->cookies_len; i++) {
         DEBUG_PRINT("set cookie [%s]", rd->cookies_str[i]);
         curl_easy_setopt(rd->curl, CURLOPT_COOKIELIST, rd->cookies_str[i]);
