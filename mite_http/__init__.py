@@ -16,7 +16,7 @@ class AcurlSessionWrapper:
 
     def getattr(self, attrname):
         try:
-            r = object.___getattr__(self, attrname)
+            r = object.__getattr__(self, attrname)
             return r
         except AttributeError:
             pass
