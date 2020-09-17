@@ -1,21 +1,22 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Writing mite journeys and scenarios &#8212; mite  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Specifying configuration for mite journeys" href="config.html" />
+    <link rel="next" title="Volume model specification" href="volume-model.html" />
     <link rel="prev" title="Mite components" href="components.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -58,12 +59,12 @@ HTTP APIs to create data.  An example might be as follows:</p>
 <span class="kn">from</span> <span class="nn">mite_http</span> <span class="kn">import</span> <span class="n">mite_http</span>
 
 <span class="nd">@mite_http</span>
-<span class="n">async</span> <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">create_user</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
     <span class="n">username</span> <span class="o">=</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span>
-    <span class="n">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Create user&quot;</span><span class="p">):</span>
-        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/users/create&quot;</span><span class="p">,</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Create user&quot;</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/users/create&quot;</span><span class="p">,</span>
                             <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;test1234&quot;</span><span class="p">})</span>
-        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;data_created&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;users&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">})</span>
+        <span class="k">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;data_created&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;users&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">})</span>
 </pre></div>
 </div>
 <p>We use the python standard library <a class="reference external" href="https://docs.python.org/3/library/uuid.html#module-uuid" title="(in Python v3.8)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">uuid</span> <span class="pre">module</span></code></a> to
@@ -94,7 +95,7 @@ of users.</p>
 
 <span class="n">usernames</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;recorder-data&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">Unpacker</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">use_list</span><span class="o">=</span><span class="bp">False</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">Unpacker</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">raw</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_list</span><span class="o">=</span><span class="kc">False</span><span class="p">)):</span>
         <span class="n">usernames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">msg</span><span class="p">[</span><span class="s2">&quot;username&quot;</span><span class="p">],))</span>
 
 <span class="n">username_datapool</span> <span class="o">=</span> <span class="n">RecyclableIterableDataPool</span><span class="p">(</span><span class="n">usernames</span><span class="p">)</span>
@@ -107,9 +108,9 @@ are tuples; this is required by miteʼs data pool framework.</p>
 </div>
 <p>Finally, we can use this datapool in our scenario:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@mite_http</span>
-<span class="n">async</span> <span class="k">def</span> <span class="nf">signin</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
-    <span class="n">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Log in&quot;</span><span class="p">):</span>
-        <span class="n">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/login&quot;</span><span class="p">,</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">signin</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">ctx</span><span class="o">.</span><span class="n">transaction</span><span class="p">(</span><span class="s2">&quot;Log in&quot;</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_url&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/login&quot;</span><span class="p">,</span>
                             <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;test1234&quot;</span><span class="p">})</span>
 
 <span class="k">def</span> <span class="nf">my_scenario</span><span class="p">():</span>
@@ -151,9 +152,11 @@ are tuples; this is required by miteʼs data pool framework.</p>
 <li class="toctree-l2"><a class="reference internal" href="#data-creation-scenarios">Data creation scenarios</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="volume-model.html">Volume model specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a></li>
 </ul>
 
 <div class="relations">
@@ -161,7 +164,7 @@ are tuples; this is required by miteʼs data pool framework.</p>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="components.html" title="previous chapter">Mite components</a></li>
-      <li>Next: <a href="config.html" title="next chapter">Specifying configuration for mite journeys</a></li>
+      <li>Next: <a href="volume-model.html" title="next chapter">Volume model specification</a></li>
   </ul></li>
 </ul>
 </div>
@@ -174,7 +177,7 @@ are tuples; this is required by miteʼs data pool framework.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 

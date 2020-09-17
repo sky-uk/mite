@@ -1,18 +1,19 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Design and deployment &#8212; mite  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Prometheus and mite" href="prometheus.html" />
@@ -48,21 +49,22 @@ environment like Kubernetes) or on different machines entirely.</p>
 <li><p>controller*: manages a test scenario and feeds tasks to the runners.
 (For more on how mite tests are organized, see the <a class="reference external" href="https://github.com/sky-uk/mite#your-first-scenario">README</a>)</p></li>
 <li><p>runner: responsible for injecting the test load into the target system</p></li>
+<li><p>duplicator*: a message router between the controller/runner and their
+downstream components</p></li>
+<li><p>collector: logs messages appearing on the mite message bus to a file</p></li>
+<li><p>receiver: dispatches incoming messages to connected <code class="docutils literal notranslate"><span class="pre">processors</span></code></p></li>
+<li><p>recorder*: listens for special messages on the bus and records them
+to a file. This is used for <a class="reference internal" href="journeys.html#data-creation-scenarios"><span class="std std-ref">data creation scenarios</span></a>.</p></li>
 <li><p>stats: aggregates raw messages from the controller and runner into
 statistical summaries</p></li>
 <li><p>exporter*: (aka prometheus exporter) listens for aggregations from the
 stats component, and exposes these via HTTP to a
 <a class="reference internal" href="prometheus.html#prometheus-doc"><span class="std std-ref">Prometheus instance</span></a></p></li>
-<li><p>recorder*: logs messages appearing on the mite message bus to a file</p></li>
-<li><p>collector: listens for special messages on the bus and records them
-to a file.  This is used for <a class="reference internal" href="journeys.html#data-creation-scenarios"><span class="std std-ref">data creation scenarios</span></a>.</p></li>
-<li><p>duplicator*: a message router between the controller/runner and their
-downstream components</p></li>
 </ul>
 <p>The components marked with an asterisk are singletons; the rest can be
 scaled up to meet the demand of the test.  The communication pathways
 between the components are represented in the following diagram:</p>
-<div class="graphviz"><img src="_images/graphviz-8c4b894bf07a3507f0a1ad70703cc01deb2af466.png" alt="digraph architecture {
+<div class="graphviz"><img src="_images/graphviz-5cb890c1d1234216a8cd0b62f5123fe91911c298.png" alt="digraph architecture {
 
 runner -&gt; duplicator;
 controller -&gt; duplicator;
@@ -70,6 +72,14 @@ duplicator -&gt; stats;
 duplicator -&gt; collector;
 duplicator -&gt; recorder;
 stats -&gt; exporter;
+
+subgraph cluster_receiver {
+  graph[style=dotted];
+  node [style=filled];
+  stats collector;
+  label = &quot;receiver                                   &quot;;
+  color=black;
+}
 
 subgraph rc {
   rank=&quot;same&quot;
@@ -246,6 +256,7 @@ within-cluster communication of the scale that we require.</p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume-model.html">Volume model specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Design and deployment</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#design-of-mite">Design of mite</a></li>
@@ -253,6 +264,7 @@ within-cluster communication of the scale that we require.</p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a></li>
 </ul>
 
 <div class="relations">
@@ -273,7 +285,7 @@ within-cluster communication of the scale that we require.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 

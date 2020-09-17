@@ -1,18 +1,19 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mite: the mighty performance testing framework &#8212; mite  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Mite components" href="components.html" />
@@ -58,6 +59,7 @@ goals for the project.</p></li>
 <li class="toctree-l2"><a class="reference internal" href="journeys.html#data-creation-scenarios">Data creation scenarios</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="volume-model.html">Volume model specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="config.html#via-environment-variables">Via environment variables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="config.html#via-a-python-callable">Via a python callable</a></li>
@@ -73,6 +75,10 @@ goals for the project.</p></li>
 <li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="prometheus.html#id1">Prometheus</a></li>
 <li class="toctree-l2"><a class="reference internal" href="prometheus.html#id2">Grafana</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="stats.html#writing-custom-stats">Writing custom stats</a></li>
 </ul>
 </li>
 </ul>
@@ -107,9 +113,11 @@ goals for the project.</p></li>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume-model.html">Volume model specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prometheus.html">Prometheus and mite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a></li>
 </ul>
 
 <div class="relations">
@@ -129,7 +137,7 @@ goals for the project.</p></li>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 

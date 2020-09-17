@@ -1,20 +1,22 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prometheus and mite &#8212; mite  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Customizing miteʼs stats" href="stats.html" />
     <link rel="prev" title="Design and deployment" href="design-deployment.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -91,6 +93,13 @@ to match the prometheus instance you configured grafana with.</p>
 
 
 
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=sky-uk&repo=mite&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
 
 
 <h3>Navigation</h3>
@@ -98,6 +107,7 @@ to match the prometheus instance you configured grafana with.</p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="components.html">Mite components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="journeys.html">Writing mite journeys and scenarios</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume-model.html">Volume model specification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">Specifying configuration for mite journeys</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design-deployment.html">Design and deployment</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Prometheus and mite</a><ul>
@@ -105,6 +115,7 @@ to match the prometheus instance you configured grafana with.</p>
 <li class="toctree-l2"><a class="reference internal" href="#id2">Grafana</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="stats.html">Customizing miteʼs stats</a></li>
 </ul>
 
 <div class="relations">
@@ -112,6 +123,7 @@ to match the prometheus instance you configured grafana with.</p>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="design-deployment.html" title="previous chapter">Design and deployment</a></li>
+      <li>Next: <a href="stats.html" title="next chapter">Customizing miteʼs stats</a></li>
   </ul></li>
 </ul>
 </div>
@@ -124,7 +136,7 @@ to match the prometheus instance you configured grafana with.</p>
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 
@@ -141,14 +153,14 @@ to match the prometheus instance you configured grafana with.</p>
       &copy;2019, Sky UK - Identity performance engineers.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
-      
-      |
       <a href="_sources/prometheus.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
+    
+    <a href="https://github.com/sky-uk/mite" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
     
 
     
