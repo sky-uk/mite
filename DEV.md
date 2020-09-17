@@ -27,6 +27,7 @@ See the documentation in `DEV.md` in the `id-mite-nft` repo.
 To push a new version of the docs
 
 ```
+# Install graphviz on your system (On MacOS: brew install graphviz)
 pip install sphinx
 # somewhere on your machine
 MITE_DOCS_PATH=`pwd`
