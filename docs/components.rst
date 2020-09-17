@@ -86,6 +86,59 @@ socket for the duplicator.
 
 .. _msgpack: https://msgpack.org/index.html
 
+.. _receiver-component:
+
+Receiver
+--------
+
+The mite receiver component is a generic mechanism that can perform tasks
+not limited to fulfilling a single role (eg. stats, collector). This allows
+changing a mite pipeline more easily, without introducing new processes and
+network components. A ``mite.cli.receiver`` instance can have multiple custom
+``processors`` connected to it as either listeners or raw listeners and can
+dispatch incoming messages to them.
+
+.. code-block:: sh
+
+   mite receiver tcp://127.0.0.1:14303 \
+    --processor=my.custom.processors:StatsProcessor \
+    --processor=my.custom.processors:CollectorProcessor
+
+   mite receiver tcp://127.0.0.1:14310 \
+    --processor=my.custom.processors:PrintProcessor
+
+**Example custom processors:**
+
+.. code-block:: python
+
+    import os
+    from uuid import uuid4
+
+    from mite import collector
+    from mite.cli import stats
+    from mite.zmq import Sender
+
+
+    class StatsProcessor:
+        def __init__(self):
+            sender = Sender()
+            sender.bind("tcp://127.0.0.1:14310")
+            self.stats = stats.Stats(sender=sender.send)
+
+        def process_message(self, message):
+            return self.stats.process(message)
+
+    class CollectorProcessor:
+        def __init__(self):
+            self.collector = collector.Collector(collector_id=str(uuid4()))
+
+        def process_raw_message(self, message):
+            return self.collector.process_raw_message(message)
+
+    class PrintProcessor:
+        def process_message(self, message):
+            print(message)
+
 Prometheus Exporter
 -------------------
 
