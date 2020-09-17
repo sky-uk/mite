@@ -36,7 +36,7 @@ git checkout gh-pages
 # cd back to the mite checkout
 cd docs
 make html
-cp -rn _build/html/* $MITE_DOCS_PATH/mite-docs
+cp -r _build/html/* $MITE_DOCS_PATH/mite-docs
 cd $MITE_DOCS_PATH/mite-docs
 git add .
 git commit -m "update docs"
