@@ -46,7 +46,7 @@ class RunnerControllerTransportExample:  # pragma: no cover
 
     async def bye(self, runner_id):
         """Takes:
-            runner_id
+        runner_id
         """
         pass
 
