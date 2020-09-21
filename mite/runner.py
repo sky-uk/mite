@@ -16,18 +16,22 @@ def spec_import_cached(journey_spec):
     return spec_import(journey_spec)
 
 
+async def _sleep_loop(delay):
+    while True:
+        await asyncio.sleep(delay)
+
+
 class RunnerControllerTransportExample:  # pragma: no cover
     async def hello(self):
         """Returns:
-            runner_id
-            test_name
-            config_list - k, v pairs
-            """
+        runner_id
+        test_name
+        config_list - k, v pairs
+        """
         pass
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        """\
-        Takes:
+        """Takes:
             runner_id
             current_work - dict of scenario_id, current volume
             completed_data_ids - list of scenario_id, scenario_data_id pairs
@@ -41,9 +45,8 @@ class RunnerControllerTransportExample:  # pragma: no cover
         pass
 
     async def bye(self, runner_id):
-        """\
-        Takes:
-            runner_id
+        """Takes:
+        runner_id
         """
         pass
 
@@ -90,6 +93,24 @@ class Runner:
         return self._stop
 
     async def run(self):
+        # This is a hack for the problems we get with the runner failing to
+        # exit cleanly.  331 and 337 are both prime and a fortiori relatively
+        # prime, which means it will take ~30 hours for them to ever
+        # simultaneously be done at the same time (modulo rescheduling jitter).
+        sleep1 = asyncio.create_task(_sleep_loop(331))
+        sleep2 = asyncio.create_task(_sleep_loop(337))
+        run = asyncio.create_task(self._run())
+        done, pending = await asyncio.wait(
+            (sleep1, sleep2, run), return_when=asyncio.FIRST_COMPLETED
+        )
+        if run not in done:
+            logger.error(
+                "Runner.run finished waiting on tasks, but the run loop wasn't complete!"
+            )
+        sleep1.cancel()
+        sleep2.cancel()
+
+    async def _run(self):
         context_id_gen = count(1)
         config = {}
         runner_id, test_name, config_list = await self._transport.hello()

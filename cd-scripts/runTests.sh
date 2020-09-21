@@ -11,6 +11,10 @@ pip install -r dev-requirements.txt || exit 1
 pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
+if [ $PRE_COMMIT_STATUS -ne 0 ]; then
+    git diff
+fi
+
 tox; TOX_EXIT_CODE=$?
 coverage html
 
