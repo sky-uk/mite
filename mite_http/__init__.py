@@ -31,7 +31,6 @@ class AcurlSessionWrapper:
         return self.__callback
 
 
-
 class SessionPool:
     """No longer actually goes pooling as this is built into acurl. API just left in place.
     Will need a refactor"""
@@ -71,7 +70,6 @@ class SessionPool:
         def response_callback(r):
             if session_wrapper._response_callback is not None:
                 session_wrapper._response_callback(r, session_wrapper.additional_metrics)
-
 
             context.send(
                 'http_metrics',
