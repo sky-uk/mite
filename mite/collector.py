@@ -71,7 +71,7 @@ class Collector:
                     )
                 ),
             )
-            logger.warning('moving old current %s to %s', self._current_fn, fn)
+            logger.info('moving old current %s to %s', self._current_fn, fn)
             os.rename(self._current_fn, fn)
 
         with open(self._current_st_fn, 'w') as f:
