@@ -10,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 class Collector:
     def __init__(
-        self, target_dir=None, roll_after=100000, collector_id=None, filter_fn=None,
+        self,
+        target_dir=None,
+        roll_after=100000,
+        collector_id=None,
+        filter_fn=None,
     ):
         logger.info('Initializing collector')
         if target_dir is None:
