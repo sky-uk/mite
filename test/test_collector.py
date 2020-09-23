@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import tempfile
 from unittest.mock import Mock
@@ -74,7 +75,7 @@ def test_filter_fn():
     with tempfile.TemporaryDirectory() as temp_dir:
         collector = Collector(target_dir=temp_dir, filter_fn=filter_mock)
         collector.process_raw_message(test_msg)
-    filter_mock.assert_called_once_with(test_dict)
+    filter_mock.assert_called_once_with(test_msg)
 
 
 def test_filter_fn_true():
@@ -99,3 +100,14 @@ def test_filter_fn_false():
         del collector
         with open(os.path.join(temp_dir, "current"), "rb") as fin:
             assert test_msg not in fin.read()
+
+
+def test_use_json():
+    test_dict = {"type": "test"}
+    test_msg = pack_msg(test_dict)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(target_dir=temp_dir, use_json=True)
+        collector.process_raw_message(test_msg)
+        del collector
+        with open(os.path.join(temp_dir, "current"), "r") as fin:
+            assert fin.read() == json.dumps(test_dict) + "\n"

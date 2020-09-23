@@ -8,7 +8,7 @@ Usage:
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
-    mite [options] collector [--collector-socket=SOCKET] [--collector-filter=SPEC] [--collector-roll=NUM_LINES] [--collector-dir=DIRECTORY]
+    mite [options] collector [--collector-socket=SOCKET] [--collector-filter=SPEC] [--collector-roll=NUM_LINES] [--collector-dir=DIRECTORY] [--collector-use-json]
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
@@ -57,6 +57,7 @@ Options:
     --collector-dir=DIRECTORY         Set the collectors output directory [default: collector_data]
     --collector-filter=SPEC           Function spec to filter messages collected by the collector
     --collector-roll=NUM_LINES        How many lines per collector output file [default: 100000]
+    --collector-use-json              Output in json format rather than msgpack
     --recorder-dir=DIRECTORY          Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
