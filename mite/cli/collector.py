@@ -21,7 +21,7 @@ def collector(opts):
         target_dir=opts["--collector-dir"],
         roll_after=int(opts["--collector-roll"]),
         filter_fn=filter_fn,
-        use_json=opts["--collector-use-json"] is not None,
+        use_json=opts["--collector-use-json"],
     )
     receiver.add_raw_listener(collector.process_raw_message)
     asyncio.get_event_loop().run_until_complete(receiver.run())
