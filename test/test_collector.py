@@ -1,8 +1,11 @@
 import glob
+import json
 import os
 import tempfile
+from unittest.mock import Mock
 
 from mite.collector import Collector
+from mite.utils import pack_msg
 
 raw_msg = "  TEST_MSG_"
 check_msg_value = "TEST_MSG_0  TEST_MSG_1  TEST_MSG_2  TEST_MSG_3  TEST_MSG_4"
@@ -53,13 +56,58 @@ def test_rotating_file():
         del collector
 
         coll_curr_start_time = os.path.join(temp_dir, 'current_start_time')
-        if os.path.isfile(coll_curr_start_time):
-            with open(coll_curr_start_time, "r") as f:
-                start_time = f.read()
-        else:
-            assert False, "The collector_start_time file doen't exist"
+        assert os.path.isfile(
+            coll_curr_start_time
+        ), "The collector_start_time file doen't exist"
+        with open(coll_curr_start_time, "r") as f:
+            start_time = f.read()
 
         # Creating a new controler to rotate the current file
         collector = Collector(temp_dir)  # noqa: F841
 
         assert any(file.startswith(start_time + "_") for file in os.listdir(temp_dir))
+
+
+def test_filter_fn():
+    filter_mock = Mock()
+    test_dict = {"type": "test"}
+    test_msg = pack_msg(test_dict)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(target_dir=temp_dir, filter_fn=filter_mock)
+        collector.process_raw_message(test_msg)
+    filter_mock.assert_called_once_with(test_msg)
+
+
+def test_filter_fn_true():
+    filter_mock = lambda x: True
+    test_dict = {"type": "test"}
+    test_msg = pack_msg(test_dict)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(target_dir=temp_dir, filter_fn=filter_mock)
+        collector.process_raw_message(test_msg)
+        del collector
+        with open(os.path.join(temp_dir, "current"), "rb") as fin:
+            assert test_msg in fin.read()
+
+
+def test_filter_fn_false():
+    filter_mock = lambda x: False
+    test_dict = {"type": "test"}
+    test_msg = pack_msg(test_dict)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(target_dir=temp_dir, filter_fn=filter_mock)
+        collector.process_raw_message(test_msg)
+        del collector
+        with open(os.path.join(temp_dir, "current"), "rb") as fin:
+            assert test_msg not in fin.read()
+
+
+def test_use_json():
+    test_dict = {"type": "test"}
+    test_msg = pack_msg(test_dict)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        collector = Collector(target_dir=temp_dir, use_json=True)
+        collector.process_raw_message(test_msg)
+        del collector
+        with open(os.path.join(temp_dir, "current"), "r") as fin:
+            assert fin.read() == json.dumps(test_dict) + "\n"
