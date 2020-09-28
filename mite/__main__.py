@@ -8,7 +8,7 @@ Usage:
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
-    mite [options] collector [--collector-socket=SOCKET]
+    mite [options] collector [--collector-socket=SOCKET] [--collector-filter=SPEC] [--collector-roll=NUM_LINES] [--collector-dir=DIRECTORY] [--collector-use-json]
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
@@ -55,7 +55,9 @@ Options:
     --message-backend=BACKEND         Backend to transport messages over [default: ZMQ]
     --exclude-working-directory       By default mite puts the current directory on the python path
     --collector-dir=DIRECTORY         Set the collectors output directory [default: collector_data]
+    --collector-filter=SPEC           Function spec to filter messages collected by the collector
     --collector-roll=NUM_LINES        How many lines per collector output file [default: 100000]
+    --collector-use-json              Output in json format rather than msgpack
     --recorder-dir=DIRECTORY          Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
@@ -76,22 +78,15 @@ import uvloop
 
 from .cli import receiver, stats
 from .cli.cat import cat, uncat
+from .cli.collector import collector
 from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
 from .cli.duplicator import duplicator
 from .cli.test import journey_cmd, scenario_cmd
-from .collector import Collector
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module, spec_import
 from .web import app, prometheus_metrics
-
-
-def _collector_receiver(opts):
-    socket = opts['--collector-socket']
-    receiver = _msg_backend_module(opts).Receiver()
-    receiver.connect(socket)
-    return receiver
 
 
 def _recorder_receiver(opts):
@@ -276,13 +271,6 @@ def runner(opts):
     # callbacks and should ensure that the porgrma exits cleanly.
     loop.run_until_complete(asyncio.sleep(5))
     loop.close()
-
-
-def collector(opts):
-    receiver = _collector_receiver(opts)
-    collector = Collector(opts['--collector-dir'], int(opts['--collector-roll']))
-    receiver.add_raw_listener(collector.process_raw_message)
-    asyncio.get_event_loop().run_until_complete(receiver.run())
 
 
 def recorder(opts):
