@@ -76,7 +76,7 @@ class HttpStatsOutput:
                 'Total> #Reqs:%d #Errs:%d', self._req_total, self._error_total
             )
             self._logger.info(
-                'Last %d Secs> #Reqs:%d #Errs:%d Req/S:%.1f min:%s 25%%:%s 50%%:%s'
+                'Last %d Secs> #Reqs:%d #Errs:%d Req/S:%.1f min:%s 25%%:%s 50%%:%s '
                 '75%%:%s 90%%:%s 99%%:%s 99.9%%:%s 99.99%%:%s max:%s',
                 self._period,
                 self._req_recent,
