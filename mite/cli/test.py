@@ -40,8 +40,7 @@ class DirectReciever:
     def filter_listeners(self, clazz):
         return list(
             filter(
-                lambda listener: isinstance(listener.__self__, clazz),
-                self._listeners,
+                lambda listener: isinstance(listener.__self__, clazz), self._listeners,
             )
         )
 
@@ -91,6 +90,8 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
     loop = asyncio.get_event_loop()
+    if opts["--debugging"]:
+        loop.set_debug(True)
 
     has_error = False
 
