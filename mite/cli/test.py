@@ -40,7 +40,8 @@ class DirectReciever:
     def filter_listeners(self, clazz):
         return list(
             filter(
-                lambda listener: isinstance(listener.__self__, clazz), self._listeners,
+                lambda listener: isinstance(listener.__self__, clazz),
+                self._listeners,
             )
         )
 
