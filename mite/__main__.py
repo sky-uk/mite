@@ -14,7 +14,7 @@ Usage:
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
-    mite [options] cat MSGPACK_FILE_PATH
+    mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
 
     mite --help
@@ -62,6 +62,7 @@ Options:
     --sleep-time=SLEEP                Set the second to await between each request [default: 1]
     --logging-webhook=URL             URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS   Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
+    --prettify-timestamps             Reformat unix timestamps to human readable dates
 """
 import asyncio
 import inspect
