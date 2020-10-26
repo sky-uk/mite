@@ -90,7 +90,10 @@ class Context:
                 raise
         finally:
             self.send(
-                'txn', start_time=start_time, end_time=time.time(), had_error=error,
+                'txn',
+                start_time=start_time,
+                end_time=time.time(),
+                had_error=error,
             )
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
@@ -113,5 +116,9 @@ class Context:
             stacktrace = ''.join(traceback.format_tb(tb))
             kwargs["stacktrace"] = stacktrace
         self.send(
-            metric_name, message=message, ex_type=ex_type, location=location, **kwargs,
+            metric_name,
+            message=message,
+            ex_type=ex_type,
+            location=location,
+            **kwargs,
         )
