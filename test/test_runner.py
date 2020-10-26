@@ -43,7 +43,7 @@ async def test_runner_exception():
         if message['type'] == 'exception':
             print(message)
             assert message['ex_type'] == "Exception"
-            assert message['message'] == "test"
+            assert message['message'] == "Exception: test"
             break
     else:
         assert False, "Exception message was not sent"
@@ -65,7 +65,7 @@ async def test_runner_mite_error():
     for message in sender.messages:
         if message['type'] == 'error':
             print(message)
-            assert message['message'] == "test"
+            assert message['message'] == "mite.exceptions.MiteError: test"
             break
     else:
         assert False, "Exception message was not sent"

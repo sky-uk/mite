@@ -149,7 +149,7 @@ _MITE_STATS = [
     Counter(
         name='mite_journey_error_total',
         matcher=matcher_by_type('error', 'exception'),
-        extractor=extractor('test journey transaction location message'.split()),
+        extractor=extractor('test journey transaction location ex_type message'.split()),
     ),
     Counter(
         name='mite_transaction_total',
