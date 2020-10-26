@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import sys
 import time
@@ -25,26 +24,17 @@ _MITE_LIB_PATHS = {str(p) for p in (_HERE, _MITE_HTTP)}
 
 def _tb_format_location(tb):
     try:
-        frame = tb.tb_frame
-        while (
-            any(frame.f_code.co_filename.startswith(p) for p in _MITE_LIB_PATHS)
-            or frame.f_code.co_filename == contextlib.__file__
-        ):
-            # Keep walking the stack frames until we get to something that's
-            # not in mite code, nor in the stdlib's contextlib module (which
-            # also shows up in our backtraces).
-            frame = frame.f_back
-        f_code = frame.f_code
-        return f"{f_code.co_filename}:{f_code.co_firstlineno}:{f_code.co_name}"
+        stack_summary = traceback.extract_tb(tb, limit=-1)[0]
+        return f"{stack_summary.filename}:{stack_summary.lineno}:{stack_summary.name}"
     except Exception:
         return "unable_to_format_source:0:none"
 
 
 class Context:
-    def __init__(self, send_fn, config, id_data={}, should_stop_func=None, debug=False):
+    def __init__(self, send_fn, config, id_data=None, should_stop_func=None, debug=False):
         self._send_fn = send_fn
         self._config = config
-        self._id_data = id_data
+        self._id_data = id_data or {}
         self._should_stop_func = should_stop_func
         self._transaction_id = None
         self._transaction_name = None
@@ -100,17 +90,14 @@ class Context:
                 raise
         finally:
             self.send(
-                'txn',
-                start_time=start_time,
-                end_time=time.time(),
-                had_error=error,
+                'txn', start_time=start_time, end_time=time.time(), had_error=error,
             )
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
 
-    def _send_exception(self, value):
-        message = str(value)
-        ex_type = type(value).__name__
+    def _send_exception(self, exn):
+        message = traceback.format_exception_only(type(exn), exn)[-1].strip()
+        ex_type = type(exn).__name__
         tb = sys.exc_info()[2]
         location = _tb_format_location(tb)
         # FIXME: this winds up sending quite a lot of data on the wire that we
@@ -125,7 +112,8 @@ class Context:
             stacktrace=stacktrace,
         )
 
-    def _send_mite_error(self, value):
+    def _send_mite_error(self, exn):
         tb = sys.exc_info()[2]
         location = _tb_format_location(tb)
-        self.send('error', message=str(value), location=location, **value.fields)
+        message = traceback.format_exception_only(type(exn), exn)[-1].strip()
+        self.send('error', message=message, location=location, **exn.fields)
