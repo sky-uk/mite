@@ -77,9 +77,9 @@ class Context:
                 raise
 
             if isinstance(e, MiteError):
-                self._send_mite_error(e)
+                self._send_exception("error", e, include_fields=True)
             else:
-                self._send_exception(e)
+                self._send_exception("exception", e, include_stacktrace=True)
             if self._debug:  # pragma: no cover
                 import ipdb
 
@@ -95,25 +95,23 @@ class Context:
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
 
-    def _send_exception(self, exn):
+    def _send_exception(
+        self, metric_name, exn, include_stacktrace=False, include_fields=False
+    ):
         message = traceback.format_exception_only(type(exn), exn)[-1].strip()
         ex_type = type(exn).__name__
         tb = sys.exc_info()[2]
         location = _tb_format_location(tb)
-        # FIXME: this winds up sending quite a lot of data on the wire that we
-        # don't actually use most of the time... do we want to make it
-        # configurable whether to send this?
-        stacktrace = ''.join(traceback.format_tb(tb))
+        if include_fields:
+            kwargs = {**exn.fields}
+        else:
+            kwargs = {}
+        if include_stacktrace:
+            # FIXME: this winds up sending quite a lot of data on the wire
+            # that we don't actually use most of the time... do we want to
+            # make it configurable whether to send this?
+            stacktrace = ''.join(traceback.format_tb(tb))
+            kwargs["stacktrace"] = stacktrace
         self.send(
-            'exception',
-            message=message,
-            ex_type=ex_type,
-            location=location,
-            stacktrace=stacktrace,
+            metric_name, message=message, ex_type=ex_type, location=location, **kwargs,
         )
-
-    def _send_mite_error(self, exn):
-        tb = sys.exc_info()[2]
-        location = _tb_format_location(tb)
-        message = traceback.format_exception_only(type(exn), exn)[-1].strip()
-        self.send('error', message=message, location=location, **exn.fields)
