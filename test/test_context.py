@@ -107,7 +107,7 @@ async def test_exception_not_sent_twice():
 
     exn_msg = send_fn.call_args_list[0][0][0]
     assert exn_msg["type"] == "exception"
-    assert exn_msg["transaction"] == "inner"
+    assert exn_msg["transaction"] == "test :: inner"
 
 
 @pytest.mark.asyncio
