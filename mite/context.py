@@ -90,7 +90,10 @@ class Context:
                 raise
         finally:
             self.send(
-                'txn', start_time=start_time, end_time=time.time(), had_error=error,
+                'txn',
+                start_time=start_time,
+                end_time=time.time(),
+                had_error=error,
             )
             self._transaction_name = old_transaction_name
             self._transaction_id = old_transaction_id
