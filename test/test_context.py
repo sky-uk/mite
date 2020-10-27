@@ -68,7 +68,7 @@ async def test_nested_transactions():
 
     inner_end_msg = send_fn.call_args_list[0][0][0]
     assert inner_end_msg["type"] == "txn"
-    assert inner_end_msg["transaction"] == "inner"
+    assert inner_end_msg["transaction"] == "outer :: inner"
 
     outer_end_msg = send_fn.call_args_list[1][0][0]
     assert outer_end_msg["type"] == "txn"
