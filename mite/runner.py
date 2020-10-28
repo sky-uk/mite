@@ -199,11 +199,10 @@ class Runner:
         )
         journey = spec_import_cached(journey_spec)
         try:
-            async with context.transaction('__root__'):
-                if args is None:
-                    await journey(context)
-                else:
-                    await journey(context, *args)
+            if args is None:
+                await journey(context)
+            else:
+                await journey(context, *args)
         except Exception as e:
             if not getattr(e, "handled", False):
                 if self._debug:
