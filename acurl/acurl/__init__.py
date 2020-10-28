@@ -379,7 +379,13 @@ class Response:
     @property
     def headers(self):
         if not hasattr(self, '_headers'):
-            self._headers = dict(self.headers_tuple)
+            self._headers = dict()
+            for k, v in self.headers_tuple:
+                if k in self._headers:
+                    self._headers[k].append(v)
+                else:
+                    self._headers[k] = [v]
+            self._headers = {k: ', '.join(v) for k, v in self._headers.items()}
         return self._headers
 
     # TODO: is this part of the request api?
