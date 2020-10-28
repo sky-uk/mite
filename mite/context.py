@@ -66,7 +66,10 @@ class Context:
         old_transaction_name = self._transaction_name
         old_transaction_id = self._transaction_id
         self._transaction_id = next(self._trans_id_gen)
-        self._transaction_name = name
+        if old_transaction_name is not None:
+            self._transaction_name = old_transaction_name + " :: " + name
+        else:
+            self._transaction_name = name
         start_time = time.time()
         error = False
         try:
