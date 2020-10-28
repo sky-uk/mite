@@ -4,7 +4,7 @@ from collections import namedtuple, defaultdict
 from mite.scenario import ScenarioManager
 
 
-def baseline_rumpup_mock(peak, ramp_over=5, sustain=60):
+def baseline_rampup_mock(peak, ramp_over=5, sustain=60):
     def volumemodel(start, end):
         return peak
 
@@ -14,38 +14,38 @@ def baseline_rumpup_mock(peak, ramp_over=5, sustain=60):
 Scenario = namedtuple('Scenario', 'journey_spec datapool volumemodel'.split())
 
 test_scenarios = [
-    ("test_scenario_01", None, baseline_rumpup_mock(1)),
-    ("test_scenario_02", None, baseline_rumpup_mock(2)),
-    ("test_scenario_03", None, baseline_rumpup_mock(3)),
-    ("test_scenario_04", None, baseline_rumpup_mock(4)),
-    ("test_scenario_05", None, baseline_rumpup_mock(5)),
+    ("test_scenario_01", None, baseline_rampup_mock(1)),
+    ("test_scenario_02", None, baseline_rampup_mock(2)),
+    ("test_scenario_03", None, baseline_rampup_mock(3)),
+    ("test_scenario_04", None, baseline_rampup_mock(4)),
+    ("test_scenario_05", None, baseline_rampup_mock(5)),
 ]
 
 test_scenario_manager_scenarios = {
     1: Scenario(
         journey_spec='test_scenario_01',
         datapool=None,
-        volumemodel=baseline_rumpup_mock(1),
+        volumemodel=baseline_rampup_mock(1),
     ),
     2: Scenario(
         journey_spec='test_scenario_02',
         datapool=None,
-        volumemodel=baseline_rumpup_mock(2),
+        volumemodel=baseline_rampup_mock(2),
     ),
     3: Scenario(
         journey_spec='test_scenario_03',
         datapool=None,
-        volumemodel=baseline_rumpup_mock(3),
+        volumemodel=baseline_rampup_mock(3),
     ),
     4: Scenario(
         journey_spec='test_scenario_04',
         datapool=None,
-        volumemodel=baseline_rumpup_mock(4),
+        volumemodel=baseline_rampup_mock(4),
     ),
     5: Scenario(
         journey_spec='test_scenario_05',
         datapool=None,
-        volumemodel=baseline_rumpup_mock(5),
+        volumemodel=baseline_rampup_mock(5),
     ),
 }
 
