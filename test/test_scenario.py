@@ -1,6 +1,7 @@
+from collections import defaultdict, namedtuple
+
 import pytest
 
-from collections import namedtuple, defaultdict
 from mite.scenario import ScenarioManager
 
 
