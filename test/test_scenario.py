@@ -75,7 +75,6 @@ def test_upadate_required_work():
 
 @pytest.mark.asyncio
 async def test_get_work():
-
     scenario_manager = ScenarioManager()
     for row in test_scenarios:
         scenario_manager.add_scenario(row[0], row[1], row[2])
