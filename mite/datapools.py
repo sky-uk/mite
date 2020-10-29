@@ -127,3 +127,40 @@ class SingleRunDataPoolWrapper:
             self.has_ran = True
             return await self.data_pool.checkout(config)
         raise DataPoolExhausted()
+
+
+class MetaDataPoolWrapper:
+    """
+    Extend a datapool to provide additional context. This is useful
+    when driving a single journey from multiple datapools and can be
+    used to pass fixed labelling parameters to the journey function.
+
+    ```
+    small_datapool = MetaDataPoolWrapper(_small_datapool, "small")
+    large_datapool = MetaDataPoolWrapper(_small_datapool, "large")
+
+    def scenario(config):
+        return [
+            (1, "journey", small_datapool),
+            (1, "journey", large_datapool)
+        ]
+
+    def journey(ctx, datapool_name, datapool_item):
+        assert(datapool_name in ("small", "large"))
+    ```
+    """
+    def __init__(self, data_pool, *context):
+        self._data_pool = data_pool
+        self._context = context
+
+    async def checkin(self, id):
+        return await self._data_pool.checkin(id)
+
+    async def checkout(self, config):
+        _id, data = await self._data_pool.checkout(config)
+        print(self._context)
+        return DataPoolItem(_id, (*self._context, *data))
+
+
+def add_datapool_metadata(datapool, *metadata):
+    return MetaDataPoolWrapper(datapool, *metadata)
