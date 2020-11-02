@@ -8,7 +8,7 @@ import ujson
 from pkg_resources import DistributionNotFound, get_distribution
 
 import _acurl
-from acurl.utils import CaseInsensitiveDefaultDict
+from acurl.utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 
 try:
     __version__ = get_distribution(__name__).version
@@ -381,11 +381,12 @@ class Response:
     @property
     def headers(self):
         if not hasattr(self, '_headers'):
-            self._headers = CaseInsensitiveDefaultDict(list)
+            headers = CaseInsensitiveDefaultDict(list)
             for k, v in self.headers_tuple:
-                self._headers[k].append(v)
-            for k in self._headers:
-                self._headers[k] = ', '.join(self._headers[k])
+                headers[k].append(v)
+            self._headers = CaseInsensitiveDict()
+            for k in headers:
+                self._headers[k] = ', '.join(headers[k])
         return self._headers
 
     # TODO: is this part of the request api?
