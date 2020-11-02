@@ -2,13 +2,13 @@ import asyncio
 import shlex
 import threading
 import time
-from collections import defaultdict
 from urllib.parse import urlparse
 
 import ujson
 from pkg_resources import DistributionNotFound, get_distribution
 
 import _acurl
+from acurl.utils import CaseInsensitiveDefaultDict
 
 try:
     __version__ = get_distribution(__name__).version
@@ -381,10 +381,11 @@ class Response:
     @property
     def headers(self):
         if not hasattr(self, '_headers'):
-            self._headers = defaultdict(list)
+            self._headers = CaseInsensitiveDefaultDict(list)
             for k, v in self.headers_tuple:
                 self._headers[k].append(v)
-            self._headers = {k: ', '.join(v) for k, v in self._headers.items()}
+            for k in self._headers:
+                self._headers[k] = ', '.join(self._headers[k])
         return self._headers
 
     # TODO: is this part of the request api?
