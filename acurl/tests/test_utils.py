@@ -14,9 +14,9 @@ def test_case_insensitive_get():
 
 
 def test_case_insensitive_get_item():
-     my_dict = CaseInsensitiveDict({"Foo": "Bar"})
-     assert my_dict["Foo"] == "Bar"
-     assert my_dict["foo"] == "Bar"
+    my_dict = CaseInsensitiveDict({"Foo": "Bar"})
+    assert my_dict["Foo"] == "Bar"
+    assert my_dict["foo"] == "Bar"
 
 
 def test_case_insensitive_set_item():
@@ -62,4 +62,3 @@ def test_case_insensitive_setdefault():
     assert my_dict.setdefault("foo") == "Bar"
     assert my_dict.setdefault("Baz", "Qux") == "Qux"
     assert my_dict.setdefault("baz") == "Qux"
-
