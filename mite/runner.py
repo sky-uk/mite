@@ -3,8 +3,6 @@ import functools
 import logging
 from itertools import count
 
-import ipdb
-
 from .context import Context
 from .utils import spec_import
 
@@ -207,6 +205,6 @@ class Runner:
         except Exception as e:
             if not getattr(e, "handled", False):
                 if self._debug:
-                    ipdb.set_trace()
+                    breakpoint()
                     raise
         return scenario_id, scenario_data_id
