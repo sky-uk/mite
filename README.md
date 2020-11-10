@@ -149,7 +149,8 @@ before running mite. Python's built-in [pdb](https://docs.python.org/3/library/p
 debugger is invoked by default, but this can be changed to use, say, the
 [ipdb debugger](https://github.com/gotcha/ipdb):
 
-```pip install ipdb
+```
+pip install ipdb
 export PYTHONBREAKPOINT=ipdb.set_trace
 ```
 
