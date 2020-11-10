@@ -1,4 +1,11 @@
+import pytest
+
 import acurl
+
+
+def session():
+    el = acurl.EventLoop()
+    return el.session()
 
 
 def test_request_headers():
@@ -15,18 +22,26 @@ def test_request_cookies():
     r = acurl.Request(
         "GET",
         "http://foo.com",
-        [],
+        [],  # headers
         [
             acurl.parse_cookie_string(
                 "foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
             ),
             acurl.parse_cookie_string("foo.com\tFALSE\t/bar\tFALSE\t0\tfoo\tbar"),
         ],
-        None,
-        None,
-        None,
+        None,  # auth
+        None,  # data
+        None,  # cert
     )
     assert "my_cookie" in r.cookies
     assert r.cookies["my_cookie"] == "my_value"
     assert "foo" in r.cookies
     assert r.cookies["foo"] == "bar"
+
+
+@pytest.mark.asyncio
+async def test_request_cookies_from_previous(httpbin):
+    s = session()
+    await s.get(httpbin.url + '/cookies/set?name=value')
+    r = await s.get(httpbin.url + "/get")
+    assert "name" in r.request.cookies
