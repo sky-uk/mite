@@ -8,3 +8,4 @@ pytest-cov
 pytest-httpserver
 werkzeug
 pre-commit
+pytest-httpbin
