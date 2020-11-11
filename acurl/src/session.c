@@ -131,8 +131,6 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
     }
     Py_INCREF(self);
     rd->session = self;
-    Py_INCREF(future);
-    rd->future = future;
     rd->method = strdup(method);
     rd->url = strdup(url);
     if(req_data_buf != NULL) {
@@ -141,13 +139,28 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
     rd->req_data_len = req_data_len;
     rd->req_data_buf = req_data_buf;
     rd->dummy = dummy;
-    ssize_t ret = write(self->loop->req_in_write, &rd, sizeof(AcRequestData *));
-    if (ret < (ssize_t)sizeof(AcRequestData *)) {
+    if (dummy) {
+      perform_request(rd);
+      rd->result = CURLE_OK;
+      curl_slist_free_all(rd->headers);
+      free(rd->req_data_buf);
+      Response *response = PyObject_New(Response, (PyTypeObject *)&ResponseType);
+      response->header_buffer = rd->header_buffer_head;
+      response->body_buffer = rd->body_buffer_head;
+      response->curl = rd->curl;
+      response->session = rd->session;
+      return response;
+    } else {
+      Py_INCREF(future);
+      rd->future = future;
+      ssize_t ret = write(self->loop->req_in_write, &rd, sizeof(AcRequestData *));
+      if (ret < (ssize_t)sizeof(AcRequestData *)) {
         fprintf(stderr, "error writing to req_in_write");
         exit(1);
+      }
+      DEBUG_PRINT("scheduling request",);
+      Py_RETURN_NONE;
     }
-    DEBUG_PRINT("scheduling request",);
-    Py_RETURN_NONE;
 
     error_cleanup:
     if(rd->headers) {

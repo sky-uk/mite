@@ -179,21 +179,26 @@ def session_cookie_for_url(
     )
 
 
-def _cookie_list_to_cookie_dict(cookie_list):
+def _cookie_seq_to_cookie_dict(cookie_list):
     return {cookie.name: cookie.value for cookie in cookie_list}
 
 
 class Request:
-    __slots__ = '_method _url _header_list _cookie_list _auth _data _cert'.split()
+    __slots__ = '_method _url _header_list _cookie_tuple _auth _data _cert _session_cookies'.split()
 
-    def __init__(self, method, url, header_list, cookie_list, auth, data, cert):
+    def __init__(self, method, url, header_list, cookie_seq, auth, data, cert, session):
         self._method = method
         self._url = url
         self._header_list = header_list
-        self._cookie_list = cookie_list
+        self._cookie_tuple = tuple(cookie_seq)
         self._auth = auth
         self._data = data
         self._cert = cert
+        self._session_cookies = tuple(
+            c
+            for c in session._get_cookie_list()
+            if urlparse(self._url).hostname.lower() == c._domain
+        )
 
     @property
     def method(self):
@@ -212,12 +217,8 @@ class Request:
         return dict(header.split(': ', 1) for header in self.header_list)
 
     @property
-    def cookie_list(self):
-        return self._cookie_list
-
-    @property
     def cookies(self):
-        return _cookie_list_to_cookie_dict(self.cookie_list)
+        return _cookie_seq_to_cookie_dict(self._cookie_tuple + self._session_cookies)
 
     @property
     def auth(self):
@@ -330,7 +331,7 @@ class Response:
 
     @property
     def cookies(self):
-        return _cookie_list_to_cookie_dict(self.cookielist)
+        return _cookie_seq_to_cookie_dict(self.cookielist)
 
     @property
     def history(self):
@@ -503,7 +504,7 @@ class Session:
         remaining_redirects,
     ):
         start_time = time.time()
-        request = Request(method, url, header_tuple, cookie_tuple, auth, data, cert)
+        request = Request(method, url, header_tuple, cookie_tuple, auth, data, cert, self)
 
         future = self._loop.create_future()
         self._session.request(
@@ -556,33 +557,34 @@ class Session:
             return redir_response
         return response
 
-    async def _dummy_request(self, cookies):
-        future = asyncio.futures.Future(loop=self._loop)
-        self._session.request(
-            future,
+    def _dummy_request(self, cookies):
+        result = self._session.request(
+            # We pass in None instead of a future, bc the request will be done
+            # synchronously
+            None,
             'GET',
             '',
-            headers=tuple(),
+            headers=(),
             cookies=cookies,
             auth=None,
             data=None,
             dummy=True,
             cert=None,
         )
-        return await future
+        return result
 
-    async def erase_all_cookies(self):
-        await self._dummy_request(('ALL',))
+    def erase_all_cookies(self):
+        self._dummy_request(('ALL',))
 
-    async def erase_session_cookies(self):
-        await self._dummy_request(('SESS',))
+    def erase_session_cookies(self):
+        self._dummy_request(('SESS',))
 
-    async def get_cookie_list(self):
-        resp = await self._dummy_request(tuple())
+    def get_cookie_list(self):
+        resp = self._dummy_request(())
         return [parse_cookie_string(cookie) for cookie in resp.get_cookielist()]
 
     async def add_cookie_list(self, cookie_list):
-        await self._dummy_request(tuple(c.format() for c in cookie_list))
+        self._dummy_request(tuple(c.format() for c in cookie_list))
 
 
 class EventLoop:
