@@ -26,8 +26,8 @@ class _CaseInsensitiveDict:
     def pop(self, key, *args, **kwargs):
         return super().pop(self._k(key), *args, **kwargs)
 
-    def popitem(self, key, *args, **kwarfs):
-        return super().popitem(self._k(key), *args, **kwargs)
+    def popitem(self, *args, **kwargs):
+        return super().popitem(*args, **kwargs)
 
     def get(self, key, *args, **kwargs):
         return super().get(self._k(key), *args, **kwargs)
