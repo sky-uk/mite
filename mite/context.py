@@ -84,9 +84,7 @@ class Context:
             else:
                 self._send_exception("exception", e, include_stacktrace=True)
             if self._debug:  # pragma: no cover
-                import ipdb
-
-                ipdb.post_mortem()
+                breakpoint()
                 sys.exit(1)
             else:
                 e.handled = True
