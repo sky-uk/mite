@@ -38,17 +38,7 @@ static size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     return node->len;
 }
 
-void start_request(struct aeEventLoop *UNUSED(eventLoop), int UNUSED(fd), void *clientData, int UNUSED(mask))
-{
-    AcRequestData *rd;
-    EventLoop *loop = (EventLoop*)clientData;
-    ssize_t b_read = read(loop->req_in_read, &rd, sizeof(AcRequestData *));
-    if (b_read < (ssize_t)sizeof(AcRequestData *)) {
-        fprintf(stderr, "Error reading from req_in_read");
-        exit(1);
-    }
-    REQUEST_TRACE_PRINT("start_request", rd);
-    DEBUG_PRINT("read AcRequestData",);
+void perform_request(AcRequestData *rd) {
     rd->curl = curl_easy_init();
     // MEMDEBUG_PRINT("init curl %p", rd->curl);
     curl_easy_setopt(rd->curl, CURLOPT_SHARE, rd->session->shared);
@@ -102,7 +92,22 @@ void start_request(struct aeEventLoop *UNUSED(eventLoop), int UNUSED(fd), void *
     }
     free(rd->cookies_str);
     /* TODO: Free the request data? */
+}
+
+void start_request(struct aeEventLoop *UNUSED(eventLoop), int UNUSED(fd), void *clientData, int UNUSED(mask))
+{
+    AcRequestData *rd;
+    EventLoop *loop = (EventLoop*)clientData;
+    ssize_t b_read = read(loop->req_in_read, &rd, sizeof(AcRequestData *));
+    if (b_read < (ssize_t)sizeof(AcRequestData *)) {
+        fprintf(stderr, "Error reading from req_in_read");
+        exit(1);
+    }
+    REQUEST_TRACE_PRINT("start_request", rd);
+    DEBUG_PRINT("read AcRequestData",);
+    perform_request(rd);
     if(rd->dummy) {
+        /* FIXME: warn about this deprecated code path */
         rd->result = CURLE_OK;
         curl_slist_free_all(rd->headers);
         free(rd->req_data_buf);

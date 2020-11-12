@@ -1,23 +1,17 @@
 import pytest
+from helpers import create_request
 
 import acurl
-from acurl import Request
 
 
 def test_to_curl():
-    r = Request("GET", "http://foo.com", (), (), None, None, None)
+    r = create_request("GET", "http://foo.com")
     assert r.to_curl() == "curl -X GET     http://foo.com"
 
 
 def test_to_curl_headers():
-    r = Request(
-        "GET",
-        "http://foo.com",
-        ("Foo: bar", "My-Header: is-awesome"),
-        (),
-        None,
-        None,
-        None,
+    r = create_request(
+        "GET", "http://foo.com", headers=("Foo: bar", "My-Header: is-awesome")
     )
     assert (
         r.to_curl()
@@ -26,30 +20,22 @@ def test_to_curl_headers():
 
 
 def test_to_curl_cookies():
-    r = Request(
+    r = create_request(
         "GET",
         "http://foo.com",
-        (),
-        (acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),),
-        None,
-        None,
-        None,
+        cookies=(acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),),
     )
     assert r.to_curl() == "curl -X GET  --cookie 123=456   http://foo.com"
 
 
 def test_to_curl_multiple_cookies():
-    r = Request(
+    r = create_request(
         "GET",
         "http://foo.com",
-        (),
-        (
+        cookies=(
             acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),
             acurl.Cookie(False, "foo.com", True, "/", False, 0, "789", "abc"),
         ),
-        None,
-        None,
-        None,
     )
     assert r.to_curl() == "curl -X GET  --cookie '123=456;789=abc'   http://foo.com"
 
@@ -60,11 +46,10 @@ def test_to_curl_cookies_wrong_domain():
     # probably only be constructed via Session.request, which always creates
     # cookies for the domain of the request.  So the case this is exercising
     # won't ever happen.
-    r = Request(
+    r = create_request(
         "GET",
         "http://foo.com",
-        (),
-        (
+        cookies=(
             acurl.Cookie(
                 False,
                 "bar.com",  # The domain doesn't match, the cookie should not be passed
@@ -76,13 +61,10 @@ def test_to_curl_cookies_wrong_domain():
                 "456",
             ),
         ),
-        None,
-        None,
-        None,
     )
     assert r.to_curl() == "curl -X GET http://foo.com"
 
 
 def test_to_curl_auth():
-    r = Request("GET", "http://foo.com", (), (), ("user", "pass"), None, None)
+    r = create_request("GET", "http://foo.com", auth=("user", "pass"))
     assert r.to_curl() == "curl -X GET   --user user:pass  http://foo.com"

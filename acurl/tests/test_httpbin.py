@@ -31,11 +31,11 @@ async def test_cookies(httpbin):
 async def test_session_cookies(httpbin):
     s = session()
     await s.get(httpbin.url + "/cookies/set?name=value")
-    cookie_list = await s.get_cookie_list()
+    cookie_list = s.get_cookie_list()
     assert len(cookie_list) == 1
     assert cookie_list[0].name == "name"
-    await s.erase_all_cookies()
-    cookie_list = await s.get_cookie_list()
+    s.erase_all_cookies()
+    cookie_list = s.get_cookie_list()
     assert len(cookie_list) == 0
 
 
