@@ -110,3 +110,25 @@ class TestHistogram:
         foo_sum{bar="one",baz="two"} 4.000000
         foo_count{bar="one",baz="two"} 2"""
         )
+
+    def test_histogram_format_with_empty_bin_count(self):
+        test_message = {
+            "name": "foo",
+            "labels": ("bar", "baz"),
+            "bin_counts": {},
+            "sums": {("one", "two"): 5},
+            "total_counts": {("one", "two"): 1},
+            "bins": (1, 2, 3),
+        }
+        h = Histogram("foo", test_message)
+        f = h.format()
+        assert f == dedent(
+            """\
+        # TYPE foo histogram
+        foo_bucket{bar="one",baz="two",le="1.000000"} 0
+        foo_bucket{bar="one",baz="two",le="2.000000"} 0
+        foo_bucket{bar="one",baz="two",le="3.000000"} 0
+        foo_bucket{bar="one",baz="two",le="+Inf"} 1
+        foo_sum{bar="one",baz="two"} 5.000000
+        foo_count{bar="one",baz="two"} 1"""
+        )
