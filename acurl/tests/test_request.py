@@ -41,7 +41,7 @@ def test_request_cookies():
 @pytest.mark.asyncio
 async def test_request_cookies_from_previous(httpbin):
     s = session()
-    await s.get(httpbin.url + '/cookies/set?name=value')
+    await s.get(httpbin.url + "/cookies/set?name=value")
     r = await s.get(httpbin.url + "/get")
     assert r.request.cookies == {"name": "value"}
 
@@ -50,7 +50,7 @@ async def test_request_cookies_from_previous(httpbin):
 @pytest.mark.slow
 async def test_request_cookies_from_previous_excludes_other_domains(httpbin):
     s = session()
-    await s.get(httpbin.url + '/cookies/set?name=value')
+    await s.get(httpbin.url + "/cookies/set?name=value")
     # FIXME: we want to set a cookie for another domain.  There's no easy way
     # to get another domain set up loally, so we (as an exception) go out to
     # the network for this test.
