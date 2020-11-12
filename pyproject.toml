@@ -10,6 +10,5 @@ exclude = '''
   | .eggs
 )/
 '''
-skip-string-normalization = true
-target-version = ['py37']
+target-version = ['py38']
 line-length = 90
