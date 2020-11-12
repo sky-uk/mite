@@ -143,7 +143,16 @@ MITE_CONF_test_msg="Hello from mite" mite journey test mite.example:journey mite
 ```
 
 If something goes wrong, adding the `--debugging` flag to this command
-will drop into an [ipdb debugger](https://github.com/gotcha/ipdb) session.
+will drop excution into a debug session. The choice of debugger used can be
+managed by setting the [`PYTHONBREAKPOINT` environment variable](https://www.python.org/dev/peps/pep-0553/#environment-variable)
+before running mite. Python's built-in [pdb](https://docs.python.org/3/library/pdb.html))
+debugger is invoked by default, but this can be changed to use, say, the
+[ipdb debugger](https://github.com/gotcha/ipdb):
+
+```
+pip install ipdb
+export PYTHONBREAKPOINT=ipdb.set_trace
+```
 
 ### Run the scenario
 

@@ -42,6 +42,10 @@ def test_to_curl_multiple_cookies():
 
 @pytest.mark.skip(reason="unimplemented")
 def test_to_curl_cookies_wrong_domain():
+    # I'm not sure if this is a valid test case...Request objects should
+    # probably only be constructed via Session.request, which always creates
+    # cookies for the domain of the request.  So the case this is exercising
+    # won't ever happen.
     r = create_request(
         "GET",
         "http://foo.com",

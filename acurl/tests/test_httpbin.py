@@ -11,10 +11,9 @@ def session():
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_get():
+async def test_get(httpbin):
     s = session()
-    r = await s.get('https://httpbin.org/ip')
+    r = await s.get(httpbin.url + "/ip")
     assert r.status_code == 200
     assert isinstance(r.headers, dict)
     # FIXME: is this a method in the requests api?
@@ -22,62 +21,51 @@ async def test_get():
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_cookies():
+async def test_cookies(httpbin):
     s = session()
-    r = await s.get('https://httpbin.org/cookies/set?name=value')
-    assert r.cookies == {'name': 'value'}
+    r = await s.get(httpbin.url + "/cookies/set?name=value")
+    assert r.cookies == {"name": "value"}
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_session_cookies():
+async def test_session_cookies(httpbin):
     s = session()
-    await s.get('https://httpbin.org/cookies/set?name=value')
+    await s.get(httpbin.url + "/cookies/set?name=value")
     cookie_list = s.get_cookie_list()
     assert len(cookie_list) == 1
-    assert cookie_list[0].name == 'name'
+    assert cookie_list[0].name == "name"
     s.erase_all_cookies()
     cookie_list = s.get_cookie_list()
     assert len(cookie_list) == 0
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_set_cookies():
+async def test_set_cookies(httpbin):
     s = session()
-    await s.get('https://httpbin.org/cookies/set?name=value')
-    r = await s.get(
-        'https://httpbin.org/cookies/set?name2=value', cookies={'name3': 'value'}
-    )
-    assert r.cookies == {'name': 'value', 'name2': 'value', 'name3': 'value'}
+    await s.get(httpbin.url + "/cookies/set?name=value")
+    r = await s.get(httpbin.url + "/cookies/set?name2=value", cookies={"name3": "value"})
+    assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_basic_auth():
+async def test_basic_auth(httpbin):
     s = session()
-    r = await s.get(
-        'https://httpbin.org/basic-auth/user/password', auth=('user', 'password')
-    )
+    r = await s.get(httpbin.url + "/basic-auth/user/password", auth=("user", "password"))
     assert r.status_code == 200
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-async def test_failed_basic_auth():
+async def test_failed_basic_auth(httpbin):
     s = session()
     r = await s.get(
-        'https://httpbin.org/basic-auth/user/password', auth=('notuser', 'notpassword')
+        httpbin.url + "/basic-auth/user/password", auth=("notuser", "notpassword")
     )
     assert r.status_code == 401
 
 
 @pytest.mark.asyncio
-@pytest.mark.slow
-@pytest.mark.xfail(strict=False)  # https://github.com/postmanlabs/httpbin/issues/617
-async def test_redirect():
+async def test_redirect(httpbin):
     s = session()
-    url = 'https://httpbin.org/ip'
-    r = await s.get('https://httpbin.org/redirect-to?' + urlencode({'url': url}))
+    url = httpbin.url + "/ip"
+    r = await s.get(httpbin.url + "/redirect-to?" + urlencode({"url": url}))
     assert r.url == url
