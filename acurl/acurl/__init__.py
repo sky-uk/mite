@@ -184,19 +184,19 @@ def _cookie_seq_to_cookie_dict(cookie_list):
 
 
 class Request:
-    __slots__ = '_method _url _header_list _cookie_tuple _auth _data _cert _session_cookies'.split()
+    __slots__ = '_method _url _header_seq _cookie_tuple _auth _data _cert _session_cookies'.split()
 
-    def __init__(self, method, url, header_list, cookie_seq, auth, data, cert, session):
+    def __init__(self, method, url, header_seq, cookie_seq, auth, data, cert, session):
         self._method = method
         self._url = url
-        self._header_list = header_list
+        self._header_seq = tuple(header_seq)
         self._cookie_tuple = tuple(cookie_seq)
         self._auth = auth
         self._data = data
         self._cert = cert
         self._session_cookies = tuple(
             c
-            for c in session._get_cookie_list()
+            for c in session.get_cookie_list()
             if urlparse(self._url).hostname.lower() == c._domain
         )
 
@@ -209,12 +209,8 @@ class Request:
         return self._url
 
     @property
-    def header_list(self):
-        return self._header_list
-
-    @property
     def headers(self):
-        return dict(header.split(': ', 1) for header in self.header_list)
+        return dict(header.split(': ', 1) for header in self._header_seq)
 
     @property
     def cookies(self):
@@ -435,12 +431,8 @@ class Session:
         self,
         method,
         url,
-        headers=None,
-        # TODO: delete this
-        headers_list=None,
-        cookies=None,
-        # TODO: delete this
-        cookie_list=None,
+        headers=(),
+        cookies=(),
         auth=None,
         data=None,
         json=None,
@@ -448,32 +440,19 @@ class Session:
         allow_redirects=True,
         max_redirects=5,
     ):
+        headers = dict(headers)
+        cookies = dict(cookies)
         if json is not None:
             if data is not None:
                 raise ValueError('use only one or none of data or json')
             data = ujson.dumps(json)
-            content_type_set = False
-            if headers and 'Content-Type' in headers:
-                content_type_set = True
-            elif headers_list:
-                content_type_set = any(
-                    1 for i in headers_list if i.startswith('Content-Type: ')
-                )
-            if not content_type_set:
-                if headers_list is None:
-                    headers_list = []
-                headers_list.append('Content-Type: application/json')
+            if 'Content-Type' not in headers:
+                headers['Content-Type'] = 'application/json'
 
-        if headers:
-            if headers_list is None:
-                headers_list = []
-            headers_list.extend('%s: %s' % i for i in headers.items())
-
-        if cookies:
-            if cookie_list is None:
-                cookie_list = []
-            for k, v in cookies.items():
-                cookie_list.append(session_cookie_for_url(url, k, v))
+        # FIXME: probably need to do some escaping if one of the values has
+        # newlines in it...
+        headers_list = ['%s: %s' % i for i in headers.items()]
+        cookie_list = [session_cookie_for_url(url, k, v) for k, v in cookies.items()]
 
         return await self._request(
             method,
@@ -534,7 +513,7 @@ class Session:
                     'GET',
                     response.redirect_url,
                     header_tuple,
-                    None,
+                    (),
                     auth,
                     None,
                     cert,
@@ -546,7 +525,7 @@ class Session:
                     method,
                     response.redirect_url,
                     header_tuple,
-                    None,
+                    (),
                     auth,
                     data,
                     cert,

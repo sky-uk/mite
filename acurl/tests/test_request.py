@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+from helpers import create_request
 
 import acurl
 
@@ -11,9 +12,7 @@ def session():
 
 
 def test_request_headers():
-    r = acurl.Request(
-        "GET", "http://foo.com", ["Foo: bar", "Baz: quux"], [], None, None, None, None
-    )
+    r = create_request("GET", "http://foo.com", headers=["Foo: bar", "Baz: quux"])
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
     assert "Baz" in r.headers
@@ -23,20 +22,15 @@ def test_request_headers():
 def test_request_cookies():
     session_mock = Mock()
     session_mock.get_cookie_list.return_value = ()
-    r = acurl.Request(
+    r = create_request(
         "GET",
         "http://foo.com",
-        [],  # headers
-        (
+        cookies=(
             acurl.parse_cookie_string(
                 "foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
             ),
             acurl.parse_cookie_string("foo.com\tFALSE\t/bar\tFALSE\t0\tfoo\tbar"),
         ),
-        None,  # auth
-        None,  # data
-        None,  # cert
-        session_mock,  # session
     )
     assert "my_cookie" in r.cookies
     assert r.cookies["my_cookie"] == "my_value"
