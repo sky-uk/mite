@@ -22,8 +22,8 @@ class OptionError(MiteError):
 
 class ElementNotFoundError(MiteError):
     def __init__(self, **kwargs):
-        text = kwargs.pop('text', '').replace("'", "").replace('"', '')
-        kwargs['text'] = text
+        text = kwargs.pop("text", "").replace("'", "").replace('"', "")
+        kwargs["text"] = text
         super().__init__(
             "Could not find element in page with search terms: {}".format(
                 sorted(kwargs.items())
@@ -37,7 +37,7 @@ def url_builder(base_url, *args, **kwargs):
     for arg in args:
         url = urljoin(url, arg)
     if kwargs:
-        url = ''.join([url, '?', urlencode(kwargs)])
+        url = "".join([url, "?", urlencode(kwargs)])
     return url
 
 
@@ -66,7 +66,7 @@ class Browser:
 
     async def _download_resource(self, url, origin, type):
         """Download a resource and then register it with the origin it came from."""
-        resource = await self._session.request('GET', url)
+        resource = await self._session.request("GET", url)
         origin._register_resource(resource, type)
 
     async def _download_resources(self, origin):
@@ -110,14 +110,14 @@ class Browser:
     async def options(self, url, *args, **kwargs):
         return await self.request("OPTIONS", url, *args, **kwargs)
 
-    async def erase_all_cookies(self):
-        await self._session.erase_all_cookies()
+    def erase_all_cookies(self):
+        self._session.erase_all_cookies()
 
-    async def erase_session_cookies(self):
-        await self._session.erase_session_cookies()
+    def erase_session_cookies(self):
+        self._session.erase_session_cookies()
 
-    async def get_cookie_list(self):
-        return await self._session.get_cookie_list()
+    def get_cookie_list(self):
+        return self._session.get_cookie_list()
 
 
 class Resource:
@@ -195,13 +195,13 @@ class Page(Resource):
         return self.frames + self.stylesheets
 
     def _register_resource(self, response, rtype):
-        if rtype == 'resource':
+        if rtype == "resource":
             self.resources.append(Resource(response, self.browser))
-        elif rtype == 'script':
+        elif rtype == "script":
             self.scripts.append(Script(response, self.browser))
-        elif rtype == 'stylesheet':
+        elif rtype == "stylesheet":
             self.stylesheets.append(Stylesheet(response, self.browser))
-        elif rtype == 'page':
+        elif rtype == "page":
             self.frames.append(Page(response, self.browser))
 
     @property
@@ -209,30 +209,30 @@ class Page(Resource):
         """Extracts all embedded resources from a page"""
         # TODO: Look into prerender and whether we should be getting these resources.
         base_url = self.response.url
-        for burl in self.find_all('base', {'href': True}):
-            base_url = burl.attrs['href']  # reset the base url to the one in the page
-        for elem in self.find_all(True, attrs={'background': True}):
-            yield url_builder(base_url, elem.attrs['background']), 'resource'
-        for elem in self.find_all(['img', 'embed', 'bgsound'], attrs={'src': True}):
-            yield url_builder(base_url, elem.attrs['src']), 'resource'
-        for elem in self.find_all(['script'], attrs={'src': True}):
-            yield url_builder(base_url, elem.attrs['src']), 'script'
-        for elem in self.find_all(['frame', 'iframe'], attrs={'src': True}):
-            yield url_builder(base_url, elem.attrs['src']), 'page'
-        for elem in self.find_all('link', attrs={'rel': 'stylesheet', 'href': True}):
-            yield url_builder(base_url, elem.attrs['href']), 'stylesheet'
-        for elem in self.find_all('input', attrs={'type': 'image', 'href': True}):
-            yield url_builder(base_url, elem.attrs['href']), 'resource'
-        for elem in self.find_all('applet', attrs={'code': True}):
-            yield url_builder(base_url, elem.attrs['code']), 'resource'
-        for elem in self.find_all('object', attrs={'codebase': True}):
-            yield url_builder(base_url, elem.attrs['codebase']), 'resource'
-        for elem in self.find_all('object', attrs={'data': True}):
-            yield url_builder(base_url, elem.attrs['data']), 'resource'
-        for elem in self.find_all(True, attrs={'style': True}):
-            if elem.attrs['style'].strip().startswith('url('):
-                url = elem.attrs['style'].split('url(', 1)[-1].rsplit(')', 1)[0]
-                yield url_builder(base_url, url), 'resource'
+        for burl in self.find_all("base", {"href": True}):
+            base_url = burl.attrs["href"]  # reset the base url to the one in the page
+        for elem in self.find_all(True, attrs={"background": True}):
+            yield url_builder(base_url, elem.attrs["background"]), "resource"
+        for elem in self.find_all(["img", "embed", "bgsound"], attrs={"src": True}):
+            yield url_builder(base_url, elem.attrs["src"]), "resource"
+        for elem in self.find_all(["script"], attrs={"src": True}):
+            yield url_builder(base_url, elem.attrs["src"]), "script"
+        for elem in self.find_all(["frame", "iframe"], attrs={"src": True}):
+            yield url_builder(base_url, elem.attrs["src"]), "page"
+        for elem in self.find_all("link", attrs={"rel": "stylesheet", "href": True}):
+            yield url_builder(base_url, elem.attrs["href"]), "stylesheet"
+        for elem in self.find_all("input", attrs={"type": "image", "href": True}):
+            yield url_builder(base_url, elem.attrs["href"]), "resource"
+        for elem in self.find_all("applet", attrs={"code": True}):
+            yield url_builder(base_url, elem.attrs["code"]), "resource"
+        for elem in self.find_all("object", attrs={"codebase": True}):
+            yield url_builder(base_url, elem.attrs["codebase"]), "resource"
+        for elem in self.find_all("object", attrs={"data": True}):
+            yield url_builder(base_url, elem.attrs["data"]), "resource"
+        for elem in self.find_all(True, attrs={"style": True}):
+            if elem.attrs["style"].strip().startswith("url("):
+                url = elem.attrs["style"].split("url(", 1)[-1].rsplit(")", 1)[0]
+                yield url_builder(base_url, url), "resource"
 
     async def on_dom_ready(self):
         # awaitable dom ready
@@ -243,21 +243,21 @@ class Page(Resource):
         return form
 
     def get_forms(self):
-        return [Form(e, self) for e in self.find_all('form')]
+        return [Form(e, self) for e in self.find_all("form")]
 
     async def click_link(self, text):
-        elem = self.find('a', text=text)
-        href = elem.attrs['href']
+        elem = self.find("a", text=text)
+        href = elem.attrs["href"]
         return await self.browser.get(url_builder(self.response.url, href))
 
     async def xhr_request(
         self, method, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs
     ):
-        headers = {'Referer': self.response.url, 'X-Requested-With': 'XMLHttpRequest'}
+        headers = {"Referer": self.response.url, "X-Requested-With": "XMLHttpRequest"}
         if formdata is not None:
             assert data is None
             data = urlencode(formdata)
-            headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+            headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
         return await self.browser._session.request(
             method,
             url_builder(self.response.url, rel_or_abs_url),
@@ -270,7 +270,7 @@ class Page(Resource):
         self, rel_or_abs_url, *, formdata=None, data=None, json=None, **kwargs
     ):
         return await self.xhr_request(
-            'POST', rel_or_abs_url, formdata=formdata, data=data, json=json, **kwargs
+            "POST", rel_or_abs_url, formdata=formdata, data=data, json=json, **kwargs
         )
 
     def __repr__(self):
@@ -316,9 +316,9 @@ class Form:
     def __init__(self, element, page):
         self._page = page
         self.element = element
-        self.method = element.get('method', 'POST').upper()
-        self.action = element.get('action')
-        self.name = element.get('name', element.get('id'))
+        self.method = element.get("method", "POST").upper()
+        self.action = element.get("action")
+        self.name = element.get("name", element.get("id"))
         self.fields = {}
         self.files = {}
         self._set_fields()
@@ -336,33 +336,33 @@ class Form:
 
         TODO: Add file support back in when we have acurl sorted"""
         return {
-            'data': urlencode(
+            "data": urlencode(
                 {name: f.value for name, f in self.fields.items() if not f.disabled}
             )
         }
 
     def _extract_fields_as_subtype(self):
-        FIELD_TYPES = ['select', 'textarea', 'input']
+        FIELD_TYPES = ["select", "textarea", "input"]
         fields = self.element.find_all(FIELD_TYPES)
         radio_field_names = set()
         for field in fields:
-            if field.name == 'select':
+            if field.name == "select":
                 yield SelectField(field)
-            elif field.name == 'textarea':
+            elif field.name == "textarea":
                 yield BaseFormField(field)
-            elif field.name == 'input':
-                if field.attrs['type'] in ['reset', 'submit', 'button']:
+            elif field.name == "input":
+                if field.attrs["type"] in ["reset", "submit", "button"]:
                     continue
-                elif field.attrs['type'] == 'file':
+                elif field.attrs["type"] == "file":
                     yield FileInputField(field)
-                elif field.attrs['type'] == 'radio':
-                    radio_field_name = field.attrs['name']
+                elif field.attrs["type"] == "radio":
+                    radio_field_name = field.attrs["name"]
                     if radio_field_name in radio_field_names:
                         continue
                     radio_field_names.add(radio_field_name)
-                    radios = [f for f in fields if f.attrs['name'] == radio_field_name]
+                    radios = [f for f in fields if f.attrs["name"] == radio_field_name]
                     yield RadioField(radios)
-                elif field.attrs['type'] == 'checkbox':
+                elif field.attrs["type"] == "checkbox":
                     yield CheckboxField(field)
                 else:
                     yield BaseFormField(field)
@@ -386,8 +386,8 @@ class Form:
             # Fudge to create a fake form field
             self.fields[item] = FakeFormField(item, value)
 
-    async def submit(self, base_url='', embedded_res=False, **kwargs):
-        if base_url == '':
+    async def submit(self, base_url="", embedded_res=False, **kwargs):
+        if base_url == "":
             base_url = self._page.response.url
         return await self._page.browser.request(
             self.method,
@@ -398,7 +398,7 @@ class Form:
         )
 
     def __repr__(self):
-        return '<%s name=%r method=%r action=%r fields=%r files=%r>' % (
+        return "<%s name=%r method=%r action=%r fields=%r files=%r>" % (
             self.__class__.__name__,
             self.name,
             self.method,
@@ -409,8 +409,8 @@ class Form:
 
 
 def _field_is_disabled(element):
-    status = element.attrs.get('disabled')
-    if status and status.lower() in ['disabled', 'true']:
+    status = element.attrs.get("disabled")
+    if status and status.lower() in ["disabled", "true"]:
         return True
     else:
         return False
@@ -419,8 +419,8 @@ def _field_is_disabled(element):
 class BaseFormField:
     def __init__(self, element):
         self.element = element
-        self.name = element.attrs.get('name')
-        self._value = element.attrs.get('value')
+        self.name = element.attrs.get("name")
+        self._value = element.attrs.get("value")
         self._disabled = _field_is_disabled(element)
 
     @property
@@ -442,7 +442,7 @@ class BaseFormField:
         self._value = value
 
     def __repr__(self):
-        return '<%s name=%r value=%r disabled=%r>' % (
+        return "<%s name=%r value=%r disabled=%r>" % (
             self.__class__.__name__,
             self.name,
             self.value,
@@ -453,7 +453,7 @@ class BaseFormField:
 class SelectField(BaseFormField):
     def __init__(self, element):
         super().__init__(element)
-        self.options = element.find_all('option')
+        self.options = element.find_all("option")
 
     def _get_options(self):
         if not self.options[-1].value:
@@ -489,10 +489,10 @@ class RadioField:
 
     def __init__(self, elements):
         self.elements = elements
-        self.name = elements[0].attrs.get('name')
-        self._value = elements[0].attrs.get('value')
+        self.name = elements[0].attrs.get("name")
+        self._value = elements[0].attrs.get("value")
         self._disabled = _field_is_disabled(elements[0])
-        self.options = [e.get('value') for e in self.elements]
+        self.options = [e.get("value") for e in self.elements]
 
     @property
     def disabled(self):
@@ -510,7 +510,7 @@ class RadioField:
             raise OptionError(value, self.options)
 
     def __repr__(self):
-        return '<%s name=%r value=%r options=%r disabled=%r>' % (
+        return "<%s name=%r value=%r options=%r disabled=%r>" % (
             self.__class__.__name__,
             self.name,
             self.value,
