@@ -21,11 +21,11 @@ class RequestError(Exception):
     pass
 
 
-_FALSE_TRUE = ['FALSE', 'TRUE']
+_FALSE_TRUE = ["FALSE", "TRUE"]
 
 
 class Cookie:
-    __slots__ = '_http_only _domain _include_subdomains _path _is_secure _expiration _name _value'.split()
+    __slots__ = "_http_only _domain _include_subdomains _path _is_secure _expiration _name _value".split()
 
     def __init__(
         self,
@@ -104,42 +104,42 @@ class Cookie:
     def format(self):
         bits = []
         if self.http_only:
-            bits.append('#HttpOnly_')
+            bits.append("#HttpOnly_")
         bits.append(self.domain)
-        bits.append('\t')
+        bits.append("\t")
         bits.append(_FALSE_TRUE[self.include_subdomains])
-        bits.append('\t')
+        bits.append("\t")
         bits.append(self.path)
-        bits.append('\t')
+        bits.append("\t")
         bits.append(_FALSE_TRUE[self.is_secure])
-        bits.append('\t')
+        bits.append("\t")
         bits.append(str(self.expiration))
-        bits.append('\t')
+        bits.append("\t")
         bits.append(self.name)
-        bits.append('\t')
+        bits.append("\t")
         bits.append(self.value)
-        return ''.join(bits)
+        return "".join(bits)
 
 
 def parse_cookie_string(cookie_string):
     cookie_string = cookie_string.strip()
-    if cookie_string.startswith('#HttpOnly_'):
+    if cookie_string.startswith("#HttpOnly_"):
         http_only = True
         cookie_string = cookie_string[10:]
     else:
         http_only = False
-    parts = cookie_string.split('\t')
+    parts = cookie_string.split("\t")
     if len(parts) == 6:
         domain, include_subdomains, path, is_secure, expiration, name = parts
-        value = ''
+        value = ""
     else:
         domain, include_subdomains, path, is_secure, expiration, name, value = parts
     return Cookie(
         http_only,
         domain,
-        include_subdomains == 'TRUE',
+        include_subdomains == "TRUE",
         path,
-        is_secure == 'TRUE',
+        is_secure == "TRUE",
         int(expiration),
         name,
         value,
@@ -165,7 +165,7 @@ def session_cookie_for_url(
 ):
     scheme, netloc, path, params, query, fragment = urlparse(url)
     if not include_url_path:
-        path = '/'
+        path = "/"
     # TODO do we need to sanitize netloc for IP and ports?
     return Cookie(
         http_only,
@@ -184,7 +184,7 @@ def _cookie_seq_to_cookie_dict(cookie_list):
 
 
 class Request:
-    __slots__ = '_method _url _header_seq _cookie_tuple _auth _data _cert _session_cookies'.split()
+    __slots__ = "_method _url _header_seq _cookie_tuple _auth _data _cert _session_cookies".split()
 
     def __init__(self, method, url, header_seq, cookie_seq, auth, data, cert, session):
         self._method = method
@@ -197,7 +197,7 @@ class Request:
         self._session_cookies = tuple(
             c
             for c in session.get_cookie_list()
-            if urlparse(self._url).hostname.lower() == c._domain
+            if urlparse(self._url).hostname.lower() == c._domain.lower()
         )
 
     @property
@@ -210,7 +210,7 @@ class Request:
 
     @property
     def headers(self):
-        return dict(header.split(': ', 1) for header in self._header_seq)
+        return dict(header.split(": ", 1) for header in self._header_seq)
 
     @property
     def cookies(self):
@@ -253,7 +253,7 @@ class Request:
 
 
 class Response:
-    __slots__ = '_req _resp _start_time _redirect_url _prev _body _text _header _headers_tuple _headers _encoding _json'.split()
+    __slots__ = "_req _resp _start_time _redirect_url _prev _body _text _header _headers_tuple _headers _encoding _json".split()
 
     def __init__(self, req, resp, start_time):
         self._req = req
@@ -276,7 +276,7 @@ class Response:
 
     @property
     def redirect_url(self):
-        if not hasattr(self, '_redirect_url'):
+        if not hasattr(self, "_redirect_url"):
             self._redirect_url = self._resp.get_redirect_url()
         return self._redirect_url
 
@@ -332,31 +332,31 @@ class Response:
     @property
     def history(self):
         result = []
-        cur = getattr(self, '_prev', None)
+        cur = getattr(self, "_prev", None)
         while cur is not None:
             result.append(cur)
-            cur = getattr(cur, '_prev', None)
+            cur = getattr(cur, "_prev", None)
         result.reverse()
         return result
 
     @property
     def body(self):
-        if not hasattr(self, '_body'):
-            self._body = b''.join(self._resp.get_body())
+        if not hasattr(self, "_body"):
+            self._body = b"".join(self._resp.get_body())
         return self._body
 
     @property
     def encoding(self):
-        if not hasattr(self, '_encoding'):
+        if not hasattr(self, "_encoding"):
             if (
-                'Content-Type' in self.headers
-                and 'charset=' in self.headers['Content-Type']
+                "Content-Type" in self.headers
+                and "charset=" in self.headers["Content-Type"]
             ):
                 self._encoding = (
-                    self.headers['Content-Type'].split('charset=')[-1].split()[0]
+                    self.headers["Content-Type"].split("charset=")[-1].split()[0]
                 )
             else:
-                self._encoding = 'latin1'
+                self._encoding = "latin1"
         return self._encoding
 
     # TODO: why do we allow setter?
@@ -366,40 +366,40 @@ class Response:
 
     @property
     def text(self):
-        if not hasattr(self, '_text'):
+        if not hasattr(self, "_text"):
             self._text = self.body.decode(self.encoding)
         return self._text
 
     def json(self):
-        if not hasattr(self, '_json'):
+        if not hasattr(self, "_json"):
             self._json = ujson.loads(self.text)
         return self._json
 
     @property
     def headers(self):
-        if not hasattr(self, '_headers'):
+        if not hasattr(self, "_headers"):
             headers = CaseInsensitiveDefaultDict(list)
             for k, v in self.headers_tuple:
                 headers[k].append(v)
             self._headers = CaseInsensitiveDict()
             for k in headers:
-                self._headers[k] = ', '.join(headers[k])
+                self._headers[k] = ", ".join(headers[k])
         return self._headers
 
     # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
-        if not hasattr(self, '_headers_tuple'):
+        if not hasattr(self, "_headers_tuple"):
             self._headers_tuple = tuple(
-                tuple(l.split(': ', 1)) for l in self.header.split('\r\n')[1:-2]
+                tuple(l.split(": ", 1)) for l in self.header.split("\r\n")[1:-2]
             )
         return self._headers_tuple
 
     # TODO: is this part of the request api?
     @property
     def header(self):
-        if not hasattr(self, '_header'):
-            self._header = b''.join(self._resp.get_header()).decode('ascii')
+        if not hasattr(self, "_header"):
+            self._header = b"".join(self._resp.get_header()).decode("ascii")
         return self._header
 
 
@@ -410,22 +410,22 @@ class Session:
         self._response_callback = None
 
     async def get(self, url, **kwargs):
-        return await self.request('GET', url, **kwargs)
+        return await self.request("GET", url, **kwargs)
 
     async def put(self, url, **kwargs):
-        return await self.request('PUT', url, **kwargs)
+        return await self.request("PUT", url, **kwargs)
 
     async def post(self, url, **kwargs):
-        return await self.request('POST', url, **kwargs)
+        return await self.request("POST", url, **kwargs)
 
     async def delete(self, url, **kwargs):
-        return await self.request('DELETE', url, **kwargs)
+        return await self.request("DELETE", url, **kwargs)
 
     async def head(self, url, **kwargs):
-        return await self.request('HEAD', url, **kwargs)
+        return await self.request("HEAD", url, **kwargs)
 
     async def options(self, url, **kwargs):
-        return await self.request('OPTIONS', url, **kwargs)
+        return await self.request("OPTIONS", url, **kwargs)
 
     async def request(
         self,
@@ -444,14 +444,14 @@ class Session:
         cookies = dict(cookies)
         if json is not None:
             if data is not None:
-                raise ValueError('use only one or none of data or json')
+                raise ValueError("use only one or none of data or json")
             data = ujson.dumps(json)
-            if 'Content-Type' not in headers:
-                headers['Content-Type'] = 'application/json'
+            if "Content-Type" not in headers:
+                headers["Content-Type"] = "application/json"
 
         # FIXME: probably need to do some escaping if one of the values has
         # newlines in it...
-        headers_list = ['%s: %s' % i for i in headers.items()]
+        headers_list = ["%s: %s" % i for i in headers.items()]
         cookie_list = [session_cookie_for_url(url, k, v) for k, v in cookies.items()]
 
         return await self._request(
@@ -507,10 +507,10 @@ class Session:
             and response.redirect_url is not None
         ):
             if remaining_redirects == 0:
-                raise RequestError('Max Redirects')
+                raise RequestError("Max Redirects")
             elif response.status_code in {301, 302, 303}:
                 redir_response = await self._request(
-                    'GET',
+                    "GET",
                     response.redirect_url,
                     header_tuple,
                     (),
@@ -541,8 +541,8 @@ class Session:
             # We pass in None instead of a future, bc the request will be done
             # synchronously
             None,
-            'GET',
-            '',
+            "GET",
+            "",
             headers=(),
             cookies=cookies,
             auth=None,
@@ -553,10 +553,10 @@ class Session:
         return result
 
     def erase_all_cookies(self):
-        self._dummy_request(('ALL',))
+        self._dummy_request(("ALL",))
 
     def erase_session_cookies(self):
-        self._dummy_request(('SESS',))
+        self._dummy_request(("SESS",))
 
     def get_cookie_list(self):
         resp = self._dummy_request(())
