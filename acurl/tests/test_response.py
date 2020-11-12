@@ -1,3 +1,7 @@
+import pytest
+from werkzeug.datastructures import Headers
+from werkzeug.wrappers import BaseResponse as Response
+
 import acurl
 
 
@@ -14,11 +18,11 @@ def test_response_headers():
         "Some Request",
         MockRawResponse(
             [
-                b'HTTP/1.1 200 OK\r\n',
-                b'Foo: bar\r\n',
-                b'Baz: quux\r\n',
-                b'baz: quuz\r\n',
-                b'\r\n',
+                b"HTTP/1.1 200 OK\r\n",
+                b"Foo: bar\r\n",
+                b"Baz: quux\r\n",
+                b"baz: quuz\r\n",
+                b"\r\n",
             ]
         ),
         0,
@@ -29,3 +33,18 @@ def test_response_headers():
     assert "Baz" in r.headers
     assert r.headers["Baz"] == "quux, quuz"
     assert r.headers["baz"] == "quux, quuz"
+
+
+@pytest.mark.asyncio
+async def test_response_cookies(httpserver):
+    hdrs = Headers()
+    hdrs.add("Set-Cookie", "foo=bar")
+    hdrs.add("Set-Cookie", "quux=xyzzy")
+    httpserver.expect_request("/foo").respond_with_response(
+        Response(response="", status=200, headers=hdrs)
+    )
+    el = acurl.EventLoop()
+    el._run_in_thread()
+    s = el.session()
+    r = await s.get(httpserver.url_for("/foo"))
+    assert r.cookies == {"foo": "bar", "quux": "xyzzy"}
