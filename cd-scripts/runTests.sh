@@ -5,6 +5,8 @@ MY_VENV=$HOME/mite-tests
 python3.8 -m venv $MY_VENV
 . $MY_VENV/bin/activate
 
+pip install -U pip
+
 pip install -r requirements.txt || exit 1
 pip install -r dev-requirements.txt || exit 1
 
