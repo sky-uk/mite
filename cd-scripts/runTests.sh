@@ -2,7 +2,7 @@
 
 MY_VENV=$HOME/mite-tests
 
-python3.8 -m venv $MY_VENV
+python3.8 -m venv --system-site-packages $MY_VENV
 . $MY_VENV/bin/activate
 
 pip install -U pip
