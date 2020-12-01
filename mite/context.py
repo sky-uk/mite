@@ -1,4 +1,6 @@
+import importlib
 import logging
+import os
 import sys
 import time
 import traceback
@@ -53,11 +55,11 @@ class Context:
 
     def send(self, type, **msg):
         msg = dict(msg)
-        msg['type'] = type
-        msg['time'] = time.time()
+        msg["type"] = type
+        msg["time"] = time.time()
         msg.update(self._id_data)
-        msg['transaction'] = self._transaction_name
-        msg['transaction_id'] = self._transaction_id
+        msg["transaction"] = self._transaction_name
+        msg["transaction_id"] = self._transaction_id
         self._send_fn(msg)
         logger.debug("sent message: %s", msg)
 
@@ -84,14 +86,26 @@ class Context:
             else:
                 self._send_exception("exception", e, include_stacktrace=True)
             if self._debug:  # pragma: no cover
-                breakpoint()
+                postmortem = os.environ.get("PYTHONPOSTMORTEM", "pdb.post_mortem")
+                # Implementation borrowed from PEP 553
+                modname, dot, funcname = postmortem.rpartition(".")
+                if dot == "":
+                    modname = "builtins"
+                try:
+                    module = importlib.import_module(modname)
+                    hook = getattr(module, funcname)
+                except Exception:
+                    import pdb
+
+                    hook = pdb.post_mortem
+                hook()
                 sys.exit(1)
             else:
                 e.handled = True
                 raise
         finally:
             self.send(
-                'txn',
+                "txn",
                 start_time=start_time,
                 end_time=time.time(),
                 had_error=error,
@@ -114,7 +128,7 @@ class Context:
             # FIXME: this winds up sending quite a lot of data on the wire
             # that we don't actually use most of the time... do we want to
             # make it configurable whether to send this?
-            stacktrace = ''.join(traceback.format_tb(tb))
+            stacktrace = "".join(traceback.format_tb(tb))
             kwargs["stacktrace"] = stacktrace
         self.send(
             metric_name,
