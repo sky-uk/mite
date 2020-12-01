@@ -156,4 +156,7 @@ def oneshot_vm(when=-1, stop_scenario=False):
             raise StopScenario
         return 0
 
+    _vm.duration = when
+    _vm.tps = 1
+
     return _vm
