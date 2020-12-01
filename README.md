@@ -152,7 +152,12 @@ debugger is invoked by default, but this can be changed to use, say, the
 ```
 pip install ipdb
 export PYTHONBREAKPOINT=ipdb.set_trace
+export PYTHONPOSTMORTEM=ipdb.post_mortem
 ```
+
+`PYTHONPOSTMORTEM` is a mite-specific extension to [PEP
+553](https://www.python.org/dev/peps/pep-0553/) which defines the
+`PYTHONBREAKPOINT` functionality.
 
 ### Run the scenario
 
