@@ -91,33 +91,33 @@ from .web import app, prometheus_metrics
 
 
 def _recorder_receiver(opts):
-    socket = opts['--recorder-socket']
+    socket = opts["--recorder-socket"]
     receiver = _msg_backend_module(opts).Receiver()
     receiver.connect(socket)
     return receiver
 
 
 def _create_sender(opts):
-    socket = opts['--message-socket']
+    socket = opts["--message-socket"]
     sender = _msg_backend_module(opts).Sender()
     sender.connect(socket)
     return sender
 
 
 def _create_prometheus_exporter_receiver(opts):
-    socket = opts['--stats-out-socket']
+    socket = opts["--stats-out-socket"]
     receiver = _msg_backend_module(opts).Receiver()
     receiver.bind(socket)
     return receiver
 
 
 def _create_runner_transport(opts):
-    socket = opts['--controller-socket']
+    socket = opts["--controller-socket"]
     return _msg_backend_module(opts).RunnerTransport(socket)
 
 
 def _create_controller_server(opts):
-    socket = opts['--controller-socket']
+    socket = opts["--controller-socket"]
     return _msg_backend_module(opts).ControllerServer(socket)
 
 
@@ -125,23 +125,23 @@ logger = logging.getLogger(__name__)
 
 
 def _start_web_in_thread(opts):
-    address = opts['--web-address']
-    kwargs = {'port': 9301}
-    if address.startswith('['):
+    address = opts["--web-address"]
+    kwargs = {"port": 9301}
+    if address.startswith("["):
         # IPV6 [host]:port
-        if ']:' in address:
-            host, port = address.split(']:')
-            kwargs['host'] = host[1:]
-            kwargs['port'] = int(port)
+        if "]:" in address:
+            host, port = address.split("]:")
+            kwargs["host"] = host[1:]
+            kwargs["port"] = int(port)
         else:
-            kwargs['host'] = address[1:-1]
-    elif address.count(':') == 1:
-        host, port = address.split(':')
-        kwargs['host'] = host
-        kwargs['port'] = int(port)
+            kwargs["host"] = address[1:-1]
+    elif address.count(":") == 1:
+        host, port = address.split(":")
+        kwargs["host"] = host
+        kwargs["port"] = int(port)
     else:
-        kwargs['host'] = address
-    t = threading.Thread(target=app.run, name='mite.web', kwargs=kwargs)
+        kwargs["host"] = address
+    t = threading.Thread(target=app.run, name="mite.web", kwargs=kwargs)
     t.daemon = True
     t.start()
 
@@ -160,7 +160,7 @@ def _controller_log_start(scenario_spec, logging_url):
             url,
             data=ujson.dumps(
                 {
-                    'testname': scenario_spec,
+                    "testname": scenario_spec,
                     # TODO: log other properties as well,
                     # like the endpoint URLs we are
                     # hitting.
@@ -171,7 +171,7 @@ def _controller_log_start(scenario_spec, logging_url):
     )
     logger.debug("Logging test start complete")
     if resp.status == 200:
-        return ujson.loads(resp.read())['newid']
+        return ujson.loads(resp.read())["newid"]
     else:
         logger.warning(
             f"Could not complete test start logging; status was {resp.status_code}"
@@ -187,7 +187,7 @@ def _controller_log_end(logging_id, logging_url):
 
     url = logging_url + "end"
     logger.info(f"Logging test end to {url}")
-    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({'id': logging_id}).encode()))
+    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode()))
     if resp.status != 204:
         logger.warning(
             f"Could not complete test end logging; status was {resp.status_code}"
@@ -197,7 +197,7 @@ def _controller_log_end(logging_id, logging_url):
 
 def controller(opts):
     config_manager = _create_config_manager(opts)
-    scenario_spec = opts['SCENARIO_SPEC']
+    scenario_spec = opts["SCENARIO_SPEC"]
     scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(opts)
     sender = _create_sender(opts)
@@ -276,7 +276,7 @@ def runner(opts):
 
 def recorder(opts):
     receiver = _recorder_receiver(opts)
-    recorder = Recorder(opts['--recorder-dir'])
+    recorder = Recorder(opts["--recorder-dir"])
     receiver.add_listener(recorder.process_message)
     asyncio.get_event_loop().run_until_complete(receiver.run())
 
@@ -291,19 +291,19 @@ def prometheus_exporter(opts):
 
 def setup_logging(opts):
     logging.basicConfig(
-        level=opts['--log-level'],
-        format='[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s',
+        level=opts["--log-level"],
+        format="[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s",
     )
 
 
 def configure_python_path(opts):
-    if not opts['--exclude-working-directory']:
+    if not opts["--exclude-working-directory"]:
         sys.path.insert(0, os.getcwd())
 
 
 def har_converter(opts):
     har_convert_to_mite(
-        opts['HAR_FILE_PATH'], opts['CONVERTED_FILE_PATH'], opts['--sleep-time']
+        opts["HAR_FILE_PATH"], opts["CONVERTED_FILE_PATH"], opts["--sleep-time"]
     )
 
 
@@ -313,33 +313,33 @@ def main():
     opts = docopt.docopt(__doc__)
     setup_logging(opts)
     configure_python_path(opts)
-    if opts['scenario']:
+    if opts["scenario"]:
         scenario_cmd(opts)
-    elif opts['journey']:
+    elif opts["journey"]:
         journey_cmd(opts)
-    elif opts['controller']:
+    elif opts["controller"]:
         controller(opts)
-    elif opts['runner']:
+    elif opts["runner"]:
         runner(opts)
-    elif opts['collector']:
+    elif opts["collector"]:
         collector(opts)
-    elif opts['duplicator']:
+    elif opts["duplicator"]:
         duplicator(opts)
-    elif opts['stats']:
+    elif opts["stats"]:
         stats.stats(opts)
-    elif opts['receiver']:
+    elif opts["receiver"]:
         receiver.generic_receiver(opts)
-    elif opts['prometheus_exporter']:
+    elif opts["prometheus_exporter"]:
         prometheus_exporter(opts)
-    elif opts['recorder']:
+    elif opts["recorder"]:
         recorder(opts)
-    elif opts['har']:
+    elif opts["har"]:
         har_converter(opts)
-    elif opts['cat']:
+    elif opts["cat"]:
         cat(opts)
-    elif opts['uncat']:
+    elif opts["uncat"]:
         uncat(opts)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
