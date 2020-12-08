@@ -154,7 +154,7 @@ class _SeleniumWrapper:
     def get_js_metrics_context(self):
         return JsMetricsContext(self)
 
-    def wait(self, locator, timeout=5):
+    def wait_for_element(self, locator, timeout=5):
         try:
             return WebDriverWait(self._remote, timeout).until(
                 EC.presence_of_element_located(locator)
@@ -165,7 +165,10 @@ class _SeleniumWrapper:
             ) from te
 
     def find_element(self, locator):
-        return self.wait(locator, 2)
+        return self.wait_for_element(locator, 2)
+
+    def implicit_wait(self, timeout):
+        self._remote.implicitly_wait(timeout)
 
 
 class JsMetricsContext:
@@ -173,11 +176,11 @@ class JsMetricsContext:
         self._browser = browser
         self._results = None
 
-    async def __aenter__(self):
-        self._browser._clear_resource_timings()
+        async def __aenter__(self):
+            self._browser._clear_resource_timings()
 
-    async def __aexit__(self, exc_type, exc, tb):
-        self._results = self._browser._retrieve_javascript_metrics()
+        async def __aexit__(self, exc_type, exc, tb):
+            self._results = self._browser._retrieve_javascript_metrics()
 
 
 @asynccontextmanager
