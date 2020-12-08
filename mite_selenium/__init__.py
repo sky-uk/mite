@@ -176,11 +176,11 @@ class JsMetricsContext:
         self._browser = browser
         self._results = None
 
-        async def __aenter__(self):
-            self._browser._clear_resource_timings()
+    async def __aenter__(self):
+        self._browser._clear_resource_timings()
 
-        async def __aexit__(self, exc_type, exc, tb):
-            self._results = self._browser._retrieve_javascript_metrics()
+    async def __aexit__(self, exc_type, exc, tb):
+        self._results = self._browser._retrieve_javascript_metrics()
 
 
 @asynccontextmanager
