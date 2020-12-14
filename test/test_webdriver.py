@@ -60,17 +60,17 @@ def test_webdriver_start_stop(MockRemote):
     context = MockContext()
     context.config = DICT_CAPABILITIES_CONFIG
     wrapper = _SeleniumWrapper(context)
-    wrapper.start()
+    wrapper._start()
     MockRemote.assert_called_with(
         browser_profile=None,
-        command_executor='http://127.0.0.1:4444/wd/hub',
-        desired_capabilities={'browser': 'Chrome'},
+        command_executor="http://127.0.0.1:4444/wd/hub",
+        desired_capabilities={"browser": "Chrome"},
         file_detector=None,
         keep_alive=False,
         options=None,
         proxy=None,
     )
-    wrapper.stop()
+    wrapper._stop()
     # For some reason, calling the Mock provides a reference to the instance
     # that was created when the mock was previously instantiated
     MockRemote().close.assert_called()
@@ -86,7 +86,7 @@ async def test_selenium_context_manager():
         pass
 
     # patch with async decorator misbehaving
-    with patch('mite_selenium.Remote', autospec=True) as MockRemote:
+    with patch("mite_selenium.Remote", autospec=True) as MockRemote:
         await test(context)
 
     MockRemote.assert_called()
