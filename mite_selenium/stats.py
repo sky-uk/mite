@@ -46,8 +46,8 @@ def build_metrics(metrics, matcher, labels):
 
 STATS = (
     Counter(
-        "mite_http_selenium_response_total",
-        matcher_by_type("http_selenium_page_load_metrics"),
+        "mite_selenium_response_total",
+        matcher_by_type("selenium_page_load_metrics"),
         extractor("test journey transaction".split()),
     ),
     *build_metrics(_PAGE_LOAD_METRICS, "selenium_page_load", ["transaction"]),
