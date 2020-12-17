@@ -107,7 +107,7 @@ class _SeleniumWrapper:
                 "total_time": timings["duration"],
             }
             self._context.send(
-                "http_selenium_page_load_metrics",
+                "selenium_page_load_metrics",
                 **self._extract_and_convert_metrics_to_seconds(metrics),
             )
 
@@ -122,7 +122,7 @@ class _SeleniumWrapper:
 
     def _extract_and_convert_metrics_to_seconds(self, metrics):
         converted_metrics = dict()
-        non_time_based_metrics = ["page_weight"]
+        non_time_based_metrics = ["page_weight", "resource_path"]
         for k, v in metrics.items():
             if k not in non_time_based_metrics:
                 converted_metrics[k] = self._convert_ms_to_seconds(v)
