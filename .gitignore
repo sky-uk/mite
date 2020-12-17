@@ -93,6 +93,7 @@ ENV/
 
 # Pycharm
 .idea/*
+.vscode/*
 
 # Jordan's add . moron protection
 recorder_data/
