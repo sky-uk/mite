@@ -96,15 +96,11 @@ class HttpStatsOutput:
             del self._resp_time_recent[:]
             self._req_recent = 0
             self._error_recent = 0
-        if msg_type == "http_metrics":
-            self._resp_time_recent.append(message["total_time"])
-            self._req_total += 1
-            self._req_recent += 1
-        elif msg_type == "http_selenium_page_load_metrics":
-            self._resp_time_recent.append(message["total_time"])
-            self._req_total += 1
-            self._req_recent += 1
-        elif msg_type == "http_selenium_network_resource_metrics":
+        if msg_type in {
+            "http_metrics",
+            "http_selenium_page_load_metrics",
+            "http_selenium_network_resource_metrics",
+        }:
             self._resp_time_recent.append(message["total_time"])
             self._req_total += 1
             self._req_recent += 1

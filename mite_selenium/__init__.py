@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Remote
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -130,10 +131,7 @@ class _SeleniumWrapper:
         return converted_metrics
 
     def _convert_ms_to_seconds(self, value_ms):
-        try:
-            return value_ms / 1000
-        except Exception:
-            return value_ms
+        return value_ms / 1000
 
     def _retrieve_javascript_metrics(self):
         try:
@@ -145,6 +143,7 @@ class _SeleniumWrapper:
             return []
 
     def _clear_resource_timings(self):
+        breakpoint()
         self._remote.execute_script("performance.clearResourceTimings()")
 
     def get(self, url):
@@ -159,28 +158,22 @@ class _SeleniumWrapper:
             return WebDriverWait(self._remote, timeout).until(
                 EC.presence_of_element_located(locator)
             )
-        except Exception as te:
+        except TimeoutException as te:
             raise MiteError(
                 f"Timed out trying to find element '{locator}' in the dom"
             ) from te
-
-    def find_element(self, locator):
-        return self.wait_for_element(locator, 2)
-
-    def implicit_wait(self, timeout):
-        self._remote.implicitly_wait(timeout)
 
 
 class JsMetricsContext:
     def __init__(self, browser):
         self._browser = browser
-        self._results = None
+        self.results = None
 
     async def __aenter__(self):
         self._browser._clear_resource_timings()
 
     async def __aexit__(self, exc_type, exc, tb):
-        self._results = self._browser._retrieve_javascript_metrics()
+        self.results = self._browser._retrieve_javascript_metrics()
 
 
 @asynccontextmanager

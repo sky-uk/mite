@@ -1,8 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from mocks.mock_context import MockContext
+from selenium.common.exceptions import TimeoutException
 
+from mite.exceptions import MiteError
 from mite_selenium import _SeleniumWrapper, mite_selenium
 
 EXAMPLE_WEBDRIVER_CONFIG = {
@@ -49,17 +51,13 @@ def test_config_defaults():
 
 
 def test_webdriver_capabilities_as_dict():
-    context = MockContext()
-    context.config = DICT_CAPABILITIES_CONFIG
-    wrapper = _SeleniumWrapper(context)
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
     assert wrapper._capabilities == {"browser": "Chrome"}
 
 
 @patch("mite_selenium.Remote", autospec=True)
 def test_webdriver_start_stop(MockRemote):
-    context = MockContext()
-    context.config = DICT_CAPABILITIES_CONFIG
-    wrapper = _SeleniumWrapper(context)
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
     wrapper._start()
     MockRemote.assert_called_with(
         browser_profile=None,
@@ -76,6 +74,71 @@ def test_webdriver_start_stop(MockRemote):
     MockRemote().close.assert_called()
 
 
+def test_get_js_metrics_context():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    context = wrapper.get_js_metrics_context()
+    assert context._browser == wrapper
+    assert context.results is None
+
+
+@pytest.mark.asyncio
+async def test_js_metrics_context_manager():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote") as mock_remote:
+        wrapper._start()
+        js_context = wrapper.get_js_metrics_context()
+
+        async with js_context:
+            pass
+
+        calls = [
+            call("performance.clearResourceTimings()"),
+            call("return performance.getEntriesByType('resource')"),
+        ]
+        mock_remote.return_value.execute_script.assert_has_calls(calls)
+
+
+def test_wait_for_element():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote") as mock_remote, patch(
+        "mite_selenium.WebDriverWait"
+    ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
+        wrapper._start()
+        locator = ("foo", "bar")
+        wrapper.wait_for_element(locator, timeout=7)
+
+        mock_web_driver_wait.assert_called_once_with(mock_remote.return_value, 7)
+        mock_web_driver_wait.return_value.until.assert_called_once_with(
+            mock_ec.presence_of_element_located.return_value
+        )
+        mock_ec.presence_of_element_located.assert_called_once_with(locator)
+
+
+def test_wait_for_element_raises_timeout_exception():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote"), patch(
+        "mite_selenium.WebDriverWait"
+    ) as mock_web_driver_wait, patch("mite_selenium.EC"):
+        wrapper._start()
+        locator = ("foo", "bar")
+        mock_web_driver_wait.return_value.until.side_effect = TimeoutException
+        with pytest.raises(MiteError, match="Timed out"):
+            wrapper.wait_for_element(locator, timeout=7)
+
+
+def test_webdriver_get():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote") as mock_remote:
+        mock_remote.return_value.capabilities = {"browserName": "chrome"}
+        wrapper._start()
+        wrapper.get("https://google.com")
+
+        mock_remote.assert_called()
+        mock_remote.return_value.get.assert_called_with("https://google.com")
+        mock_remote.return_value.execute_script.assert_called()
+        assert wrapper._remote == mock_remote.return_value
+
+
 @pytest.mark.asyncio
 async def test_selenium_context_manager():
     context = MockContext()
@@ -86,8 +149,14 @@ async def test_selenium_context_manager():
         pass
 
     # patch with async decorator misbehaving
-    with patch("mite_selenium.Remote", autospec=True) as MockRemote:
+    with patch("mite_selenium.Remote", autospec=True) as mock_remote:
         await test(context)
 
-    MockRemote.assert_called()
-    MockRemote().close.assert_called()
+    mock_remote.assert_called()
+    mock_remote().close.assert_called()
+
+
+def _setup_wrapper(capabilites):
+    context = MockContext()
+    context.config = capabilites
+    return _SeleniumWrapper(context)

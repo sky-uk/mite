@@ -50,7 +50,7 @@ STATS = (
         matcher_by_type("http_selenium_page_load_metrics"),
         extractor("test journey transaction".split()),
     ),
-    *build_metrics(_PAGE_LOAD_METRICS, "http_selenium_page_load", ["transaction"]),
+    *build_metrics(_PAGE_LOAD_METRICS, "selenium_page_load", ["transaction"]),
     *build_metrics(
         _NETWORK_RESOURCE_METRICS,
         "http_selenium_network_resource",
