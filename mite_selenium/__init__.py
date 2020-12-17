@@ -143,7 +143,6 @@ class _SeleniumWrapper:
             return []
 
     def _clear_resource_timings(self):
-        breakpoint()
         self._remote.execute_script("performance.clearResourceTimings()")
 
     def get(self, url):
