@@ -24,7 +24,6 @@ class _SeleniumWrapper:
             "webdriver_command_executor", "http://127.0.0.1:4444/wd/hub"
         )
         self._keep_alive = self._context.config.get("webdriver_keep_alive", False)
-
         self._file_detector = self._spec_import_if_none("webdriver_file_detector")
         self._proxy = self._spec_import_if_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_none("webdriver_browser_profile")
@@ -32,8 +31,7 @@ class _SeleniumWrapper:
 
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
-        if not type(self._capabilities) == dict:
-            self._capabilities = spec_import(self._capabilities)
+        self._capabilities = spec_import(self._capabilities)
 
     def _spec_import_if_none(self, config_option):
         value = self._context.config.get(config_option, None)
