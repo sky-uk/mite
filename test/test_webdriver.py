@@ -21,7 +21,10 @@ LIGHTWEIGHT_WEBDRIVER_CONFIG = {
     "webdriver_capabilities": "mocks.mock_selenium:capabilities"
 }
 
-DICT_CAPABILITIES_CONFIG = {"webdriver_capabilities": {"browser": "Chrome"}}
+
+# Mock webdriver capabilities with spec import 
+webdriver_capabilities = {"browser": "Chrome"}
+DICT_CAPABILITIES_CONFIG = {"webdriver_capabilities": "test_webdriver:webdriver_capabilities"}
 
 
 def test_config_loaded():
