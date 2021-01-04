@@ -48,19 +48,21 @@ git push
 
 ## Unit tests
 
-Run the unit tests on all supported python versions (currently 3.7 and
-3.8), including a code-coverage report:
+Run the unit tests on all supported python versions (currently 3.8and
+3.9), including a code-coverage report:
 
 ```
 cd /path/to/mite
 tox
 ```
 
-This requires that you have python 3.7 and 3.8 installed locally (on
-ubuntu – specifically the dingo release – `sudo apt install python3.7
-python3.8`).  You will also need tox installed globally (or in the
-virtualenv you use for development).  You can view a hyperlinked
-version of the source annotated according to coverage with:
+This requires that you have python 3.8 and 3.9 installed locally (on
+ubuntu `sudo apt install python3.8 python3.9` after adding the
+[deadsnakes
+PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)).  You will
+also need tox installed globally (or in the virtualenv you use for
+development).  You can view a hyperlinked version of the source
+annotated according to coverage with:
 
 ```
 coverage html
