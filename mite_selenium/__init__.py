@@ -50,6 +50,7 @@ class _SeleniumWrapper:
             file_detector=self._file_detector,
             options=self._options,
         )
+        self._context.webdriver = self._remote
 
     def _stop(self):
         self._remote.close()
