@@ -65,7 +65,6 @@ Options:
     --prettify-timestamps             Reformat unix timestamps to human readable dates
 """
 import asyncio
-import inspect
 import logging
 import os
 import sys
@@ -80,13 +79,19 @@ import uvloop
 from .cli import receiver, stats
 from .cli.cat import cat, uncat
 from .cli.collector import collector
-from .cli.common import _create_config_manager, _create_runner, _create_scenario_manager
+from .cli.common import (
+    _create_config_manager,
+    _create_runner,
+    _create_scenario_manager,
+    _create_sender,
+    _get_scenario_with_kwargs,
+)
 from .cli.duplicator import duplicator
 from .cli.test import journey_cmd, scenario_cmd
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
-from .utils import _msg_backend_module, spec_import
+from .utils import _msg_backend_module
 from .web import app, prometheus_metrics
 
 
@@ -95,13 +100,6 @@ def _recorder_receiver(opts):
     receiver = _msg_backend_module(opts).Receiver()
     receiver.connect(socket)
     return receiver
-
-
-def _create_sender(opts):
-    socket = opts["--message-socket"]
-    sender = _msg_backend_module(opts).Sender()
-    sender.connect(socket)
-    return sender
 
 
 def _create_prometheus_exporter_receiver(opts):
@@ -198,22 +196,9 @@ def _controller_log_end(logging_id, logging_url):
 def controller(opts):
     config_manager = _create_config_manager(opts)
     scenario_spec = opts["SCENARIO_SPEC"]
-    scenarios_fn = spec_import(scenario_spec)
     scenario_manager = _create_scenario_manager(opts)
     sender = _create_sender(opts)
-    # Inject arguments into the scenario
-    scenarios_kwargs = {}
-    scenarios_signature = inspect.signature(scenarios_fn)
-    for param_name in scenarios_signature.parameters:
-        if param_name == "config":
-            scenarios_kwargs["config"] = config_manager
-        elif param_name == "sender":
-            scenarios_kwargs["sender"] = sender
-        else:
-            raise Exception(
-                f"Don't know how to inject {param_name} into a scenario function!"
-            )
-    scenarios = scenarios_fn(**scenarios_kwargs)
+    scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
     # Done setting up scenarios

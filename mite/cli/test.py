@@ -10,7 +10,13 @@ from ..controller import Controller
 from ..recorder import Recorder
 from ..utils import pack_msg, spec_import
 from ..volume_model import oneshot_vm
-from .common import _create_config_manager, _create_runner, _create_scenario_manager
+from .common import (
+    _create_config_manager,
+    _create_runner,
+    _create_scenario_manager,
+    _create_sender,
+    _get_scenario_with_kwargs,
+)
 
 
 class DirectRunnerTransport:
@@ -57,8 +63,8 @@ class DirectReciever:
 
 
 def _setup_msg_processors(receiver, opts):
-    collector = Collector(opts['--collector-dir'], int(opts['--collector-roll']))
-    recorder = Recorder(opts['--recorder-dir'])
+    collector = Collector(opts["--collector-dir"], int(opts["--collector-roll"]))
+    recorder = Recorder(opts["--recorder-dir"])
     receiver.add_listener(recorder.process_message)
     receiver.add_raw_listener(collector.process_raw_message)
 
@@ -116,24 +122,21 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
 
 def scenario_test_cmd(opts):
-    scenario_spec = opts['SCENARIO_SPEC']
-    scenarios_fn = spec_import(scenario_spec)
+    scenario_spec = opts["SCENARIO_SPEC"]
     config_manager = _create_config_manager(opts)
-    try:
-        scenarios = scenarios_fn(config_manager)
-    except TypeError:
-        scenarios = scenarios_fn()
+    sender = _create_sender(opts)
+    scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
     test_scenarios(scenario_spec, opts, scenarios, config_manager)
 
 
 def journey_test_cmd(opts):
-    journey_spec = opts['JOURNEY_SPEC']
-    datapool_spec = opts['DATAPOOL_SPEC']
+    journey_spec = opts["JOURNEY_SPEC"]
+    datapool_spec = opts["DATAPOOL_SPEC"]
     if datapool_spec:
         datapool = spec_import(datapool_spec)
     else:
         datapool = None
-    volumemodel = lambda start, end: int(opts['--volume'])
+    volumemodel = lambda start, end: int(opts["--volume"])
     test_scenarios(
         journey_spec,
         opts,
@@ -143,8 +146,8 @@ def journey_test_cmd(opts):
 
 
 def journey_run_cmd(opts):
-    journey_spec = opts['JOURNEY_SPEC']
-    datapool_spec = opts['DATAPOOL_SPEC']
+    journey_spec = opts["JOURNEY_SPEC"]
+    datapool_spec = opts["DATAPOOL_SPEC"]
     if datapool_spec:
         datapool = SingleRunDataPoolWrapper(spec_import(datapool_spec))
     else:
@@ -159,12 +162,12 @@ def journey_run_cmd(opts):
 
 
 def scenario_cmd(opts):
-    if opts['test']:
+    if opts["test"]:
         scenario_test_cmd(opts)
 
 
 def journey_cmd(opts):
-    if opts['test']:
+    if opts["test"]:
         journey_test_cmd(opts)
-    elif opts['run']:
+    elif opts["run"]:
         journey_run_cmd(opts)
