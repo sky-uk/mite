@@ -53,7 +53,7 @@ STATS = (
     *build_metrics(_PAGE_LOAD_METRICS, "selenium_page_load", ["transaction"]),
     *build_metrics(
         _NETWORK_RESOURCE_METRICS,
-        "http_selenium_network_resource",
+        "selenium_network_resource",
         ["transaction", "resource_path"],
     ),
 )
