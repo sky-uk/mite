@@ -40,6 +40,16 @@ async def test_session_cookies(httpbin):
 
 
 @pytest.mark.asyncio
+async def test_session_cookies_sent_on_subsequent_request(httpbin):
+    s = session()
+    await s.get(httpbin.url + "/cookies/set?name=value")
+    resp = await s.get(httpbin.url + "/cookies")
+    data = resp.json()
+    assert len(data) == 1
+    assert data["cookies"] == {"name": "value"}
+
+
+@pytest.mark.asyncio
 async def test_set_cookies(httpbin):
     s = session()
     await s.get(httpbin.url + "/cookies/set?name=value")
