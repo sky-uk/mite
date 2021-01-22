@@ -147,6 +147,7 @@ extern PyTypeObject EventLoopType;
 extern PyTypeObject ResponseType;
 extern PyTypeObject SessionType;
 void start_request(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
+void perform_request(AcRequestData *rd);
 void free_buffer_nodes(BufferNode *start);
 void schedule_cleanup_curl_share(Session *session, CURLSH *share);
 void schedule_cleanup_curl_easy(Session *session, CURL *ptr);
