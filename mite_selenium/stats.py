@@ -23,6 +23,7 @@ _NETWORK_RESOURCE_METRICS = [
     ("time_to_last_byte", "seconds"),
     ("tls_time", "seconds"),
     ("total_time", "seconds"),
+    ("js_execution_time", "seconds")
 ]
 
 
