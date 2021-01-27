@@ -23,7 +23,10 @@ _NETWORK_RESOURCE_METRICS = [
     ("time_to_last_byte", "seconds"),
     ("tls_time", "seconds"),
     ("total_time", "seconds"),
-    ("js_execution_time", "seconds")
+]
+
+_CUSTOM_METRICS = [
+    ("js_execution_time", "seconds"),
 ]
 
 
@@ -57,4 +60,5 @@ STATS = (
         "selenium_network_resource",
         ["transaction", "resource_path"],
     ),
+    *build_metrics(_CUSTOM_METRICS, "selenium", ["transaction"]),
 )
