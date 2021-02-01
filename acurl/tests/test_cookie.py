@@ -76,7 +76,7 @@ def test_session_cookie_for_url_with_cookie_instance():
     assert cookie.value == "bar"
 
 
-def test_session_cookie_for_url_with_cookie_value():
+def test_session_cookie_for_url_with_string_value():
     cookie = acurl.session_cookie_for_url(url="https://sky.com", name="foo", value="bar")
     assert cookie.domain == ".sky.com"
     assert cookie.name == "foo"
