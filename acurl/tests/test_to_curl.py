@@ -23,7 +23,7 @@ def test_to_curl_cookies():
     r = create_request(
         "GET",
         "http://foo.com",
-        cookies=(acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),),
+        cookies=(acurl._Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),),
     )
     assert r.to_curl() == "curl -X GET  --cookie 123=456   http://foo.com"
 
@@ -33,8 +33,8 @@ def test_to_curl_multiple_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl.Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),
-            acurl.Cookie(False, "foo.com", True, "/", False, 0, "789", "abc"),
+            acurl._Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),
+            acurl._Cookie(False, "foo.com", True, "/", False, 0, "789", "abc"),
         ),
     )
     assert r.to_curl() == "curl -X GET  --cookie '123=456;789=abc'   http://foo.com"
@@ -50,7 +50,7 @@ def test_to_curl_cookies_wrong_domain():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl.Cookie(
+            acurl._Cookie(
                 False,
                 "bar.com",  # The domain doesn't match, the cookie should not be passed
                 True,

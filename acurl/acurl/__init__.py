@@ -25,6 +25,18 @@ _FALSE_TRUE = ["FALSE", "TRUE"]
 
 
 class Cookie:
+    def __init__(
+        self,
+        domain,
+        name,
+        value,
+    ):
+        self.domain = domain
+        self.name = name
+        self.value = value
+
+
+class _Cookie:
     __slots__ = "_http_only _domain _include_subdomains _path _is_secure _expiration _name _value".split()
 
     def __init__(
@@ -134,7 +146,7 @@ def parse_cookie_string(cookie_string):
         value = ""
     else:
         domain, include_subdomains, path, is_secure, expiration, name, value = parts
-    return Cookie(
+    return _Cookie(
         http_only,
         domain,
         include_subdomains == "TRUE",
@@ -166,16 +178,18 @@ def session_cookie_for_url(
     scheme, netloc, path, params, query, fragment = urlparse(url)
     if not include_url_path:
         path = "/"
+
+    is_type_cookie = isinstance(value, Cookie)
     # TODO do we need to sanitize netloc for IP and ports?
-    return Cookie(
+    return _Cookie(
         http_only,
-        "." + netloc.split(":")[0],
+        value.domain if is_type_cookie else "." + netloc.split(":")[0],
         include_subdomains,
         path,
         is_secure,
         0,
-        name,
-        value,
+        value.name if is_type_cookie else name,
+        value.value if is_type_cookie else value,
     )
 
 
