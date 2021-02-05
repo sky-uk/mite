@@ -35,36 +35,6 @@ class RecyclableIterableDataPool:
         self._available.append(id)
 
 
-class IterableFactoryDataPool:
-    def __init__(self, iterable_factory):
-        self._iterable_factory = iterable_factory
-        self._checked_out = set()
-        self._initialized = False
-
-    def _initialize_once(self):
-        if self._initialized:
-            return
-        self._iter = self._cycle()
-        self._initialized = True
-
-    def _cycle(self):
-        while True:
-            iterable = enumerate(self._iterable_factory(), 1)
-            for id, data in iterable:
-                yield id, data
-
-    async def checkout(self, config):
-        self._initialize_once()
-        _id, data = next(self._iter)
-        if _id in self._checked_out:
-            raise Exception("Iterable factory data pool lapped itself")
-        self._checked_out.add(_id)
-        return DataPoolItem(_id, data)
-
-    async def checkin(self, id):
-        self._checked_out.remove(id)
-
-
 class IterableDataPool:
     def __init__(self, iterable):
         self._iter = enumerate(iterable, 1)
@@ -79,19 +49,6 @@ class IterableDataPool:
 
     async def checkin(self, id):
         pass
-
-
-# FIXME deprecate these aliases
-def create_iterable_data_pool_with_recycling(iterable):
-    return RecyclableIterableDataPool(iterable)
-
-
-def create_iterable_data_pool(iterable):
-    return IterableDataPool(iterable)
-
-
-def iterable_factory_data_pool(fn):  # pragma: no cover
-    return IterableFactoryDataPool(fn)
 
 
 class SingleRunDataPool:
