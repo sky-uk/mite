@@ -2,8 +2,8 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -36,6 +36,7 @@ Options:
     -h --help                         Show this screen
     --version                         Show version
     --debugging                       Drop into debugger (pdb) on journey error and exit.  Select debugger with PYTHONBREAKPOINT and PYTHONPOSTMORTEM
+    --memory-tracing                  Print heap alloc diffs every 60 seconds
     --log-level=LEVEL                 Set logger level, one of DEBUG, INFO, WARNING, ERROR, CRITICAL [default: INFO]
     --config=CONFIG_SPEC              Set a config loader to a callable loaded via a spec [default: mite.config:default_config_loader]
     --add-to-config=NEW_VALUE         Add a key:value to the config map, in addition to what's loaded from a file
