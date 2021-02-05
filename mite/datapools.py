@@ -14,13 +14,13 @@ class DataPoolExhausted(BaseException):
 class RecyclableIterableDataPool:
     def __init__(self, iterable):
         self._data = iterable
-        self._available = deque(range(len(self._data)))
         self._initialized = False
 
     def _initialize_once(self):
         if self._initialized:
             return
         self._data = tuple(self._data)
+        self._available = deque(range(len(self._data)))
         self._initialized = True
 
     async def checkout(self, config):
@@ -54,6 +54,7 @@ class IterableFactoryDataPool:
                 yield id, data
 
     async def checkout(self, config):
+        self._initialize_once()
         _id, data = next(self._iter)
         if _id in self._checked_out:
             raise Exception("Iterable factory data pool lapped itself")
@@ -80,6 +81,7 @@ class IterableDataPool:
         pass
 
 
+# FIXME deprecate these aliases
 def create_iterable_data_pool_with_recycling(iterable):
     return RecyclableIterableDataPool(iterable)
 
