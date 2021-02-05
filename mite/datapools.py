@@ -13,10 +13,18 @@ class DataPoolExhausted(BaseException):
 
 class RecyclableIterableDataPool:
     def __init__(self, iterable):
-        self._data = tuple(iterable)
+        self._data = iterable
         self._available = deque(range(len(self._data)))
+        self._initialized = False
+
+    def _initialize_once(self):
+        if self._initialized:
+            return
+        self._data = tuple(self._data)
+        self._initialized = True
 
     async def checkout(self, config):
+        self._initialize_once()
         if self._available:
             id = self._available.popleft()
             return DataPoolItem(id, self._data[id])
@@ -31,7 +39,13 @@ class IterableFactoryDataPool:
     def __init__(self, iterable_factory):
         self._iterable_factory = iterable_factory
         self._checked_out = set()
+        self._initialized = False
+
+    def _initialize_once(self):
+        if self._initialized:
+            return
         self._iter = self._cycle()
+        self._initialized = True
 
     def _cycle(self):
         while True:
