@@ -25,6 +25,10 @@ _NETWORK_RESOURCE_METRICS = [
     ("total_time", "seconds"),
 ]
 
+_CUSTOM_METRICS = [
+    ("js_execution_time", "seconds"),
+]
+
 
 def build_metrics(metrics, matcher, labels):
     histograms = []
@@ -56,4 +60,5 @@ STATS = (
         "selenium_network_resource",
         ["transaction", "resource_path"],
     ),
+    *build_metrics(_CUSTOM_METRICS, "selenium", ["transaction"]),
 )
