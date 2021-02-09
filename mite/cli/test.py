@@ -1,6 +1,8 @@
 import asyncio
+import gc
 import logging
 import sys
+import tracemalloc
 
 from mite.datapools import SingleRunDataPoolWrapper
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
@@ -85,6 +87,42 @@ def _get_http_stats_output(receiver):
     return listeners[0].__self__ if len(listeners) == 1 else None
 
 
+def print_diff(snapshot1, snapshot2):
+    top_stats = snapshot2.compare_to(snapshot1, "lineno")
+    printed = 0
+    for stat in top_stats:
+        if any(
+            x in stat.traceback._frames[0][0]
+            for x in ("linecache.py", "traceback.py", "tracemalloc.py")
+        ):
+            continue
+        print(stat)
+        printed += 1
+        if printed > 10:
+            break
+
+
+async def mem_snapshot(initial_snapshot, interval=60):
+    last_snapshot = None
+    snapshot = None
+    while True:
+        await asyncio.sleep(interval)
+        last_snapshot = snapshot
+        gc.collect()
+        snapshot = tracemalloc.take_snapshot()
+        print("Differences from initial:")
+        print_diff(initial_snapshot, snapshot)
+        if last_snapshot is not None:
+            print("Differences from last:")
+            print_diff(last_snapshot, snapshot)
+
+
+async def controller_report(controller, receiver):
+    while True:
+        await asyncio.sleep(1)
+        controller.report(receiver.recieve)
+
+
 def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
@@ -100,24 +138,19 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     if opts["--debugging"]:
         loop.set_debug(True)
 
-    has_error = False
-
-    async def controller_report():
-        nonlocal has_error
-        while True:
-            await asyncio.sleep(1)
-            controller.report(receiver.recieve)
-            if controller.should_stop():
-                if http_stats_output is not None and http_stats_output.error_total > 0:
-                    has_error = True
-                return
-
-    loop.run_until_complete(
-        asyncio.gather(
-            controller_report(), _create_runner(opts, transport, receiver.recieve).run()
-        )
+    coroutines = (
+        controller_report(controller, receiver),
+        _create_runner(opts, transport, receiver.recieve).run(),
     )
+    if opts["--memory-tracing"]:
+        tracemalloc.start()
+        initial_snapshot = tracemalloc.take_snapshot()
+        coroutines += (mem_snapshot(initial_snapshot),)
 
+    loop.run_until_complete(asyncio.wait(coroutines, return_when=asyncio.FIRST_COMPLETED))
+    # Run one last report before exiting
+    controller.report(receiver.recieve)
+    has_error = http_stats_output is not None and http_stats_output.error_total > 0
     sys.exit(int(has_error))
 
 
