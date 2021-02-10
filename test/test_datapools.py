@@ -1,55 +1,73 @@
 import pytest
-
-from mite.scenario import ScenarioManager
+from pytest import raises
 
 from mite.datapools import (
-    create_iterable_data_pool_with_recycling,
-    create_iterable_data_pool,
     DataPoolExhausted,
+    IterableDataPool,
+    RecyclableIterableDataPool,
 )
-import mite.datapools as dps
+from mite.scenario import ScenarioManager
 
 
 @pytest.mark.asyncio
-async def test_recycling():
-    scenario_manager = ScenarioManager()
-    iterable = 'abcdefgh'
-    dp = create_iterable_data_pool_with_recycling(iterable)
-    for i in range(len(iterable) * 20):
-        dpi = await dp.checkout(scenario_manager)
-        await dp.checkin(dpi.id)
-    assert (await dp.checkout(scenario_manager)).data == 'a'
+class TestRecyclableIterableDataPool:
+    async def test_recycling(self):
+        scenario_manager = ScenarioManager()
+        iterable = "abcdefgh"
+        dp = RecyclableIterableDataPool(iterable)
+        for _ in range(len(iterable) * 20):
+            dpi = await dp.checkout(scenario_manager)
+            await dp.checkin(dpi.id)
+        assert (await dp.checkout(scenario_manager)).data == "a"
 
-
-@pytest.mark.asyncio
-async def test_iterable():
-    scenario_manager = ScenarioManager()
-    iterable = 'abcdefgh'
-    dp = create_iterable_data_pool(iterable)
-    for i in range(len(iterable)):
-        dpi = await dp.checkout(scenario_manager)
-        await dp.checkin(dpi.id)
-    try:
+    async def test_raises_when_exhausted(self):
+        scenario_manager = ScenarioManager()
+        iterable = "ab"
+        dp = RecyclableIterableDataPool(iterable)
         await dp.checkout(scenario_manager)
-    except DataPoolExhausted:
-        pass
-    else:
-        assert False, "Data pool should have been exhausted"
+        await dp.checkout(scenario_manager)
+        with raises(Exception, match="Recyclable iterable datapool was emptied!"):
+            await dp.checkout(scenario_manager)
+
+    async def test_checkin(self):
+        scenario_manager = ScenarioManager()
+        iterable = "ab"
+        dp = RecyclableIterableDataPool(iterable)
+        xa = await dp.checkout(scenario_manager)
+        await dp.checkout(scenario_manager)
+        await dp.checkin(xa.id)
+        x = await dp.checkout(scenario_manager)
+        assert x.data == "a"
+
+    async def test_does_not_consume_until_checkout_called(self):
+        def my_iterable():
+            raise Exception("oops")
+            yield None
+
+        scenario_manager = ScenarioManager()
+        dp = RecyclableIterableDataPool(my_iterable())
+        with raises(Exception, match="oops"):
+            await dp.checkout(scenario_manager)
 
 
 @pytest.mark.asyncio
-async def test_recyclable_is_exhausted():
-    scenario_manager = ScenarioManager()
-    iterable = "ab"
-    dp = dps.RecyclableIterableDataPool(iterable)
-    xa = await dp.checkout(scenario_manager)
-    assert xa.data == "a"
-    x = await dp.checkout(scenario_manager)
-    assert x.data == "b"
-    x = await dp.checkout(scenario_manager)
-    assert x is None
-    await dp.checkin(xa.id)
-    x = await dp.checkout(scenario_manager)
-    assert x.data == "a"
-    x = await dp.checkout(scenario_manager)
-    assert x is None
+class TestIterableDataPool:
+    async def test_raises_when_exhausted(self):
+        scenario_manager = ScenarioManager()
+        iterable = "abcdefgh"
+        dp = IterableDataPool(iterable)
+        for _ in range(len(iterable)):
+            dpi = await dp.checkout(scenario_manager)
+            await dp.checkin(dpi.id)
+        with raises(DataPoolExhausted):
+            await dp.checkout(scenario_manager)
+
+    async def test_does_not_consume_until_checkout_called(self):
+        def my_iterable():
+            raise Exception("oops")
+            yield None
+
+        scenario_manager = ScenarioManager()
+        dp = IterableDataPool(my_iterable())
+        with raises(Exception, match="oops"):
+            await dp.checkout(scenario_manager)

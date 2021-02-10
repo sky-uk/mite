@@ -1,11 +1,10 @@
 import logging
 from collections import deque, namedtuple
-from itertools import count
 
 logger = logging.getLogger(__name__)
 
 
-DataPoolItem = namedtuple('DataPoolItem', 'id data'.split())
+DataPoolItem = namedtuple("DataPoolItem", "id data".split())
 
 
 class DataPoolExhausted(BaseException):
@@ -14,89 +13,42 @@ class DataPoolExhausted(BaseException):
 
 class RecyclableIterableDataPool:
     def __init__(self, iterable):
-        self._checked_out = {}
-        self._available = deque(
-            DataPoolItem(id, data) for id, data in enumerate(iterable, 1)
-        )
+        self._data = iterable
+        self._initialized = False
+
+    def _initialize_once(self):
+        if self._initialized:
+            return
+        self._data = tuple(self._data)
+        self._available = deque(range(len(self._data)))
+        self._initialized = True
 
     async def checkout(self, config):
+        self._initialize_once()
         if self._available:
-            dpi = self._available.popleft()
-            self._checked_out[dpi.id] = dpi.data
-            return dpi
+            id = self._available.popleft()
+            return DataPoolItem(id, self._data[id])
         else:
-            # FIXME: should this raise a DataPoolExhausted exception?
-            return None
+            raise Exception("Recyclable iterable datapool was emptied!")
 
     async def checkin(self, id):
-        data = self._checked_out[id]
-        self._available.append(DataPoolItem(id, data))
-
-
-class IterableFactoryDataPool:
-    def __init__(self, iterable_factory):
-        self._iterable_factory = iterable_factory
-        self._checked_out = set()
-
-    def _cycle(self):
-        counter = count(1)
-        _iter = iter(self._iterable_factory())
-        while True:
-            try:
-                data = next(_iter)
-            except StopIteration:
-                counter = count(1)
-                _iter = iter(self._iterable_factory())
-                data = next(_iter)
-            _id = next(counter)
-            yield _id, data
-
-    async def checkout(self, config):
-        if not hasattr(self, '_cycle_gen_iter'):
-            self._cycle_gen_iter = self._cycle()
-        last_id = 0
-        while True:
-            _id, data = next(self._cycle_gen_iter)
-            if _id not in self._checked_out:
-                self._checked_out.add(_id)
-                return DataPoolItem(_id, data)
-            if _id <= last_id:
-                return None
-            last_id = _id
-
-    async def checkin(self, id):
-        self._checked_out.remove(id)
+        self._available.append(id)
 
 
 class IterableDataPool:
     def __init__(self, iterable):
-        self._iter = iter(iterable)
-        self._id_gen = count(1)
+        self._iter = enumerate(iterable, 1)
 
     async def checkout(self, config):
         try:
-            data = next(self._iter)
+            id, data = next(self._iter)
         except StopIteration:
             raise DataPoolExhausted()
-        else:
-            id = next(self._id_gen)
-            dpi = DataPoolItem(id, data)
-            return dpi
+        dpi = DataPoolItem(id, data)
+        return dpi
 
     async def checkin(self, id):
         pass
-
-
-def create_iterable_data_pool_with_recycling(iterable):
-    return RecyclableIterableDataPool(iterable)
-
-
-def create_iterable_data_pool(iterable):
-    return IterableDataPool(iterable)
-
-
-def iterable_factory_data_pool(fn):  # pragma: no cover
-    return IterableFactoryDataPool(fn)
 
 
 class SingleRunDataPool:
