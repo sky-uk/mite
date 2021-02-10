@@ -1,4 +1,5 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from selenium.common.exceptions import TimeoutException
@@ -166,12 +167,16 @@ class JsMetricsContext:
     def __init__(self, browser):
         self._browser = browser
         self.results = None
+        self.start_time = None
+        self.execution_time = None
 
     async def __aenter__(self):
+        self.start_time = time.time()
         self._browser._clear_resource_timings()
 
     async def __aexit__(self, exc_type, exc, tb):
         self.results = self._browser._retrieve_javascript_metrics()
+        self.execution_time = time.time() - self.start_time
 
 
 @asynccontextmanager
