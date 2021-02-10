@@ -51,6 +51,14 @@ class IterableDataPool:
         pass
 
 
+def iterable_datapool(fn):
+    return IterableDataPool(fn())
+
+
+def recyclable_iterable_datapool(fn):
+    return RecyclableIterableDataPool(fn())
+
+
 class SingleRunDataPool:
     def __init__(self, data_item):
         self.has_ran = False
