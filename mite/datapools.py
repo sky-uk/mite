@@ -15,6 +15,7 @@ class RecyclableIterableDataPool:
     def __init__(self, iterable):
         self._data = iterable
         self._initialized = False
+        self._available = None
 
     def _initialize_once(self):
         if self._initialized:
@@ -32,6 +33,12 @@ class RecyclableIterableDataPool:
             raise Exception("Recyclable iterable datapool was emptied!")
 
     async def checkin(self, id):
+        if self._available is None:
+            logger.error(
+                f"{repr(self)}: checkin called for {id} before the datapool "
+                "was initialized!  Maybe a stale runner is hanging around"
+            )
+            return
         self._available.append(id)
 
 
