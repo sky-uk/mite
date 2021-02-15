@@ -1,5 +1,4 @@
 import asyncio
-import re
 import shlex
 import threading
 import time
