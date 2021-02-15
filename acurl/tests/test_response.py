@@ -52,6 +52,7 @@ def test_response_headers_with_HTTP_100():
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
 
+
 def test_response_headers_with_multiple_HTTP_100():
     # It's unclear if this can happen. It doesn't sound like it should, but
     # there's documentation of it happening in IIS at least:

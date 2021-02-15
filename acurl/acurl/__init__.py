@@ -411,7 +411,9 @@ class Response:
     @property
     def headers_tuple(self):
         if not hasattr(self, "_headers_tuple"):
-            self._headers_tuple = tuple(tuple(l.split(": ", 1)) for l in self._get_header_lines())
+            self._headers_tuple = tuple(
+                tuple(l.split(": ", 1)) for l in self._get_header_lines()
+            )
         return self._headers_tuple
 
     # TODO: is this part of the request api?
