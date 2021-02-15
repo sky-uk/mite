@@ -400,12 +400,19 @@ class Response:
                 self._headers[k] = ", ".join(headers[k])
         return self._headers
 
+    def _get_header_lines(self):
+        headers = self.header.split("\r\n")
+        headers = headers[:-2]  # drop the final blank lines
+        while headers[0].startswith("HTTP/1.1 100"):
+            headers = headers[2:]
+        return headers[1:]  # drop the final response code
+
     # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
         if not hasattr(self, "_headers_tuple"):
             self._headers_tuple = tuple(
-                tuple(l.split(": ", 1)) for l in self.header.split("\r\n")[1:-2]
+                tuple(l.split(": ", 1)) for l in self._get_header_lines()
             )
         return self._headers_tuple
 

@@ -35,6 +35,47 @@ def test_response_headers():
     assert r.headers["baz"] == "quux, quuz"
 
 
+def test_response_headers_with_HTTP_100():
+    r = acurl.Response(
+        "Some Request",
+        MockRawResponse(
+            [
+                b"HTTP/1.1 100 Continue\r\n",
+                b"\r\n",
+                b"HTTP/1.1 200 OK\r\n",
+                b"Foo: bar\r\n",
+                b"\r\n",
+            ]
+        ),
+        0,
+    )
+    assert "Foo" in r.headers
+    assert r.headers["Foo"] == "bar"
+
+
+def test_response_headers_with_multiple_HTTP_100():
+    # It's unclear if this can happen. It doesn't sound like it should, but
+    # there's documentation of it happening in IIS at least:
+    # https://stackoverflow.com/questions/22818059/several-100-continue-received-from-the-server
+    r = acurl.Response(
+        "Some Request",
+        MockRawResponse(
+            [
+                b"HTTP/1.1 100 Continue\r\n",
+                b"\r\n",
+                b"HTTP/1.1 100 Continue\r\n",
+                b"\r\n",
+                b"HTTP/1.1 200 OK\r\n",
+                b"Foo: bar\r\n",
+                b"\r\n",
+            ]
+        ),
+        0,
+    )
+    assert "Foo" in r.headers
+    assert r.headers["Foo"] == "bar"
+
+
 @pytest.mark.asyncio
 async def test_response_cookies(httpserver):
     hdrs = Headers()
