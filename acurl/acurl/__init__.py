@@ -1,4 +1,5 @@
 import asyncio
+import re
 import shlex
 import threading
 import time
@@ -400,13 +401,28 @@ class Response:
                 self._headers[k] = ", ".join(headers[k])
         return self._headers
 
+    def _get_header_lines(self):
+        header_lines = iter(self.header.splitlines())
+        for line in header_lines:
+            http_code_header = re.search(r"^HTTP/[\d\.]+\s+(?P<code>\d+)", line, re.IGNORECASE)
+            if http_code_header:
+                if http_code_header['code'] == "100":
+                    # Consume & skip the expected blank line
+                    next_line = next(header_lines)
+                    if next_line:
+                        raise ValueError(f"Expected blank line to follow HTTP 100 but received: {next_line}")
+                # Anything HTTP/ is not an HTTP header
+                continue
+            elif not line:
+                # Any other blank lines indicate the end of the header block
+                break
+            yield line
+
     # TODO: is this part of the request api?
     @property
     def headers_tuple(self):
         if not hasattr(self, "_headers_tuple"):
-            self._headers_tuple = tuple(
-                tuple(l.split(": ", 1)) for l in self.header.split("\r\n")[1:-2]
-            )
+            self._headers_tuple = tuple(tuple(l.split(": ", 1)) for l in self._get_header_lines())
         return self._headers_tuple
 
     # TODO: is this part of the request api?

@@ -35,6 +35,24 @@ def test_response_headers():
     assert r.headers["baz"] == "quux, quuz"
 
 
+def test_response_headers_with_HTTP_100():
+    r = acurl.Response(
+        "Some Request",
+        MockRawResponse(
+            [
+                b"HTTP/1.1 100 Continue\r\n",
+                b"\r\n",
+                b"HTTP/1.1 200 OK\r\n",
+                b"Foo: bar\r\n",
+                b"\r\n",
+            ]
+        ),
+        0,
+    )
+    assert "Foo" in r.headers
+    assert r.headers["Foo"] == "bar"
+
+
 @pytest.mark.asyncio
 async def test_response_cookies(httpserver):
     hdrs = Headers()
