@@ -1,5 +1,6 @@
 import logging
 from collections import deque, namedtuple
+from itertools import cycle
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def iterable_datapool(fn):
 
 
 def recyclable_iterable_datapool(fn):
-    return RecyclableIterableDataPool(fn())
+    return IterableDataPool(cycle(fn()))
 
 
 class SingleRunDataPool:
