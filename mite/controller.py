@@ -141,13 +141,10 @@ class Controller:
         )
 
     def should_stop(self):
-        logger.debug(
-            "Scenario manager active: %s" % (self._scenario_manager.is_active(),)
-        )
-        logger.debug("Active runners: %s" % (self._runner_tracker.get_active_count(),))
-        return (
-            not self._scenario_manager.is_active()
-        ) and self._runner_tracker.get_active_count() == 0
+        scenario_manager_active = self._scenario_manager.is_active()
+        active_runner_count = self._runner_tracker.get_active_count()
+        logger.debug(f"should_stop {scenario_manager_active=} {active_runner_count=}")
+        return not scenario_manager_active and active_runner_count == 0
 
     def bye(self, runner_id):
         self._runner_tracker.remove_runner(runner_id)
