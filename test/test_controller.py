@@ -119,6 +119,13 @@ def test_controller_report():
 
 
 class TestWorkTracker:
+    def test_get_total_work_is_additive(self):
+        wt = WorkTracker()
+        wt.set_actual(1, {101: 3})
+        wt.set_actual(2, {101: 3})
+        total = wt.get_total_work([1, 2])
+        assert total == {101: 6}
+
     def test_remove_runner_removes_work_from_total(self):
         wt = WorkTracker()
         wt.set_actual(1, {101: 3})
@@ -126,3 +133,15 @@ class TestWorkTracker:
         wt.remove_runner(1)
         total = wt.get_total_work([2])
         assert total == {101: 3}
+
+    def test_add_assumed(self):
+        wt = WorkTracker()
+        assumed = (
+            (1, None, None, None),
+            (1, None, None, None),
+            (1, None, None, None),
+            (1, None, None, None),
+            (2, None, None, None),
+        )
+        wt.add_assumed(1, assumed)
+        assert wt._all_work[1] == {1: 4, 2: 1}
