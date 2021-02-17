@@ -12,7 +12,7 @@ from mite.__main__ import controller as main_controller
 from mite.__main__ import duplicator as main_duplicator
 from mite.__main__ import runner as main_runner
 from mite.config import ConfigManager
-from mite.controller import Controller
+from mite.controller import Controller, WorkTracker
 from mite.scenario import ScenarioManager, StopScenario
 
 TESTNAME = "unit_test_name"
@@ -30,15 +30,15 @@ def test_controller_hello():
 
 def test_controller_log_start(httpserver):
     def handler(req):
-        assert req.data == json.dumps({'id': "testing"}).encode("utf-8")
+        assert req.data == json.dumps({"id": "testing"}).encode("utf-8")
         return
 
     httpserver.expect_request(
         "/start",
         "POST",
-        data=ujson.dumps({'testname': "testing"}),
+        data=ujson.dumps({"testname": "testing"}),
         handler_type=HandlerType.ONESHOT,
-    ).respond_with_json({'newid': "testing-id"})
+    ).respond_with_json({"newid": "testing-id"})
 
     with httpserver.wait(raise_assertions=True, stop_on_nohandler=True, timeout=5):
         _controller_log_start("testing", httpserver.url_for("/"))
@@ -48,7 +48,7 @@ def test_controller_log_end(httpserver):
     httpserver.expect_request(
         "/end",
         "POST",
-        data=ujson.dumps({'id': "testing-id"}),
+        data=ujson.dumps({"id": "testing-id"}),
         handler_type=HandlerType.ONESHOT,
     ).respond_with_response(Response(status=204))
 
@@ -91,10 +91,10 @@ def test_controller_report():
     ds = DummySender()
     opts = {
         "SCENARIO_SPEC": "test_controller:dummy_scenario",
-        '--delay-start-seconds': 0,
-        '--min-loop-delay': 0,
-        '--max-loop-delay': 0,
-        '--spawn-rate': 2000,
+        "--delay-start-seconds": 0,
+        "--min-loop-delay": 0,
+        "--max-loop-delay": 0,
+        "--spawn-rate": 2000,
         "--message-backend": "ZMQ",
         "--config": "mite.config:default_config_loader",
         "--add-to-config": (),
@@ -116,3 +116,13 @@ def test_controller_report():
     # Even in a broken condition, we get one controller report.  So we check
     # that we have more than that...
     assert sum(x["type"] == "controller_report" for x in ds._received) > 1
+
+
+class TestWorkTracker:
+    def test_remove_runner_removes_work_from_total(self):
+        wt = WorkTracker()
+        wt.set_actual(1, {101: 3})
+        wt.set_actual(2, {101: 3})
+        wt.remove_runner(1)
+        total = wt.get_total_work([2])
+        assert total == {101: 3}
