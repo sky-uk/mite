@@ -54,20 +54,19 @@ class ScenarioManager:
         )
 
     def _update_required_and_period(self, start_of_period, end_of_period):
-        required = {}
+        self._required.clear()
         for scenario_id, scenario in list(self._scenarios.items()):
             try:
-                number = int(scenario.volumemodel(start_of_period, end_of_period))
+                self._required[scenario_id] = int(
+                    scenario.volumemodel(start_of_period, end_of_period)
+                )
             except StopScenario:
                 logger.info(
                     "Removed scenario %d because volume model raised StopScenario",
                     scenario_id,
                 )
                 del self._scenarios[scenario_id]
-            else:
-                required[scenario_id] = number
         self._current_period_end = end_of_period
-        self._required = required
 
     def get_required_work(self):
         if self._in_start:
