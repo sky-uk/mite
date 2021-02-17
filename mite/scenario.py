@@ -1,8 +1,9 @@
 import logging
 import random
 import time
-from collections import namedtuple
-from itertools import count
+from collections import defaultdict, namedtuple
+from itertools import count, repeat
+from math import ceil, floor
 
 from .datapools import DataPoolExhausted
 
@@ -17,13 +18,10 @@ class StopScenario(Exception):
 
 
 def _volume_dicts_remove_a_from_b(a, b):
-    diff = dict(b)
+    diff = defaultdict(int, b)
     for scenario_id, current_num in a.items():
-        if scenario_id in diff:
-            diff[scenario_id] -= current_num
-            if diff[scenario_id] < 1:
-                del diff[scenario_id]
-    return diff
+        diff[scenario_id] -= current_num
+    return {k: v for k, v in diff.items() if v > 0}
 
 
 class ScenarioManager:
@@ -84,16 +82,16 @@ class ScenarioManager:
 
     async def get_work(
         self,
-        current_work,
-        num_runner_current_work,
+        all_current_work,
+        this_runner_current_work,
         num_runners,
         runner_self_limit,
         hit_rate,
     ):
-        required = self.get_required_work()
-        diff = _volume_dicts_remove_a_from_b(current_work, required)
-        total = sum(required.values())
-        runners_share_limit = total / num_runners - num_runner_current_work
+        required_work = self.get_required_work()
+        diff = _volume_dicts_remove_a_from_b(all_current_work, required_work)
+        total = sum(required_work.values())
+        runners_share_limit = total / num_runners - this_runner_current_work
         limit = max(0, runners_share_limit)
         if runner_self_limit is not None:
             limit = min(limit, runners_share_limit)
@@ -101,17 +99,12 @@ class ScenarioManager:
         if self._spawn_rate is not None and hit_rate > 1:
             spawn_limit = self._spawn_rate / hit_rate
             limit = min(limit, spawn_limit)
-        if limit % 1:
-            if limit % 1 > random.random():
-                limit += 1
-        limit = int(limit)
+        if random.random() < 0.5:  # round up or down randomly
+            limit = floor(limit)
+        else:
+            limit = ceil(limit)
 
-        def _yield(diff):
-            for k, v in diff.items():
-                for i in range(v):
-                    yield k
-
-        scenario_ids = list(_yield(diff))
+        scenario_ids = [x for k, v in diff.items() for x in repeat(k, v)]
         random.shuffle(scenario_ids)
         work = []
         for scenario_id in scenario_ids[:limit]:
@@ -125,7 +118,7 @@ class ScenarioManager:
                         )
                     except DataPoolExhausted:
                         logger.info(
-                            "Removed scenario %d because data pool exhausted", scenario_id
+                            f"Removed scenario {scenario_id} because data pool exhausted"
                         )
                         del self._scenarios[scenario_id]
                         continue
@@ -136,20 +129,10 @@ class ScenarioManager:
                     (scenario_id, data_pool_id, scenario.journey_spec, data_pool_data)
                 )
         logger.debug(
-            "current=%r required=%r diff=%r limit=%r runners_share_limit=%r spawn_limit=%r runner_self_limit=%r "
-            "num_runners=%r spawn_rate=%r hit_rate=%r num_runner_current_work=%r len_work=%r",
-            sum(current_work.values()),
-            sum(required.values()),
-            sum(diff.values()),
-            limit,
-            runners_share_limit,
-            spawn_limit,
-            runner_self_limit,
-            num_runners,
-            self._spawn_rate,
-            hit_rate,
-            num_runner_current_work,
-            len(work),
+            f"current={sum(all_current_work.values())} required={sum(required_work.values())} "
+            f"diff={sum(diff.values())} {limit=} {runners_share_limit=} {spawn_limit=} "
+            f"{runner_self_limit=} {num_runners=} spawn_rate={self._spawn_rate} {hit_rate=} "
+            f"{this_runner_current_work=} len_work={len(work)}",
         )
 
         return work
@@ -160,4 +143,16 @@ class ScenarioManager:
     async def checkin_data(self, ids):
         for scenario_id, scenario_data_id in ids:
             if scenario_id in self._scenarios:
+                # FIXME: this leaks datapool items if:
+                # - some journey is running (with a datapool)
+                # - we call _update_required_and_period and that journey is
+                #   removed
+                # - we come here to check the data pool items for the
+                #   previously-running journeys in
+                # - the datapool to check in to is missing
+                # This probably isn't a huge deal for us, because all our
+                # tests currently are structured to all run for the same time
+                # and finish simultaneously.  But eventually we should fix
+                # this, probably by storing an immutable mapping of
+                # scenario_id:datapool for checkin purposes
                 await self._scenarios[scenario_id].datapool.checkin(scenario_data_id)
