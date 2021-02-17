@@ -24,8 +24,8 @@ class WorkTracker:
     def add_assumed(self, runner_id, work):
         """Work given out is assumed to be being done"""
         current = self._all_work[runner_id]
-        for k, v in work.items():
-            current[k] += v
+        for scenario_id, *_ in work:
+            current[scenario_id] += 1
 
     def get_total_work(self, runner_ids):
         """Adds up the total assigned work for each scenario, across all runners.
@@ -106,10 +106,10 @@ class Controller:
         active_runner_ids = self._runner_tracker.get_active()
         current_work = self._work_tracker.get_total_work(active_runner_ids)
         hit_rate = self._runner_tracker.get_hit_rate()
-        work, scenario_volume_map = await self._scenario_manager.get_work(
+        work = await self._scenario_manager.get_work(
             current_work, runner_total, len(active_runner_ids), max_work, hit_rate
         )
-        self._add_assumed(runner_id, scenario_volume_map)
+        self._add_assumed(runner_id, work)
         return work
 
     async def request_work(
