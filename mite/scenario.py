@@ -128,7 +128,7 @@ class ScenarioManager:
                 work.append(
                     (scenario_id, data_pool_id, scenario.journey_spec, data_pool_data)
                 )
-        logger.debug(
+        logger.info(
             f"current={sum(all_current_work.values())} required={sum(required_work.values())} "
             f"diff={sum(diff.values())} {limit=} {runners_share_limit=} {spawn_limit=} "
             f"{runner_self_limit=} {num_runners=} spawn_rate={self._spawn_rate} {hit_rate=} "
