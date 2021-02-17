@@ -106,6 +106,7 @@ class Controller:
         active_runner_ids = self._runner_tracker.get_active()
         current_work = self._work_tracker.get_total_work(active_runner_ids)
         hit_rate = self._runner_tracker.get_hit_rate()
+        logger.info(f"getting work for runner {runner_id}")
         work = await self._scenario_manager.get_work(
             current_work, runner_total, len(active_runner_ids), max_work, hit_rate
         )
