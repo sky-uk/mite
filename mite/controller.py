@@ -1,22 +1,24 @@
+import logging
+import time
 from collections import defaultdict, deque
 from itertools import count
-import time
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class WorkTracker:
+    """Keep track of how much work each runner has assigned to it.
+
+    `_all_work` is a dictionary keyed by runner id.  The values are a
+    dictionary of `scenario_id: count` for each runner.
+
+    """
+
     def __init__(self):
         self._all_work = defaultdict(lambda: defaultdict(int))
-        self._total_work = defaultdict(int)
 
     def set_actual(self, runner_id, work):
         """Actual is set upon request from live runner"""
-        for k, v in self._all_work[runner_id].items():
-            self._total_work[k] -= v
-        for k, v in work.items():
-            self._total_work[k] += v
         self._all_work[runner_id] = defaultdict(int, work)
 
     def add_assumed(self, runner_id, work):
@@ -24,19 +26,25 @@ class WorkTracker:
         current = self._all_work[runner_id]
         for k, v in work.items():
             current[k] += v
-            self._total_work[k] += v
 
     def get_total_work(self, runner_ids):
+        """Adds up the total assigned work for each scenario, across all runners.
+
+        The return value is a dict of `scenario_id: count`.
+
+        """
         for expired_runner_id in set(self._all_work.keys()) - set(runner_ids):
             self.remove_runner(expired_runner_id)
-        return self._total_work
+        total_work = defaultdict(int)
+        for runner_work in self._all_work.values():
+            for scenario_id, jobs in runner_work.items():
+                total_work[scenario_id] += jobs
+        return total_work
 
     def get_runner_total(self, runner_id):
         return sum(self._all_work[runner_id].values())
 
     def remove_runner(self, runner_id):
-        for k, v in self._all_work[runner_id].items():
-            self._total_work[k] -= v
         del self._all_work[runner_id]
 
 
@@ -123,12 +131,12 @@ class Controller:
         actual = self._work_tracker.get_total_work(active_runner_ids)
         sender(
             {
-                'type': 'controller_report',
-                'time': time.time(),
-                'test': self._testname,
-                'required': required,
-                'actual': dict(actual),
-                'num_runners': len(active_runner_ids),
+                "type": "controller_report",
+                "time": time.time(),
+                "test": self._testname,
+                "required": required,
+                "actual": dict(actual),
+                "num_runners": len(active_runner_ids),
             }
         )
 
