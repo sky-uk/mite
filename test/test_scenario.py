@@ -12,7 +12,7 @@ def baseline_rampup_mock(peak, ramp_over=5, sustain=60):
     return volumemodel
 
 
-Scenario = namedtuple('Scenario', 'journey_spec datapool volumemodel'.split())
+Scenario = namedtuple("Scenario", "journey_spec datapool volumemodel".split())
 
 test_scenarios = [
     ("test_scenario_01", None, baseline_rampup_mock(1)),
@@ -24,27 +24,27 @@ test_scenarios = [
 
 test_scenario_manager_scenarios = {
     1: Scenario(
-        journey_spec='test_scenario_01',
+        journey_spec="test_scenario_01",
         datapool=None,
         volumemodel=baseline_rampup_mock(1),
     ),
     2: Scenario(
-        journey_spec='test_scenario_02',
+        journey_spec="test_scenario_02",
         datapool=None,
         volumemodel=baseline_rampup_mock(2),
     ),
     3: Scenario(
-        journey_spec='test_scenario_03',
+        journey_spec="test_scenario_03",
         datapool=None,
         volumemodel=baseline_rampup_mock(3),
     ),
     4: Scenario(
-        journey_spec='test_scenario_04',
+        journey_spec="test_scenario_04",
         datapool=None,
         volumemodel=baseline_rampup_mock(4),
     ),
     5: Scenario(
-        journey_spec='test_scenario_05',
+        journey_spec="test_scenario_05",
         datapool=None,
         volumemodel=baseline_rampup_mock(5),
     ),
@@ -78,12 +78,13 @@ def test_upadate_required_work():
 async def test_get_work():
     scenario_manager = ScenarioManager()
     for row in test_scenarios:
-        scenario_manager.add_scenario(row[0], row[1], row[2])
+        scenario_manager.add_scenario(*row)
     scenario_manager._update_required_and_period(5, 10)
+    # FIXME: setting _required directly like this seems bogus
     scenario_manager._required = test_scenario_manager_required
-    work, scenario_volume_map = await scenario_manager.get_work(
+    work = await scenario_manager.get_work(
         test_current_work, test_num_runner_current_work, test_num_runners, None, 0.2
     )
 
-    assert work.count((4, None, 'test_scenario_04', None)) == 4
-    assert work.count((1, None, 'test_scenario_01', None)) == 1
+    assert work.count((4, None, "test_scenario_04", None)) == 4
+    assert work.count((1, None, "test_scenario_01", None)) == 1
