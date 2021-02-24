@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Duplicator:
     def __init__(self, in_address, out_addresses, loop=None):
-        self._zmq_context = zmq.Context(io_threads=4)
+        self._zmq_context = zmq.Context()
         self._in_socket = self._zmq_context.socket(zmq.PULL)
         self._in_socket.bind(in_address)
         self._out_sockets = [
