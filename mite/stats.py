@@ -140,44 +140,48 @@ def extractor(labels, value_key=None):
 def controller_report_extractor(dict_key):
     def extract_items(msg):
         for scenario_id, value in msg[dict_key].items():
-            yield (msg.get('test', ''), scenario_id), value
+            yield (msg.get("test", ""), scenario_id), value
 
-    return Extractor(labels=('test', 'scenario_id'), extract=extract_items)
+    return Extractor(labels=("test", "scenario_id"), extract=extract_items)
 
 
 _MITE_STATS = [
     Counter(
-        name='mite_journey_error_total',
-        matcher=matcher_by_type('error', 'exception'),
-        extractor=extractor('test journey transaction location ex_type message'.split()),
+        name="mite_journey_error_total",
+        matcher=matcher_by_type("error", "exception"),
+        extractor=extractor("test journey transaction location ex_type message".split()),
     ),
     Counter(
-        name='mite_transaction_total',
-        matcher=matcher_by_type('txn'),
-        extractor=extractor('test journey transaction had_error'.split()),
+        name="mite_transaction_total",
+        matcher=matcher_by_type("txn"),
+        extractor=extractor("test journey transaction had_error".split()),
     ),
     Gauge(
-        name='mite_actual_count',
-        matcher=matcher_by_type('controller_report'),
-        extractor=controller_report_extractor('actual'),
+        name="mite_actual_count",
+        matcher=matcher_by_type("controller_report"),
+        extractor=controller_report_extractor("actual"),
     ),
     Gauge(
-        name='mite_required_count',
-        matcher=matcher_by_type('controller_report'),
-        extractor=controller_report_extractor('required'),
+        name="mite_required_count",
+        matcher=matcher_by_type("controller_report"),
+        extractor=controller_report_extractor("required"),
     ),
     Gauge(
-        name='mite_runner_count',
-        matcher=matcher_by_type('controller_report'),
-        extractor=extractor(['test'], 'num_runners'),
+        name="mite_runner_count",
+        matcher=matcher_by_type("controller_report"),
+        extractor=extractor(["test"], "num_runners"),
     ),
 ]
 
 
 class Stats:
-    def __init__(self, sender):
+    def __init__(self, sender, include, exclude):
         self._all_stats = []
         for entry_point in pkg_resources.iter_entry_points("mite_stats"):
+            if include is not None and entry_point.name not in include:
+                continue
+            if exclude is not None and entry_point.name in exclude:
+                continue
             logging.info(f"Registering stats processors from {entry_point.name}")
             self._all_stats += entry_point.load()
 
