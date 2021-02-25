@@ -117,18 +117,19 @@ Configuring custom stats
 ------------------------
 
 By default, all stats processors that are registered as entrypoints will
-be used by the mite stats component.  However, as each processor has to
-execute code for each message (even if only to determine that it is not
-interested in that message), the performance impact of having many stats
-processors registered can be large.  The ``--stats-include-processors``
-and ``--stats-exclude-processors`` can be used to fine-tune this behavior.
-If ``--stats-include-processors`` is passed, then only processors whose
-name is on the list will be included.  If ``--stats-exclude-processors``
-is passed, then all processors will be included except those on the list.
-(You can pass both arguments, which will result in the processors from the
-include list but not on the exclude list being used – but it doesnʼt make
-much sense to do this, just pass the difference of the two sets as the
-include argument, and omit the exclude one).
+be used by the mite stats component.  However, because each processor
+has to execute code for each message (even if only to determine that it
+is not interested in that message), there can be a large cumulative
+performance impact if you have many stats processors registered.  The
+``--stats-include-processors`` and ``--stats-exclude-processors`` can be
+used to fine-tune this behavior.  If ``--stats-include-processors`` is
+passed, then only processors whose name is on the list will be included.
+If ``--stats-exclude-processors`` is passed, then all processors will be
+included except those on the list.  (You can pass both arguments, which
+will result in the processors from the include list but not on the
+exclude list being used – but it doesnʼt make much sense to do this,
+just pass the difference of the two sets as the include argument, and
+omit the exclude one).
 
 The format of both argumentsʼ value is a comma-separated list without
 spaces: ``--stats-include-processors=processor1,processor2``
