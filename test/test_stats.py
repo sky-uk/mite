@@ -34,7 +34,7 @@ def test_label_extractor_txn_msg():
 
 
 class EntryPointMock:
-    def __init__(self, val="x"):
+    def __init__(self, val):
         self.__val = val
 
     @property
@@ -48,13 +48,11 @@ class EntryPointMock:
 class TestModularity:
     def test_modularity(self):
         with mock.patch("logging.info") as logging_info, mock.patch(
-            "pkg_resources.iter_entry_points", return_value=[EntryPointMock()]
+            "pkg_resources.iter_entry_points", return_value=[EntryPointMock("x")]
         ) as iter_entry_points:
             s = Stats(None)
             iter_entry_points.assert_called_once()
-            logging_info.assert_called_with(
-                "Registering stats processors from EntryPointMock"
-            )
+            logging_info.assert_called_with("Registering stats processors from x")
             assert s._all_stats == ["x"]
 
     def test_modularity_include(self):
