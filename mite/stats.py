@@ -175,7 +175,7 @@ _MITE_STATS = [
 
 
 class Stats:
-    def __init__(self, sender, include, exclude):
+    def __init__(self, sender, include=None, exclude=None):
         self._all_stats = []
         for entry_point in pkg_resources.iter_entry_points("mite_stats"):
             if include is not None and entry_point.name not in include:
