@@ -3,19 +3,19 @@ import unittest.mock as mock
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
 TXN_MSG = {
-    'start_time': 1572604344.7903123,
-    'end_time': 1572604346.0693598,
-    'had_error': True,
-    'type': 'txn',
-    'time': 1572604346.0693617,
-    'test': 'mite_project.file:scenario',
-    'runner_id': 1,
-    'journey': 'mite_project.file:journey',
-    'context_id': 8,
-    'scenario_id': 31,
-    'scenario_data_id': 2,
-    'transaction': 'txn_name',
-    'transaction_id': 3,
+    "start_time": 1572604344.7903123,
+    "end_time": 1572604346.0693598,
+    "had_error": True,
+    "type": "txn",
+    "time": 1572604346.0693617,
+    "test": "mite_project.file:scenario",
+    "runner_id": 1,
+    "journey": "mite_project.file:journey",
+    "context_id": 8,
+    "scenario_id": 31,
+    "scenario_data_id": 2,
+    "transaction": "txn_name",
+    "transaction_id": 3,
 }
 
 
@@ -34,23 +34,42 @@ def test_label_extractor_txn_msg():
 
 
 class EntryPointMock:
-    name = "EntryPointMock"
+    def __init__(self, val):
+        self.__val = val
+
+    @property
+    def name(self):
+        return self.__val
 
     def load(self):
-        return ["x"]
+        return [self.__val]
 
 
 class TestModularity:
     def test_modularity(self):
         with mock.patch("logging.info") as logging_info, mock.patch(
-            "pkg_resources.iter_entry_points", return_value=[EntryPointMock()]
+            "pkg_resources.iter_entry_points", return_value=[EntryPointMock("x")]
         ) as iter_entry_points:
             s = Stats(None)
             iter_entry_points.assert_called_once()
-            logging_info.assert_called_with(
-                "Registering stats processors from EntryPointMock"
-            )
+            logging_info.assert_called_with("Registering stats processors from x")
             assert s._all_stats == ["x"]
+
+    def test_modularity_include(self):
+        with mock.patch(
+            "pkg_resources.iter_entry_points",
+            return_value=[EntryPointMock("x"), EntryPointMock("y")],
+        ):
+            s = Stats(None, include=["x"])
+            assert s._all_stats == ["x"]
+
+    def test_modularity_exclude(self):
+        with mock.patch(
+            "pkg_resources.iter_entry_points",
+            return_value=[EntryPointMock("x"), EntryPointMock("y")],
+        ):
+            s = Stats(None, exclude=["x"])
+            assert s._all_stats == ["y"]
 
 
 class TestCounter:
