@@ -162,6 +162,11 @@ class _SeleniumWrapper:
                 f"Timed out trying to find element '{locator}' in the dom"
             ) from te
 
+    def switch_to_iframe(self, index):
+        self._remote.switch_to.frame(
+            self._remote.find_elements_by_tag_name("iframe")[index]
+        )
+
 
 class JsMetricsContext:
     def __init__(self, browser):
