@@ -163,7 +163,7 @@ class _SeleniumWrapper:
             ) from te
 
     def switch_to_iframe(self, locator):
-        self._remote.switch_to.frame(self.wait_for_element(locator))
+        self._remote.switch_to.frame(self._remote.find_element(*locator))
 
 
 class JsMetricsContext:
