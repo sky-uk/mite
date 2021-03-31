@@ -6,7 +6,7 @@ Usage:
     mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
-    mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
+    mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET] [--memory-tracing]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET] [--collector-filter=SPEC] [--collector-roll=NUM_LINES] [--collector-dir=DIRECTORY] [--collector-use-json]
     mite [options] recorder [--recorder-socket=SOCKET]
@@ -72,6 +72,7 @@ import logging
 import os
 import sys
 import threading
+import tracemalloc
 from urllib.request import Request as UrlLibRequest
 from urllib.request import urlopen
 
@@ -90,6 +91,7 @@ from .cli.common import (
     _get_scenario_with_kwargs,
 )
 from .cli.duplicator import duplicator
+from .cli.mem_trace import mem_snapshot
 from .cli.test import journey_cmd, scenario_cmd
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
@@ -245,7 +247,12 @@ def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(_create_runner(opts, transport, sender.send).run())
+    coroutines = (_create_runner(opts, transport, sender.send).run(),)
+    if opts["--memory-tracing"]:
+        tracemalloc.start()
+        initial_snapshot = tracemalloc.take_snapshot()
+        coroutines += (mem_snapshot(initial_snapshot),)
+    loop.run_until_complete(asyncio.wait(coroutines, return_when=asyncio.FIRST_COMPLETED))
     # Under rare conditions, we've seen a race condition on the runner's exit
     # that leads to an exception like:
     # RuntimeError: Event loop stopped before Future completed.
