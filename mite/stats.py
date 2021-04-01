@@ -2,8 +2,7 @@ import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from numbers import Number
-from typing import Any, Callable, DefaultDict, Sequence, Tuple
+from typing import Any, Callable, Sequence, Tuple
 
 import pkg_resources
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Extractor:
     labels: Sequence[str]
-    extract: Callable[[Any], Sequence[Tuple[str, Number]]]
+    extract: Callable[[Any], Sequence[Tuple[str, float]]]
 
 
 @dataclass
@@ -25,7 +24,7 @@ class Stat:
 
 @dataclass
 class _CounterBase(Stat):
-    metrics: DefaultDict[Any, int] = field(
+    metrics: defaultdict[Any, float] = field(
         default_factory=lambda: defaultdict(int), init=False
     )
 
@@ -61,8 +60,8 @@ class Accumulator(_CounterBase):
 
 @dataclass
 class Gauge(Stat):
-    metrics: DefaultDict[Any, float] = field(
-        default_factory=lambda: defaultdict(float), init=False
+    metrics: defaultdict[Any, float] = field(
+        default_factory=lambda: defaultdict(int), init=False
     )
 
     def process(self, msg):
@@ -84,6 +83,9 @@ class Gauge(Stat):
 @dataclass
 class Histogram(Stat):
     bins: Sequence[float]
+    bin_counts: defaultdict[str, list[float]] = field(
+        default=defaultdict(list), init=False
+    )
 
     def __post_init__(self):
         self.bins = sorted(self.bins)

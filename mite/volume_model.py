@@ -1,4 +1,5 @@
 from dataclasses import InitVar, dataclass, field
+from functools import cached_property
 from typing import Optional
 
 from mite.scenario import StopScenario
@@ -65,6 +66,7 @@ class Compound(_VolumeModel):
     _left: InitVar[_VolumeModel]
     _right: InitVar[_VolumeModel]
     _realized: bool = field(init=False, default=False)
+    _components: tuple[_VolumeModel, ...] = field(init=False)
 
     def __post_init__(self, _left, _right):
         if isinstance(_left, Compound):
@@ -79,10 +81,11 @@ class Compound(_VolumeModel):
         self._components = tuple(l + r)
         self.duration = _left.duration + _right.duration
 
-    def _realize_ramps(self):
-        cs = list(self._components)
+    @cached_property
+    def _components_with_start_times(self) -> tuple[tuple[int, _VolumeModel], ...]:
+        cs: list[tuple[int, _VolumeModel]] = []
         x = 0
-        for i, c in enumerate(cs):
+        for i, c in enumerate(self._components):
             if isinstance(c, Ramp):
                 if i == 0:
                     if c.frm is not None:
@@ -103,7 +106,7 @@ class Compound(_VolumeModel):
                     else:
                         frm = cs[i - 1][1](cs[i - 1][1].duration, 0)
                 try:
-                    to = cs[i + 1](0, 1)
+                    to = self._components[i + 1](0, 1)
                     if c.to is not None:
                         # FIXME: not actually an error if to == the tps of
                         # the next volume model...
@@ -119,19 +122,17 @@ class Compound(_VolumeModel):
                         )
                     to = c.to
                 c = _RealRamp(duration=c.duration, _frm=frm, _to=to)
-            cs[i] = (x, c)
+            cs.append((x, c))
             x += c.duration
-
-        self._components = cs
-        self._realized = True
+        return tuple(cs)
 
     def __call__(self, start, end):
-        if not self._realized:
-            self._realize_ramps()
         return super().__call__(start, end)
 
     def _volume(self, start, end):
-        applicable = list(filter(lambda x: x[0] <= start, self._components))
+        applicable = list(
+            filter(lambda x: x[0] <= start, self._components_with_start_times)
+        )
         try:
             c = applicable[-1]
             return c[1](start - c[0], end - c[0])

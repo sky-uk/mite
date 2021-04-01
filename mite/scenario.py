@@ -1,15 +1,20 @@
-from collections import namedtuple
-from itertools import count
-import time
+from __future__ import annotations
+
 import logging
 import random
+import time
+from itertools import count
+from typing import Any, Callable, NamedTuple
 
 from .datapools import DataPoolExhausted
 
 logger = logging.getLogger(__name__)
 
 
-Scenario = namedtuple('Scenario', 'journey_spec datapool volumemodel'.split())
+class Scenario(NamedTuple):
+    journey_spec: str
+    datapool: Any
+    volumemodel: Callable[[float, float], float]
 
 
 class StopScenario(Exception):
@@ -46,7 +51,7 @@ class ScenarioManager:
         scenario_id = next(self._scenario_id_gen)
         self._scenarios[scenario_id] = Scenario(journey_spec, datapool, volumemodel)
         logger.info(
-            'Added scenario id=%d journey_spec=%r datapool=%r volumemodel=%r',
+            "Added scenario id=%d journey_spec=%r datapool=%r volumemodel=%r",
             scenario_id,
             journey_spec,
             datapool,
@@ -60,7 +65,7 @@ class ScenarioManager:
                 number = int(scenario.volumemodel(start_of_period, end_of_period))
             except StopScenario:
                 logger.info(
-                    'Removed scenario %d because volume model raised StopScenario',
+                    "Removed scenario %d because volume model raised StopScenario",
                     scenario_id,
                 )
                 del self._scenarios[scenario_id]
@@ -114,8 +119,8 @@ class ScenarioManager:
 
         scenario_ids = list(_yield(diff))
         random.shuffle(scenario_ids)
-        work = []
-        scenario_volume_map = {}
+        work: list[tuple[int, int | None, str, Any]] = []
+        scenario_volume_map: dict[int, int] = {}
         for scenario_id in scenario_ids:
             if len(work) >= limit:
                 break
@@ -130,7 +135,7 @@ class ScenarioManager:
                         )
                     except DataPoolExhausted:
                         logger.info(
-                            'Removed scenario %d because data pool exhausted', scenario_id
+                            "Removed scenario %d because data pool exhausted", scenario_id
                         )
                         del self._scenarios[scenario_id]
                         continue
@@ -145,8 +150,8 @@ class ScenarioManager:
                 else:
                     scenario_volume_map[scenario_id] = 1
         logger.debug(
-            'current=%r required=%r diff=%r limit=%r runners_share_limit=%r spawn_limit=%r runner_self_limit=%r'
-            'num_runners=%r spawn_rate=%r hit_rate=%r num_runner_current_work=%r len_work=%r',
+            "current=%r required=%r diff=%r limit=%r runners_share_limit=%r spawn_limit=%r runner_self_limit=%r"
+            "num_runners=%r spawn_rate=%r hit_rate=%r num_runner_current_work=%r len_work=%r",
             sum(current_work.values()),
             sum(required.values()),
             sum(diff.values()),
