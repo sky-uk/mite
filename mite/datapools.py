@@ -1,10 +1,13 @@
 import logging
-from collections import deque, namedtuple
+from collections import deque
+from typing import Any, NamedTuple
 
 logger = logging.getLogger(__name__)
 
 
-DataPoolItem = namedtuple("DataPoolItem", "id data".split())
+class DataPoolItem(NamedTuple):
+    id: int
+    data: Any
 
 
 class DataPoolExhausted(BaseException):

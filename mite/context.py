@@ -101,7 +101,7 @@ class Context:
                 hook()
                 sys.exit(1)
             else:
-                e.handled = True
+                setattr(e, "handled", True)
                 raise
         finally:
             self.send(
