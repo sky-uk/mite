@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections import deque
 from contextlib import asynccontextmanager
+from functools import wraps
 
 from acurl import EventLoop
 
@@ -51,6 +52,7 @@ class SessionPool:
 
     @classmethod
     def decorator(cls, func):
+        @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
             loop = asyncio.get_event_loop()
             try:
@@ -72,7 +74,7 @@ class SessionPool:
                 session_wrapper._response_callback(r, session_wrapper.additional_metrics)
 
             context.send(
-                'http_metrics',
+                "http_metrics",
                 start_time=r.start_time,
                 effective_url=r.url,
                 response_code=r.status_code,
