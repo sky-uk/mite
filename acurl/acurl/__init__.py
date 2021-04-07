@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import ujson
 from pkg_resources import DistributionNotFound, get_distribution
 
-import _acurl
+import _acurl  # type: ignore
 from acurl.utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 
 try:
@@ -375,7 +375,7 @@ class Response:
 
     # TODO: why do we allow setter?
     @encoding.setter
-    def encoding_setter(self, encoding):
+    def encoding(self, encoding):
         self._encoding = encoding
 
     @property
@@ -392,10 +392,12 @@ class Response:
     @property
     def headers(self):
         if not hasattr(self, "_headers"):
-            headers = CaseInsensitiveDefaultDict(list)
+            headers: CaseInsensitiveDefaultDict[
+                str, list[str]
+            ] = CaseInsensitiveDefaultDict(list)
             for k, v in self.headers_tuple:
                 headers[k].append(v)
-            self._headers = CaseInsensitiveDict()
+            self._headers: CaseInsensitiveDict[str, str] = CaseInsensitiveDict()
             for k in headers:
                 self._headers[k] = ", ".join(headers[k])
         return self._headers
