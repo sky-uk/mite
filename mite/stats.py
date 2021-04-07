@@ -1,3 +1,8 @@
+# type: ignore
+
+# We need https://github.com/python/mypy/pull/10292 merging to be able to type
+# check this module effectively
+
 import logging
 import time
 from collections import defaultdict
