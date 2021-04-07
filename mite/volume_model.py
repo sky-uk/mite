@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import InitVar, dataclass, field
 from functools import cached_property
 from typing import Optional

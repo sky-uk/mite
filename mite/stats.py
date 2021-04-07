@@ -3,6 +3,8 @@
 # We need https://github.com/python/mypy/pull/10292 merging to be able to type
 # check this module effectively
 
+from __future__ import annotations
+
 import logging
 import time
 from collections import defaultdict
