@@ -130,9 +130,7 @@ class Compound(_VolumeModel):
         return super().__call__(start, end)
 
     def _volume(self, start, end):
-        applicable = list(
-            filter(lambda x: x[0] <= start, self._components_with_start_times)
-        )
+        applicable = [x for x in self._components_with_start_times if x[0] <= start]
         try:
             c = applicable[-1]
             return c[1](start - c[0], end - c[0])
