@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import MutableMapping
-from typing import TypeVar
+from typing import MutableMapping, TypeVar
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
