@@ -1,6 +1,7 @@
 import logging
 import time
 from contextlib import asynccontextmanager
+from functools import wraps
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Remote
@@ -193,6 +194,7 @@ async def _selenium_context_manager(context):
 
 
 def mite_selenium(func):
+    @wraps(func)
     async def wrapper(ctx, *args, **kwargs):
         async with _selenium_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
