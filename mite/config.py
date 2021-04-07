@@ -13,8 +13,8 @@ class ConfigManager:
     def __init__(self):
         self._version_id_gen = count(1)
         self._version = 0
-        self._config = {}
-        self._runner_version_map = {}
+        self._config: dict[str, str] = {}
+        self._runner_version_map: dict[int, int] = {}
 
     def _get_changes_since(self, version):
         for key, (value, value_version) in self._config.items():
@@ -33,7 +33,7 @@ class ConfigManager:
         self._version = next(self._version_id_gen)
         self._config[name] = (value, self._version)
 
-    def get(self, name: str, default=None) -> str | None:
+    def get(self, name: str, default: str = None) -> str | None:
         return self._config.get(name, [default])[0]
 
     def __repr__(self):
