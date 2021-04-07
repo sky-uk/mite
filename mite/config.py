@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 from itertools import count
@@ -27,11 +29,11 @@ class ConfigManager:
         self._runner_version_map[runner_id] = self._version
         return list(self._get_changes_since(version))
 
-    def set(self, name, value):
+    def set(self, name: str, value: str) -> None:
         self._version = next(self._version_id_gen)
         self._config[name] = (value, self._version)
 
-    def get(self, name, default=None):
+    def get(self, name: str, default=None) -> str | None:
         return self._config.get(name, [default])[0]
 
     def __repr__(self):
@@ -47,11 +49,11 @@ class ConfigManager:
 def default_config_loader():
     result = {}
     for name, value in os.environ.items():
-        if name.startswith('MITE_CONF_'):
+        if name.startswith("MITE_CONF_"):
             key_name = name[10:]
             logger.info(f'Setting config "{key_name}" from environment variable')
             result[key_name] = value
-        if name.startswith('MITE_EVAL_CONF_'):
+        if name.startswith("MITE_EVAL_CONF_"):
             key_name = name[15:]
             logger.info(f'Setting config "{key_name}" by eval\'ing environment variable')
             result[key_name] = eval(value)
