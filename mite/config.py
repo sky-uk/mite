@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 import os
 from itertools import count
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    ConfigType = Union[str, int]
 
 logger = logging.getLogger()
 
@@ -13,7 +17,7 @@ class ConfigManager:
     def __init__(self):
         self._version_id_gen = count(1)
         self._version = 0
-        self._config: dict[str, str] = {}
+        self._config: dict[str, tuple[ConfigType, int]] = {}
         self._runner_version_map: dict[int, int] = {}
 
     def _get_changes_since(self, version):
@@ -29,11 +33,11 @@ class ConfigManager:
         self._runner_version_map[runner_id] = self._version
         return list(self._get_changes_since(version))
 
-    def set(self, name: str, value: str) -> None:
+    def set(self, name: str, value: ConfigType) -> None:
         self._version = next(self._version_id_gen)
         self._config[name] = (value, self._version)
 
-    def get(self, name: str, default: str = None) -> str | None:
+    def get(self, name: str, default: ConfigType = None) -> ConfigType | None:
         return self._config.get(name, [default])[0]
 
     def __repr__(self):
