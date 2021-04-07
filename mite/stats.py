@@ -89,7 +89,7 @@ class Gauge(Stat):
 class Histogram(Stat):
     bins: Sequence[float]
     bin_counts: defaultdict[str, list[float]] = field(
-        default=defaultdict(list), init=False
+        default_factory=lambda: defaultdict(list), init=False
     )
 
     def __post_init__(self):
