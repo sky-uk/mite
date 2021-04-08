@@ -1,10 +1,11 @@
+from abc import ABCMeta
 from collections import defaultdict
 from typing import MutableMapping, TypeVar
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
 
-class _CaseInsensitiveDict(MutableMapping[_K, _V]):
+class _CaseInsensitiveDict(MutableMapping[_K, _V], metaclass=ABCMeta):
     @staticmethod
     def _k(key: _K) -> _K: ...
     def _convert_keys(self) -> None: ...
