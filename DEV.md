@@ -48,7 +48,7 @@ git push
 
 ## Unit tests
 
-Run the unit tests on all supported python versions (currently 3.8and
+Run the unit tests on all supported python versions (currently 3.8 and
 3.9), including a code-coverage report:
 
 ```
