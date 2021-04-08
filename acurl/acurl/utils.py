@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import MutableMapping, TypeVar
-
-_K = TypeVar("_K")
-_V = TypeVar("_V")
+from typing import MutableMapping
 
 
-class _CaseInsensitiveDict(MutableMapping[_K, _V]):
+class _CaseInsensitiveDict(MutableMapping):
     # Base on https://stackoverflow.com/a/32888599 but tweaked for python3
     @staticmethod
     def _k(key):
@@ -44,9 +41,9 @@ class _CaseInsensitiveDict(MutableMapping[_K, _V]):
             self.__setitem__(k, v)
 
 
-class CaseInsensitiveDict(_CaseInsensitiveDict[_K, _V], dict[_K, _V]):
+class CaseInsensitiveDict(_CaseInsensitiveDict, dict):
     pass
 
 
-class CaseInsensitiveDefaultDict(_CaseInsensitiveDict[_K, _V], defaultdict[_K, _V]):
+class CaseInsensitiveDefaultDict(_CaseInsensitiveDict, defaultdict):
     pass
