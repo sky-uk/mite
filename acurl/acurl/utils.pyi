@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABCMeta
 from collections import defaultdict
 from typing import MutableMapping, TypeVar
