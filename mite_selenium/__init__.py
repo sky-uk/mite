@@ -154,19 +154,15 @@ class _SeleniumWrapper:
         return JsMetricsContext(self)
 
     def wait_for_elements(self, locator, timeout=5):
-        try:
-            return WebDriverWait(self._remote, timeout).until(
-                EC.presence_of_all_elements_located(locator)
-            )
-        except TimeoutException as te:
-            raise MiteError(
-                f"Timed out trying to find element '{locator}' in the dom"
-            ) from te
+        return self._wait_for(EC.presence_of_all_elements_located, locator, timeout)
 
     def wait_for_element(self, locator, timeout=5):
+        return self._wait_for(EC.presence_of_element_located, timeout)
+
+    def _wait_for(self, condition_func, locator, timeout=5):
         try:
             return WebDriverWait(self._remote, timeout).until(
-                EC.presence_of_element_located(locator)
+                condition_func(locator)
             )
         except TimeoutException as te:
             raise MiteError(
