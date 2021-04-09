@@ -157,7 +157,7 @@ class _SeleniumWrapper:
         return self._wait_for(EC.presence_of_all_elements_located, locator, timeout)
 
     def wait_for_element(self, locator, timeout=5):
-        return self._wait_for(EC.presence_of_element_located, timeout)
+        return self._wait_for(EC.presence_of_element_located, locator, timeout)
 
     def _wait_for(self, condition_func, locator, timeout=5):
         try:
