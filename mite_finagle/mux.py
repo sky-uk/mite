@@ -1,0 +1,299 @@
+from io import BytesIO
+from functools import cached_property
+import enum
+import typing
+
+
+class Int:
+    """An integer encoded in `length` bytes, optionally signed."""
+    def __init__(self, length, signed=False):
+        self._length = length
+        self._signed = signed
+
+    def read(self, input):
+        int_bytes = input.read(self._length)
+        if len(int_bytes) != self._length:
+            raise ValueError("integer not fully read")
+        return int.from_bytes(int_bytes, "big", signed=self._signed)
+
+    def serialize(self, value):
+        return value.to_bytes(self._length, "big", signed=self._signed)
+
+
+class String:
+    """A string, prefixed with its length packed into `len_bytes` bytes."""
+    def __init__(self, len_bytes):
+        self._length = Int(len_bytes)
+
+    def read(self, input):
+        length = self._length.read(input)
+        r = input.read(length)
+        if len(r) != length:
+            raise ValueError("string read too short")
+        return r
+
+    def serialize(self, s):
+        return self._length.serialize(len(s)) + s
+
+
+class Dict:
+    """A dictionary.
+
+    The number of keys is first, packed into `len_bytes`.  Then each key and
+    value follows, each encoded as a string prefixed with its length in
+    `strlen_bytes`.
+
+    """
+    def __init__(self, len_bytes, strlen_bytes):
+        self._length = Int(len_bytes)
+        self._string = String(strlen_bytes)
+
+    def read(self, input):
+        d = {}
+        try:
+            nkey = self._length.read(input)
+            while nkey > 0:
+                key = self._string.read(input)
+                value = self._string.read(input)
+                d[key] = value
+                nkey -= 1
+            return d
+        except ValueError:
+            raise ValueError("couldn't read dict")
+
+    def serialize(self, d):
+        return self._length.serialize(len(d)) + b"".join(
+            self._string.serialize(k) + self._string.serialize(v) for k, v in d.items()
+        )
+
+
+class Body:
+    """A message body.
+
+    Read and written without length, padding, etc. because it consumes the
+    rest of the message tile the end.
+
+    """
+    def read(self, input):
+        return input.read()
+
+    def serialize(self, value):
+        return value
+
+
+class _MessageMeta(type):
+    # FIXME @cached_property
+    @property
+    def _TYPES(cls):
+        r = {}
+        for x in cls.__subclasses__():
+            r[x.type] = x
+            if (reply_cls := getattr(x, "Reply", None)) is not None:
+                r[-x.type] = reply_cls
+        return r
+
+    def __new__(cls, name, bases, namespace):
+        if name == "Message":
+            # Bail out early for the base class
+            return type.__new__(cls, name, bases, namespace)
+
+        if name != "Reply":
+            # Processing for top level messages
+            if "Reply" not in namespace:
+                # Add reply class to top level messages that lack it
+                class Reply(Message):
+                    type = -namespace["type"]
+                    Fields = namespace["Fields"]
+
+                namespace["Reply"] = Reply
+            else:
+                # Reply explicitly present -- make sure it's a Message.
+                if namespace["Reply"].__bases__[0] is not Message:
+                    raise ValueError("Found Reply class not derived from Message")
+                # And copy type and Fields onto it if missing.
+                if "type" not in namespace["Reply"].__dict__:
+                    namespace["Reply"].type = -namespace["type"]
+                if "Fields" not in namespace["Reply"].__dict__:
+                    namespace["Reply"].Fields = namespace["Fields"]
+        return type.__new__(cls, name, bases, namespace)
+
+
+class Message(metaclass=_MessageMeta):
+    """Represnets a Mux message
+
+    There are a few members that are special on subclases:
+    - `type`: an integer indicating the message type.
+    - `Fields`: a class whose members are annotated with data-descriptor
+      classes from above.  The ordering in the source determines the ordering
+      in which they will be serialized.
+    - `Reply`: a `Message` subclass that indicates the structure of the reply
+      to a message.  Within a `Reply`:
+      - if `type` is not given it defaults to the negation of the parent message
+        type
+      - if `Fields` is not given it defaults to the value of `Fields` for the
+        parent message
+    - `args_for_reply`: a function that should return a dict giving the
+      keyword arguments to pass in when constructing a reply.  This function
+      itself can pass arguments, which will be passed through from the
+      `make_reply` function.
+
+    The class has initializer and equality methods predefined, as well as
+    `to_bytes` and `from_bytes` for (de)serialization,
+    `read_from_(async_)stream` for generating messages from I/O streams, and
+    `make_reply` for constructing replies to messages.
+
+    """
+    def __init__(self, tag, *args, **kwargs):
+        self.tag = tag
+        field_names = [name for name, _ in self._fields() if name not in kwargs]
+        assert len(field_names) == len(args)
+        kwargs.update({name: value for name, value in zip(field_names, args)})
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @classmethod
+    def _fields(cls):
+        """Get the dynamically defined fields for this class.
+
+        Much of the behavior of Message subclasses depends in one way or
+        another on this.
+
+        """
+        for name, descriptor in typing.get_type_hints(cls.Fields).items():
+            if not name.startswith("_"):
+                yield name, descriptor
+
+    def __eq__(self, other):
+        """Two instances are equal if they are the same type and all fields are equal."""
+        return type(self) is type(other) and all(
+            getattr(self, name) == getattr(other, name) for name, _ in self._fields()
+        )
+
+    def to_bytes(self):
+        """Serialize to bytes."""
+        payload = b"".join(
+            (
+                descriptor.serialize(getattr(self, name))
+                for name, descriptor in self._fields()
+            )
+        )
+        return b"".join(
+            (
+                Int(4).serialize(len(payload) + 4),
+                Int(1, signed=True).serialize(self.type),
+                Int(3).serialize(self.tag),
+                payload,
+            )
+        )
+
+    @classmethod
+    def from_bytes(cls, msg):
+        """Deserialize from bytes."""
+        stream = BytesIO(msg)
+        type = Int(1, signed=True).read(stream)
+        tag = Int(3).read(stream)
+        subclass = cls._TYPES[type]
+        kwargs = {
+            name: descriptor.read(stream) for name, descriptor in subclass._fields()
+        }
+        kwargs["tag"] = tag
+        if stream.read() != b"":
+            raise ValueError("extra bytes in message")
+        return subclass(**kwargs)
+
+    @classmethod
+    def read_from_stream(cls, stream):
+        """Read from a sychronous I/O stream.
+
+        This needs to be distinct from `from_bytes` in order to properly read
+        out a single message framed by length (and no more or less) from the
+        stream.
+
+        """
+        size = Int(4).read(stream)
+        msg = stream.read(size)
+        return cls.from_bytes(msg)
+
+    @classmethod
+    async def read_from_async_stream(cls, stream):
+        """Read from an async I/O stream."""
+        size = Int(4).read(stream)
+        msg = await stream.read(size)
+        return cls.from_bytes(msg)
+
+    def make_reply(self, *args, **kwargs):
+        """Construct a reply to a message object.
+
+        The arguments to pass to this function will depend on the type of
+        message you are replying to.
+
+        """
+        return self.Reply(self.tag, **self.args_for_reply(*args, **kwargs))
+
+
+class Ping(Message):
+    """A mux ping, to check if the connection is alive.
+
+    Can be sent by either side of the connection.
+
+    """
+    type = 65
+
+    class Fields:
+        pass
+
+
+class Init(Message):
+    """An initialization message.
+
+    Sent from client to server on connection establishment.
+
+    """
+    type = 68
+
+    class Fields:
+        version: Int(2)
+
+    def args_for_reply(self):
+        return {"version": 1}
+
+
+class CanTinit(Message):
+    """TODO: document this"""
+    type = 127
+
+    class Fields:
+        message: Body()
+
+    class Reply(Message):
+        type = -128
+
+    def args_for_reply(self):
+        return {"message": b"tinit check"}
+
+
+class DispatchStatus(enum.IntEnum):
+    """Status codes for a Mux RPC call."""
+    OK = 0
+    ERROR = 1
+    NACK = 2
+
+
+class Dispatch(Message):
+    """TODO: document this"""
+    type = 2
+
+    class Fields:
+        context: Dict(2, 2)
+        destination: String(2)
+        delegations: Dict(2, 2)
+        body: Body()
+
+    class Reply(Message):
+        class Fields:
+            status: Int(1)
+            context: Dict(2, 2)
+            body: Body()
+
+    def args_for_reply(self, body, status=DispatchStatus.OK):
+        return {"status": status, "context": self.context, "body": body}
