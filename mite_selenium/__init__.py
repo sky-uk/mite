@@ -156,7 +156,7 @@ class _SeleniumWrapper:
     def wait_for_elements(self, locator, timeout=5):
         try:
             return WebDriverWait(self._remote, timeout).until(
-                EC.presence_of_all_elements_located(locator, timeout)
+                EC.presence_of_all_elements_located(locator)
             )
         except TimeoutException as te:
             raise MiteError(
