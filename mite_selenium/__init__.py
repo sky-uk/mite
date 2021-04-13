@@ -161,9 +161,7 @@ class _SeleniumWrapper:
 
     def _wait_for(self, condition_func, locator, timeout=5):
         try:
-            return WebDriverWait(self._remote, timeout).until(
-                condition_func(locator)
-            )
+            return WebDriverWait(self._remote, timeout).until(condition_func(locator))
         except TimeoutException as te:
             raise MiteError(
                 f"Timed out trying to find element '{locator}' in the dom"
