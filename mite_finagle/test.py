@@ -6,9 +6,10 @@ from . import FinagleMessageFactory, mite_finagle
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "gen_py"))
 
-from tenancies.ttypes import ServiceType, TenancyRequest, TenancyResponse  # noqa: E402
+from tenancies.Tenancies import Client  # noqa: E402
+from tenancies.ttypes import ServiceType  # noqa: E402
 
-msg_factory = FinagleMessageFactory("lookup", TenancyRequest, TenancyResponse)
+msg_factory = FinagleMessageFactory("lookup", Client)
 
 
 @mite_finagle
