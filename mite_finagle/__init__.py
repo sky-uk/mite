@@ -10,6 +10,14 @@ from thrift.transport import TTransport
 
 from .mux import CanTinit, Dispatch, Init, Message, Ping
 
+# TODO:
+# - headers (ptp, request id, ...)
+# - figure out how to generate/import cybrtron thrift
+# - unit tests and integration tests
+# - benchmark
+# - backport to the thrift stubs
+# - split the thrift stuff into its own file
+
 _SEQUENCE_NOS = count(1)
 
 _READERS = {
@@ -138,6 +146,10 @@ class FinagleMessageFactory:
         return result
 
 
+class MiteFinagleError(Exception):
+    pass
+
+
 class MiteFinagleConnection:
     def __init__(self, context, address, port):
         self._context = context
@@ -172,7 +184,7 @@ class MiteFinagleConnection:
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for x in done:
-                yield x.result()
+                yield self._process_result(x.result())
             pending = (self._replies.get(), *pending)
 
     async def send(self, factory, *args, **kwargs):
@@ -205,7 +217,8 @@ class MiteFinagleConnection:
 
     async def send_and_wait(self, msg_factory, *args, **kwargs):
         tag = await self.send(msg_factory, *args, **kwargs)
-        return await self._main_loop(return_msg=tag)
+        result = await self._main_loop(return_msg=tag)
+        return self._process_result(result)
 
     async def _main_loop(self, return_msg=None, return_after_reply=None):
         while True:
@@ -245,6 +258,12 @@ class MiteFinagleConnection:
             function=name,
             had_error=had_error,
         )
+
+    def _process_result(self, result):
+        if isinstance(result, _FinagleError):
+            raise MiteFinagleError("encountered thrift error", _FinagleError._wrapped)
+        else:
+            return result
 
 
 class MiteFinagle:
