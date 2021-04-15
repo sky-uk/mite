@@ -1,15 +1,15 @@
-import asyncio
+# import asyncio
 import os
 import sys
 
-from . import FinagleMessageFactory, mite_finagle
+from . import ThriftMessageFactory, mite_finagle
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "gen_py"))
 
 from tenancies.Tenancies import Client  # noqa: E402
 from tenancies.ttypes import ServiceType  # noqa: E402
 
-msg_factory = FinagleMessageFactory("lookup", Client)
+msg_factory = ThriftMessageFactory("lookup", Client)
 
 
 @mite_finagle

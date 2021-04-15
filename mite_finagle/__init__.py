@@ -5,7 +5,7 @@ from functools import wraps
 from itertools import count
 
 from .mux import CanTinit, Dispatch, Init, Message, Ping
-from .thrift import _FinagleError
+from .thrift import _ThriftError
 
 # TODO:
 # - headers (ptp, request id, ...)
@@ -131,8 +131,8 @@ class MiteFinagleConnection:
         )
 
     def _process_result(self, result):
-        if isinstance(result, _FinagleError):
-            raise MiteFinagleError("encountered thrift error", _FinagleError._wrapped)
+        if isinstance(result, _ThriftError):
+            raise MiteFinagleError("encountered thrift error", result._wrapped)
         else:
             return result
 

@@ -119,9 +119,9 @@ class _MessageMeta(type):
 
 
 class Message(metaclass=_MessageMeta):
-    """Represnets a Mux message
+    """Represents a Mux message
 
-    There are a few members that are special on subclases:
+    There are a few members that are special on subclasses:
     - `type`: an integer indicating the message type.
     - `Fields`: a class whose members are annotated with data-descriptor
       classes from above.  The ordering in the source determines the ordering
@@ -204,7 +204,7 @@ class Message(metaclass=_MessageMeta):
 
     @classmethod
     def read_from_stream(cls, stream):
-        """Read from a sychronous I/O stream.
+        """Read from a synchronous I/O stream.
 
         This needs to be distinct from `from_bytes` in order to properly read
         out a single message framed by length (and no more or less) from the
