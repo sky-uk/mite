@@ -189,6 +189,7 @@ class Message(metaclass=_MessageMeta):
     @classmethod
     def from_bytes(cls, msg):
         """Deserialize from bytes."""
+        print("from_bytes", msg)
         stream = BytesIO(msg)
         type = Int(1, signed=True).read(stream)
         tag = Int(3).read(stream)
@@ -217,7 +218,10 @@ class Message(metaclass=_MessageMeta):
     @classmethod
     async def read_from_async_stream(cls, stream):
         """Read from an async I/O stream."""
-        size = Int(4).read(stream)
+        size_bytes = await stream.read(4)
+        if len(size_bytes) != 4:
+            raise ValueError("couldn't read size")
+        size = int.from_bytes(size_bytes, "big")
         msg = await stream.read(size)
         return cls.from_bytes(msg)
 
