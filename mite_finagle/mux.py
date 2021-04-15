@@ -189,7 +189,7 @@ class Message(metaclass=_MessageMeta):
     @classmethod
     def from_bytes(cls, msg):
         """Deserialize from bytes."""
-        print("from_bytes", msg)
+        # print("from_bytes", msg)
         stream = BytesIO(msg)
         type = Int(1, signed=True).read(stream)
         tag = Int(3).read(stream)

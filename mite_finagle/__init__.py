@@ -1,9 +1,11 @@
 import asyncio
 import time
+from contextlib import asynccontextmanager
+from functools import wraps
 from itertools import count
 
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
-from thrift.Thrift import TType, TMessageType
+from thrift.Thrift import TMessageType, TType
 from thrift.transport import TTransport
 
 from .mux import CanTinit, Dispatch, Init, Message, Ping
@@ -69,11 +71,39 @@ def write_struct(proto, name, fields):
     proto.writeStructEnd()
 
 
+async def _result_wait(self, seconds):
+    # Slightly weird -- a function with a `self` argument outside of a class.
+    # This is not for calling directly; rather we will add it as an attribute
+    # to the class representing the Thrift call result (which is generated
+    # from thrift code, so we can't add the method in a "normal" way)
+    if (sent_time := getattr(self, "_sent_time")) is None:
+        print("sent_time not found")
+        # This means we're in a weird racy universe.  We don't want to not
+        # sleep at all, as that seems likely to make the races worse.  So
+        # we'll do a small wait to try to stabilize.
+        to_sleep = 0.1
+    else:
+        # Remember kids: python has function scope
+        to_sleep = seconds - (time.time() - sent_time)
+    if to_sleep > 0:
+        await asyncio.sleep(to_sleep)
+    else:
+        # FIXME: log a warning
+        pass
+
+
+class _FinagleError:
+    def __init__(self, wrapped):
+        self._wrapped = wrapped
+
+
 class FinagleMessageFactory:
-    def __init__(self, fn_name, args_struct, reply_struct):
+    def __init__(self, fn_name, args_struct, reply_struct, stats_name=None):
         self._fn_name = fn_name
         self._args_struct = args_struct
         self._reply_struct = reply_struct
+        self._stats_name = stats_name or fn_name
+        self._reply_struct.chained_wait = _result_wait
         self._seq_no = next(_SEQUENCE_NOS)
 
     def get_bytes(self, *args, **kwargs):
@@ -95,30 +125,22 @@ class FinagleMessageFactory:
         if args[0][0] == 0:
             # Success; the reply is the value of the 0th field
             args = args[0][1]
+            result = self._reply_struct(
+                **{
+                    self._reply_struct.thrift_spec[field_id][2]: field_value
+                    for field_id, field_value in args
+                }
+            )
         else:
             # An error was thrown
-            raise Exception(f"thrift error occurred: {args}")
-        return self._reply_struct(
-            **{
-                self._reply_struct.thrift_spec[field_id][2]: field_value
-                for field_id, field_value in args[0][1]
-            }
-        )
-
-    # FIXME
-    # async def wait(self, seconds):
-    #     if (sent_time := getattr(self, "_sent_time")) is None:
-    #         raise Exception("message hasn't been sent")
-    #     to_sleep = seconds - (time.time() - sent_time)
-    #     if to_sleep > 0:
-    #         await asyncio.sleep(to_sleep)
-    #     else:
-    #         # FIXME: log a warning
-    #         pass
+            print("finagle error")
+            result = _FinagleError(args)
+        return result
 
 
-class MiteFinagle:
-    def __init__(self, address, port):
+class MiteFinagleConnection:
+    def __init__(self, context, address, port):
+        self._context = context
         self._address = address
         self._port = port
         self._replies = asyncio.Queue()
@@ -134,7 +156,7 @@ class MiteFinagle:
         # await self._main_loop(return_after_reply=CanTinit)
         # await self._send_raw(Init(next(self._tags), 1))
         # await self._main_loop(return_after_reply=Init)
-        return self
+        return  # FIXME: to get the folding right
 
     async def __aexit__(self, exc_type, exc, tb):
         # FIXME: handle errors
@@ -143,24 +165,43 @@ class MiteFinagle:
         await self._writer.wait_closed()
 
     async def replies(self):
+        pending = (self._main_loop(), self._replies.get())
         while True:
             done, pending = await asyncio.wait(
-                (self._main_loop(), self._replies.get()),
+                pending,
                 return_when=asyncio.FIRST_COMPLETED,
             )
-            yield done[0].result()
+            for x in done:
+                yield x.result()
+            pending = (self._replies.get(), *pending)
 
     async def send(self, factory, *args, **kwargs):
         tag = next(self._tags)
         mux_msg = Dispatch(tag, {}, b"", {}, factory.get_bytes(*args, **kwargs))
-        self._in_flight[tag] = factory  # FIXME: save a reference to the args?
-        await self._send_raw(mux_msg)
+        # A bit of an awkward dance.  We want to save the time the message was
+        # sent, so that the chained_wait function can work.  We can't just
+        # store the current time on the next line, though, because we are
+        # awaiting the send function, so other coroutines might run before we
+        # get around to doing the send.  Similarly, I am not totally sure we
+        # can defer setting the self._in_flight until after the send function
+        # returns.  I think it's possible, under the right (wrong) combination
+        # of async events, for the message reply to be processed by _main_loop
+        # before control returns from the await.  (The timings of network
+        # roundtrips on a remote connection make it vanishingly unlikely, but
+        # that's nto the same as impossible.)  So we need to have a two-step
+        # procedure: save the reference to the outgoing message's factory
+        # before sending it, then save the time it was sent afterwards.
+        self._in_flight[tag] = [factory, None]
+        sent_time = await self._send_raw(mux_msg)
+        self._in_flight[tag][1] = sent_time
         return tag
 
     async def _send_raw(self, mux_msg):
-        print("send_raw", mux_msg.to_bytes())
+        # print("send_raw", mux_msg.to_bytes())
         self._writer.write(mux_msg.to_bytes())
+        sent_time = time.time()
         await self._writer.drain()
+        return sent_time
 
     async def send_and_wait(self, msg_factory, *args, **kwargs):
         tag = await self.send(msg_factory, *args, **kwargs)
@@ -169,7 +210,7 @@ class MiteFinagle:
     async def _main_loop(self, return_msg=None, return_after_reply=None):
         while True:
             message = await Message.read_from_async_stream(self._reader)
-            print("recv", message.to_bytes())
+            # print("recv", message.to_bytes())
             if message.type in (Ping.type, Init.type, CanTinit.type):
                 await self._send_raw(message.make_reply())
             elif message.type in (Ping.Reply.type, Init.Reply.type, CanTinit.Reply.type):
@@ -179,12 +220,52 @@ class MiteFinagle:
                 ):
                     return
             elif message.type == Dispatch.Reply.type:
-                if (factory := self._in_flight.pop(message.tag, None)) is None:
+                if (data := self._in_flight.pop(message.tag, None)) is None:
                     raise Exception("unknown reply tag received")
+                factory, sent_time = data
                 reply = factory.get_reply(message.body)
+                reply._sent_time = sent_time
+                self._send_stat(
+                    name=factory._stats_name,
+                    sent_time=sent_time,
+                    had_error=isinstance(reply, _FinagleError),
+                )
                 if return_msg is not None and return_msg == message.tag:
                     return reply
                 await self._replies.put(reply)
             else:
                 breakpoint()
                 raise Exception("unknown type")
+
+    def _send_stat(self, name, sent_time, had_error):
+        self.context.send(
+            "finagle_metrics",
+            start_time=sent_time,
+            total_time=time.time() - sent_time,
+            function=name,
+            had_error=had_error,
+        )
+
+
+class MiteFinagle:
+    def __init__(self, context):
+        self._context = context
+
+    @asynccontextmanager
+    async def connect(self, address, port):
+        conn = MiteFinagleConnection(self, address, port)
+        async with conn:
+            yield conn
+
+
+def mite_finagle(f):
+    @wraps(f)
+    async def inner(ctx, *args, **kwargs):
+        if getattr(ctx, "finagle", None) is not None:
+            raise Exception("Context has had mite_finagle applied twice -- this is a bug")
+        ctx.finagle = MiteFinagle(ctx)
+        result = await f(ctx, *args, **kwargs)
+        del ctx.finagle
+        return result
+
+    return inner
