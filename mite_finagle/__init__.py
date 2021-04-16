@@ -4,8 +4,14 @@ from contextlib import asynccontextmanager
 from functools import wraps
 from itertools import count
 
-from .mux import CanTinit, Dispatch, Init, Message, Ping
-from .thrift import _ThriftError
+try:
+    from .mux import CanTinit, Dispatch, Init, Message, Ping
+    from .thrift import _ThriftError
+except ImportError as e:
+    # FIXME: are we sure this is the only kind of ImportError we will get?
+    raise Exception(
+        "The mite_finagle module requires the thrift package to be installed"
+    ) from e
 
 # TODO:
 # - headers (ptp, request id, ...)
