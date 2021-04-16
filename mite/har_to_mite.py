@@ -91,7 +91,7 @@ def _render_journey_transaction(
 
 
 def har_convert_to_mite(file_name, converted_file_name, sleep_s):
-    # TODO: accurate sleep times should be made possible by extracting the timestamps from the har file
+
     base_path = os.getcwd()
     with open(base_path + '/' + file_name.lstrip('/'), 'r') as f:
         temp_pages = json.loads(f.read())
