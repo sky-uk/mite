@@ -1,7 +1,7 @@
 from jinja2 import Template
 import json
 import os
-
+import time
 
 TEMPLATE = Template(
     '    async with ctx.transaction("Request {{method}} {{url}}"):\n'
