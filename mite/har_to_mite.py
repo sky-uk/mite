@@ -1,30 +1,31 @@
-from jinja2 import Template
 import json
 import os
 import time
 
+from jinja2 import Template
+
 TEMPLATE = Template(
     '    async with ctx.transaction("Request {{method}} {{url}}"):\n'
-    '        resp = await ctx.browser.{{method}}(\n'
-    '            \'{{url}}\',\n'
-    '            headers={{headers}},\n'
-    '            {{json}}'
-    '            )\n'
-    '        check_status_code{{check_groups}}(resp, {{expected_status}})\n'
-    '    await sleep({{sleep}})\n\n\n'
+    "        resp = await ctx.browser.{{method}}(\n"
+    "            '{{url}}',\n"
+    "            headers={{headers}},\n"
+    "            {{json}}"
+    "            )\n"
+    "        check_status_code{{check_groups}}(resp, {{expected_status}})\n"
+    "    await sleep({{sleep}})\n\n\n"
 )
 
 
 def set_expected_status_code(cur_page, entries):
-    code = cur_page['response']['status']
+    code = cur_page["response"]["status"]
     status_groups = ""
-    if code == 302 and cur_page['response']['redirectURL']:
+    if code == 302 and cur_page["response"]["redirectURL"]:
         for other_page in entries:
-            if cur_page['response']['redirectURL'] == other_page['request']['url']:
-                cur_page['response']['redirectURL'] = other_page['response'][
-                    'redirectURL'
+            if cur_page["response"]["redirectURL"] == other_page["request"]["url"]:
+                cur_page["response"]["redirectURL"] = other_page["response"][
+                    "redirectURL"
                 ]
-                cur_page['response']['status'] = other_page['response']['status']
+                cur_page["response"]["status"] = other_page["response"]["status"]
                 entries.remove(other_page)
                 code, status_groups = set_expected_status_code(cur_page, entries)
     elif code == 304:
@@ -35,27 +36,27 @@ def set_expected_status_code(cur_page, entries):
 
 def set_request_headers_dict(page):
     return {
-        header['name']: header['value']
-        for header in page['request']['headers']
-        if header['name'] != 'Cookie'
+        header["name"]: header["value"]
+        for header in page["request"]["headers"]
+        if header["name"] != "Cookie"
     }
 
 
 def set_request_body(method, page):
-    if method == 'post':
+    if method == "post":
         # the body need to be studied more
-        return "json={}\n".format(page['request']['postData'])
+        return "json={}\n".format(page["request"]["postData"])
     return ""
 
 
 def _parse_urls(pages):
     """Parses urls from pages in hard file"""
-    return [page['title'] for page in pages['log']['pages']]
+    return [page["title"] for page in pages["log"]["pages"]]
 
 
 def _extract_and_sort_requests(pages):
     """Pull entries from har text and sort into chronological order"""
-    entries = pages['log']['entries']
+    entries = pages["log"]["entries"]
     entries.sort(key=lambda n: n["startedDateTime"])
     return entries
 
@@ -79,9 +80,9 @@ def _render_journey_transaction(
     """Renders a single transaction with a predefined template for use
     in a mite journey"""
     return TEMPLATE.render(
-        date_time=page['startedDateTime'],
+        date_time=page["startedDateTime"],
         method=req_method,
-        url=page['request']['url'],
+        url=page["request"]["url"],
         headers=set_request_headers_dict(page),
         json=set_request_body(req_method, page),
         check_groups=group_status,
@@ -93,31 +94,35 @@ def _render_journey_transaction(
 def har_convert_to_mite(file_name, converted_file_name, sleep_s):
 
     base_path = os.getcwd()
-    with open(base_path + '/' + file_name.lstrip('/'), 'r') as f:
+    with open(base_path + "/" + file_name.lstrip("/"), "r") as f:
         temp_pages = json.loads(f.read())
     journey_main = ""
     page_urls = _parse_urls(temp_pages)
     entries = _extract_and_sort_requests(temp_pages)
-    timestamp = time.strptime(temp_pages['log']['pages'][0]['startedDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    timestamp = time.strptime(
+        temp_pages["log"]["pages"][0]["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
     previous_timestamp = time.mktime(timestamp)
     sleep_period = 0
 
     for cur_page in entries:
         if (
-            not cur_page['response']['status']
-            or not cur_page['request']['url'] in page_urls
+            not cur_page["response"]["status"]
+            or not cur_page["request"]["url"] in page_urls
         ):
             continue
 
         expected_status_code, check_groups_status = set_expected_status_code(
             cur_page, entries
         )
-        req_method = cur_page['request']['method'].lower()
+        req_method = cur_page["request"]["method"].lower()
 
         if sleep_s != 0:
             sleep_period = sleep_s
         else:
-            timestamp = time.strptime(cur_page['startedDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            timestamp = time.strptime(
+                cur_page["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
             timestamp = time.mktime(timestamp)
             sleep_period = int(timestamp - previous_timestamp)
             previous_timestamp = timestamp
@@ -129,5 +134,5 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
 
     journey_start = _create_journey_file_start()
 
-    with open(base_path + '/' + converted_file_name.lstrip('/'), 'w') as nf:
+    with open(base_path + "/" + converted_file_name.lstrip("/"), "w") as nf:
         nf.write(journey_start + journey_main)
