@@ -1,4 +1,5 @@
 import pytest
+import os
 
 from copy import deepcopy
 
@@ -9,8 +10,8 @@ from mite.har_to_mite import (
     set_expected_status_code,
     set_request_headers_dict,
     set_request_body,
+    har_convert_to_mite
 )
-
 
 # page with status_code=0
 SIMPLE_PAGE = {
@@ -205,6 +206,20 @@ def test_extract_and_sort_requests():
     urls = [page['request']['url'] for page in _extract_and_sort_requests(PAGES_200)]
     assert urls == ['random_page.url', '302_redirection.url', 'a_page.url']
 
+def test_har_convert_to_mite():
+    testfile = os.getcwd() + "/testharconvmite.txt"
+    testfile10secs = os.getcwd() + "/testharconvmite10secs.txt"
+
+    if os.path.exists(testfile):
+        os.remove(testfile)
+    if os.path.exists(testfile10secs):
+        os.remove(testfile10secs)
+
+    har_convert_to_mite( 'test.har', 'testharconvmite.txt', 0)
+    har_convert_to_mite( 'test.har', 'testharconvmite10secs.txt', 10)
+
+    assert os.path.exists( testfile )
+    assert os.path.exists( testfile10secs )
 
 @pytest.mark.skip(reason="unfinished")
 def test_render_transaction():
