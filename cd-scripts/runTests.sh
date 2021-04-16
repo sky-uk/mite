@@ -2,7 +2,7 @@
 
 MY_VENV=$HOME/mite-tests
 
-python3.8 -m venv --system-site-packages $MY_VENV
+python3.9 -m venv --system-site-packages $MY_VENV
 . $MY_VENV/bin/activate
 
 pip install -U pip
@@ -17,7 +17,7 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-tox; TOX_EXIT_CODE=$?
+tox -e py39; TOX_EXIT_CODE=$?
 coverage html
 
 # Further ideas for jobs to run:
