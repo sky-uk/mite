@@ -17,7 +17,7 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-tox; TOX_EXIT_CODE=$?
+tox -e py39; TOX_EXIT_CODE=$?
 coverage html
 
 # Further ideas for jobs to run:
