@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-pre-commit run --origin HEAD --source origin/master
+/home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
 if [ $PRE_COMMIT_STATUS -ne 0 ]; then
