@@ -41,11 +41,11 @@ def url_builder(base_url, *args, **kwargs):
     return url
 
 
-def browser_decorator(separation=0):
+def browser_decorator(separation=0, embedded_res=False):
     def wrapper_factory(func):
         @mite_http
         async def wrapper(context, *args, **kwargs):
-            context.browser = Browser(context)
+            context.browser = Browser(context, embedded_res)
             async with ensure_fixed_separation(separation):
                 result = await func(context, *args, **kwargs)
             del context.browser
