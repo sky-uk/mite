@@ -1,16 +1,6 @@
 #!/bin/sh -x
 
-MY_VENV=$HOME/mite-tests
-
-python3.9 -m venv --system-site-packages $MY_VENV
-. $MY_VENV/bin/activate
-
-pip install -U pip
-
-pip install -r requirements.txt || exit 1
-pip install -r dev-requirements.txt || exit 1
-
-pre-commit run --origin HEAD --source origin/master
+/home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
 if [ $PRE_COMMIT_STATUS -ne 0 ]; then
@@ -18,7 +8,6 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
 fi
 
 tox -e py39; TOX_EXIT_CODE=$?
-coverage html
 
 # Further ideas for jobs to run:
 # - license check
