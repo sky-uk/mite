@@ -222,6 +222,12 @@ def test_har_convert_to_mite():
     assert os.path.exists(testfile)
     assert os.path.exists(testfile10secs)
 
+    with open(testfile, "r") as testharoutfile:
+        testharStr = testharoutfile.read()
+    assert testharStr.find("await sleep(0)") != -1
+    assert testharStr.find("await sleep(49)") != -1
+    assert testharStr.find("await sleep(4)") != -1
+
 
 @pytest.mark.skip(reason="unfinished")
 def test_render_transaction():
