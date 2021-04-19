@@ -224,9 +224,9 @@ def test_har_convert_to_mite():
 
     with open(testfile, "r") as testharoutfile:
         testharStr = testharoutfile.read()
-    assert testharStr.find("await sleep(0)") != -1
-    assert testharStr.find("await sleep(49)") != -1
-    assert testharStr.find("await sleep(4)") != -1
+    assert "await sleep(0)" in testharStr
+    assert "await sleep(49)" in testharStr
+    assert "await sleep(4)" in testharStr
 
 
 @pytest.mark.skip(reason="unfinished")
