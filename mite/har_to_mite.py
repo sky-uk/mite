@@ -1,5 +1,4 @@
 import json
-import os
 import time
 
 from jinja2 import Template
@@ -92,9 +91,7 @@ def _render_journey_transaction(
 
 
 def har_convert_to_mite(file_name, converted_file_name, sleep_s):
-
-    base_path = os.getcwd()
-    with open(base_path + "/" + file_name.lstrip("/"), "r") as f:
+    with open(file_name, "r") as f:
         temp_pages = json.loads(f.read())
     journey_main = ""
     page_urls = _parse_urls(temp_pages)
@@ -134,5 +131,5 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
 
     journey_start = _create_journey_file_start()
 
-    with open(base_path + "/" + converted_file_name.lstrip("/"), "w") as nf:
+    with open(converted_file_name, "w") as nf:
         nf.write(journey_start + journey_main)

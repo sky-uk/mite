@@ -1,5 +1,6 @@
 import os
 from copy import deepcopy
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -208,25 +209,29 @@ def test_extract_and_sort_requests():
 
 
 def test_har_convert_to_mite():
-    testfile = os.getcwd() + "/testharconvmite.txt"
-    testfile10secs = os.getcwd() + "/testharconvmite10secs.txt"
+    with NamedTemporaryFile() as test_har:
+        testinputfile = os.path.join(os.path.dirname(__file__), "test.har")
+        testoutputfile = test_har.name
 
-    if os.path.exists(testfile):
-        os.remove(testfile)
-    if os.path.exists(testfile10secs):
-        os.remove(testfile10secs)
+        har_convert_to_mite(testinputfile, testoutputfile, 0)
 
-    har_convert_to_mite("test.har", "testharconvmite.txt", 0)
-    har_convert_to_mite("test.har", "testharconvmite10secs.txt", 10)
+        with open(testoutputfile, "r") as testharoutfile:
+            testharstr = testharoutfile.read()
+        assert "await sleep(0)" in testharstr
+        assert "await sleep(49)" in testharstr
+        assert "await sleep(4)" in testharstr
 
-    assert os.path.exists(testfile)
-    assert os.path.exists(testfile10secs)
 
-    with open(testfile, "r") as testharoutfile:
-        testharStr = testharoutfile.read()
-    assert "await sleep(0)" in testharStr
-    assert "await sleep(49)" in testharStr
-    assert "await sleep(4)" in testharStr
+def test_har_convert_to_mite_10secs():
+    with NamedTemporaryFile() as test_har:
+        testinputfile = os.path.join(os.path.dirname(__file__), "test.har")
+        testoutputfile = test_har.name
+
+        har_convert_to_mite(testinputfile, testoutputfile, 10)
+
+        with open(testoutputfile, "r") as testharoutfile:
+            testharstr = testharoutfile.read()
+        assert "await sleep(10)" in testharstr
 
 
 @pytest.mark.skip(reason="unfinished")
