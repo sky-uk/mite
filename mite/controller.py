@@ -132,6 +132,13 @@ class Controller:
             }
         )
 
+    def announce_end(self, sender):
+        sender(
+            {
+                'type': 'run_end',
+            }
+        )
+
     def should_stop(self):
         logger.debug(
             "Scenario manager active: %s" % (self._scenario_manager.is_active(),)

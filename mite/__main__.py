@@ -235,6 +235,7 @@ def controller(opts):
         # TODO: kill runners, do other shutdown tasks
         logging.info("Received interrupt signal, shutting down")
     finally:
+        controller.announce_end(sender.send)
         _controller_log_end(logging_id, logging_url)
         # TODO: cancel all loop tasks?  Something must be done to stop this
         # from hanging
