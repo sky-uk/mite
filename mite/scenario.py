@@ -133,7 +133,7 @@ class ScenarioManager:
                             "Removed scenario %d because data pool exhausted", scenario_id
                         )
                         del self._scenarios[scenario_id]
-                        if len(self.scenarios) == 0:
+                        if len(self._scenarios) == 0:
                             logger.info("All scenarios removed from scenario tracker")
                         continue
                     else:
