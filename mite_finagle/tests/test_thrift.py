@@ -5,7 +5,7 @@ from unittest.mock import patch
 from pytest import raises, mark
 from thrift.Thrift import TApplicationException
 
-from mite_finagle.thrift import FinagleMessageFactory, _FinagleError
+from mite_finagle.thrift import ThriftMessageFactory, _ThriftError
 
 old_path = sys.path
 sys.path = list(sys.path)
@@ -17,27 +17,28 @@ sys.path = old_path
 
 
 def test_init():
-    FinagleMessageFactory("performfoo", Client)
+    ThriftMessageFactory("performfoo", Client)
     assert True
 
 
 def test_init_with_wrong_client_raises():
     with raises(Exception, match="wrong client passed"):
-        FinagleMessageFactory("performfo", Client)
+        ThriftMessageFactory("performfo", Client)
 
 
 def test_get_bytes():
-    f = FinagleMessageFactory("performfoo", Client)
-    assert (
-        f.get_bytes("bar")
-        == b"\x80\x01\x00\x01\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00"
-        b"\x01\x0b\x00\x01\x00\x00\x00\x03bar\x00\x00"
-    )
+    f = ThriftMessageFactory("performfoo", Client)
+    with patch("mite_finagle.thrift._SEQUENCE_NOS", new=iter([1])):
+        assert (
+            f.get_request_bytes("bar")
+            == b"\x80\x01\x00\x01\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00"
+            b"\x01\x0b\x00\x01\x00\x00\x00\x03bar\x00\x00"
+        )
 
 
 def test_get_reply():
-    f = FinagleMessageFactory("performfoo", Client)
-    reply = f.get_reply(
+    f = ThriftMessageFactory("performfoo", Client)
+    reply = f.get_reply_object(
         b"\x80\x01\x00\x02\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00\x00"
         b"\x0b\x00\x01\x00\x00\x00\x04quux\x00\x00"
     )
@@ -47,19 +48,19 @@ def test_get_reply():
 
 
 def test_get_reply_exception():
-    f = FinagleMessageFactory("performfoo", Client)
-    reply = f.get_reply(
+    f = ThriftMessageFactory("performfoo", Client)
+    reply = f.get_reply_object(
         b"\x80\x01\x00\x03\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0b\x00\x01"
         b"\x00\x00\x00\x06foobar\x08\x00\x02\x00\x00\x04\xd2\x00"
     )
-    assert isinstance(reply, _FinagleError)
+    assert isinstance(reply, _ThriftError)
     assert isinstance(reply._wrapped, TApplicationException)
 
 
 @mark.asyncio
 async def test_chained_wait():
-    f = FinagleMessageFactory("performfoo", Client)
-    reply = f.get_reply(
+    f = ThriftMessageFactory("performfoo", Client)
+    reply = f.get_reply_object(
         b"\x80\x01\x00\x02\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00\x00"
         b"\x0b\x00\x01\x00\x00\x00\x04quux\x00\x00"
     )
@@ -71,8 +72,8 @@ async def test_chained_wait():
 
 @mark.asyncio
 async def test_chained_wait_no_sent_time():
-    f = FinagleMessageFactory("performfoo", Client)
-    reply = f.get_reply(
+    f = ThriftMessageFactory("performfoo", Client)
+    reply = f.get_reply_object(
         b"\x80\x01\x00\x02\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00\x00"
         b"\x0b\x00\x01\x00\x00\x00\x04quux\x00\x00"
     )
@@ -83,8 +84,8 @@ async def test_chained_wait_no_sent_time():
 
 @mark.asyncio
 async def test_chained_wait_over_long():
-    f = FinagleMessageFactory("performfoo", Client)
-    reply = f.get_reply(
+    f = ThriftMessageFactory("performfoo", Client)
+    reply = f.get_reply_object(
         b"\x80\x01\x00\x02\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00\x00"
         b"\x0b\x00\x01\x00\x00\x00\x04quux\x00\x00"
     )

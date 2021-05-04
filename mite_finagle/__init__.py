@@ -66,7 +66,7 @@ class MiteFinagleConnection:
 
     async def send(self, factory, *args, **kwargs):
         tag = next(self._tags)
-        mux_msg = Dispatch(tag, {}, b"", {}, factory.get_bytes(*args, **kwargs))
+        mux_msg = Dispatch(tag, {}, b"", {}, factory.get_request_bytes(*args, **kwargs))
         # A bit of an awkward dance.  We want to save the time the message was
         # sent, so that the chained_wait function can work.  We can't just
         # store the current time on the next line, though, because we are
@@ -113,12 +113,12 @@ class MiteFinagleConnection:
                 if (data := self._in_flight.pop(message.tag, None)) is None:
                     raise Exception("unknown reply tag received")
                 factory, sent_time = data
-                reply = factory.get_reply(message.body)
+                reply = factory.get_reply_object(message.body)
                 reply._sent_time = sent_time
                 self._send_stat(
                     name=factory._stats_name,
                     sent_time=sent_time,
-                    had_error=isinstance(reply, _FinagleError),
+                    had_error=isinstance(reply, _ThriftError),
                 )
                 if return_msg is not None and return_msg == message.tag:
                     return reply
