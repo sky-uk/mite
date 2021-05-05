@@ -22,6 +22,8 @@ except ImportError as e:
 # - split the thrift stuff into its own file
 # - stats hooks for journey test output
 
+_TAGS = count(1)
+
 
 class MiteFinagleError(Exception):
     pass
@@ -33,7 +35,6 @@ class MiteFinagleConnection:
         self._address = address
         self._port = port
         self._replies = asyncio.Queue()
-        self._tags = count(1)
         # FIXME: some sort of length limit to keep this from leaking...?
         self._in_flight = {}
 
@@ -65,7 +66,7 @@ class MiteFinagleConnection:
             pending = (self._replies.get(), *pending)
 
     async def send(self, factory, *args, **kwargs):
-        tag = next(self._tags)
+        tag = next(_TAGS)
         mux_msg = Dispatch(tag, {}, b"", {}, factory.get_request_bytes(*args, **kwargs))
         # A bit of an awkward dance.  We want to save the time the message was
         # sent, so that the chained_wait function can work.  We can't just

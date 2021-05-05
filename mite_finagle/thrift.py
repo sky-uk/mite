@@ -6,9 +6,11 @@ from itertools import count
 from typing import Any
 
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
+from thrift.Thrift import TMessageType, TType
 from thrift.transport import TTransport
 
 _SEQUENCE_NOS = count(1)
+_SIMPLE_TYPES = {TType.STRING, TType.BOOL, TType.I64}  # TODO: more
 
 
 async def _result_wait(self, seconds):
@@ -68,7 +70,29 @@ class ThriftMessageFactory:
     different services.
 
     """
-    def __init__(self, fn_name, client, stats_name=None):
+
+    # TODO: document what these are any why they are set on the class
+    make_string = lambda: "foo"
+    make_number = lambda: 1
+    make_bool = lambda: False
+
+    @classmethod
+    def get_methods(cls, module):
+        """TODO"""
+        if "Processor" not in module.__dict__:
+            raise ValueError(f"{module.__name__} doesn't contain a Processor class")
+        for method_name in module.__dict__["Processor"].__dict__.keys():
+            if not method_name.startswith("process_"):
+                continue
+            method_name = method_name[8:]
+            yield method_name
+
+    def __init__(
+        self,
+        fn_name,
+        client,
+        stats_name=None,
+    ):
         self._fn_name = fn_name
         self._client = client
         self._stats_name = stats_name or fn_name
@@ -84,7 +108,8 @@ class ThriftMessageFactory:
         # arguments.  Most (all) the cybertron thrift services have a single
         # struct as the first argument, but technically we're not as generic
         # as we need to be...
-        self._args_struct = getattr(module, fn_name + "_args").thrift_spec[1][3][0]
+        self._args_struct = getattr(module, fn_name + "_args")
+        self._result_object = getattr(module, fn_name + "_result")
 
     def get_request_bytes(self, *args, **kwargs):
         """Get the bytes representing a serialized request to the RPC function.
@@ -93,13 +118,23 @@ class ThriftMessageFactory:
         arguments.
 
         """
-        out_msg = self._args_struct(*args, **kwargs)
+        out_msg = self._args_struct.thrift_spec[1][3][0](*args, **kwargs)
         seq_no = next(_SEQUENCE_NOS)
         trans = TTransport.TMemoryBuffer()
         proto = TBinaryProtocol(trans)
         proxy = _WriteProxy(seq_no, proto)
         getattr(self._client, "send_" + self._fn_name)(proxy, out_msg)
         return trans._buffer.getvalue()
+
+    def get_request_object(self, msg):
+        """TODO"""
+        trans = TTransport.TMemoryBuffer(msg)
+        proto = TBinaryProtocol(trans)
+        (name, type, seqid) = proto.readMessageBegin()
+        # assert type == TODO
+        r = self._args_struct()
+        r.read(proto)
+        return r.request
 
     def get_reply_object(self, msg):
         """Deserialize a reply from the bytes `msg`.
@@ -117,3 +152,66 @@ class ThriftMessageFactory:
             print("finagle error", str(e))
             result = _ThriftError(e)
         return result
+
+    def get_reply_bytes(self, seqid, *args, **kwargs):
+        """Get a bytestring representing a reply to this factory's function."""
+        result_struct = self._result_object.thrift_spec[0][3][0](*args, **kwargs)
+        result = self._result_object(result_struct)
+        trans = TTransport.TMemoryBuffer()
+        proto = TBinaryProtocol(trans)
+        proto.writeMessageBegin("performfoo", TMessageType.REPLY, seqid)
+        result.write(proto)
+        proto.writeMessageEnd()
+        return trans._buffer.getvalue()
+
+    def get_reply_args(self):
+        """TODO"""
+        obj = self._result_object.thrift_spec[0][3][0]
+        kwargs = self._get_args_for_spec(obj.thrift_spec)
+        return kwargs
+
+    def _get_simple_type(self, type):
+        if type == TType.STRING:
+            return self.make_string()
+        elif type == TType.BOOL:
+            return self.make_bool()
+        elif type in {TType.I64}:  # TODO: more
+            return self.make_int()
+
+    def _get_args_for_spec(self, spec):
+        kwargs = {}
+        for t in spec:
+            if not isinstance(t, tuple):
+                continue
+            name = t[2]
+            inner_type = t[1]
+            if inner_type in _SIMPLE_TYPES:
+                kwargs[name] = self._get_simple_type(inner_type)
+            elif inner_type == TType.STRUCT:
+                kwargs[name] = self._get_args_for_spec(t[3][0])
+            elif inner_type == TType.MAP:
+                key_type = t[3][0]
+                value_type = t[3][2]
+                if value_type == TType.STRUCT:
+                    obj = t[3][3][0]
+                    value = obj(**self._get_args_for_spec(obj.thrift_spec))
+                elif value_type in _SIMPLE_TYPES:
+                    value = self._get_simple_type(value_type)
+                else:
+                    breakpoint()
+                    raise Exception("unk val")
+                kwargs[name] = {self._get_simple_type(key_type): value}
+            elif inner_type == TType.LIST:
+                member_type = t[3][0]
+                if member_type == TType.STRUCT:
+                    obj = t[3][1][0]
+                    value = obj(**self._get_args_for_spec(obj.thrift_spec))
+                    kwargs[name] = [value]
+                elif member_type in _SIMPLE_TYPES:
+                    kwargs[name] = [self._get_simple_type(member_type)]
+                else:
+                    raise Exception("unk member type")
+            else:
+                breakpoint()
+                raise Exception("can't initialize")
+        return kwargs

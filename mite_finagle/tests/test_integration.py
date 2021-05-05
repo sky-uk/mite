@@ -1,21 +1,23 @@
 import asyncio
 import os
 import sys
+from random import randint
+from unittest.mock import patch
 
 import pytest
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
-from thrift.transport import TTransport
 from thrift.Thrift import TMessageType
+from thrift.transport import TTransport
 
 from mite_finagle import mite_finagle
+from mite_finagle.mux import Dispatch, DispatchStatus, Message
 from mite_finagle.thrift import ThriftMessageFactory
-from mite_finagle.mux import Dispatch
 
 old_path = sys.path
 sys.path = list(sys.path)
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from foo_service.Foo import Client, performfoo_result  # noqa: E402
-from foo_service.ttypes import FooResponse  # noqa: E402
+from foo_service.ttypes import FooRequest  # noqa: E402
 
 sys.path = old_path
 
@@ -46,38 +48,83 @@ class MockContext:
         raise NotImplementedError
 
 
+class ThriftConversation:
+    def __init__(self, sock_server):
+        self._server = sock_server
+        self._seqids = []
+        self._requests = []
+        self._factories = {}
+
+    def add_exchange(self, factory, req_args, rep_args):
+        seqid = randint(1, 1_000_000)
+        self._seqids.append(seqid)
+        with patch("mite_finagle.thrift._SEQUENCE_NOS", new=iter([seqid])):
+            self._server.add_response(
+                after=len(
+                    Dispatch(
+                        seqid, {}, b"", {}, factory.get_request_bytes(*req_args)
+                    ).to_bytes()
+                ),
+                response_bytes=Dispatch.Reply(
+                    seqid,
+                    DispatchStatus.OK,
+                    {},
+                    factory.get_reply_bytes(seqid, *rep_args),
+                ).to_bytes(),
+            )
+        print(
+            "adding reply",
+            Dispatch.Reply(
+                seqid,
+                DispatchStatus.OK,
+                {},
+                factory.get_reply_bytes(seqid, *rep_args),
+            ).to_bytes(),
+        )
+        self._requests.append(req_args)
+        self._factories[seqid] = factory
+
+    async def serve(self):
+        await self._server.serve(5050)
+
+    def play(self):
+        for request, seqid in zip(self._requests, self._seqids):
+            with patch("mite_finagle.thrift._SEQUENCE_NOS", new=iter([seqid])), patch(
+                "mite_finagle._TAGS", new=iter([seqid])
+            ):
+                yield request
+
+    def received(self):
+        r = []
+        for m in self._server._received:
+            msg = Message.from_bytes(m[4:])
+            factory = self._factories[msg.tag]
+            r.append(factory.get_request_object(msg.body))
+        return r
+
+
+@pytest.fixture
+def thrift_conversation(sock_server):
+    return ThriftConversation(sock_server)
+
+
 @pytest.mark.asyncio
-async def test_integration_basic(sock_server):
+async def test_integration_basic(thrift_conversation):
     factory = ThriftMessageFactory("performfoo", Client)
 
-    trans = TTransport.TMemoryBuffer()
-    proto = TBinaryProtocol(trans)
-    proto.writeMessageBegin("performfoo", TMessageType.REPLY, 1)
-    result = performfoo_result(FooResponse("foo"))
-    result.write(proto)
-    proto.writeMessageEnd()
-    sock_server.add_response(
-        after=51,
-        response_bytes=Dispatch.Reply(1, 0, {}, trans._buffer.getvalue()).to_bytes(),
-    )
-    await sock_server.serve(5050)
+    thrift_conversation.add_exchange(factory, ("foo",), ("foo",))
+    await thrift_conversation.serve()
 
     @mite_finagle
     async def journey(ctx):
         async with ctx.finagle.connect("127.0.0.1", 5050) as finagle:
             print("connected")
-            await finagle.send_and_wait(factory, "foo")
+            for req_args in thrift_conversation.play():
+                await finagle.send_and_wait(factory, *req_args)
 
     ctx = MockContext()
 
     await asyncio.sleep(0)
     await journey(ctx)
 
-    sock_server.assert_received(
-        [
-            # FIXME: make this less brutal to specify
-            b"\x00\x00\x00/\x02\x00\x00\x01\x00\x00\x00\x00\x00\x00\x80\x01\x00"
-            + b"\x01\x00\x00\x00\nperformfoo\x00\x00\x00\x01\x0c\x00\x01\x0b\x00"
-            + b"\x01\x00\x00\x00\x03foo\x00\x00"
-        ]
-    )
+    assert thrift_conversation.received() == [FooRequest("foo")]
