@@ -67,6 +67,31 @@ class Dict:
         )
 
 
+class RestDict:
+    """A dictionary encoded without length.
+
+    The difference with the `Dict` class is: that class's encoding begins with
+    a length specifying the number of kv pairs in the dictionary.  This class
+    on the other hand does not specify a length, and consumes kv pairs until
+    the input is exhausted.
+
+    """
+    def __init__(self, strlen_bytes):
+        self._string = String(strlen_bytes)
+
+    def read(self, input):
+        d = {}
+        remaining = len(input.getbuffer())  # FIXME: dangerous, can we validate it?
+        while input.tell() < remaining:
+            k = self._string.read(input)
+            v = self._string.read(input)
+            d[k] = v
+        return d
+
+    def serialize(self, d):
+        return b"".join(self._string.serialize(k) + self._string.serialize(v) for k, v in d.items())
+
+
 class Body:
     """A message body.
 
@@ -257,6 +282,7 @@ class Init(Message):
 
     class Fields:
         version: Int(2)
+        kwargs: RestDict(4)
 
     def args_for_reply(self):
         return {"version": 1}
