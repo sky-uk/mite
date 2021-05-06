@@ -285,7 +285,7 @@ class Init(Message):
         kwargs: RestDict(4)
 
     def args_for_reply(self):
-        return {"version": 1}
+        return {"version": 1, "kwargs": {}}
 
 
 class CanTinit(Message):
