@@ -10,7 +10,7 @@ from thrift.Thrift import TMessageType, TType
 from thrift.transport import TTransport
 
 _SEQUENCE_NOS = count(1)
-_SIMPLE_TYPES = {TType.STRING, TType.BOOL, TType.I64}  # TODO: more
+_SIMPLE_TYPES = {TType.STRING, TType.BOOL, TType.I64, TType.I32}  # TODO: more
 
 
 async def _result_wait(self, seconds):
@@ -71,11 +71,6 @@ class ThriftMessageFactory:
 
     """
 
-    # TODO: document what these are any why they are set on the class
-    make_string = lambda: "foo"
-    make_number = lambda: 1
-    make_bool = lambda: False
-
     @classmethod
     def get_methods(cls, module):
         """TODO"""
@@ -102,14 +97,29 @@ class ThriftMessageFactory:
             )
         # Monkeypatch the chained_wait method onto the reply class
         module = import_module(client.__module__)
-        reply_class = getattr(module, fn_name + "_result").thrift_spec[0][3][0]
-        reply_class.chained_wait = _result_wait
+        reply_wrapper = getattr(module, fn_name + "_result")
+        reply_object = self._get_reply_object(reply_wrapper)
+        if reply_object is not None:
+            reply_object.chained_wait = _result_wait
         # FIXME: this doesn't cover cases where functions have multiple
         # arguments.  Most (all) the cybertron thrift services have a single
         # struct as the first argument, but technically we're not as generic
         # as we need to be...
         self._args_struct = getattr(module, fn_name + "_args")
         self._result_object = getattr(module, fn_name + "_result")
+
+    @staticmethod
+    def _get_reply_object(wrapper):
+        spec = wrapper.thrift_spec
+        if spec == ():
+            return
+        spec = spec[0]
+        if spec is None or spec[1] == TType.LIST:
+            # the thrift method returns void or a list FIXME: this means mite
+            # needs to check whether the result is a list etc.
+            return
+        else:
+            return spec[3][0]
 
     def get_request_bytes(self, *args, **kwargs):
         """Get the bytes representing a serialized request to the RPC function.
@@ -134,7 +144,7 @@ class ThriftMessageFactory:
         # assert type == TODO
         r = self._args_struct()
         r.read(proto)
-        return r.request
+        return getattr(r, "request", ())
 
     def get_reply_object(self, msg):
         """Deserialize a reply from the bytes `msg`.
@@ -155,40 +165,50 @@ class ThriftMessageFactory:
 
     def get_reply_bytes(self, seqid, *args, **kwargs):
         """Get a bytestring representing a reply to this factory's function."""
-        result_struct = self._result_object.thrift_spec[0][3][0](*args, **kwargs)
-        result = self._result_object(result_struct)
+        result = self._result_object()
+        result_struct_class = self._get_reply_object(self._result_object)
+        if result_struct_class is not None:
+            result_struct = result_struct_class(*args, **kwargs)
+            result.success = result_struct
         trans = TTransport.TMemoryBuffer()
         proto = TBinaryProtocol(trans)
-        proto.writeMessageBegin("performfoo", TMessageType.REPLY, seqid)
+        proto.writeMessageBegin(self._fn_name, TMessageType.REPLY, seqid)
         result.write(proto)
         proto.writeMessageEnd()
         return trans._buffer.getvalue()
 
-    def get_reply_args(self):
+    def get_reply_args(self, overrides):
         """TODO"""
-        obj = self._result_object.thrift_spec[0][3][0]
-        kwargs = self._get_args_for_spec(obj.thrift_spec)
+        obj = self._get_reply_object(self._result_object)
+        if obj is None:
+            return {}
+        kwargs = self._get_args_for_spec(obj.thrift_spec, overrides)
         return kwargs
 
     def _get_simple_type(self, type):
         if type == TType.STRING:
-            return self.make_string()
+            return "foo"
         elif type == TType.BOOL:
-            return self.make_bool()
-        elif type in {TType.I64}:  # TODO: more
-            return self.make_int()
+            return False
+        elif type in {TType.I64, TType.I32}:  # TODO: more
+            return 1
 
-    def _get_args_for_spec(self, spec):
+    def _get_args_for_spec(self, spec, overrides=None):
         kwargs = {}
-        for t in spec:
+        if overrides is None:
+            overrides = {}
+        overrides = overrides.get(self._fn_name, {})
+        for i, t in enumerate(spec):
             if not isinstance(t, tuple):
                 continue
             name = t[2]
             inner_type = t[1]
-            if inner_type in _SIMPLE_TYPES:
+            if name in overrides:
+                kwargs[name] = overrides[name]
+            elif inner_type in _SIMPLE_TYPES:
                 kwargs[name] = self._get_simple_type(inner_type)
             elif inner_type == TType.STRUCT:
-                kwargs[name] = self._get_args_for_spec(t[3][0])
+                kwargs[name] = t[3][0](**self._get_args_for_spec(t[3][0].thrift_spec))
             elif inner_type == TType.MAP:
                 key_type = t[3][0]
                 value_type = t[3][2]
@@ -204,14 +224,18 @@ class ThriftMessageFactory:
             elif inner_type == TType.LIST:
                 member_type = t[3][0]
                 if member_type == TType.STRUCT:
-                    obj = t[3][1][0]
-                    value = obj(**self._get_args_for_spec(obj.thrift_spec))
-                    kwargs[name] = [value]
+                    # FIXME: would be nice to provide a value, but getStatus
+                    # causes recursion on donwstreamStatuses, and an empty
+                    # list is still a list...
+                    # obj = t[3][1][0]
+                    # value = obj(**self._get_args_for_spec(obj.thrift_spec))
+                    # kwargs[name] = [value]
+                    kwargs[name] = []
                 elif member_type in _SIMPLE_TYPES:
                     kwargs[name] = [self._get_simple_type(member_type)]
                 else:
                     raise Exception("unk member type")
             else:
                 breakpoint()
-                raise Exception("can't initialize")
+                raise Exception("can't initialize", inner_type)
         return kwargs
