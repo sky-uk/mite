@@ -198,8 +198,8 @@ class Message(metaclass=_MessageMeta):
             name: descriptor.read(stream) for name, descriptor in subclass._fields()
         }
         kwargs["tag"] = tag
-        if stream.read() != b"":
-            raise ValueError("extra bytes in message")
+        if (extra := stream.read()) != b"":
+            raise ValueError("extra bytes in message", type, subclass, kwargs, extra, msg)
         return subclass(**kwargs)
 
     @classmethod
