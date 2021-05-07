@@ -1,7 +1,13 @@
+from __future__ import annotations
+
 import asyncio
 import shlex
 import threading
 import time
+from collections import namedtuple
+from dataclasses import InitVar, dataclass, field
+from functools import cache, cached_property, partial
+from typing import Any
 from urllib.parse import urlparse
 
 import ujson
@@ -14,100 +20,33 @@ try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
     # package is not installed
-    pass
+    __version__ = "0.unknown"
 
 
 class RequestError(Exception):
     pass
 
 
+# FIXME: put the cookie stuff in its own file?
 _FALSE_TRUE = ["FALSE", "TRUE"]
 
 
-class Cookie:
-    def __init__(
-        self,
-        domain,
-        name,
-        value,
-    ):
-        self.domain = domain
-        self.name = name
-        self.value = value
+Cookie = namedtuple("Cookie", ["domain", "name", "value"])
 
 
+@dataclass(frozen=True)
 class _Cookie:
-    __slots__ = "_http_only _domain _include_subdomains _path _is_secure _expiration _name _value".split()
-
-    def __init__(
-        self,
-        http_only,
-        domain,
-        include_subdomains,
-        path,
-        is_secure,
-        expiration,
-        name,
-        value,
-    ):
-        self._http_only = http_only
-        self._domain = domain
-        self._include_subdomains = include_subdomains
-        self._path = path
-        self._is_secure = is_secure
-        self._expiration = expiration
-        self._name = name
-        self._value = value
-
-    def __repr__(self):
-        return (
-            "Cookie(http_only={}, domain={}, include_subdomains={}, path={}, is_secure={}, "
-            "expiration={}, name={}, value={})"
-        ).format(
-            self._http_only,
-            self._domain,
-            self._include_subdomains,
-            self._path,
-            self._is_secure,
-            self._expiration,
-            self._name,
-            self._value,
-        )
-
-    def __str__(self):
-        return self.__repr__()
-
-    @property
-    def http_only(self):
-        return self._http_only
-
-    @property
-    def domain(self):
-        return self._domain
-
-    @property
-    def include_subdomains(self):
-        return self._include_subdomains
-
-    @property
-    def path(self):
-        return self._path
-
-    @property
-    def is_secure(self):
-        return self._is_secure
-
-    @property
-    def expiration(self):
-        return self._expiration
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def value(self):
-        return self._value
+    # FIXME: the implementation in terms of dataclasses gives up on having
+    # __slots__.  If we want to keep that, then we need either to do some
+    # gross hacks or use the attrs library.
+    http_only: bool
+    domain: str
+    include_subdomains: bool
+    path: str
+    is_secure: bool
+    expiration: int  # TODO???
+    name: str
+    value: str
 
     @property
     def has_expired(self):
@@ -116,21 +55,16 @@ class _Cookie:
     def format(self):
         bits = []
         if self.http_only:
-            bits.append("#HttpOnly_")
-        bits.append(self.domain)
-        bits.append("\t")
+            bits.append("#HttpOnly_" + self.domain)
+        else:
+            bits.append(self.domain)
         bits.append(_FALSE_TRUE[self.include_subdomains])
-        bits.append("\t")
         bits.append(self.path)
-        bits.append("\t")
         bits.append(_FALSE_TRUE[self.is_secure])
-        bits.append("\t")
         bits.append(str(self.expiration))
-        bits.append("\t")
         bits.append(self.name)
-        bits.append("\t")
         bits.append(self.value)
-        return "".join(bits)
+        return "\t".join(bits)
 
 
 def parse_cookie_string(cookie_string):
@@ -197,30 +131,33 @@ def _cookie_seq_to_cookie_dict(cookie_list):
     return {cookie.name: cookie.value for cookie in cookie_list}
 
 
+@dataclass(frozen=True)
 class Request:
-    __slots__ = "_method _url _header_seq _cookie_tuple _auth _data _cert _session_cookies".split()
+    # FIXME: same considerations apply as with Cookie
+    method: str
+    url: str
+    header_seq: tuple[Any]  # TODO
+    cookie_tuple: tuple[Any]  # TODO
+    auth: Any  # TODO
+    data: str
+    cert: Any  # TODO
+    session_cookies: Any = field(init=False)  # TODO
+    session: InitVar[Any]
 
-    def __init__(self, method, url, header_seq, cookie_seq, auth, data, cert, session):
-        self._method = method
-        self._url = url
-        self._header_seq = tuple(header_seq)
-        self._cookie_tuple = tuple(cookie_seq)
-        self._auth = auth
-        self._data = data
-        self._cert = cert
-        self._session_cookies = tuple(
-            c
-            for c in session.get_cookie_list()
-            if urlparse(self._url).hostname.lower() == c._domain.lower()
+    def __post_init__(self, session):
+        object.__setattr__(self, "header_seq", tuple(self.header_seq))
+        object.__setattr__(self, "cookie_tuple", tuple(self.cookie_tuple))
+        object.__setattr__(
+            self,
+            "session_cookies",
+            tuple(
+                c
+                for c in session.get_cookie_list()
+                # FIXME: does this dtrt if we make a request to foo.bar.com
+                # with a session cookie for .bar.com
+                if urlparse(self._url).hostname.lower() == c._domain.lower()
+            ),
         )
-
-    @property
-    def method(self):
-        return self._method
-
-    @property
-    def url(self):
-        return self._url
 
     @property
     def headers(self):
@@ -229,18 +166,6 @@ class Request:
     @property
     def cookies(self):
         return _cookie_seq_to_cookie_dict(self._cookie_tuple + self._session_cookies)
-
-    @property
-    def auth(self):
-        return self._auth
-
-    @property
-    def data(self):
-        return self._data
-
-    @property
-    def cert(self):
-        return self._cert
 
     def to_curl(self):
         data_arg = ""
@@ -261,89 +186,83 @@ class Request:
         if self.auth is not None:
             auth_arg = "--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}")
         return (
-            f"curl -X {self.method} {header_args} {cookie_args} {auth_arg} {data_arg} "
+            f"curl -X {self.method} "
+            + " ".join((header_args, cookie_args, auth_arg, data_arg))
             + shlex.quote(self.url)
         )
 
 
+@dataclass(frozen=True)
 class Response:
+    # FIXME: in addition to the slots considerations of Request and Cookie, we
+    # also need to consider the interaction of slots with cached property
+    request: Any
+    _resp: Any
+    start_time: Any
     __slots__ = "_req _resp _start_time _redirect_url _prev _body _text _header _headers_tuple _headers _encoding _json".split()
 
-    def __init__(self, req, resp, start_time):
-        self._req = req
-        self._resp = resp
-        self._start_time = start_time
-
-    @property
-    def request(self):
-        return self._req
-
-    @property
+    @cached_property
     def status_code(self):
         return self._resp.get_response_code()
 
     response_code = status_code
 
-    @property
+    @cached_property
     def url(self):
         return self._resp.get_effective_url()
 
-    @property
+    @cached_property
     def redirect_url(self):
-        if not hasattr(self, "_redirect_url"):
-            self._redirect_url = self._resp.get_redirect_url()
-        return self._redirect_url
+        return self._resp.get_redirect_url()
 
-    @property
-    def start_time(self):
-        return self._start_time
-
-    @property
+    # FIXME: how many of these do we think need to be cached?  Most will be
+    # calculated once and no more, so caching is a waste...
+    @cached_property
     def total_time(self):
         return self._resp.get_total_time()
 
-    @property
+    @cached_property
     def namelookup_time(self):
         return self._resp.get_namelookup_time()
 
-    @property
+    @cached_property
     def connect_time(self):
         return self._resp.get_connect_time()
 
-    @property
+    @cached_property
     def appconnect_time(self):
         return self._resp.get_appconnect_time()
 
-    @property
+    @cached_property
     def pretransfer_time(self):
         return self._resp.get_pretransfer_time()
 
-    @property
+    @cached_property
     def starttransfer_time(self):
         return self._resp.get_starttransfer_time()
 
-    @property
+    @cached_property
     def upload_size(self):
         return self._resp.get_size_upload()
 
-    @property
+    @cached_property
     def download_size(self):
         return self._resp.get_size_download()
 
-    @property
+    @cached_property
     def primary_ip(self):
         return self._resp.get_primary_ip()
 
     # TODO: is this part of the request api?
-    @property
+    @cached_property
     def cookielist(self):
         return [parse_cookie_string(cookie) for cookie in self._resp.get_cookielist()]
 
-    @property
+    @cached_property
     def cookies(self):
         return _cookie_seq_to_cookie_dict(self.cookielist)
 
-    @property
+    @cached_property
     def history(self):
         result = []
         cur = getattr(self, "_prev", None)
@@ -353,52 +272,41 @@ class Response:
         result.reverse()
         return result
 
-    @property
+    @cached_property
     def body(self):
-        if not hasattr(self, "_body"):
-            self._body = b"".join(self._resp.get_body())
-        return self._body
+        return b"".join(self._resp.get_body())
 
-    @property
+    @cached_property
     def encoding(self):
-        if not hasattr(self, "_encoding"):
-            if (
-                "Content-Type" in self.headers
-                and "charset=" in self.headers["Content-Type"]
-            ):
-                self._encoding = (
-                    self.headers["Content-Type"].split("charset=")[-1].split()[0]
-                )
-            else:
-                self._encoding = "latin1"
-        return self._encoding
+        if (
+            "Content-Type" in self.headers
+            and "charset=" in self.headers["Content-Type"]
+        ):
+            return self.headers["Content-Type"].split("charset=")[-1].split()[0]
+        return "latin1"
 
-    # TODO: why do we allow setter?
-    @encoding.setter
-    def encoding_setter(self, encoding):
-        self._encoding = encoding
+    # TODO: why did we allow setter?
+    # @encoding.setter
+    # def encoding_setter(self, encoding):
+    #     self._encoding = encoding
 
-    @property
+    @cached_property
     def text(self):
-        if not hasattr(self, "_text"):
-            self._text = self.body.decode(self.encoding)
-        return self._text
+        return self.body.decode(self.encoding)
 
+    @cache
     def json(self):
-        if not hasattr(self, "_json"):
-            self._json = ujson.loads(self.text)
-        return self._json
+        return ujson.loads(self.text)
 
-    @property
+    @cached_property
     def headers(self):
-        if not hasattr(self, "_headers"):
-            headers = CaseInsensitiveDefaultDict(list)
-            for k, v in self.headers_tuple:
-                headers[k].append(v)
-            self._headers = CaseInsensitiveDict()
-            for k in headers:
-                self._headers[k] = ", ".join(headers[k])
-        return self._headers
+        headers_pre = CaseInsensitiveDefaultDict(list)
+        for k, v in self.headers_tuple:
+            headers_pre[k].append(v)
+        headers = CaseInsensitiveDict()
+        for k in headers_pre:
+            headers[k] = ", ".join(headers[k])
+        return headers  # FIXME: shoudl be frozen
 
     def _get_header_lines(self):
         headers = self.header.split("\r\n")
@@ -408,50 +316,29 @@ class Response:
         return headers[1:]  # drop the final response code
 
     # TODO: is this part of the request api?
-    @property
+    @cached_property
     def headers_tuple(self):
-        if not hasattr(self, "_headers_tuple"):
-            self._headers_tuple = tuple(
-                tuple(l.split(": ", 1)) for l in self._get_header_lines()
-            )
-        return self._headers_tuple
+        return tuple(
+            tuple(line.split(": ", 1)) for line in self._get_header_lines()
+        )
 
     # TODO: is this part of the request api?
-    @property
+    @cached_property
     def header(self):
-        if not hasattr(self, "_header"):
-            self._header = b"".join(self._resp.get_header()).decode("ascii")
-        return self._header
+        return b"".join(self._resp.get_header()).decode("ascii")
 
 
 class Session:
-    def __init__(self, ae_loop, loop):
+    def __init__(self, loop):
         self._loop = loop
-        self._session = _acurl.Session(ae_loop)
+        self._session = _acurl.Session(loop.get_uvloop_ptr_capsule())
         self._response_callback = None
-
-    async def get(self, url, **kwargs):
-        return await self.request("GET", url, **kwargs)
-
-    async def put(self, url, **kwargs):
-        return await self.request("PUT", url, **kwargs)
-
-    async def post(self, url, **kwargs):
-        return await self.request("POST", url, **kwargs)
-
-    async def delete(self, url, **kwargs):
-        return await self.request("DELETE", url, **kwargs)
-
-    async def head(self, url, **kwargs):
-        return await self.request("HEAD", url, **kwargs)
-
-    async def options(self, url, **kwargs):
-        return await self.request("OPTIONS", url, **kwargs)
 
     async def request(
         self,
         method,
         url,
+        *,
         headers=(),
         cookies=(),
         auth=None,
@@ -486,6 +373,13 @@ class Session:
             allow_redirects,
             max_redirects,
         )
+
+    get = partial(request, "GET")
+    put = partial(request, "PUT")
+    post = partial(request, "POST")
+    delete = partial(request, "DELETE")
+    head = partial(request, "HEAD")
+    options = partial(request, "OPTIONS")
 
     # TODO: make it a property
     def set_response_callback(self, callback):
@@ -590,36 +484,39 @@ class Session:
 class EventLoop:
     def __init__(self, loop=None, same_thread=False):
         self._loop = loop if loop is not None else asyncio.get_event_loop()
-        self._ae_loop = _acurl.EventLoop()
-        self._running = False
+        # TODO: verify that the loop is a uvloop
+        self._wrapper = _acurl.CurlWrapper(loop.get_uvloop_ptr_capsule())
+
+        # self._ae_loop = _acurl.EventLoop()
+        # self._running = False
         # Completed requests end up on the fd pipe, complete callback called
-        self._loop.add_reader(self._ae_loop.get_out_fd(), self._complete)
-        if same_thread:
-            self._loop.call_later(0, self._same_thread_runner)
-        else:
-            self._run_in_thread()
+        # self._loop.add_reader(self._ae_loop.get_out_fd(), self._complete)
+        # if same_thread:
+        #     self._loop.call_later(0, self._same_thread_runner)
+        # else:
+        #     self._run_in_thread()
 
-    def _same_thread_runner(self):
-        """Start event loop in normal python thread, allows use of python debugger and profiler"""
-        self._ae_loop.once()
-        self._loop.call_later(0.001, self._same_thread_runner)
+    # def _same_thread_runner(self):
+    #     """Start event loop in normal python thread, allows use of python debugger and profiler"""
+    #     self._ae_loop.once()
+    #     self._loop.call_later(0.001, self._same_thread_runner)
 
-    def _run_in_thread(self):
-        if not self._running:
-            self._running = True
-            self._thread = threading.Thread(target=self._runner, daemon=True)
-            self._thread.start()
+    # def _run_in_thread(self):
+    #     if not self._running:
+    #         self._running = True
+    #         self._thread = threading.Thread(target=self._runner, daemon=True)
+    #         self._thread.start()
 
-    def _runner(self):
-        self._ae_loop.main()
-        self._running = False
+    # def _runner(self):
+    #     self._ae_loop.main()
+    #     self._running = False
 
-    def stop(self):
-        if self._running:
-            self._ae_loop.stop()
+    # def stop(self):
+    #     if self._running:
+    #         self._ae_loop.stop()
 
-    def __del__(self):
-        self.stop()
+    # def __del__(self):
+    #     self.stop()
 
     def _complete(self):
         for error, response, future in self._ae_loop.get_completed():
@@ -629,4 +526,4 @@ class EventLoop:
                 future.set_exception(RequestError(error))
 
     def session(self):
-        return Session(self._ae_loop, self._loop)
+        return Session(self._loop)
