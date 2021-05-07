@@ -1,6 +1,6 @@
 #!/bin/sh
 
-INCLUDES="-pthread -I/usr/include/python3.7m -I/home/aecay/.virtualenvs/mite-perftest/include/python3.7m"
+INCLUDES="-I/usr/include/python3.8m"
 
 CLANG_COMMAND="clang -O2 -Weverything -Wno-disabled-macro-expansion -Wno-padded -Wno-reserved-id-macro $INCLUDES -c"
 
