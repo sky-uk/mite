@@ -38,91 +38,6 @@ static size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     return node->len;
 }
 
-void perform_request(AcRequestData *rd) {
-    rd->curl = curl_easy_init();
-    // MEMDEBUG_PRINT("init curl %p", rd->curl);
-    curl_easy_setopt(rd->curl, CURLOPT_SHARE, rd->session->shared);
-    curl_easy_setopt(rd->curl, CURLOPT_URL, rd->url);
-    curl_easy_setopt(rd->curl, CURLOPT_CUSTOMREQUEST, rd->method);
-    //curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1L); //DEBUG
-    curl_easy_setopt(rd->curl, CURLOPT_ENCODING, "");
-    if(rd->headers != NULL) {
-        curl_easy_setopt(rd->curl, CURLOPT_HTTPHEADER, rd->headers);
-    }
-    if(rd->auth != NULL) {
-        curl_easy_setopt(rd->curl, CURLOPT_USERPWD, rd->auth);
-    }
-    // An empty string enables the cookie engine without adding any
-    // cookies: https://curl.haxx.se/libcurl/c/CURLOPT_COOKIEFILE.html
-    curl_easy_setopt(rd->curl, CURLOPT_COOKIEFILE, "");
-    for(int i=0; i < rd->cookies_len; i++) {
-        DEBUG_PRINT("set cookie [%s]", rd->cookies_str[i]);
-        curl_easy_setopt(rd->curl, CURLOPT_COOKIELIST, rd->cookies_str[i]);
-    }
-    if(rd->req_data_buf != NULL) {
-        curl_easy_setopt(rd->curl, CURLOPT_POSTFIELDSIZE, rd->req_data_len);
-        curl_easy_setopt(rd->curl, CURLOPT_POSTFIELDS, rd->req_data_buf);
-    }
-    curl_easy_setopt(rd->curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(rd->curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    if ((rd->ca_key != NULL) && (rd->ca_cert != NULL)) {
-	curl_easy_setopt(rd->curl, CURLOPT_SSLKEY, rd->ca_key);
-        curl_easy_setopt(rd->curl, CURLOPT_SSLCERT, rd->ca_cert);
-    }
-    curl_easy_setopt(rd->curl, CURLOPT_PRIVATE, rd);
-    curl_easy_setopt(rd->curl, CURLOPT_WRITEFUNCTION, body_callback);
-    curl_easy_setopt(rd->curl, CURLOPT_WRITEDATA, rd);
-    curl_easy_setopt(rd->curl, CURLOPT_HEADERFUNCTION, header_callback);
-    curl_easy_setopt(rd->curl, CURLOPT_HEADERDATA, rd);
-    free(rd->method);
-    rd->method = NULL;
-    free(rd->url);
-    rd->url = NULL;
-    if(rd->auth != NULL) {
-        free(rd->auth);
-        rd->auth = NULL;
-    }
-    if(rd->ca_cert != NULL) {
-	free(rd->ca_cert);
-	rd->ca_cert = NULL;
-    }
-    if(rd->ca_key != NULL) {
-        free(rd->ca_key);
-        rd->ca_key = NULL;
-    }
-    free(rd->cookies_str);
-    /* TODO: Free the request data? */
-}
-
-void start_request(struct aeEventLoop *UNUSED(eventLoop), int UNUSED(fd), void *clientData, int UNUSED(mask))
-{
-    AcRequestData *rd;
-    EventLoop *loop = (EventLoop*)clientData;
-    ssize_t b_read = read(loop->req_in_read, &rd, sizeof(AcRequestData *));
-    if (b_read < (ssize_t)sizeof(AcRequestData *)) {
-        fprintf(stderr, "Error reading from req_in_read");
-        exit(1);
-    }
-    REQUEST_TRACE_PRINT("start_request", rd);
-    DEBUG_PRINT("read AcRequestData",);
-    perform_request(rd);
-    if(rd->dummy) {
-        /* FIXME: warn about this deprecated code path */
-        rd->result = CURLE_OK;
-        curl_slist_free_all(rd->headers);
-        free(rd->req_data_buf);
-        ssize_t ret = write(loop->req_out_write, &rd, sizeof(AcRequestData *));
-        if (ret < (ssize_t)sizeof(AcRequestData *)) {
-            fprintf(stderr, "Error writing dummy request to req_out_write");
-            exit(1);
-        }
-    }
-    else {
-        DEBUG_PRINT("adding handle",);
-        curl_multi_add_handle(loop->multi, rd->curl);
-    }
-}
-
 /* Object methods */
 
 static void Response_dealloc(Response *self)
@@ -368,5 +283,7 @@ PyTypeObject ResponseType = {
     0,                         /* tp_weaklist */
     0,                         /* tp_del */
     0,                         /* tp_version_tag */
-    0                          /* tp_finalize */
+    0,                         /* tp_finalize */
+    0,                         /* tp_vectorcall */
+    0                          /* tp_print XXX */
 };
