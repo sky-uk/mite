@@ -4,15 +4,16 @@
 
 #define PY_SSIZE_T_CLEAN
 
-#include "ae/ae.h"
 #include <curl/multi.h>
 #include <Python.h>
-#include <pthread.h>
+// #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <stdbool.h>
+// FIXME: what's this doing?
 #include "structmember.h"
+#include <uv.h>
 
 #define NO_ACTIVE_TIMER_ID -1
 
@@ -66,23 +67,26 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    aeEventLoop *event_loop;
     CURLM *multi;
-    long long timer_id;
-    bool stop;
-    int req_in_read;
-    int req_in_write;
+    uv_loop_t *loop;
+    uv_timer_t *timeout;
     int req_out_read;
     int req_out_write;
     int stop_read;
     int stop_write;
     int curl_easy_cleanup_read;
     int curl_easy_cleanup_write;
-} EventLoop;
+} CurlWrapper;
+
+typedef struct {
+    uv_poll_t poll_handle;
+    curl_socket_t sockfd;
+    CurlWrapper *wrapper;
+} curl_context_t;
 
 typedef struct {
     PyObject_HEAD
-    EventLoop *loop;
+    uv_loop_t *loop;
     CURLSH *shared;
 } Session;
 
@@ -146,8 +150,6 @@ typedef struct {
 extern PyTypeObject EventLoopType;
 extern PyTypeObject ResponseType;
 extern PyTypeObject SessionType;
-void start_request(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
-void perform_request(AcRequestData *rd);
 void free_buffer_nodes(BufferNode *start);
 void schedule_cleanup_curl_share(Session *session, CURLSH *share);
 void schedule_cleanup_curl_easy(Session *session, CURL *ptr);

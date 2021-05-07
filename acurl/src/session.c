@@ -4,19 +4,26 @@ static PyObject *
 Session_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     Session *self;
-    EventLoop *loop;
-
-    static char *kwlist[] = {"loop", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &loop)) {
-        return NULL;
-    }
+    PyObject *loop_capsule;  // FIXME: do we still need this here?
+    uv_loop_t *loop;
 
     self = (Session *)type->tp_alloc(type, 0);
     if (self == NULL) {
         return NULL;
     }
 
-    Py_INCREF(loop);
+    static char *kwlist[] = {"loop", NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &loop_capsule)) {
+        return NULL;
+    }
+
+    if (! PyCapsule_CheckExact(loop_capsule)) {
+        // FIXME: raise exn
+        fprintf(stderr, "got a bogus arg to Session_new");
+        exit(1);
+    }
+    loop = (uv_loop_t*)PyCapsule_GetPointer(loop_capsule, NULL);
+
     self->loop = loop;
     self->shared = curl_share_init();
     curl_share_setopt(self->shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
@@ -29,9 +36,8 @@ Session_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static void
 Session_dealloc(Session *self)
 {
-    DEBUG_PRINT("response=%p", self);
+    // FIXME: what's this doing?
     schedule_cleanup_curl_share(self, self->shared);
-    Py_XDECREF(self->loop);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -41,11 +47,7 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
 {
     char *method;
     char *url;
-    PyObject *future;
-    PyObject *headers;
-    PyObject *auth;
-    PyObject *cert;
-    PyObject *cookies;
+    PyObject *future, *headers, *auth, *cert, *cookies;
     Py_ssize_t req_data_len = 0;
     char *req_data_buf = NULL;
     int dummy;
@@ -62,23 +64,47 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    AcRequestData *rd = (AcRequestData *)malloc(sizeof(AcRequestData));
-    REQUEST_TRACE_PRINT("Session_request", rd);
-    memset(rd, 0, sizeof(AcRequestData));
-    if(headers != Py_None) {
+    struct curl_slist* curl_headers = NULL;
+    Py_ssize_t cookies_len;
+    const char **cookies_str;
+    CURL *curl = curl_easy_init();
+
+    // FIXME get this from the CurlWrapper curl_easy_setopt(curl, CURLOPT_SHARE, rd->session->shared);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
+    //curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1L); //DEBUG
+    curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+    // FIXME: make this configurable?
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+    // FIXME store the future here.  don't forget to incref it
+    // curl_easy_setopt(rd->curl, CURLOPT_PRIVATE, rd);
+    // curl_easy_setopt(rd->curl, CURLOPT_WRITEFUNCTION, body_callback);
+    // curl_easy_setopt(rd->curl, CURLOPT_WRITEDATA, rd);
+    // curl_easy_setopt(rd->curl, CURLOPT_HEADERFUNCTION, header_callback);
+    // curl_easy_setopt(rd->curl, CURLOPT_HEADERDATA, rd);
+
+    // Headers
+    if (headers != Py_None) {
         if(!PyTuple_CheckExact(headers)) {
             PyErr_SetString(PyExc_ValueError, "headers should be a tuple of strings or None");
             goto error_cleanup;
         }
-        for(int i=0; i < PyTuple_GET_SIZE(headers); i++) {
-            if(!PyUnicode_CheckExact(PyTuple_GET_ITEM(headers, i))) {
+        for(int i = 0; i < PyTuple_GET_SIZE(headers); i++) {
+            PyObject *item = PyTuple_GET_ITEM(headers, i);
+            if(!PyUnicode_CheckExact(item)) {
                 PyErr_SetString(PyExc_ValueError, "headers should be a tuple of strings or None");
                 goto error_cleanup;
             }
-            rd->headers = curl_slist_append(rd->headers, PyUnicode_AsUTF8(PyTuple_GET_ITEM(headers, i)));
+            curl_headers = curl_slist_append(curl_headers, PyUnicode_AsUTF8(item));
         }
+        // FIXME: we must not free the slist until the request completes.
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     }
-    if(auth != Py_None) {
+
+    // Auth
+    if (auth != Py_None) {
         if(!PyTuple_CheckExact(auth) ||
            PyTuple_GET_SIZE(auth) != 2 ||
            !PyUnicode_CheckExact(PyTuple_GET_ITEM(auth, 0)) ||
@@ -88,9 +114,16 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
         }
         const char *username = PyUnicode_AsUTF8(PyTuple_GET_ITEM(auth, 0));
         const char *password = PyUnicode_AsUTF8(PyTuple_GET_ITEM(auth, 1));
-        rd->auth = (char*)malloc(strlen(username) + 1 + strlen(password) + 1);
-        sprintf(rd->auth, "%s:%s", username, password);
+        // 2 extra bytes for the colon and the null
+        size_t buflen = strlen(username) + strlen(password) + 2;
+        char *auth = (char*)malloc(buflen);
+        // FIXME: check error
+        snprintf(auth, buflen, "%s:%s", username, password);
+        curl_easy_setopt(curl, CURLOPT_USERPWD, auth);
+        free(auth);
     }
+
+    // Certificate
     if(cert != Py_None) {
 	if(!PyTuple_CheckExact(cert) ||
            PyTuple_GET_SIZE(cert) != 2 ||
@@ -99,88 +132,74 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
             PyErr_SetString(PyExc_ValueError, "cert should be a tuple of strings (certificate path, key path) or None");
             goto error_cleanup;
         }
-        DEBUG_PRINT("PRE variables",);
-        const char *cert_path = PyUnicode_AsUTF8(PyTuple_GET_ITEM(cert, 0));
-        const char *key_path = PyUnicode_AsUTF8(PyTuple_GET_ITEM(cert, 1));
-        DEBUG_PRINT("PRE malloc",);
-        /* FIXME: use strndup */
-        rd->ca_cert = (char*)malloc(strlen(cert_path) + 1);
-        rd->ca_key = (char*)malloc(strlen(key_path) + 1);
-        DEBUG_PRINT("PRE sprintf",);
-        sprintf(rd->ca_cert, "%s", cert_path);
-        sprintf(rd->ca_key, "%s", key_path);
+        curl_easy_setopt(curl, CURLOPT_SSLKEY, PyTuple_GET_ITEM(cert, 0));
+        curl_easy_setopt(curl, CURLOPT_SSLCERT, PyTuple_GET_ITEM(cert, 1));
     }
-    if(cookies != Py_None) {
-        Py_INCREF(cookies);
-        rd->cookies = cookies;
+
+    // Cookies
+    // An empty string enables the cookie engine without adding any
+    // cookies: https://curl.haxx.se/libcurl/c/CURLOPT_COOKIEFILE.html
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+    if (cookies != Py_None) {
         if(!PyTuple_CheckExact(cookies)) {
             PyErr_SetString(PyExc_ValueError, "cookies should be a tuple of strings or None");
             goto error_cleanup;
         }
-        rd->cookies_len = PyTuple_GET_SIZE(cookies);
-        if(rd->cookies_len > 0) {
-          rd->cookies_str = (const char**)calloc((size_t)rd->cookies_len, sizeof(char*));
-            for(int i=0; i < rd->cookies_len; i++) {
+        if (cookies_len > 0) {
+            for(int i = 0; i < PyTuple_GET_SIZE(cookies); i++) {
                 if(!PyUnicode_CheckExact(PyTuple_GET_ITEM(cookies, i))) {
                     PyErr_SetString(PyExc_ValueError, "cookies should be a tuple of strings or None");
                     goto error_cleanup;
                 }
-                rd->cookies_str[i] = PyUnicode_AsUTF8(PyTuple_GET_ITEM(cookies, i));
+                // The docs don't *say* that this copies the string...but ti
+                // can return a heap error (that we don't check for oops!!
+                // FIXME), so probably (hopefully) that is what happens
+                curl_easy_setopt(curl, CURLOPT_COOKIELIST, PyUnicode_AsUTF8(PyTuple_GET_ITEM(cookies, i)));
             }
         }
     }
-    Py_INCREF(self);
-    rd->session = self;
-    rd->method = strdup(method);
-    rd->url = strdup(url);
+
+    // Request data
     if(req_data_buf != NULL) {
-        req_data_buf = strdup(req_data_buf);
-    }
-    rd->req_data_len = req_data_len;
-    rd->req_data_buf = req_data_buf;
-    rd->dummy = dummy;
-    if (dummy) {
-      perform_request(rd);
-      rd->result = CURLE_OK;
-      curl_slist_free_all(rd->headers);
-      free(rd->req_data_buf);
-      Response *response = PyObject_New(Response, (PyTypeObject *)&ResponseType);
-      response->header_buffer = rd->header_buffer_head;
-      response->body_buffer = rd->body_buffer_head;
-      response->curl = rd->curl;
-      response->session = rd->session;
-      return response;
-    } else {
-      Py_INCREF(future);
-      rd->future = future;
-      ssize_t ret = write(self->loop->req_in_write, &rd, sizeof(AcRequestData *));
-      if (ret < (ssize_t)sizeof(AcRequestData *)) {
-        fprintf(stderr, "error writing to req_in_write");
-        exit(1);
-      }
-      DEBUG_PRINT("scheduling request",);
-      Py_RETURN_NONE;
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, req_data_len);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_data_buf);
     }
 
+    curl_multi_add_handle(self->multi, curl);
+
+    /* if (dummy) { */
+    /*   rd->result = CURLE_OK; */
+    /*   curl_slist_free_all(rd->headers); */
+    /*   free(rd->req_data_buf); */
+    /*   Response *response = PyObject_New(Response, (PyTypeObject *)&ResponseType); */
+    /*   response->header_buffer = rd->header_buffer_head; */
+    /*   response->body_buffer = rd->body_buffer_head; */
+    /*   response->curl = rd->curl; */
+    /*   response->session = rd->session; */
+    /*   return response; */
+    /* } */
+    /* else { */
+    /*   Py_INCREF(future); */
+    /*   rd->future = future; */
+    /*   ssize_t ret = write(self->loop->req_in_write, &rd, sizeof(AcRequestData *)); */
+    /*   if (ret < (ssize_t)sizeof(AcRequestData *)) { */
+    /*     fprintf(stderr, "error writing to req_in_write"); */
+    /*     exit(1); */
+    /*   } */
+    /*   DEBUG_PRINT("scheduling request",); */
+    /*   Py_RETURN_NONE; */
+    /* } */
+
+
+
+
+    Py_RETURN_NONE;
+
     error_cleanup:
-    if(rd->headers) {
-        curl_slist_free_all(rd->headers);
-    }
-    if(rd->auth) {
-        free(rd->auth);
-    }
-    if(rd->ca_cert) {
-	free(rd->ca_cert);
-    }
-    if(rd->ca_key) {
-        free(rd->ca_key);
-    }
-    if(rd->cookies) {
-        Py_DECREF(rd->cookies);
-        free(rd->cookies_str);
-    }
-    free(rd);
-    return NULL;
+    if (curl_headers) curl_slist_free_all(curl_headers);
+    if (auth) free(auth);
+    if(cookies_str) free(cookies_str);
+    Py_RETURN_NONE;
 }
 
 
@@ -199,7 +218,7 @@ PyTypeObject SessionType = {
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
-    0,                         /* tp_reserved */
+    0,                         /* tp_as_async */
     0,                         /* tp_repr */
     0,                         /* tp_as_number */
     0,                         /* tp_as_sequence */
@@ -238,5 +257,7 @@ PyTypeObject SessionType = {
     0,                         /* tp_weaklist */
     0,                         /* tp_del */
     0,                         /* tp_version_tag */
-    0                          /* tp_finalize */
+    0,                         /* tp_finalize */
+    0,                         /* tp_vectorcall */
+    0                          /* tp_print XXX */
 };
