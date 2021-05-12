@@ -1,48 +1,20 @@
 #include "acurl.h"
 
-/* Helper function */
-
-static BufferNode *alloc_buffer_node(size_t size, char *data) {
-    BufferNode *node = (BufferNode *)malloc(sizeof(BufferNode));
-    node->len = size;
-    node->buffer = strndup(data, size);
-    node->next = NULL;
-    return node;
-}
-
-/* Async methods */
-
-static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    AcRequestData *rd = (AcRequestData *)userdata;
-    BufferNode *node = alloc_buffer_node(size * nmemb, ptr);
-    if(unlikely(rd->header_buffer_head == NULL)) {
-        rd->header_buffer_head = node;
-    }
-    if(likely(rd->header_buffer_tail != NULL)) {
-        rd->header_buffer_tail->next = node;
-    }
-    rd->header_buffer_tail = node;
-    return node->len;
-}
-
-static size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    AcRequestData *rd = (AcRequestData *)userdata;
-    BufferNode *node = alloc_buffer_node(size * nmemb, ptr);
-    if(unlikely(rd->body_buffer_head == NULL)) {
-        rd->body_buffer_head = node;
-    }
-    if(likely(rd->body_buffer_tail != NULL)) {
-        rd->body_buffer_tail->next = node;
-    }
-    rd->body_buffer_tail = node;
-    return node->len;
-}
-
 /* Object methods */
+
+static void free_buffer_nodes(BufferNode *start) {
+    BufferNode *node = start;
+    while(node != NULL)
+    {
+        BufferNode *next = node->next;
+        free(node->buffer);
+        free(node);
+        node = next;
+    }
+}
 
 static void Response_dealloc(Response *self)
 {
-    DEBUG_PRINT("response=%p", self);
     free_buffer_nodes(self->header_buffer);
     free_buffer_nodes(self->body_buffer);
     curl_multi_remove_handle(self->session->shared, self->curl);
@@ -53,10 +25,9 @@ static void Response_dealloc(Response *self)
        HEADERFUNCTION.) */
     curl_easy_setopt(self->curl, CURLOPT_HEADERFUNCTION, NULL);
     curl_easy_setopt(self->curl, CURLOPT_HEADERDATA, NULL);
-    /* The reason we need to call curl_easy_cleanup in the event loop is that
-       it might block while tearing down connections. */
-    schedule_cleanup_curl_easy(self->session, self->curl);
-    Py_XDECREF(self->session);
+
+    schedule_cleanup_curl_easy(self->session->wrapper->loop, self->curl);
+    Py_DECREF(self->session);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -76,7 +47,11 @@ static PyObject * get_buffer_as_pylist(BufferNode *start)
     node = start;
     while(node != NULL)
     {
-        PyList_SET_ITEM(list, i++, PyBytes_FromStringAndSize(node->buffer, node->len));
+        if (unlikely(node->len > PY_SSIZE_T_MAX)) {
+            fprintf(stderr, "buffer is ginormous");
+            exit(1);
+        }
+        PyList_SET_ITEM(list, i++, PyBytes_FromStringAndSize(node->buffer, (Py_ssize_t)node->len));
         node = node->next;
     }
     DEBUG_PRINT("list=%p", list);
@@ -192,6 +167,7 @@ static PyObject *Response_get_cookielist(Response *self, PyObject *UNUSED(args))
         node = node->next;
     }
     list = PyList_New(len);
+    // FIXME: check return
     node = start;
     while(node != NULL)
     {
