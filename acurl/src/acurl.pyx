@@ -1,8 +1,8 @@
 #cython: language_level=3
 
 from curlinterface cimport *
-from session import Session
-from response import Response
+from session cimport Session
+from response cimport Response
 
 # Callback functions
 
