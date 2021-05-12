@@ -1,3 +1,5 @@
+#cython: language_level=3
+
 cdef class _Cookie:
     cdef bint http_only
     cdef str domain
@@ -7,6 +9,8 @@ cdef class _Cookie:
     cdef int expiration  # TODO right type???
     cdef str name
     cdef str value
+
+    cdef str format(self)
 
 cdef session_cookie_for_url(
     str url,

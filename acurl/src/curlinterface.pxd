@@ -1,4 +1,4 @@
-cdef extern from "<curl.h>":
+cdef extern from "<curl/curl.h>":
     # Forward decls
     ctypedef void CURL
     ctypedef void CURLM
@@ -41,6 +41,7 @@ cdef extern from "<curl.h>":
     CURLM *curl_multi_init()
     CURLMcode curl_multi_socket_action(CURLM *multi_handle, curl_socket_t s, int ev_bitmask, int *running_handles) nogil
     CURLMsg *curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queue)
+    CURLMcode curl_multi_add_handle(CURLM *multi_handle, CURL *curl_handle)
     CURLMcode curl_multi_remove_handle(CURLM *multi_handle, CURL *curl_handle)
     CURLMcode curl_multi_cleanup(CURLM *multi_handle)
 
