@@ -28,7 +28,7 @@ static inline CURLcode acurl_easy_getinfo_double(CURL *curl, CURLINFO info, doub
   return curl_easy_getinfo(curl, info, data);
 }
 
-static inline CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void *data) {
+static inline CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void **data) {
   // Curl technically uses char* instead of void*, but I fea that will confuse cython...
   return curl_easy_getinfo(curl, info, data);
 }
@@ -46,5 +46,9 @@ static inline CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, con
 }
 
 static inline CURLcode acurl_easy_setopt_int(CURL *easy, CURLoption option, int data) {
+  return curl_easy_setopt(easy, option, data)
+}
+
+static inline CURLcode acurl_easy_setopt_writecb(CURL *easy, CURLoption option, curl_write_callback data) {
   return curl_easy_setopt(easy, option, data)
 }

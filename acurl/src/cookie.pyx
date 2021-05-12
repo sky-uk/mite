@@ -1,22 +1,20 @@
 import time
-from collections import namedtuple
 from urllib.parse import urlparse
 from cpython cimport array
 
-Cookie = namedtuple("Cookie", ["domain", "name", "value"])
+cdef class Cookie:
+    cdef readonly str domain
+    cdef readonly str name
+    cdef readonly str value
+
+    def __cinit__(self, domain, name, value):
+        self.domain = domain
+        self.name = name
+        self.value = value
 
 cdef (bytes, bytes) _FALSE_TRUE = (b"FALSE", b"TRUE")
 
 cdef class _Cookie:
-    cdef bint http_only
-    cdef str domain
-    cdef bint include_subdomains
-    cdef str path
-    cdef bint is_secure
-    cdef int expiration  # TODO right type???
-    cdef str name
-    cdef str value
-
     # @property
     # def has_expired(self):
     #     return self.expiration != 0 and time.time() > self.expiration
@@ -65,3 +63,36 @@ cdef session_cookie_for_url(
         value.name if is_type_cookie else name,
         value.value if is_type_cookie else value,
     )
+
+cdef _Cookie parse_cookie_string(str cookie_string):
+    cookie_string = cookie_string.strip()
+    if cookie_string.startswith("#HttpOnly_"):  # FIXME: optimize?
+        http_only = True
+        cookie_string = cookie_string[10:]
+    else:
+        http_only = False
+    parts = cookie_string.split("\t")
+    if len(parts) == 6:
+        domain, include_subdomains, path, is_secure, expiration, name = parts
+        value = ""
+    else:
+        domain, include_subdomains, path, is_secure, expiration, name, value = parts
+    return _Cookie(
+        http_only,
+        domain,
+        include_subdomains == "TRUE",
+        path,
+        is_secure == "TRUE",
+        int(expiration),
+        name,
+        value,
+    )
+
+cdef dict cookie_seq_to_cookie_dict(list cookie_list):
+    cdef int i
+    cdef dict d = {}
+    cdef Cookie cookie
+    for i in range(len(cookie_list)):
+        cookie = cookie_list[i]
+        d[cookie.name] = cookie.value
+    return d
