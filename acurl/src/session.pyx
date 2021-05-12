@@ -4,20 +4,52 @@ import time  # FIXME: use fast c fn
 
 from cookie cimport session_cookie_for_url
 from request cimport Request
-from response cimport Response
+from response cimport Response, BufferNode
+from libc.stdlib cimport malloc
+from libc.string cimport strndup
 
 class RequestError(Exception):
     pass
 
+# Callback functions
+
+cdef BufferNode* alloc_buffer_node(size_t size, char *data):
+    cdef BufferNode* node = <BufferNode*>malloc(sizeof(BufferNode))
+    node.len = size
+    node.buffer = strndup(data, size)
+    node.next = NULL
+    return node
+
+cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
+    cdef Response response = <Response>userdata
+    cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
+    if response.header_buffer == NULL:  # FIXME: unlikely
+        response.header_buffer = node
+    if response.header_buffer_tail != NULL:  # FIXME: likely
+        response.header_buffer_tail.next = node
+    response.header_buffer_tail = node
+    return node.len
+
+cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
+    cdef Response response = <Response>userdata
+    cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
+    if response.body_buffer == NULL:  # FIXME: unlikely
+        response.body_buffer = node
+    if response.body_buffer_tail != NULL:  # FIXME: likely
+        response.body_buffer_tail.next = node
+    response.body_buffer_tail = node
+    return node.len
+
 cdef class Session:
-    def __cinit__(self):
+    def __cinit__(self, wrapper):
         self.shared = curl_share_init()
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION)
-
-    def __init__(self, wrapper):
         self.wrapper = wrapper
+
+    def __dealloc__(self):
+        self.wrapper.loop.call_soon(self.wrapper.cleanup_share, self.shared)
 
     cdef object _inner_request(
         self,
@@ -45,11 +77,10 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
-        # FIXME
-        # curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, body_callback)
-        # curl_easy_setopt(curl, CURLOPT_WRITEDATA, response)
-        # curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback)
-        # curl_easy_setopt(curl, CURLOPT_HEADERDATA, response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
 
         cdef int i
 
@@ -80,7 +111,20 @@ cdef class Session:
             acurl_easy_setopt_cstr(curl, CURLOPT_SSLKEY, cert[0])
             acurl_easy_setopt_cstr(curl, CURLOPT_SSLCERT, cert[1])
 
-        # FIXME: cookies, data, ...
+        acurl_easy_setopt_cstr(curl, CURLOPT_COOKIEFILE, "")
+        if cookies is not None:
+            for i in range(len(cookies)):  # FIXME: not fast
+                if not isinstance(cookies[i], str):
+                    raise ValueError("cookies should be a tuple of strings")
+                acurl_easy_setopt_cstr(curl, CURLOPT_COOKIELIST, cookies[i])
+
+        if data is not None:
+            acurl_easy_setopt_int(curl, CURLOPT_POSTFIELDSIZE, len(data))
+            acurl_easy_setopt_cstr(curl, CURLOPT_POSTFIELDS, data)
+
+        curl_multi_add_handle(self.wrapper.multi, curl)
+
+        # FIXME: handle dummy
 
         return future
 
@@ -163,3 +207,6 @@ cdef class Session:
             else:
                 raise RequestError("Max Redirects")
         return response
+
+    async def get(self, *args, **kwargs):
+        return await self._outer_request("GET", *args, **kwargs)

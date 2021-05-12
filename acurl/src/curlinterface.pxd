@@ -7,12 +7,14 @@ cdef extern from "curl.h":
     ctypedef int curl_socket_t
     ctypedef int (*curl_socket_callback)(CURL *easy, curl_socket_t s, int what, void *userp, void *socketp)
     ctypedef int (*curl_multi_timer_callback)(CURLM *multi, long timeout_ms, void *userp)
+    ctypedef size_t (*curl_write_callback)(char *buffer, size_t size, size_t nitems, void *outstream)
 
     # Slist
     struct curl_slist:
         char *data
         curl_slist *next
     curl_slist *curl_slist_append(curl_slist *, const char *)
+    void curl_slist_free_all(curl_slist *)
 
     # Multi
     ctypedef int CURLMcode
@@ -40,6 +42,7 @@ cdef extern from "curl.h":
     CURLMcode curl_multi_socket_action(CURLM *multi_handle, curl_socket_t s, int ev_bitmask, int *running_handles) nogil
     CURLMsg *curl_multi_info_read(CURLM *multi_handle, int *msgs_in_queue)
     CURLMcode curl_multi_remove_handle(CURLM *multi_handle, CURL *curl_handle)
+    CURLMcode curl_multi_cleanup(CURLM *multi_handle)
 
     # Curl
     ctypedef int CURLcode
@@ -93,10 +96,31 @@ cdef extern from "curl.h":
     cdef int CURLOPT_USERPWD
     cdef int CURLOPT_SSLKEY
     cdef int CURLOPT_SSLCERT
+    cdef int CURLOPT_WRITEFUNCTION
+    cdef int CURLOPT_WRITEDATA
+    cdef int CURLOPT_HEADERFUNCTION
+    cdef int CURLOPT_HEADERDATA
+    cdef int CURLOPT_COOKIEFILE
+    cdef int CURLOPT_COOKIELIST
+    cdef int CURLOPT_POSTFIELDSIZE
+    cdef int CURLOPT_POSTFIELDS
 
     # Info
     ctypedef int CURLINFO
     cdef int CURLINFO_PRIVATE
+    cdef int CURLINFO_EFFECTIVE_URL
+    cdef int CURLINFO_RESPONSE_CODE
+    cdef int CURLINFO_TOTAL_TIME
+    cdef int CURLINFO_NAMELOOKUP_TIME
+    cdef int CURLINFO_CONNECT_TIME
+    cdef int CURLINFO_COOKIELIST
+    cdef int CURLINFO_APPCONNECT_TIME
+    cdef int CURLINFO_PRETRANSFER_TIME
+    cdef int CURLINFO_STARTTRANSFER_TIME
+    cdef int CURLINFO_SIZE_UPLOAD
+    cdef int CURLINFO_SIZE_DOWNLOAD
+    cdef int CURLINFO_PRIMARY_IP
+    cdef int CURLINFO_REDIRECT_URL
 
 # Typed wrappers
 cdef extern from "acurl_wrappers.h":
@@ -106,10 +130,14 @@ cdef extern from "acurl_wrappers.h":
     CURLMcode acurl_multi_setopt_socketcb(CURLM * multi_handle, CURLMoption option, curl_socket_callback param)
     CURLMcode acurl_multi_setopt_timercb(CURLM * multi_handle, CURLMoption option, curl_multi_timer_callback param)
     # curl_easy_getinfo
-    CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void *data)
+    CURLcode acurl_easy_getinfo_long(CURL *curl, CURLINFO info, long *data)
+    CURLcode acurl_easy_getinfo_double(CURL *curl, CURLINFO info, double *data)
+    CURLcode acurl_easy_getinfo_cstr(CURL *curl, CURLINFO info, char **data)
+    CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void **data)
     # curl_share_setopt
     CURLSHcode acurl_share_setopt_int(CURLSH *share, CURLSHoption option, int data)
     # curl_easy_setopt
     CURLcode acurl_easy_setopt_voidptr(CURL *easy, CURLoption option, void *data)
     CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, const char *data)
     CURLcode acurl_easy_setopt_int(CURL *easy, CURLoption option, int data)
+    CURLcode acurl_easy_setopt_writecb(CURL *easy, CURLoption option, curl_write_callback data)

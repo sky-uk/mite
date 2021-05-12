@@ -35,19 +35,13 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
         wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired)
 
 cdef class CurlWrapper:
-    cdef CURLM* multi
-    timer_handle: asyncio.TimerHandle
-    loop: asyncio.Loop
-
-    def __cinit__(self):
+    def __cinit__(self, object loop):
         self.multi = curl_multi_init()
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, 1000)  # FIXME: magic number
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)
         acurl_multi_setopt_timercb(self.multi, CURLMOPT_TIMERFUNCTION, start_timeout)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_TIMERDATA, <void*>self)
-
-    def __init__(self, loop):
         self.loop = loop
         self.timer_handle = None
 
@@ -65,14 +59,14 @@ cdef class CurlWrapper:
             curl_multi_socket_action(multi, fd, CURL_CSELECT_OUT, &_running)
         self.check_multi_info()
 
-    def timeout_expired(self):
+    cdef void timeout_expired(self):
         cdef int _running
         cdef CURLM* multi = self.multi
         with nogil:
             curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
         self.check_multi_info()
 
-    def check_multi_info(self):
+    cdef void check_multi_info(self):
         cdef CURLMsg *msg
         cdef int _pending
         cdef CURL *easy
@@ -91,7 +85,16 @@ cdef class CurlWrapper:
                 exit(1)
             message = curl_multi_info_read(self.multi, &_pending)
 
+    cdef void cleanup_share(self, CURLSH* share):
+        curl_share_cleanup(share)
+
     def session(self):
         return Session(self)
 
-    # FIXME: dealloc
+    def __dealloc__(self):
+        # TODO: I (AWE) can't convince myself that this definitely doesn't
+        # leak memory, because we might be tearing down the event loop before
+        # we've called all the queued schedule_cleanup_curl_pointer events.
+        # But this should be a rare case, so I'm not going to try to fix it
+        # for now.
+        curl_multi_cleanup(self.multi)

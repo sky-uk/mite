@@ -1,6 +1,7 @@
 #cython: language_level=3
 
 import shlex
+from cookie import cookie_seq_to_cookie_dict
 
 cdef class Request:
     def __cinit__(
@@ -28,7 +29,7 @@ cdef class Request:
 
     @property
     def cookies(self):
-        return {cookie.name: cookie.value for cookie in self.cookie_tuple + self.session_cookies}
+        cookie_seq_to_cookie_dict(self.cookie_tuple + self.session_cookies)
 
     def to_curl(self):
         data_arg = ""
