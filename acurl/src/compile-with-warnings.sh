@@ -2,7 +2,7 @@
 
 INCLUDES="-I/usr/include/python3.8m"
 
-CLANG_COMMAND="clang -O2 -Weverything -Wno-disabled-macro-expansion -Wno-padded -Wno-reserved-id-macro $INCLUDES -c"
+CLANG_COMMAND="clang -O2 -Weverything -Wno-disabled-macro-expansion -Wno-gnu-statement-expression -Wno-padded -Wno-reserved-id-macro $INCLUDES -c"
 
 GCC_COMMAND="gcc -O2 -Wall -Wextra -Wpedantic $INCLUDES -c"
 

@@ -17,9 +17,46 @@
 
 #define NO_ACTIVE_TIMER_ID -1
 
+// Python compat
+
+#if PY_VERSION_HEX < 0x03080000
+#error Unsupported python version!
+#endif
+
+#if PY_VERSION_HEX < 0x03090000
+#define PyObject_CallMethodNoArgs(obj, name) PyObject_CallMethodObjArgs((obj), (name), NULL)
+#endif
+
+#define PyObject_CallMethodNamedNoArgs(obj, name) ({ \
+        PyObject *method_name = PyUnicode_FromString((name)); \
+        PyObject *result = PyObject_CallMethodNoArgs((obj), method_name); \
+        Py_DECREF(method_name); \
+        result; \
+})
+
+#define PyObject_CallMethodNamedArgs(obj, name, ...) ({           \
+        PyObject *method_name = PyUnicode_FromString((name)); \
+        PyObject *result = PyObject_CallMethodObjArgs((obj), method_name, __VA_ARGS__, NULL); \
+        Py_DECREF(method_name); \
+        result; \
+})
+
+#define CheckExn(x) ({ \
+            PyObject *result = (x); \
+            if (result == NULL) { \
+                fprintf(stderr, "error occurred\n"); \
+                PyErr_PrintEx(0); \
+                exit(1); \
+            } \
+            result; \
+        })
+
+
 /* Macros for debugging */
 
+#ifndef DEBUG
 #define DEBUG 0
+#endif
 #if DEBUG
     #include <sys/syscall.h>
     #define DEBUG_PRINT(fmt, ...) fprintf(stderr, "DEBUG: %s:%d:%s() tid=%ld: " fmt "\n", __FILE__, __LINE__, __func__, (long)syscall(SYS_gettid), __VA_ARGS__)
@@ -51,32 +88,17 @@
 #  define UNUSED(x) UNUSED_ ## x
 #endif
 
-/* Cleanup helpers */
-
-typedef enum {
-    CleanupEasy,
-    CleanupShare
-} CleanupPointerType;
-
-typedef struct {
-    CleanupPointerType type;
-    void *ptr;
-} CleanupData;
-
 /* Structs */
 
 typedef struct {
     PyObject_HEAD
     CURLM *multi;
+    PyObject *py_loop;
     uv_loop_t *loop;
     uv_timer_t *timeout;
-    int req_out_read;
-    int req_out_write;
-    int stop_read;
-    int stop_write;
-    int curl_easy_cleanup_read;
-    int curl_easy_cleanup_write;
 } CurlWrapper;
+
+
 
 typedef struct {
     uv_poll_t poll_handle;
@@ -86,7 +108,7 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    uv_loop_t *loop;
+    CurlWrapper *wrapper;
     CURLSH *shared;
 } Session;
 
@@ -101,58 +123,24 @@ typedef struct _BufferNode {
     struct _BufferNode *next;
 } BufferNode;
 
-/* TODO: the fields marked xxx below are freed in session_request.  We might
-   want to split them out into their own struct (as a start has been made at
-   below), to better reflect their lifetime */
-typedef struct {
-    char* method;         /* xxx */
-    char* url;            /* xxx */
-    char* auth;           /* xxx */
-    PyObject* cookies;
-    ssize_t cookies_len;
-    char** cookies_str;   /* xxx */
-    PyObject* future;
-    struct curl_slist* headers;
-    int req_data_len;           /* xxx? */
-    char* req_data_buf;   /* xxx? */
-    Session* session;
-    CURL *curl;
-    CURLcode result;
-    BufferNode *header_buffer_head;
-    BufferNode *header_buffer_tail;
-    BufferNode *body_buffer_head;
-    BufferNode *body_buffer_tail;
-    int dummy;
-    char* ca_cert;        /* xxx */
-    char* ca_key;         /* xxx */
-} AcRequestData;
-
-/* TODO not used yet, see above */
-typedef struct {
-    const char* method;
-    const char* url;
-    const char* auth;
-    const char* ca_cert;
-    const char* ca_key;
-    const char** cookies_str;
-} AcRequestDataStartInfo;
-
 typedef struct {
     PyObject_HEAD
+    PyObject *future;
     BufferNode *header_buffer;
+    BufferNode *header_buffer_tail;
     BufferNode *body_buffer;
+    BufferNode *body_buffer_tail;
     Session *session;
     CURL *curl;
 } Response;
 
 /* Forward declarations */
 
-extern PyTypeObject EventLoopType;
+extern PyTypeObject CurlWrapperType;
 extern PyTypeObject ResponseType;
 extern PyTypeObject SessionType;
-void free_buffer_nodes(BufferNode *start);
-void schedule_cleanup_curl_share(Session *session, CURLSH *share);
-void schedule_cleanup_curl_easy(Session *session, CURL *ptr);
+void schedule_cleanup_curl_share(uv_loop_t *loop, CURLSH *share);
+void schedule_cleanup_curl_easy(uv_loop_t *loop, CURL *ptr);
 PyMODINIT_FUNC PyInit__acurl(void);
 
 #endif /* defined _ACURL_H */

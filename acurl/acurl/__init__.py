@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import shlex
-import threading
 import time
+import warnings
 from collections import namedtuple
 from dataclasses import InitVar, dataclass, field
-from functools import cache, cached_property, partial
+# FIXME: can just use cache on 3.9
+from functools import cached_property
+from functools import lru_cache as cache
+from functools import partial
 from typing import Any
 from urllib.parse import urlparse
 
 import ujson
+import uvloop
 from pkg_resources import DistributionNotFound, get_distribution
 
 import _acurl
@@ -147,17 +151,19 @@ class Request:
     def __post_init__(self, session):
         object.__setattr__(self, "header_seq", tuple(self.header_seq))
         object.__setattr__(self, "cookie_tuple", tuple(self.cookie_tuple))
-        object.__setattr__(
-            self,
-            "session_cookies",
-            tuple(
-                c
-                for c in session.get_cookie_list()
-                # FIXME: does this dtrt if we make a request to foo.bar.com
-                # with a session cookie for .bar.com
-                if urlparse(self._url).hostname.lower() == c._domain.lower()
-            ),
-        )
+        object.__setattr__(self, "session_cookies", ())
+        # FIXME
+        # object.__setattr__(
+        #     self,
+        #     "session_cookies",
+        #     tuple(
+        #         c
+        #         for c in session.get_cookie_list()
+        #         # FIXME: does this dtrt if we make a request to foo.bar.com
+        #         # with a session cookie for .bar.com
+        #         if urlparse(self._url).hostname.lower() == c._domain.lower()
+        #     ),
+        # )
 
     @property
     def headers(self):
@@ -199,13 +205,14 @@ class Response:
     request: Any
     _resp: Any
     start_time: Any
-    __slots__ = "_req _resp _start_time _redirect_url _prev _body _text _header _headers_tuple _headers _encoding _json".split()
 
     @cached_property
     def status_code(self):
         return self._resp.get_response_code()
 
-    response_code = status_code
+    @cached_property
+    def response_code(self):
+        return self._resp.get_response_code()
 
     @cached_property
     def url(self):
@@ -278,10 +285,7 @@ class Response:
 
     @cached_property
     def encoding(self):
-        if (
-            "Content-Type" in self.headers
-            and "charset=" in self.headers["Content-Type"]
-        ):
+        if "Content-Type" in self.headers and "charset=" in self.headers["Content-Type"]:
             return self.headers["Content-Type"].split("charset=")[-1].split()[0]
         return "latin1"
 
@@ -318,9 +322,7 @@ class Response:
     # TODO: is this part of the request api?
     @cached_property
     def headers_tuple(self):
-        return tuple(
-            tuple(line.split(": ", 1)) for line in self._get_header_lines()
-        )
+        return tuple(tuple(line.split(": ", 1)) for line in self._get_header_lines())
 
     # TODO: is this part of the request api?
     @cached_property
@@ -329,10 +331,9 @@ class Response:
 
 
 class Session:
-    def __init__(self, loop):
-        self._loop = loop
-        self._session = _acurl.Session(loop.get_uvloop_ptr_capsule())
-        self._response_callback = None
+    def __init__(self, wrapper):
+        self._session = _acurl.Session(wrapper)
+        self.response_callback = None
 
     async def request(
         self,
@@ -374,16 +375,22 @@ class Session:
             max_redirects,
         )
 
-    get = partial(request, "GET")
+    async def get(self, *args, **kwargs):
+        return await self.request("GET", *args, **kwargs)
+
     put = partial(request, "PUT")
     post = partial(request, "POST")
     delete = partial(request, "DELETE")
     head = partial(request, "HEAD")
     options = partial(request, "OPTIONS")
 
-    # TODO: make it a property
     def set_response_callback(self, callback):
-        self._response_callback = callback
+        warnings.warn(
+            "set_response_callback method is deprecated in acurl",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.response_callback = callback
 
     async def _request(
         self,
@@ -397,12 +404,10 @@ class Session:
         allow_redirects,
         remaining_redirects,
     ):
-        start_time = time.time()
         request = Request(method, url, header_tuple, cookie_tuple, auth, data, cert, self)
+        start_time = time.time()
 
-        future = self._loop.create_future()
-        self._session.request(
-            future,
+        future = self._session.request(
             method,
             url,
             headers=header_tuple,
@@ -412,10 +417,13 @@ class Session:
             dummy=False,
             cert=cert,
         )
-        response = Response(request, await future, start_time)
+        c_response = await future
+        response = Response(request, c_response, start_time)
 
-        if self._response_callback:
-            self._response_callback(response)
+        if self.response_callback:
+            # FIXME: should this be async?
+            self.response_callback(response)
+
         if (
             allow_redirects
             and (300 <= response.status_code < 400)
@@ -423,39 +431,27 @@ class Session:
         ):
             if remaining_redirects == 0:
                 raise RequestError("Max Redirects")
-            elif response.status_code in {301, 302, 303}:
-                redir_response = await self._request(
-                    "GET",
-                    response.redirect_url,
-                    header_tuple,
-                    (),
-                    auth,
-                    None,
-                    cert,
-                    allow_redirects,
-                    remaining_redirects - 1,
-                )
-            else:
-                redir_response = await self._request(
-                    method,
-                    response.redirect_url,
-                    header_tuple,
-                    (),
-                    auth,
-                    data,
-                    cert,
-                    allow_redirects,
-                    remaining_redirects - 1,
-                )
+            if response.status_code in {301, 302, 303}:
+                method = "GET"
+                data = None
+            redir_response = await self._request(
+                method,
+                response.redirect_url,
+                header_tuple,
+                # FIXME: doesn't pass cookies!
+                (),
+                auth,
+                data,
+                cert,
+                allow_redirects,
+                remaining_redirects - 1,
+            )
             redir_response._prev = response
             return redir_response
         return response
 
     def _dummy_request(self, cookies):
         result = self._session.request(
-            # We pass in None instead of a future, bc the request will be done
-            # synchronously
-            None,
             "GET",
             "",
             headers=(),
@@ -482,10 +478,15 @@ class Session:
 
 
 class EventLoop:
-    def __init__(self, loop=None, same_thread=False):
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+    def __init__(self, loop=None):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        self._loop = loop
+        if not isinstance(loop, uvloop.Loop):
+            breakpoint()
+            raise Exception("acurl is only compatible with uvloop")
         # TODO: verify that the loop is a uvloop
-        self._wrapper = _acurl.CurlWrapper(loop.get_uvloop_ptr_capsule())
+        self._wrapper = _acurl.CurlWrapper(loop)
 
         # self._ae_loop = _acurl.EventLoop()
         # self._running = False
@@ -526,4 +527,4 @@ class EventLoop:
                 future.set_exception(RequestError(error))
 
     def session(self):
-        return Session(self._loop)
+        return Session(self._wrapper)  # FIXME: ugly to pass this here

@@ -1,30 +1,64 @@
 #include "acurl.h"
 
+/* Helper function */
+
+static BufferNode *alloc_buffer_node(size_t size, char *data) {
+    BufferNode *node = (BufferNode *)malloc(sizeof(BufferNode));
+    node->len = size;
+    node->buffer = strndup(data, size);
+    node->next = NULL;
+    return node;
+}
+
+/* Async methods */
+
+static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    Response *response = (Response *)userdata;
+    BufferNode *node = alloc_buffer_node(size * nmemb, ptr);
+    if(unlikely(response->header_buffer == NULL)) {
+        response->header_buffer = node;
+    }
+    if(likely(response->header_buffer_tail != NULL)) {
+        response->header_buffer_tail->next = node;
+    }
+    response->header_buffer_tail = node;
+    return node->len;
+}
+
+static size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    Response *response = (Response *)userdata;
+    BufferNode *node = alloc_buffer_node(size * nmemb, ptr);
+    if(unlikely(response->body_buffer == NULL)) {
+        response->body_buffer = node;
+    }
+    if(likely(response->body_buffer_tail != NULL)) {
+        response->body_buffer_tail->next = node;
+    }
+    response->body_buffer_tail = node;
+    return node->len;
+}
+
+/* Object methods */
+
 static PyObject *
 Session_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     Session *self;
-    PyObject *loop_capsule;  // FIXME: do we still need this here?
-    uv_loop_t *loop;
 
     self = (Session *)type->tp_alloc(type, 0);
     if (self == NULL) {
         return NULL;
     }
 
-    static char *kwlist[] = {"loop", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &loop_capsule)) {
-        return NULL;
+    PyObject *wrapper;
+    static char *kwlist[] = {"wrapper", NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &wrapper)) {
+        return NULL;  // FIXME exn
     }
+    // FIXME: check type
+    Py_INCREF(wrapper);
+    self->wrapper = (CurlWrapper*)wrapper;
 
-    if (! PyCapsule_CheckExact(loop_capsule)) {
-        // FIXME: raise exn
-        fprintf(stderr, "got a bogus arg to Session_new");
-        exit(1);
-    }
-    loop = (uv_loop_t*)PyCapsule_GetPointer(loop_capsule, NULL);
-
-    self->loop = loop;
     self->shared = curl_share_init();
     curl_share_setopt(self->shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
     curl_share_setopt(self->shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
@@ -36,8 +70,8 @@ Session_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static void
 Session_dealloc(Session *self)
 {
-    // FIXME: what's this doing?
-    schedule_cleanup_curl_share(self, self->shared);
+    schedule_cleanup_curl_share(self->wrapper->loop, self->shared);
+    Py_DECREF(self->wrapper);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -47,29 +81,41 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
 {
     char *method;
     char *url;
-    PyObject *future, *headers, *auth, *cert, *cookies;
+    PyObject *headers, *auth, *cert, *cookies;
     Py_ssize_t req_data_len = 0;
     char *req_data_buf = NULL;
     int dummy;
 
     static char *kwlist[] = {
-      "future", "method", "url", "headers", "auth",
+      "method", "url", "headers", "auth",
       "cookies", "data", "dummy", "cert", NULL
     };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssOOOz#pO", kwlist,
-                                     &future, &method, &url, &headers,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ssOOOz#pO", kwlist,
+                                     &method, &url, &headers,
                                      &auth, &cookies, &req_data_buf,
                                      &req_data_len, &dummy, &cert)) {
+        // FIXME: raise exn
         return NULL;
     }
 
     struct curl_slist* curl_headers = NULL;
-    Py_ssize_t cookies_len;
-    const char **cookies_str;
     CURL *curl = curl_easy_init();
 
-    // FIXME get this from the CurlWrapper curl_easy_setopt(curl, CURLOPT_SHARE, rd->session->shared);
+    PyObject *future = PyObject_CallMethodNamedNoArgs(self->wrapper->py_loop, "create_future");
+    // TODO: check exn
+    Py_XINCREF(future);
+    Response *response = PyObject_New(Response, &ResponseType);
+    response->future = future;
+    response->header_buffer = NULL;
+    response->header_buffer_tail = NULL;
+    response->body_buffer = NULL;
+    response->body_buffer_tail = NULL;
+    Py_INCREF(self);
+    response->session = self;
+    response->curl = curl;
+
+    curl_easy_setopt(curl, CURLOPT_SHARE, self->shared);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
     //curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1L); //DEBUG
@@ -78,12 +124,11 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-    // FIXME store the future here.  don't forget to incref it
-    // curl_easy_setopt(rd->curl, CURLOPT_PRIVATE, rd);
-    // curl_easy_setopt(rd->curl, CURLOPT_WRITEFUNCTION, body_callback);
-    // curl_easy_setopt(rd->curl, CURLOPT_WRITEDATA, rd);
-    // curl_easy_setopt(rd->curl, CURLOPT_HEADERFUNCTION, header_callback);
-    // curl_easy_setopt(rd->curl, CURLOPT_HEADERDATA, rd);
+    curl_easy_setopt(curl, CURLOPT_PRIVATE, response);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, body_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, response);
 
     // Headers
     if (headers != Py_None) {
@@ -100,7 +145,7 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
             curl_headers = curl_slist_append(curl_headers, PyUnicode_AsUTF8(item));
         }
         // FIXME: we must not free the slist until the request completes.
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
     }
 
     // Auth
@@ -116,11 +161,11 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
         const char *password = PyUnicode_AsUTF8(PyTuple_GET_ITEM(auth, 1));
         // 2 extra bytes for the colon and the null
         size_t buflen = strlen(username) + strlen(password) + 2;
-        char *auth = (char*)malloc(buflen);
+        char *authstr = (char*)malloc(buflen);
         // FIXME: check error
-        snprintf(auth, buflen, "%s:%s", username, password);
-        curl_easy_setopt(curl, CURLOPT_USERPWD, auth);
-        free(auth);
+        snprintf(authstr, buflen, "%s:%s", username, password);
+        curl_easy_setopt(curl, CURLOPT_USERPWD, authstr);
+        free(authstr);
     }
 
     // Certificate
@@ -145,8 +190,9 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
             PyErr_SetString(PyExc_ValueError, "cookies should be a tuple of strings or None");
             goto error_cleanup;
         }
+        Py_ssize_t cookies_len = PyTuple_GET_SIZE(cookies);
         if (cookies_len > 0) {
-            for(int i = 0; i < PyTuple_GET_SIZE(cookies); i++) {
+            for(int i = 0; i < cookies_len; i++) {
                 if(!PyUnicode_CheckExact(PyTuple_GET_ITEM(cookies, i))) {
                     PyErr_SetString(PyExc_ValueError, "cookies should be a tuple of strings or None");
                     goto error_cleanup;
@@ -165,7 +211,7 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_data_buf);
     }
 
-    curl_multi_add_handle(self->multi, curl);
+    curl_multi_add_handle(self->wrapper->multi, curl);
 
     /* if (dummy) { */
     /*   rd->result = CURLE_OK; */
@@ -178,27 +224,13 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
     /*   response->session = rd->session; */
     /*   return response; */
     /* } */
-    /* else { */
-    /*   Py_INCREF(future); */
-    /*   rd->future = future; */
-    /*   ssize_t ret = write(self->loop->req_in_write, &rd, sizeof(AcRequestData *)); */
-    /*   if (ret < (ssize_t)sizeof(AcRequestData *)) { */
-    /*     fprintf(stderr, "error writing to req_in_write"); */
-    /*     exit(1); */
-    /*   } */
-    /*   DEBUG_PRINT("scheduling request",); */
-    /*   Py_RETURN_NONE; */
-    /* } */
 
-
-
-
-    Py_RETURN_NONE;
+    return future;
 
     error_cleanup:
     if (curl_headers) curl_slist_free_all(curl_headers);
     if (auth) free(auth);
-    if(cookies_str) free(cookies_str);
+    // TODO: raise exception
     Py_RETURN_NONE;
 }
 
