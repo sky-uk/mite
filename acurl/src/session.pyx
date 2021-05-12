@@ -7,6 +7,8 @@ from request cimport Request
 from response cimport Response, BufferNode
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
+from cpython.pycapsule cimport PyCapsule_New
+from curlinterface cimport *
 
 class RequestError(Exception):
     pass
@@ -49,7 +51,7 @@ cdef class Session:
         self.wrapper = wrapper
 
     def __dealloc__(self):
-        self.wrapper.loop.call_soon(self.wrapper.cleanup_share, self.shared)
+        self.wrapper.loop.call_soon(self.wrapper.cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
 
     cdef object _inner_request(
         self,

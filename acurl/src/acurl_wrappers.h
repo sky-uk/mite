@@ -1,4 +1,4 @@
-#include <curl.h>
+#include <curl/curl.h>
 
 static inline CURLMcode acurl_multi_setopt_pointer(CURLM * multi_handle, CURLMoption option, void * param) {
   return curl_multi_setopt(multi_handle, option, param);
@@ -38,17 +38,17 @@ static inline CURLSHcode acurl_share_setopt_int(CURLSH *share, CURLSHoption opti
 }
 
 static inline CURLcode acurl_easy_setopt_voidptr(CURL *easy, CURLoption option, void *data) {
-  return curl_easy_setopt(easy, option, data)
+  return curl_easy_setopt(easy, option, data);
 }
 
 static inline CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, const char *data) {
-  return curl_easy_setopt(easy, option, data)
+  return curl_easy_setopt(easy, option, data);
 }
 
 static inline CURLcode acurl_easy_setopt_int(CURL *easy, CURLoption option, int data) {
-  return curl_easy_setopt(easy, option, data)
+  return curl_easy_setopt(easy, option, data);
 }
 
 static inline CURLcode acurl_easy_setopt_writecb(CURL *easy, CURLoption option, curl_write_callback data) {
-  return curl_easy_setopt(easy, option, data)
+  return curl_easy_setopt(easy, option, data);
 }

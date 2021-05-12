@@ -1,3 +1,5 @@
+#cython: language_level=3
+
 import time
 from urllib.parse import urlparse
 from cpython cimport array
@@ -12,24 +14,22 @@ cdef class Cookie:
         self.name = name
         self.value = value
 
-cdef (bytes, bytes) _FALSE_TRUE = (b"FALSE", b"TRUE")
-
 cdef class _Cookie:
     # @property
     # def has_expired(self):
     #     return self.expiration != 0 and time.time() > self.expiration
 
     cdef str format(self):
-        cdef array bits = array.array('B', [])
+        cdef array.array bits = array.array('B', [])
         if self.http_only:
             bits.frombytes(b"#HttpOnly_")
         bits.fromunicode(self.domain)
         bits.append(9)  # Tab
-        bits.frombytes(_FALSE_TRUE[self.include_subdomains])
+        bits.frombytes(b"TRUE" if self.include_subdomains else b"FALSE")
         bits.append(9)
         bits.fromunicode(self.path)
         bits.append(9)
-        bits.frombytes(_FALSE_TRUE[self.is_secure])
+        bits.frombytes(b"TRUE" if self.is_secure else b"FALSE")
         bits.append(9)
         bits.fromunicode(str(self.expiration))
         bits.append(9)
