@@ -28,7 +28,7 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
             wrapper.timer_handle = None
     elif timeout_ms == 0:
         with nogil:
-            curl_multi_socket_action(wrapper.multi, CURL_SOCKET_TIMEOUT, 0, &_running)
+            curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
         wrapper.loop.call_soon(wrapper.check_multi_info)  # FIXME: are we sure we're on the main thread?
     else:
         secs = timeout_ms / 1000
