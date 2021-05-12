@@ -1,4 +1,4 @@
-cdef extern from "curl.h":
+cdef extern from "<curl.h>":
     # Forward decls
     ctypedef void CURL
     ctypedef void CURLM
@@ -82,6 +82,7 @@ cdef extern from "curl.h":
     cdef int CURL_LOCK_DATA_SSL_SESSION
 
     CURLSH *curl_share_init()
+    void curl_share_cleanup(CURLSH* share)
 
     # Options
     ctypedef int CURLoption
