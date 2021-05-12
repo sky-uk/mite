@@ -1,1 +1,6 @@
 *.o
+acurl.c
+response.c
+session.c
+request.c
+*.html
