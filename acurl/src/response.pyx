@@ -11,7 +11,7 @@ from utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 cdef class Response:
     def __cinit__(self):
         # Technically it's dangerous to leave curl and session members
-        # uninitialized, but we hope no one calls our init metod directly...
+        # uninitialized, but we hope no one calls our init method directly...
         self.header_buffer = NULL
         self.header_buffer_tail = NULL
         self.body_buffer = NULL

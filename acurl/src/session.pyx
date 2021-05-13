@@ -9,6 +9,7 @@ from libc.stdlib cimport malloc
 from libc.string cimport strndup
 from cpython.pycapsule cimport PyCapsule_New
 from curlinterface cimport *
+from cpython.ref cimport Py_INCREF
 
 class RequestError(Exception):
     pass
@@ -24,6 +25,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
 
 cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef Response response = <Response>userdata
+    Py_INCREF(response)  # FIXME: why
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
         response.header_buffer = node
@@ -34,6 +36,7 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
 
 cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef Response response = <Response>userdata
+    Py_INCREF(response)  # FIXME: why
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
         response.body_buffer = node
@@ -68,6 +71,7 @@ cdef class Session:
         cdef CURL* curl = curl_easy_init()
         future = self.wrapper.loop.create_future()
         response = Response.make(self, curl, future)
+        Py_INCREF(response)  # FIXME: where does it get decrefed?
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
@@ -177,10 +181,14 @@ cdef class Session:
             dummy=False
         )
         response = Response(request, c_response, start_time)
-        if self.response_callback:
-            # FIXME: should this be async?
-            self.response_callback(response)
-        if allow_redirects:
+        # if self.response_callback: TODO
+        #     # FIXME: should this be async?
+        #     self.response_callback(response)
+        if (
+            allow_redirects
+            and (300 <= response.status_code < 400)
+            and response.redirect_url is not None
+        ):
             while (
                 max_redirects > 0
                 and (300 <= response.status_code < 400)
@@ -204,9 +212,9 @@ cdef class Session:
                 )
                 # FIXME: should we be resetting start_time here?
                 response = Response(request, c_response, start_time)
-                if self.response_callback:
-                    # FIXME: should this be async?
-                    self.response_callback(response)
+                # if self.response_callback: TODO
+                #     # FIXME: should this be async?
+                #     self.response_callback(response)
                 response._prev = old_response
             else:
                 raise RequestError("Max Redirects")
