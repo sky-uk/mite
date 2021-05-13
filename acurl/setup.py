@@ -6,7 +6,7 @@ extensions = [
 ]
 
 setup(
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(extensions, gdb_debug=True),
     setup_requires=["setuptools_scm", "cython"],
     use_scm_version={'root': '..', 'relative_to': __file__},
 )

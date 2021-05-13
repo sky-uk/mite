@@ -1,7 +1,7 @@
 #cython: language_level=3
 
 cdef class Request:
-    cdef readonly str method
+    cdef readonly bytes method
     cdef readonly str url
     cdef object header_tuple
     cdef object cookie_tuple

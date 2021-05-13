@@ -7,7 +7,7 @@ from cpython.pycapsule cimport PyCapsule_GetPointer
 
 # Callback functions
 
-cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp):
+cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
         wrapper.loop.add_reader(sock, wrapper.curl_perform_read, sock)
