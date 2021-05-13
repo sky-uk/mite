@@ -1,32 +1,23 @@
+import asyncio
+from functools import partial
+
 import pytest
 from werkzeug.datastructures import Headers
-from werkzeug.wrappers import BaseResponse as Response
+from werkzeug.wrappers import Response
 
 import acurl
 
 
-class MockRawResponse:
-    def __init__(self, header):
-        self._header = header
-
-    def get_header(self):
-        return self._header
-
-
-def test_response_headers():
-    r = acurl.Response(
-        "Some Request",
-        MockRawResponse(
-            [
-                b"HTTP/1.1 200 OK\r\n",
-                b"Foo: bar\r\n",
-                b"Baz: quux\r\n",
-                b"baz: quuz\r\n",
-                b"\r\n",
-            ]
-        ),
-        0,
+@pytest.mark.asyncio
+async def test_response_headers(httpserver, acurl_session):
+    hdrs = Headers()
+    hdrs.add("Foo", "bar")
+    hdrs.add("Baz", "quux")
+    hdrs.add("baz", "quuz")
+    httpserver.expect_request("/foo").respond_with_response(
+        Response(response="", status=200, headers=hdrs)
     )
+    r = await acurl_session.get(httpserver.url_for("/foo"))
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
     assert r.headers["foo"] == "bar"
@@ -35,57 +26,81 @@ def test_response_headers():
     assert r.headers["baz"] == "quux, quuz"
 
 
-def test_response_headers_with_HTTP_100():
-    r = acurl.Response(
-        "Some Request",
-        MockRawResponse(
-            [
-                b"HTTP/1.1 100 Continue\r\n",
-                b"\r\n",
-                b"HTTP/1.1 200 OK\r\n",
-                b"Foo: bar\r\n",
-                b"\r\n",
-            ]
-        ),
-        0,
-    )
-    assert "Foo" in r.headers
-    assert r.headers["Foo"] == "bar"
-
-
-def test_response_headers_with_multiple_HTTP_100():
-    # It's unclear if this can happen. It doesn't sound like it should, but
-    # there's documentation of it happening in IIS at least:
-    # https://stackoverflow.com/questions/22818059/several-100-continue-received-from-the-server
-    r = acurl.Response(
-        "Some Request",
-        MockRawResponse(
-            [
-                b"HTTP/1.1 100 Continue\r\n",
-                b"\r\n",
-                b"HTTP/1.1 100 Continue\r\n",
-                b"\r\n",
-                b"HTTP/1.1 200 OK\r\n",
-                b"Foo: bar\r\n",
-                b"\r\n",
-            ]
-        ),
-        0,
-    )
-    assert "Foo" in r.headers
-    assert r.headers["Foo"] == "bar"
+async def connected_cb(body, reader, writer):
+    writer.write(body)
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
+    await reader.read(-1)
 
 
 @pytest.mark.asyncio
-async def test_response_cookies(httpserver):
+async def test_response_headers_with_HTTP_100(acurl_session):
+    body = b"".join(
+        (
+            b"HTTP/1.1 100 Continue\r\n",
+            b"\r\n",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Foo: bar\r\n",
+            b"\r\n",
+            b"body",
+        )
+    )
+    server = await asyncio.start_server(
+        partial(connected_cb, body), host="localhost", port=10763
+    )
+    await server.start_serving()
+
+    async def go():
+        r = await acurl_session.get("http://localhost:10763/foo")
+        server.close()
+        return r
+
+    results = await asyncio.gather(go(), server.serve_forever(), return_exceptions=True)
+    resp = [x for x in results if isinstance(x, acurl._Response)][0]
+    assert "Foo" in resp.headers
+    assert resp.headers["Foo"] == "bar"
+
+
+@pytest.mark.asyncio
+async def test_response_headers_with_multiple_HTTP_100(acurl_session):
+    # It's unclear if this can happen. It doesn't sound like it should, but
+    # there's documentation of it happening in IIS at least:
+    # https://stackoverflow.com/questions/22818059/several-100-continue-received-from-the-server
+    body = b"".join(
+        (
+            b"HTTP/1.1 100 Continue\r\n",
+            b"\r\n",
+            b"HTTP/1.1 100 Continue\r\n",
+            b"\r\n",
+            b"HTTP/1.1 200 OK\r\n",
+            b"Foo: bar\r\n",
+            b"\r\n",
+        )
+    )
+    server = await asyncio.start_server(
+        partial(connected_cb, body), host="localhost", port=10763
+    )
+    await server.start_serving()
+
+    async def go():
+        r = await acurl_session.get("http://localhost:10763/foo")
+        server.close()
+        return r
+
+    results = await asyncio.gather(go(), server.serve_forever(), return_exceptions=True)
+    resp = [x for x in results if isinstance(x, acurl._Response)][0]
+    assert "Foo" in resp.headers
+    assert resp.headers["Foo"] == "bar"
+
+
+@pytest.mark.asyncio
+async def test_response_cookies(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Set-Cookie", "foo=bar")
     hdrs.add("Set-Cookie", "quux=xyzzy")
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    el = acurl.EventLoop()
-    el._run_in_thread()
-    s = el.session()
-    r = await s.get(httpserver.url_for("/foo"))
+    r = await acurl_session.get(httpserver.url_for("/foo"))
     assert r.cookies == {"foo": "bar", "quux": "xyzzy"}

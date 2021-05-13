@@ -6,7 +6,7 @@ import acurl
 
 def test_to_curl():
     r = create_request("GET", "http://foo.com")
-    assert r.to_curl() == "curl -X GET     http://foo.com"
+    assert r.to_curl() == "curl -X GET http://foo.com"
 
 
 def test_to_curl_headers():
@@ -15,7 +15,7 @@ def test_to_curl_headers():
     )
     assert (
         r.to_curl()
-        == "curl -X GET -H 'Foo: bar' -H 'My-Header: is-awesome'    http://foo.com"
+        == "curl -X GET -H 'Foo: bar' -H 'My-Header: is-awesome' http://foo.com"
     )
 
 
@@ -25,7 +25,7 @@ def test_to_curl_cookies():
         "http://foo.com",
         cookies=(acurl._Cookie(False, "foo.com", True, "/", False, 0, "123", "456"),),
     )
-    assert r.to_curl() == "curl -X GET  --cookie 123=456   http://foo.com"
+    assert r.to_curl() == "curl -X GET --cookie 123=456 http://foo.com"
 
 
 def test_to_curl_multiple_cookies():
@@ -37,7 +37,7 @@ def test_to_curl_multiple_cookies():
             acurl._Cookie(False, "foo.com", True, "/", False, 0, "789", "abc"),
         ),
     )
-    assert r.to_curl() == "curl -X GET  --cookie '123=456;789=abc'   http://foo.com"
+    assert r.to_curl() == "curl -X GET --cookie '123=456;789=abc' http://foo.com"
 
 
 @pytest.mark.skip(reason="unimplemented")
@@ -67,4 +67,4 @@ def test_to_curl_cookies_wrong_domain():
 
 def test_to_curl_auth():
     r = create_request("GET", "http://foo.com", auth=("user", "pass"))
-    assert r.to_curl() == "curl -X GET   --user user:pass  http://foo.com"
+    assert r.to_curl() == "curl -X GET --user user:pass http://foo.com"

@@ -1,3 +1,4 @@
+import asyncio
 from urllib.parse import urlencode
 
 import pytest
@@ -5,14 +6,14 @@ import pytest
 import acurl
 
 
-def session():
-    el = acurl.EventLoop()
+async def session():
+    el = acurl.CurlWrapper(asyncio.get_running_loop())
     return el.session()
 
 
 @pytest.mark.asyncio
 async def test_get(httpbin):
-    s = session()
+    s = await session()
     r = await s.get(httpbin.url + "/ip")
     assert r.status_code == 200
     assert isinstance(r.headers, dict)
@@ -21,27 +22,25 @@ async def test_get(httpbin):
 
 
 @pytest.mark.asyncio
-async def test_cookies(httpbin):
-    s = session()
-    r = await s.get(httpbin.url + "/cookies/set?name=value")
+async def test_cookies(httpbin, acurl_session):
+    r = await acurl_session.get(httpbin.url + "/cookies/set?name=value")
     assert r.cookies == {"name": "value"}
 
 
 @pytest.mark.asyncio
-async def test_session_cookies(httpbin):
-    s = session()
-    await s.get(httpbin.url + "/cookies/set?name=value")
-    cookie_list = s.get_cookie_list()
-    assert len(cookie_list) == 1
-    assert cookie_list[0].name == "name"
-    s.erase_all_cookies()
-    cookie_list = s.get_cookie_list()
+async def test_session_cookies(httpbin, acurl_session):
+    await acurl_session.get(httpbin.url + "/cookies/set?name=value")
+    cookies = acurl_session.cookies()
+    assert cookies == {"name": "value"}
+    # FIXME!
+    acurl_session.erase_all_cookies()
+    cookie_list = acurl_session.cookies()
     assert len(cookie_list) == 0
 
 
 @pytest.mark.asyncio
 async def test_session_cookies_sent_on_subsequent_request(httpbin):
-    s = session()
+    s = await session()
     await s.get(httpbin.url + "/cookies/set?name=value")
     resp = await s.get(httpbin.url + "/cookies")
     data = resp.json()
@@ -51,7 +50,7 @@ async def test_session_cookies_sent_on_subsequent_request(httpbin):
 
 @pytest.mark.asyncio
 async def test_set_cookies(httpbin):
-    s = session()
+    s = await session()
     await s.get(httpbin.url + "/cookies/set?name=value")
     r = await s.get(httpbin.url + "/cookies/set?name2=value", cookies={"name3": "value"})
     assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
@@ -59,14 +58,14 @@ async def test_set_cookies(httpbin):
 
 @pytest.mark.asyncio
 async def test_basic_auth(httpbin):
-    s = session()
+    s = await session()
     r = await s.get(httpbin.url + "/basic-auth/user/password", auth=("user", "password"))
     assert r.status_code == 200
 
 
 @pytest.mark.asyncio
 async def test_failed_basic_auth(httpbin):
-    s = session()
+    s = await session()
     r = await s.get(
         httpbin.url + "/basic-auth/user/password", auth=("notuser", "notpassword")
     )
@@ -75,7 +74,7 @@ async def test_failed_basic_auth(httpbin):
 
 @pytest.mark.asyncio
 async def test_redirect(httpbin):
-    s = session()
+    s = await session()
     url = httpbin.url + "/ip"
     r = await s.get(httpbin.url + "/redirect-to?" + urlencode({"url": url}))
     assert r.url == url

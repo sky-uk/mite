@@ -3,7 +3,9 @@
 from curlinterface cimport *
 from libc.stdio cimport printf
 from cpython cimport array
+from cpython.ref cimport Py_INCREF
 
+include "utils.pyx"
 include "cookie.pyx"
 include "request.pyx"
 include "response.pyx"
@@ -13,6 +15,7 @@ include "session.pyx"
 
 cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
+    Py_INCREF(wrapper)  # FIXME: why
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
         wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
@@ -25,6 +28,7 @@ cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, 
 
 cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
+    Py_INCREF(wrapper)  # FIXME: why
     cdef int _running
     cdef double secs
     if timeout_ms < 0:
@@ -79,7 +83,7 @@ cdef class CurlWrapper:
         cdef CURLMsg *message
         cdef int _pending
         cdef CURL *easy
-        cdef Response response
+        cdef _Response response
         cdef void *response_raw
 
         message = curl_multi_info_read(self.multi, &_pending)
@@ -87,8 +91,7 @@ cdef class CurlWrapper:
             if message.msg == CURLMSG_DONE:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
-                response = <Response>response_raw
-                printf("check_multi_info response is: %p\n", <void*>response)
+                response = <_Response>response_raw  # FIXME: check for a stray decref
                 response.future.set_result(response)
                 curl_multi_remove_handle(self.multi, easy)
             else:
@@ -96,7 +99,7 @@ cdef class CurlWrapper:
             message = curl_multi_info_read(self.multi, &_pending)
 
     def session(self):
-        return Session(self)
+        return Session.__new__(Session, self)
 
     def __dealloc__(self):
         # TODO: I (AWE) can't convince myself that this definitely doesn't

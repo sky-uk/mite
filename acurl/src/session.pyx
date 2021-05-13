@@ -8,6 +8,8 @@ from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
 from libc.stdio cimport printf
+import cython
+from json import dumps
 
 class RequestError(Exception):
     pass
@@ -24,7 +26,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     return node
 
 cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
-    cdef Response response = <Response>userdata
+    cdef _Response response = <_Response>userdata
     Py_INCREF(response)  # FIXME: why
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
@@ -35,7 +37,7 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     return node.len
 
 cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
-    cdef Response response = <Response>userdata
+    cdef _Response response = <_Response>userdata
     Py_INCREF(response)  # FIXME: why
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
@@ -49,9 +51,11 @@ cdef void cleanup_share(object share_capsule):
     cdef void* share_raw = PyCapsule_GetPointer(share_capsule, <const char*>NULL)
     curl_share_cleanup(<CURLSH*>share_raw)
 
+@cython.no_gc_clear  # FIXME: make sure this isn't going to leak!
 cdef class Session:
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
+    cdef public object response_callback
 
     def __cinit__(self, wrapper):
         self.shared = curl_share_init()
@@ -59,9 +63,29 @@ cdef class Session:
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION)
         self.wrapper = wrapper
+        self.response_callback = None
 
     def __dealloc__(self):
-        self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+        if self.wrapper.loop.is_closed():
+            # FIXME: the event loop being closed only happens during testing,
+            # so it kind of sucks to pay the price of checking for it all the
+            # time...
+            curl_share_cleanup(self.shared)
+        else:
+            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+
+    def cookies(self):
+        cdef CURL* curl = curl_easy_init()
+        acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
+        lst = curl_extract_cookielist(curl)
+        curl_easy_cleanup(curl)
+        return cookie_seq_to_cookie_dict(tuple(parse_cookie_string(c) for c in lst))
+
+    def erase_all_cookies(self):
+        cdef CURL* curl = curl_easy_init()
+        acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
+        acurl_easy_setopt_cstr(curl, CURLOPT_COOKIELIST, b"ALL")
+        curl_easy_cleanup(curl)
 
     cdef object _inner_request(
         self,
@@ -70,15 +94,14 @@ cdef class Session:
         tuple headers,
         tuple cookies,
         object auth,
-        str data,
+        bytes data,
         object cert,
-        bint  dummy,
     ):
         cdef curl_slist* curl_headers = NULL
         cdef CURL* curl = curl_easy_init()
         cdef object future = self.wrapper.loop.create_future()
         cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
-        cdef Response response = Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
+        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
         Py_INCREF(response)  # FIXME: where does it get decrefed?
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
@@ -90,7 +113,6 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
-        printf("inner_request response is: %p\n", <void*>response)
         acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
         acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
         acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
@@ -100,8 +122,8 @@ cdef class Session:
         cdef int i
 
         for i in range(len(headers)):  # FIXME: not fast
-            if not isinstance(headers[i], str):
-                raise ValueError("headers should be a tuple of strings if set")
+            if not isinstance(headers[i], bytes):
+                raise ValueError("headers should be a tuple of bytestrings if set")
             curl_headers = curl_slist_append(curl_headers, headers[i])
         # FIXME: free the slist eventually
         acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
@@ -115,7 +137,7 @@ cdef class Session:
             ):
                 print(auth)
                 raise ValueError("auth must be a 2-tuple of strings")
-            acurl_easy_setopt_cstr(curl, CURLOPT_USERPWD, auth[0] + ":" + auth[1])
+            acurl_easy_setopt_cstr(curl, CURLOPT_USERPWD, auth[0].encode() + b":" + auth[1].encode())
 
         if cert is not None:
             if (  # FIXME: not fast
@@ -131,8 +153,8 @@ cdef class Session:
         acurl_easy_setopt_cstr(curl, CURLOPT_COOKIEFILE, "")
         if cookies is not None:
             for i in range(len(cookies)):  # FIXME: not fast
-                if not isinstance(cookies[i], str):
-                    raise ValueError("cookies should be a tuple of strings")
+                if not isinstance(cookies[i], bytes):
+                    raise ValueError("cookies should be a tuple of bytes")
                 acurl_easy_setopt_cstr(curl, CURLOPT_COOKIELIST, cookies[i])
 
         if data is not None:
@@ -169,15 +191,22 @@ cdef class Session:
         if json is not None:
             if data is not None:
                 raise ValueError("use only one or none of data or json")
-            data = json.dumps(json)  # FIXME: make fast
+            data = dumps(json).encode()  # FIXME: make fast
             headers.setdefault("Content-Type", "application/json")
+        elif data is not None:
+            if isinstance(data, str):
+                data = data.encode()
+            else:
+                if not isinstance(data, bytes):
+                    # FIXME: not very duck type
+                    raise ValueError("data must be str or bytes")
 
         # FIXME: probably need to do some escaping if one of the values has
         # newlines in it...
-        cdef tuple headers_tuple = tuple("%s: %s" % i for i in headers.items())
+        cdef tuple headers_tuple = tuple(k.encode() + b": " + v.encode() for k, v in headers.items())
         cdef tuple cookie_tuple = tuple(session_cookie_for_url(url, k, v).format() for k, v in cookies.items())
 
-        cdef Response response = await self._inner_request(
+        cdef _Response response = await self._inner_request(
             method,
             url,
             headers_tuple,
@@ -185,12 +214,11 @@ cdef class Session:
             auth,
             data,
             cert,
-            dummy=False
         )
-        cdef Response old_response
-        # if self.response_callback: TODO
-        #     # FIXME: should this be async?
-        #     self.response_callback(response)
+        cdef _Response old_response
+        if self.response_callback:
+            # FIXME: should this be async?
+            self.response_callback(response)
         if (
             allow_redirects
             and (300 <= response.status_code < 400)
@@ -199,7 +227,6 @@ cdef class Session:
             while (
                 max_redirects > 0
             ):
-                print("redirect", max_redirects, response.redirect_url)
                 max_redirects -= 1
                 if response.status_code in {301, 302, 303}:
                     method = b"GET"
@@ -214,12 +241,10 @@ cdef class Session:
                     auth,
                     data,
                     cert,
-                    dummy=False,
                 )
-                # FIXME: should we be resetting start_time here?
-                # if self.response_callback: TODO
-                #     # FIXME: should this be async?
-                #     self.response_callback(response)
+                if self.response_callback:
+                    # FIXME: should this be async?
+                    self.response_callback(response)
                 response._set_prev(old_response)
                 if not ((300 <= response.status_code < 400)
                         and response.redirect_url is not None):
@@ -230,3 +255,6 @@ cdef class Session:
 
     async def get(self, *args, **kwargs):
         return await self._outer_request(b"GET", *args, **kwargs)
+
+    async def post(self, *args, **kwargs):
+        return await self._outer_request(b"POST", *args, **kwargs)

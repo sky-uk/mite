@@ -2,9 +2,8 @@
 
 from libc.stdlib cimport free
 from cpython cimport array
-import json
+from json import loads
 from cpython.list cimport PyList_New
-from utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 from libc.stdio cimport printf
 
 cdef struct BufferNode:
@@ -12,7 +11,23 @@ cdef struct BufferNode:
     char *buffer
     BufferNode *next
 
-cdef class Response:
+cdef list curl_extract_cookielist(CURL* curl):
+    cdef void* start_raw
+    cdef curl_slist *start
+    cdef curl_slist *node
+    cdef int len = 0
+    cdef int i = 0
+    acurl_easy_getinfo_voidptr(curl, CURLINFO_COOKIELIST, &start_raw)
+    start = <curl_slist*>start_raw
+    node = start
+    cdef lst = []
+    while node != NULL:
+        lst.append(node.data.decode("UTF-8"))
+        node = node.next
+    curl_slist_free_all(start)
+    return lst
+
+cdef class _Response:
     cdef BufferNode* header_buffer
     cdef BufferNode* header_buffer_tail
     cdef BufferNode* body_buffer
@@ -22,7 +37,7 @@ cdef class Response:
     cdef object future
     cdef readonly unsigned long start_time
     cdef readonly Request request
-    cdef Response _prev
+    cdef _Response _prev
 
     def __cinit__(self):
         # Technically it's dangerous to leave curl and session members
@@ -46,10 +61,11 @@ cdef class Response:
             old_ptr = ptr
             ptr = ptr.next
             free(old_ptr)
+        # Dealloc curl
 
     @staticmethod
-    cdef Response make(Session session, CURL* curl, object future, unsigned long time, Request request):
-        cdef Response r = Response.__new__(Response)
+    cdef _Response make(Session session, CURL* curl, object future, unsigned long time, Request request):
+        cdef _Response r = _Response.__new__(_Response)
         r.session = session
         r.curl = curl
         r.future = future
@@ -73,25 +89,7 @@ cdef class Response:
         return value
 
     cdef list get_cookielist(self):
-        cdef void* start_raw
-        cdef curl_slist *start
-        cdef curl_slist *node
-        cdef int len = 0
-        cdef int i = 0
-        acurl_easy_getinfo_voidptr(self.curl, CURLINFO_COOKIELIST, &start_raw)
-        start = <curl_slist*>start_raw
-        node = start
-        while node != NULL:
-            len += 1
-            node = node.next
-        cdef list lst = PyList_New(len)
-        node = start
-        while node != NULL:
-            lst[i] = node.data.decode("UTF-8")
-            i += 1
-            node = node.next
-        curl_slist_free_all(start)
-        return lst
+        return curl_extract_cookielist(self.curl)
 
     def _set_prev(self, prev):
         self._prev = prev
@@ -150,12 +148,13 @@ cdef class Response:
 
     @property
     def cookies(self):
-        return cookie_seq_to_cookie_dict(self.cookielist)
+        # FIXME: we lose the ability to get domains of cookies...
+        return cookie_seq_to_cookie_dict(tuple(parse_cookie_string(c) for c in self.get_cookielist()))
 
     @property
     def history(self):
         cdef list result = []
-        cdef Response cur = self._prev
+        cdef _Response cur = self._prev
         while cur is not None:
             result.append(cur)
             cur = cur._prev
@@ -198,9 +197,8 @@ cdef class Response:
     def text(self):
         return self.body.decode(self.encoding)
 
-    @property
     def json(self):
-        return json.loads(self.text)
+        return loads(self.body)
 
     @property
     def headers(self):

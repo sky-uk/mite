@@ -57,6 +57,7 @@ cdef extern from "<curl/curl.h>":
         CURLMsgdata data
 
     CURL *curl_easy_init()
+    void curl_easy_cleanup(CURL *curl)
 
     # Misc enums
     cdef int CURL_POLL_NONE

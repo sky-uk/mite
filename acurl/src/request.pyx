@@ -5,8 +5,8 @@ import shlex
 cdef class Request:
     cdef readonly bytes method
     cdef readonly str url
-    cdef object header_tuple
-    cdef object cookie_tuple
+    cdef tuple header_tuple
+    cdef tuple cookie_tuple
     cdef readonly object auth
     cdef readonly object data
     cdef readonly object cert
@@ -16,15 +16,15 @@ cdef class Request:
         self,
         bytes method,
         str url,
-        object header_tuple,
-        object cookie_tuple,
+        tuple header_tuple,
+        tuple cookie_tuple,
         tuple auth,
-        str data,
+        bytes data,
         tuple cert,
     ):
         self.method = method
         self.url = url
-        self.header_tuple = header_tuple,
+        self.header_tuple = header_tuple
         self.cookie_tuple = cookie_tuple
         self.auth = auth
         self.data = data
@@ -37,29 +37,29 @@ cdef class Request:
 
     @property
     def cookies(self):
-        cookie_seq_to_cookie_dict(self.cookie_tuple + self.session_cookies)
+        return cookie_seq_to_cookie_dict(self.cookie_tuple + self.session_cookies)
 
     def to_curl(self):
-        cdef str data_arg = ""
         cdef object data
+        cdef list args = ["curl", "-X", self.method.decode('ascii')]
         if self.data is not None:
             data = self.data
             if hasattr(data, "decode"):
                 data = data.decode("utf-8")
-            data_arg = "-d " + shlex.quote(data)
-        cdef str header_args = " ".join(
-            ("-H " + shlex.quote(k + ": " + v) for k, v in self.headers.items())
-        )
-        cdef str cookie_args = ""
-        if len(self.cookies) > 0:
-            cookie_args = "--cookie " + shlex.quote(
-                ";".join((f"{k}={v}" for k, v in self.cookies.items()))
+            args.append("-d " + shlex.quote(data))
+        if len(self.headers) > 0:
+            args.append(
+                " ".join(
+                    ("-H " + shlex.quote(k + ": " + v) for k, v in self.headers.items())
+                )
             )
-        cdef str auth_arg = ""
+        if len(self.cookies) > 0:
+            args.append(
+                "--cookie " + shlex.quote(
+                    ";".join((f"{k}={v}" for k, v in self.cookies.items()))
+                )
+            )
         if self.auth is not None:
-            auth_arg = "--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}")
-        return (
-            f"curl -X {self.method} "
-            + " ".join((header_args, cookie_args, auth_arg, data_arg))
-            + shlex.quote(self.url)
-        )
+            args.append("--user " + shlex.quote(f"{self.auth[0]}:{self.auth[1]}"))
+        args.append(shlex.quote(self.url))
+        return " ".join(args)
