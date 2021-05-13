@@ -10,9 +10,9 @@ from cpython.pycapsule cimport PyCapsule_GetPointer
 cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
-        wrapper.loop.add_reader(sock, wrapper.curl_perform_read, sock)
+        wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
-        wrapper.loop.add_writer(sock, wrapper.curl_perform_write, sock)
+        wrapper.loop.add_writer(sock, wrapper.curl_perform_write, wrapper, sock)
     if action == CURL_POLL_REMOVE:
         wrapper.loop.remove_reader(sock)
         wrapper.loop.remove_writer(sock)
@@ -30,10 +30,10 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     elif timeout_ms == 0:
         with nogil:
             curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
-        wrapper.loop.call_soon(wrapper.check_multi_info)  # FIXME: are we sure we're on the main thread?
+        wrapper.loop.call_soon(wrapper.check_multi_info, wrapper)  # FIXME: are we sure we're on the main thread?
     else:
         secs = timeout_ms / 1000
-        wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired)
+        wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
 
 cdef class CurlWrapper:
     def __cinit__(self, object loop):
