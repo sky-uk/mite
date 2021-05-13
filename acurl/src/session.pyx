@@ -2,16 +2,12 @@
 
 import time  # FIXME: use fast c fn
 
-from cookie cimport session_cookie_for_url
-from request cimport Request
-from response cimport Response, BufferNode
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
 from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
 from libc.stdio cimport printf
-
 
 class RequestError(Exception):
     pass
@@ -54,6 +50,9 @@ cdef void cleanup_share(object share_capsule):
     curl_share_cleanup(<CURLSH*>share_raw)
 
 cdef class Session:
+    cdef CURLSH* shared
+    cdef CurlWrapper wrapper
+
     def __cinit__(self, wrapper):
         self.shared = curl_share_init()
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)

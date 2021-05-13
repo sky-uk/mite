@@ -1,10 +1,13 @@
 #cython: language_level=3
 
 from curlinterface cimport *
-from session cimport Session
-from response cimport Response
 from libc.stdio cimport printf
+from cpython cimport array
 
+include "cookie.pyx"
+include "request.pyx"
+include "response.pyx"
+include "session.pyx"
 
 # Callback functions
 
@@ -37,6 +40,10 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
         wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
 
 cdef class CurlWrapper:
+    cdef CURLM* multi
+    cdef object timer_handle
+    cdef object loop
+
     def __cinit__(self, object loop):
         self.multi = curl_multi_init()
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, 1000)  # FIXME: magic number

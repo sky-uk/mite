@@ -2,7 +2,6 @@
 
 import time
 from urllib.parse import urlparse
-from cpython cimport array
 
 
 cdef class Cookie:
@@ -16,6 +15,15 @@ cdef class Cookie:
         self.value = value
 
 cdef class _Cookie:
+    cdef bint http_only
+    cdef str domain
+    cdef bint include_subdomains
+    cdef str path
+    cdef bint is_secure
+    cdef int expiration  # TODO right type???
+    cdef str name
+    cdef str value
+
     # @property
     # def has_expired(self):
     #     return self.expiration != 0 and time.time() > self.expiration

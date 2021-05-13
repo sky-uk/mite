@@ -2,7 +2,7 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 
 extensions = [
-    Extension("*", ["src/*.pyx"], include_dirs=["src"], libraries=["curl"])
+    Extension("acurl", ["src/acurl.pyx"], libraries=["curl"])
 ]
 
 setup(
