@@ -23,3 +23,5 @@ cdef session_cookie_for_url(
 )
 
 cdef _Cookie parse_cookie_string(str cookie_string)
+
+cdef dict cookie_seq_to_cookie_dict(list cookie_list)

@@ -15,6 +15,7 @@ cdef class Response:
     cdef BufferNode* body_buffer_tail
     cdef CURL* curl
     cdef Session session
+    cdef object future
     cdef Response _prev
 
     @staticmethod

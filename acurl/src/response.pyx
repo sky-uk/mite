@@ -4,8 +4,8 @@ from libc.stdlib cimport free
 from cpython cimport array
 import json
 from curlinterface cimport *
-from cython.list import PyList_New
-from cookie import parse_cookie_string, cookie_seq_to_cookie_dict
+from cpython.list cimport PyList_New
+from cookie cimport parse_cookie_string, cookie_seq_to_cookie_dict
 from utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 
 cdef class Response:

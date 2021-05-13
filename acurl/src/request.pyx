@@ -1,7 +1,7 @@
 #cython: language_level=3
 
 import shlex
-from cookie import cookie_seq_to_cookie_dict
+from cookie cimport cookie_seq_to_cookie_dict
 
 cdef class Request:
     def __cinit__(
