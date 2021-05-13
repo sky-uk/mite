@@ -17,7 +17,7 @@ cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, 
         wrapper.loop.remove_reader(sock)
         wrapper.loop.remove_writer(sock)
     if action != CURL_POLL_IN and action != CURL_POLL_OUT and action != CURL_POLL_INOUT and action != CURL_POLL_REMOVE:
-        exit(1)
+        raise Exception("oops")
 
 cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
@@ -83,7 +83,7 @@ cdef class CurlWrapper:
                 response.future.set_result(response)
                 curl_multi_remove_handle(self.multi, easy)
             else:
-                exit(1)
+                raise Exception("oops2")
             message = curl_multi_info_read(self.multi, &_pending)
 
     def cleanup_share(self, share_capsule):
