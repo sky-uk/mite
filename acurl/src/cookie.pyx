@@ -15,42 +15,52 @@ cdef class Cookie:
         self.value = value
 
 cdef class _Cookie:
-    cdef bint http_only
-    cdef str domain
-    cdef bint include_subdomains
-    cdef str path
-    cdef bint is_secure
-    cdef int expiration  # TODO right type???
-    cdef str name
-    cdef str value
+    cdef readonly bint http_only
+    cdef readonly str domain
+    cdef readonly bint include_subdomains
+    cdef readonly str path
+    cdef readonly bint is_secure
+    cdef readonly int expiration  # TODO right type???
+    cdef readonly str name
+    cdef readonly str value
 
-    # @property
-    # def has_expired(self):
-    #     return self.expiration != 0 and time.time() > self.expiration
+    def __cinit__(self, bint http_only, str domain, bint include_subdomains, str path, bint is_secure, int expiration, str name, str value):
+        self.http_only = http_only
+        self.domain = domain
+        self.include_subdomains = include_subdomains
+        self.path = path
+        self.is_secure = is_secure
+        self.expiration = expiration
+        self.name = name
+        self.value = value
 
-    cdef str format(self):
+    @property
+    def has_expired(self):
+        return self.expiration != 0 and time.time() > self.expiration
+
+    cpdef bytes format(self):
         cdef array.array bits = array.array('B', [])
         if self.http_only:
             bits.frombytes(b"#HttpOnly_")
-        bits.fromunicode(self.domain)
+        bits.frombytes(self.domain.encode())
         bits.append(9)  # Tab
         bits.frombytes(b"TRUE" if self.include_subdomains else b"FALSE")
         bits.append(9)
-        bits.fromunicode(self.path)
+        bits.frombytes(self.path.encode())
         bits.append(9)
         bits.frombytes(b"TRUE" if self.is_secure else b"FALSE")
         bits.append(9)
-        bits.fromunicode(str(self.expiration))
+        bits.frombytes(str(self.expiration).encode())
         bits.append(9)
-        bits.fromunicode(self.name)
+        bits.frombytes(self.name.encode())
         bits.append(9)
-        bits.fromunicode(self.value)
-        return bits.tounicode()
+        bits.frombytes(self.value.encode())
+        return bits.tobytes()
 
-cdef session_cookie_for_url(
+cpdef _Cookie session_cookie_for_url(
     str url,
     str name,
-    str value,
+    object value,
     bint http_only=False,
     bint include_subdomains=True,
     bint is_secure=False,
@@ -61,7 +71,14 @@ cdef session_cookie_for_url(
     if not include_url_path:
         path = "/"
 
-    cdef bint is_type_cookie = isinstance(value, Cookie)
+    cdef bint is_type_cookie
+    if isinstance(value, Cookie):
+        is_type_cookie = True
+    elif isinstance(value, str):
+        is_type_cookie = False
+    else:
+        raise ValueError("cookie value must be string or Cookie class")
+
     # TODO do we need to sanitize netloc for IP and ports?
     return _Cookie(
         http_only,
@@ -74,7 +91,7 @@ cdef session_cookie_for_url(
         value.value if is_type_cookie else value,
     )
 
-cdef _Cookie parse_cookie_string(str cookie_string):
+cpdef _Cookie parse_cookie_string(str cookie_string):
     cdef bint http_only
     cdef str domain, include_subdomains, path, is_secure, expiration, name, value
 
@@ -101,10 +118,10 @@ cdef _Cookie parse_cookie_string(str cookie_string):
         value,
     )
 
-cdef dict cookie_seq_to_cookie_dict(list cookie_list):
+cdef dict cookie_seq_to_cookie_dict(tuple cookie_list):
     cdef int i
     cdef dict d = {}
-    cdef Cookie cookie
+    cdef _Cookie cookie
     for i in range(len(cookie_list)):
         cookie = cookie_list[i]
         d[cookie.name] = cookie.value

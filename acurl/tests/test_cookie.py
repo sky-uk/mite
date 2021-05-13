@@ -27,7 +27,7 @@ def test_cookie_has_expired():
 
 def test_cookie_format():
     c = acurl._Cookie(False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value")
-    assert c.format() == "foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
+    assert c.format() == b"foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
 
 
 def test_parse_cookie_string():
