@@ -7,6 +7,8 @@ from curlinterface cimport *
 from cpython.list cimport PyList_New
 from cookie cimport parse_cookie_string, cookie_seq_to_cookie_dict
 from utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
+from libc.stdio cimport printf
+from request cimport Request
 
 cdef class Response:
     def __cinit__(self):
@@ -33,11 +35,13 @@ cdef class Response:
             free(old_ptr)
 
     @staticmethod
-    cdef Response make(Session session, CURL* curl, object future):
+    cdef Response make(Session session, CURL* curl, object future, unsigned long time, Request request):
         cdef Response r = Response.__new__(Response)
-        r.session = session = session
+        r.session = session
         r.curl = curl
         r.future = future
+        r.start_time = time
+        r.request = request
         return r
 
     cdef long get_info_long(self, CURLINFO info):
@@ -57,8 +61,8 @@ cdef class Response:
 
     cdef list get_cookielist(self):
         cdef void* start_raw
-        cdef curl_slist *start = NULL
-        cdef curl_slist *node = NULL
+        cdef curl_slist *start
+        cdef curl_slist *node
         cdef int len = 0
         cdef int i = 0
         acurl_easy_getinfo_voidptr(self.curl, CURLINFO_COOKIELIST, &start_raw)
@@ -75,6 +79,9 @@ cdef class Response:
             node = node.next
         curl_slist_free_all(start)
         return lst
+
+    def _set_prev(self, prev):
+        self._prev = prev
 
     @property
     def status_code(self):
@@ -128,11 +135,6 @@ cdef class Response:
     def primary_ip(self):
         return self.get_info_str(CURLINFO_PRIMARY_IP)
 
-    # TODO: is this part of the request api?
-    @property
-    def cookielist(self):
-        return [parse_cookie_string(cookie) for cookie in self._resp.get_cookielist()]
-
     @property
     def cookies(self):
         return cookie_seq_to_cookie_dict(self.cookielist)
@@ -140,7 +142,7 @@ cdef class Response:
     @property
     def history(self):
         cdef list result = []
-        cur = self._prev
+        cdef Response cur = self._prev
         while cur is not None:
             result.append(cur)
             cur = cur._prev
@@ -152,17 +154,26 @@ cdef class Response:
         cdef array.array body = array.array("B")
         cdef BufferNode* node = self.body_buffer
         while node != NULL:
-            body.extend_buffer(node.buffer, node.len)
+            array.extend_buffer(body, node.buffer, node.len)
+            node = node.next
         return body.tobytes()
 
     # TODO: is this part of the request api?
     @property
     def header(self):
+        # Idea to cache this: need three states:
+        # - headers not populated: header_buffer is null, header_buffer_tail
+        # is not
+        # - headers being populated: both not null
+        # - headers calculated: header_buffer is not null (and points to
+        # array); tail is null
+        # then make all the code behave correctly
         cdef array.array header = array.array("B")
         cdef BufferNode* node = self.header_buffer
         while node != NULL:
-            header.extend_buffer(node.buffer, node.len)
-        return header.tobytes()
+            array.extend_buffer(header, node.buffer, node.len)
+            node = node.next
+        return header.tobytes().decode("UTF-8")
 
     @property
     def encoding(self):
@@ -180,16 +191,17 @@ cdef class Response:
 
     @property
     def headers(self):
-        headers_pre = CaseInsensitiveDefaultDict(list)
+        cdef object headers_pre = CaseInsensitiveDefaultDict(list)
+        cdef str k, v
         for k, v in self.headers_tuple:
             headers_pre[k].append(v)
-        headers = CaseInsensitiveDict()
+        cdef object headers = CaseInsensitiveDict()
         for k in headers_pre:
-            headers[k] = ", ".join(headers[k])
+            headers[k] = ", ".join(headers_pre[k])
         return headers  # FIXME: should be frozen
 
     def _get_header_lines(self):
-        headers = self.header.split("\r\n")
+        cdef list headers = self.header.split("\r\n")
         headers = headers[:-2]  # drop the final blank lines
         while headers[0].startswith("HTTP/1.1 100"):
             headers = headers[2:]
