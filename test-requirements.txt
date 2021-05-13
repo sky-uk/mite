@@ -6,6 +6,6 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-httpserver
-werkzeug
+werkzeug>=2.0
 pre-commit
 pytest-httpbin
