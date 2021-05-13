@@ -3,14 +3,27 @@
 from libc.stdlib cimport free
 from cpython cimport array
 import json
-from curlinterface cimport *
 from cpython.list cimport PyList_New
-from cookie cimport parse_cookie_string, cookie_seq_to_cookie_dict
 from utils import CaseInsensitiveDefaultDict, CaseInsensitiveDict
 from libc.stdio cimport printf
-from request cimport Request
+
+cdef struct BufferNode:
+    size_t len
+    char *buffer
+    BufferNode *next
 
 cdef class Response:
+    cdef BufferNode* header_buffer
+    cdef BufferNode* header_buffer_tail
+    cdef BufferNode* body_buffer
+    cdef BufferNode* body_buffer_tail
+    cdef CURL* curl
+    cdef Session session
+    cdef object future
+    cdef readonly unsigned long start_time
+    cdef readonly Request request
+    cdef Response _prev
+
     def __cinit__(self):
         # Technically it's dangerous to leave curl and session members
         # uninitialized, but we hope no one calls our init method directly...
