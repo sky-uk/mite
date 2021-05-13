@@ -4,3 +4,4 @@ response.c
 session.c
 request.c
 *.html
+*.c

@@ -4,6 +4,7 @@ import time
 from urllib.parse import urlparse
 from cpython cimport array
 
+
 cdef class Cookie:
     cdef readonly str domain
     cdef readonly str name
@@ -47,11 +48,12 @@ cdef session_cookie_for_url(
     bint is_secure=False,
     bint include_url_path=False,
 ):
+    cdef str scheme, netloc, path, params, query, fragment
     scheme, netloc, path, params, query, fragment = urlparse(url)
     if not include_url_path:
         path = "/"
 
-    is_type_cookie = isinstance(value, Cookie)
+    cdef bint is_type_cookie = isinstance(value, Cookie)
     # TODO do we need to sanitize netloc for IP and ports?
     return _Cookie(
         http_only,
@@ -65,13 +67,16 @@ cdef session_cookie_for_url(
     )
 
 cdef _Cookie parse_cookie_string(str cookie_string):
+    cdef bint http_only
+    cdef str domain, include_subdomains, path, is_secure, expiration, name, value
+
     cookie_string = cookie_string.strip()
     if cookie_string.startswith("#HttpOnly_"):  # FIXME: optimize?
         http_only = True
         cookie_string = cookie_string[10:]
     else:
         http_only = False
-    parts = cookie_string.split("\t")
+    cdef list parts = cookie_string.split("\t")
     if len(parts) == 6:
         domain, include_subdomains, path, is_secure, expiration, name = parts
         value = ""

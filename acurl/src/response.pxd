@@ -2,6 +2,7 @@
 
 from curlinterface cimport CURL, CURLINFO
 from session cimport Session
+from request cimport Request
 
 cdef struct BufferNode:
     size_t len
@@ -16,10 +17,12 @@ cdef class Response:
     cdef CURL* curl
     cdef Session session
     cdef object future
+    cdef readonly unsigned long start_time
+    cdef readonly Request request
     cdef Response _prev
 
     @staticmethod
-    cdef Response make(Session session, CURL* curl, object future)
+    cdef Response make(Session session, CURL* curl, object future, unsigned long time, Request request)
     cdef long get_info_long(self, CURLINFO info)
     cdef str get_info_str(self, CURLINFO info)
     cdef double get_info_double(self, CURLINFO info)

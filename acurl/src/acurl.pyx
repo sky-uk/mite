@@ -3,7 +3,8 @@
 from curlinterface cimport *
 from session cimport Session
 from response cimport Response
-from cpython.pycapsule cimport PyCapsule_GetPointer
+from libc.stdio cimport printf
+
 
 # Callback functions
 
@@ -68,7 +69,7 @@ cdef class CurlWrapper:
         self.check_multi_info()
 
     cdef void check_multi_info(self):
-        cdef CURLMsg *msg
+        cdef CURLMsg *message
         cdef int _pending
         cdef CURL *easy
         cdef Response response
@@ -80,15 +81,12 @@ cdef class CurlWrapper:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
                 response = <Response>response_raw
+                printf("check_multi_info response is: %p\n", <void*>response)
                 response.future.set_result(response)
                 curl_multi_remove_handle(self.multi, easy)
             else:
                 raise Exception("oops2")
             message = curl_multi_info_read(self.multi, &_pending)
-
-    def cleanup_share(self, share_capsule):
-        cdef void* share_raw = PyCapsule_GetPointer(share_capsule, <const char*>NULL)
-        curl_share_cleanup(<CURLSH*>share_raw)
 
     def session(self):
         return Session(self)
