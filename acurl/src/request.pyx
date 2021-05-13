@@ -6,7 +6,7 @@ from cookie cimport cookie_seq_to_cookie_dict
 cdef class Request:
     def __cinit__(
         self,
-        str method,
+        bytes method,
         str url,
         object header_tuple,
         object cookie_tuple,

@@ -8,12 +8,12 @@ cdef class Session:
     cdef CurlWrapper wrapper
     cdef object _inner_request(
         self,
-        str method,
+        bytes method,
         str url,
         tuple headers,
-        tuple auth,
-        list cookies,
+        tuple cookies,
+        object auth,
         str data,
-        tuple cert,
+        object cert,
         bint  dummy,
     )

@@ -55,25 +55,25 @@ cdef class Session:
 
     cdef object _inner_request(
         self,
-        str method,
+        bytes method,
         str url,
         tuple headers,
-        tuple auth,
-        list cookies,
+        tuple cookies,
+        object auth,
         str data,
-        tuple cert,
+        object cert,
         bint  dummy,
     ):
-        cdef curl_slist* curl_headers
+        cdef curl_slist* curl_headers = NULL
         cdef CURL* curl = curl_easy_init()
         future = self.wrapper.loop.create_future()
         response = Response.make(self, curl, future)
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
-        acurl_easy_setopt_cstr(curl, CURLOPT_URL, url)
+        acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
         acurl_easy_setopt_cstr(curl, CURLOPT_CUSTOMREQUEST, method)
         # curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1)  # DEBUG
-        acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, "")
+        acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, b"")
         # FIXME: make this configurable?
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
@@ -86,26 +86,28 @@ cdef class Session:
 
         cdef int i
 
-        if headers is not None:
-            for i in range(len(headers)):  # FIXME: not fast
-                if not isinstance(headers[i], str):
-                    raise ValueError("headers should be a tuple of strings if set")
-                curl_headers = curl_slist_append(curl_headers, headers[i])
-            # FIXME: free the slist eventually
-            acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
+        for i in range(len(headers)):  # FIXME: not fast
+            if not isinstance(headers[i], str):
+                raise ValueError("headers should be a tuple of strings if set")
+            curl_headers = curl_slist_append(curl_headers, headers[i])
+        # FIXME: free the slist eventually
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
 
         if auth is not None:
             if (  # FIXME: not fast
-                len(auth) != 2
+                not isinstance(auth, tuple)
+                or len(auth) != 2
                 or not isinstance(auth[0], str)
                 or not isinstance(auth[1], str)
             ):
+                print(auth)
                 raise ValueError("auth must be a 2-tuple of strings")
             acurl_easy_setopt_cstr(curl, CURLOPT_USERPWD, auth[0] + ":" + auth[1])
 
         if cert is not None:
             if (  # FIXME: not fast
-                len(cert) != 2
+                not isinstance(cert, tuple)
+                or len(cert) != 2
                 or not isinstance(cert[0], str)
                 or not isinstance(cert[1], str)
             ):
@@ -144,8 +146,8 @@ cdef class Session:
         allow_redirects=True,
         max_redirects=5,
     ):
-        if not isinstance(method, str):
-            raise ValueError("method must be a string")
+        if not isinstance(method, bytes):
+            raise ValueError("method must be bytes")
         if not isinstance(url, str):
             raise ValueError("url must be a string")
         headers = dict(headers)
@@ -186,7 +188,7 @@ cdef class Session:
             ):
                 max_redirects -= 1
                 if response.status_code in {301, 302, 303}:
-                    method = "GET"
+                    method = b"GET"
                     data = None
                 old_response = response
                 c_response = await self._inner_request(
@@ -211,4 +213,4 @@ cdef class Session:
         return response
 
     async def get(self, *args, **kwargs):
-        return await self._outer_request("GET", *args, **kwargs)
+        return await self._outer_request(b"GET", *args, **kwargs)
