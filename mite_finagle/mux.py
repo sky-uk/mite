@@ -353,4 +353,4 @@ class Lease(Message):
 
     class Fields:
         unit: Int(1)
-        howmuch: INt(8)
+        howmuch: Int(8)
