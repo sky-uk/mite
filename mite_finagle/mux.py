@@ -36,6 +36,16 @@ class String:
         return self._length.serialize(len(s)) + s
 
 
+class RestString:
+    """A string, occupying the rest of the message."""
+    def read(self, input):
+        r = input.read()
+        return r
+
+    def serialize(self, s):
+        return s
+
+
 class Dict:
     """A dictionary.
 
@@ -115,6 +125,7 @@ class _MessageMeta(type):
             r[x.type] = x
             if (reply_cls := getattr(x, "Reply", None)) is not None:
                 r[-x.type] = reply_cls
+        r[-62] = Discarded  # Exceptionally
         return r
 
     def __new__(cls, name, bases, namespace):
@@ -327,3 +338,19 @@ class Dispatch(Message):
 
     def args_for_reply(self, body, status=DispatchStatus.OK):
         return {"status": status, "context": self.context, "body": body}
+
+
+class Discarded(Message):
+    type = 66
+
+    class Fields:
+        discard_tag: Int(3)
+        why: RestString()
+
+
+class Lease(Message):
+    type = 67
+
+    class Fields:
+        unit: Int(1)
+        howmuch: INt(8)
