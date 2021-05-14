@@ -236,9 +236,9 @@ class ThriftMessageFactory:
                     # obj = t[3][1][0]
                     # value = obj(**self._get_args_for_spec(obj.thrift_spec))
                     # kwargs[name] = [value]
-                    kwargs[name] = []
+                    kwargs[name] = ()  # use tuple so it's hashable
                 elif member_type in _SIMPLE_TYPES:
-                    kwargs[name] = [self._get_simple_type(member_type)]
+                    kwargs[name] = (self._get_simple_type(member_type),)
                 else:
                     raise Exception("unk member type")
             else:
