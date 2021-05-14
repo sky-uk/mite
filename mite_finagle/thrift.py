@@ -211,6 +211,13 @@ class ThriftMessageFactory:
                 kwargs[name] = t[3][0](**self._get_args_for_spec(t[3][0].thrift_spec))
             elif inner_type == TType.MAP:
                 key_type = t[3][0]
+                if key_type == TType.STRUCT:
+                    obj = t[3][1][0]
+                    key = obj(**self._get_args_for_spec(obj.thrift_spec))
+                elif key_type in _SIMPLE_TYPES:
+                    key = self._get_simple_type(key_type)
+                else:
+                    raise Exception("unk key")
                 value_type = t[3][2]
                 if value_type == TType.STRUCT:
                     obj = t[3][3][0]
@@ -218,9 +225,8 @@ class ThriftMessageFactory:
                 elif value_type in _SIMPLE_TYPES:
                     value = self._get_simple_type(value_type)
                 else:
-                    breakpoint()
                     raise Exception("unk val")
-                kwargs[name] = {self._get_simple_type(key_type): value}
+                kwargs[name] = {key: value}
             elif inner_type == TType.LIST:
                 member_type = t[3][0]
                 if member_type == TType.STRUCT:
