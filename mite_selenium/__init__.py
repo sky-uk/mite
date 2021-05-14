@@ -170,6 +170,8 @@ class _SeleniumWrapper:
     def switch_to_iframe(self, locator):
         self._remote.switch_to.frame(self._remote.find_element(*locator))
 
+    def current_url(self):
+        return self._remote.current_url
 
 class JsMetricsContext:
     def __init__(self, browser):
