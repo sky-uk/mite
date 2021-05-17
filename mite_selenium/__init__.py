@@ -173,6 +173,7 @@ class _SeleniumWrapper:
     def current_url(self):
         return self._remote.current_url
 
+
 class JsMetricsContext:
     def __init__(self, browser):
         self._browser = browser
