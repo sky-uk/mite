@@ -159,13 +159,19 @@ class _SeleniumWrapper:
     def wait_for_element(self, locator, timeout=5):
         return self._wait_for(EC.presence_of_element_located, locator, timeout)
 
+    def wait_for_url(self, locator, timeout=5):
+        return self._wait_for(EC.url_to_be, locator, timeout)
+
     def _wait_for(self, condition_func, locator, timeout=5):
         try:
             return WebDriverWait(self._remote, timeout).until(condition_func(locator))
         except TimeoutException as te:
-            raise MiteError(
-                f"Timed out trying to find element '{locator}' in the dom"
-            ) from te
+            if EC.url_to_be == condition_func:
+                raise MiteError(f"Timed out waiting for url to be '{locator}'") from te
+            else:
+                raise MiteError(
+                    f"Timed out trying to find element '{locator}' in the dom"
+                ) from te
 
     def switch_to_iframe(self, locator):
         self._remote.switch_to.frame(self._remote.find_element(*locator))

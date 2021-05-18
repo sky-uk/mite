@@ -127,8 +127,36 @@ def test_wait_for_element_raises_timeout_exception():
         wrapper._start()
         locator = ("foo", "bar")
         mock_web_driver_wait.return_value.until.side_effect = TimeoutException
-        with pytest.raises(MiteError, match="Timed out"):
+        with pytest.raises(MiteError, match="Timed out trying to find element"):
             wrapper.wait_for_element(locator, timeout=7)
+
+
+def test_wait_for_url():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote") as mock_remote, patch(
+        "mite_selenium.WebDriverWait"
+    ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
+        wrapper._start()
+        locator = "https://google.com"
+        wrapper.wait_for_url(locator, timeout=7)
+
+        mock_web_driver_wait.assert_called_once_with(mock_remote.return_value, 7)
+        mock_web_driver_wait.return_value.until.assert_called_once_with(
+            mock_ec.url_to_be.return_value
+        )
+        mock_ec.url_to_be.assert_called_once_with(locator)
+
+
+def test_wait_for_url_raises_timeout_exception():
+    wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
+    with patch("mite_selenium.Remote"), patch(
+        "mite_selenium.WebDriverWait"
+    ) as mock_web_driver_wait, patch("mite_selenium.EC"):
+        wrapper._start()
+        locator = "https://google.com"
+        mock_web_driver_wait.return_value.until.side_effect = TimeoutException
+        with pytest.raises(MiteError, match="Timed out waiting for url to be"):
+            wrapper.wait_for_url(locator, timeout=7)
 
 
 def test_webdriver_get():
