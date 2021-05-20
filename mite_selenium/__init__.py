@@ -1,12 +1,14 @@
 import logging
+import socket
 import time
 from contextlib import asynccontextmanager
 from functools import wraps
 
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver import Remote
+from selenium.webdriver import Remote as SeleniumRemote
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from seleniumwire.webdriver import Remote as SeleniumWireRemote
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
@@ -34,6 +36,8 @@ class _SeleniumWrapper:
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
         self._capabilities = spec_import(self._capabilities)
+        self._seleniumwire_options = self._spec_import_if_none("seleniumwire_options")
+        self._is_selenium_wire = self._seleniumwire_options is not None
 
     def _spec_import_if_none(self, config_option):
         value = self._context.config.get(config_option, None)
@@ -43,19 +47,41 @@ class _SeleniumWrapper:
 
     def _start(self):
         self._context.browser = self
-        self._remote = Remote(
-            desired_capabilities=self._capabilities,
-            command_executor=self._command_executor,
-            browser_profile=self._browser_profile,
-            proxy=self._proxy,
-            keep_alive=self._keep_alive,
-            file_detector=self._file_detector,
-            options=self._options,
-        )
+        try:
+            if self._is_selenium_wire:
+                addr = socket.gethostbyname(socket.gethostname())
+                self._remote = SeleniumWireRemote(
+                    desired_capabilities=self._capabilities,
+                    command_executor=self._command_executor,
+                    browser_profile=self._browser_profile,
+                    proxy=self._proxy,
+                    keep_alive=self._keep_alive,
+                    file_detector=self._file_detector,
+                    options=self._options,
+                    seleniumwire_options={
+                        **self._seleniumwire_options,
+                        **{"addr": addr},
+                    },
+                )
+                logger.debug(f"Selenium-wire machine IP: {addr}")
+            else:
+                self._remote = SeleniumRemote(
+                    desired_capabilities=self._capabilities,
+                    command_executor=self._command_executor,
+                    browser_profile=self._browser_profile,
+                    proxy=self._proxy,
+                    keep_alive=self._keep_alive,
+                    file_detector=self._file_detector,
+                    options=self._options,
+                )
+        except Exception as e:
+            logger.error(str(e))
+            raise e
+
         self._context.raw_webdriver = self._remote
 
-    def _stop(self):
-        self._remote.close()
+    def _quit(self):
+        self._remote.quit()
 
     def _browser_has_timing_capabilities(self):
         return self._remote.capabilities["browserName"] == "chrome"
@@ -186,9 +212,17 @@ class _SeleniumWrapper:
     def switch_to_iframe(self, locator):
         self._remote.switch_to.frame(self._remote.find_element(*locator))
 
+    def add_request_interceptor(self, request_interceptor):
+        if self.is_selenium_wire:
+            self._remote.request_interceptor = request_interceptor
+
     @property
     def current_url(self):
         return self._remote.current_url
+
+    @property
+    def is_selenium_wire(self):
+        return self._is_selenium_wire
 
 
 class JsMetricsContext:
@@ -214,7 +248,7 @@ async def _selenium_context_manager(context):
         sw._start()
         yield
     finally:
-        sw._stop()
+        sw._quit()
 
 
 def mite_selenium(func):
