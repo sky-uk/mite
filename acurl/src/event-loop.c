@@ -185,7 +185,7 @@ EventLoop_new(PyTypeObject *type, PyObject *UNUSED(args), PyObject *UNUSED(kwds)
     int curl_easy_cleanup[2];
     self->timer_id = NO_ACTIVE_TIMER_ID;
     self->multi = curl_multi_init();
-    curl_multi_setopt(self->multi, CURLMOPT_MAXCONNECTS, 1000); /* FIXME: magic number */
+    curl_multi_setopt(self->multi, CURLMOPT_MAXCONNECTS, 100000); /* FIXME: magic number */
     curl_multi_setopt(self->multi, CURLMOPT_SOCKETFUNCTION, socket_callback);
     curl_multi_setopt(self->multi, CURLMOPT_SOCKETDATA, self);
     curl_multi_setopt(self->multi, CURLMOPT_TIMERFUNCTION, timer_callback);

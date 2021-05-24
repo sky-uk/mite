@@ -170,7 +170,7 @@ Session_request(Session *self, PyObject *args, PyObject *kwds)
         free(rd->auth);
     }
     if(rd->ca_cert) {
-	free(rd->ca_cert);
+        free(rd->ca_cert);
     }
     if(rd->ca_key) {
         free(rd->ca_key);
