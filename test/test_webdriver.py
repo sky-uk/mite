@@ -205,7 +205,7 @@ async def test_selenium_context_manager():
     context = MockContext()
     context.config = DICT_CAPABILITIES_CONFIG
 
-    @mite_selenium
+    @mite_selenium()
     async def test(context):
         pass
 
