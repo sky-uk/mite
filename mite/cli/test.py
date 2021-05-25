@@ -70,7 +70,9 @@ def _setup_msg_processors(receiver, opts):
     receiver.add_listener(recorder.process_message)
     receiver.add_raw_listener(collector.process_raw_message)
 
-    extra_processors = [spec_import(x)() for x in opts["--message-processors"].split(",")]
+    extra_processors = [
+        spec_import(x)() for x in opts["--message-processors"].split(",") if x
+    ]
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)
