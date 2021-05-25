@@ -1,11 +1,11 @@
-from io import BytesIO
-from functools import cached_property
 import enum
 import typing
+from io import BytesIO
 
 
 class Int:
     """An integer encoded in `length` bytes, optionally signed."""
+
     def __init__(self, length, signed=False):
         self._length = length
         self._signed = signed
@@ -22,6 +22,7 @@ class Int:
 
 class String:
     """A string, prefixed with its length packed into `len_bytes` bytes."""
+
     def __init__(self, len_bytes):
         self._length = Int(len_bytes)
 
@@ -38,6 +39,7 @@ class String:
 
 class RestString:
     """A string, occupying the rest of the message."""
+
     def read(self, input):
         r = input.read()
         return r
@@ -54,6 +56,7 @@ class Dict:
     `strlen_bytes`.
 
     """
+
     def __init__(self, len_bytes, strlen_bytes):
         self._length = Int(len_bytes)
         self._string = String(strlen_bytes)
@@ -86,6 +89,7 @@ class RestDict:
     the input is exhausted.
 
     """
+
     def __init__(self, strlen_bytes):
         self._string = String(strlen_bytes)
 
@@ -99,7 +103,9 @@ class RestDict:
         return d
 
     def serialize(self, d):
-        return b"".join(self._string.serialize(k) + self._string.serialize(v) for k, v in d.items())
+        return b"".join(
+            self._string.serialize(k) + self._string.serialize(v) for k, v in d.items()
+        )
 
 
 class Body:
@@ -109,6 +115,7 @@ class Body:
     rest of the message tile the end.
 
     """
+
     def read(self, input):
         return input.read()
 
@@ -179,6 +186,7 @@ class Message(metaclass=_MessageMeta):
     `make_reply` for constructing replies to messages.
 
     """
+
     def __init__(self, tag, *args, **kwargs):
         self.tag = tag
         field_names = [name for name, _ in self._fields() if name not in kwargs]
@@ -277,6 +285,7 @@ class Ping(Message):
     Can be sent by either side of the connection.
 
     """
+
     type = 65
 
     class Fields:
@@ -289,6 +298,7 @@ class Init(Message):
     Sent from client to server on connection establishment.
 
     """
+
     type = 68
 
     class Fields:
@@ -301,6 +311,7 @@ class Init(Message):
 
 class CanTinit(Message):
     """TODO: document this"""
+
     type = 127
 
     class Fields:
@@ -315,6 +326,7 @@ class CanTinit(Message):
 
 class DispatchStatus(enum.IntEnum):
     """Status codes for a Mux RPC call."""
+
     OK = 0
     ERROR = 1
     NACK = 2
@@ -322,6 +334,7 @@ class DispatchStatus(enum.IntEnum):
 
 class Dispatch(Message):
     """TODO: document this"""
+
     type = 2
 
     class Fields:

@@ -1,6 +1,6 @@
-import threading
-import pytest
 import asyncio
+
+import pytest
 
 
 class SocketFixture:

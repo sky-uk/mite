@@ -1,6 +1,7 @@
+from pytest import raises
+
 from mite.scenario import StopScenario
 from mite.volume_model import Constant, Nothing, Ramp
-from pytest import raises
 
 
 class TestNothing:

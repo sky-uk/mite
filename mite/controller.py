@@ -1,7 +1,7 @@
+import logging
+import time
 from collections import defaultdict, deque
 from itertools import count
-import time
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -123,12 +123,12 @@ class Controller:
         actual = self._work_tracker.get_total_work(active_runner_ids)
         sender(
             {
-                'type': 'controller_report',
-                'time': time.time(),
-                'test': self._testname,
-                'required': required,
-                'actual': dict(actual),
-                'num_runners': len(active_runner_ids),
+                "type": "controller_report",
+                "time": time.time(),
+                "test": self._testname,
+                "required": required,
+                "actual": dict(actual),
+                "num_runners": len(active_runner_ids),
             }
         )
 
