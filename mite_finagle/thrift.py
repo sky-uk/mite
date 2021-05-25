@@ -198,8 +198,9 @@ class ThriftMessageFactory:
         if overrides is None:
             overrides = {}
         overrides = overrides.get(self._fn_name, {})
-        for i, t in enumerate(spec):
+        for t in spec:
             if not isinstance(t, tuple):
+                # FIXME: other than None, what non-tuples do we see?
                 continue
             name = t[2]
             inner_type = t[1]
