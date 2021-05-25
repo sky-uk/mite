@@ -205,6 +205,23 @@ async def test_selenium_context_manager():
     context = MockContext()
     context.config = DICT_CAPABILITIES_CONFIG
 
+    @mite_selenium
+    async def test(context):
+        pass
+
+    # patch with async decorator misbehaving
+    with patch("mite_selenium.Remote", autospec=True) as mock_remote:
+        await test(context)
+
+    mock_remote.assert_called()
+    mock_remote().close.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_selenium_context_manager_with_parens():
+    context = MockContext()
+    context.config = DICT_CAPABILITIES_CONFIG
+
     @mite_selenium()
     async def test(context):
         pass

@@ -37,7 +37,7 @@ class _SeleniumWrapper:
         self._capabilities = self._context.config.get("webdriver_capabilities")
         self._capabilities = spec_import(self._capabilities)
 
-    def _spec_import_if_none(self, config_option):
+    def _spec_import_if_not_none(self, config_option):
         value = self._context.config.get(config_option, None)
         if value:
             value = spec_import(value)
@@ -211,10 +211,9 @@ class JsMetricsContext:
 
 
 class _SeleniumWireWrapper(_SeleniumWrapper):
-    def __init__(self, context, selenium_wire_remote):
+    def __init__(self, context):
         super().__init__(context)
-        self._selenium_wire_remote = selenium_wire_remote
-        self._seleniumwire_options = self._spec_import_if_none("seleniumwire_options")
+        self._seleniumwire_options = self._spec_import_if_not_none("seleniumwire_options")
 
     def _start(self):
         self._context.browser = self
@@ -240,30 +239,42 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
 
 
 @asynccontextmanager
-async def _selenium_context_manager(context, selenium_wire_remote=None):
+async def _selenium_context_manager(context, wire):
+    if wire:
+        sw = _SeleniumWireWrapper(context)
+    else:
+        sw = _SeleniumWrapper(context)
+
     try:
-        if selenium_wire_remote:
-            sw = _SeleniumWireWrapper(context, selenium_wire_remote)
-        else:
-            sw = _SeleniumWrapper(context)
         sw._start()
         yield
     finally:
         sw._quit()
 
 
-def mite_selenium(wire=False):
+def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
-        selenium_wire_remote = None
         if wire:
-            module = importlib.import_module("seleniumwire.webdriver")
-            selenium_wire_remote = getattr(module, "Remote")
+            try:
+                importlib.import_module("seleniumwire.webdriver")
+            except ModuleNotFoundError:
+                raise Exception(
+                    "The wire=True argument to mite_selenium is only supported "
+                    + "if mite was installed with the selenium_wire extra"
+                )
 
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
-            async with _selenium_context_manager(ctx, selenium_wire_remote):
+            async with _selenium_context_manager(ctx, wire):
                 return await func(ctx, *args, **kwargs)
 
         return wrapper
 
-    return wrapper_factory
+    if len(args) == 0:
+        # invoked as @mite_selenium(wire=...) def foo(...)
+        return wrapper_factory
+    elif len(args) > 1:
+        raise Exception("Anomalous invocation of mite_welenium decorator")
+    else:
+        # len(args) == 1; invoked as @mite_selenium def foo(...)
+        return wrapper_factory(args[0])
