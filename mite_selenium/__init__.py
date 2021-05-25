@@ -213,12 +213,15 @@ class JsMetricsContext:
 class _SeleniumWireWrapper(_SeleniumWrapper):
     def __init__(self, context):
         super().__init__(context)
-        self._seleniumwire_options = self._spec_import_if_not_none("seleniumwire_options")
+        self._seleniumwire_options = (
+            self._spec_import_if_not_none("seleniumwire_options") or {}
+        )
 
     def _start(self):
+        module = importlib.import_module("seleniumwire.webdriver")
         self._context.browser = self
         addr = socket.gethostbyname(socket.gethostname())
-        self._remote = self._selenium_wire_remote(
+        self._remote = module.Remote(
             desired_capabilities=self._capabilities,
             command_executor=self._command_executor,
             browser_profile=self._browser_profile,
@@ -260,7 +263,7 @@ def mite_selenium(*args, wire=False):
             except ModuleNotFoundError:
                 raise Exception(
                     "The wire=True argument to mite_selenium is only supported "
-                    + "if mite was installed with the selenium_wire extra"
+                    + "if mite was installed with the 'selenium_wire' extra"
                 )
 
         @wraps(func)
