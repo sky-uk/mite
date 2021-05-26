@@ -60,7 +60,7 @@ def test_webdriver_capabilities_as_dict():
     assert wrapper._capabilities == {"browser": "Chrome"}
 
 
-@patch("mite_selenium.Remote", autospec=True)
+@patch("mite_selenium.SeleniumRemote", autospec=True)
 def test_webdriver_start_stop(MockRemote):
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
     wrapper._start()
@@ -73,10 +73,10 @@ def test_webdriver_start_stop(MockRemote):
         options=None,
         proxy=None,
     )
-    wrapper._stop()
+    wrapper._quit()
     # For some reason, calling the Mock provides a reference to the instance
     # that was created when the mock was previously instantiated
-    MockRemote().close.assert_called()
+    MockRemote().quit.assert_called()
 
 
 def test_get_js_metrics_context():
@@ -89,7 +89,7 @@ def test_get_js_metrics_context():
 @pytest.mark.asyncio
 async def test_js_metrics_context_manager():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote") as mock_remote:
+    with patch("mite_selenium.SeleniumRemote") as mock_remote:
         wrapper._start()
         js_context = wrapper.get_js_metrics_context()
 
@@ -105,7 +105,7 @@ async def test_js_metrics_context_manager():
 
 def test_wait_for_element():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote") as mock_remote, patch(
+    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
         wrapper._start()
@@ -121,7 +121,7 @@ def test_wait_for_element():
 
 def test_wait_for_element_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote"), patch(
+    with patch("mite_selenium.SeleniumRemote"), patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC"):
         wrapper._start()
@@ -133,7 +133,7 @@ def test_wait_for_element_raises_timeout_exception():
 
 def test_wait_for_elements():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote") as mock_remote, patch(
+    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
         wrapper._start()
@@ -149,7 +149,7 @@ def test_wait_for_elements():
 
 def test_wait_for_elements_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote"), patch(
+    with patch("mite_selenium.SeleniumRemote"), patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC"):
         wrapper._start()
@@ -161,7 +161,7 @@ def test_wait_for_elements_raises_timeout_exception():
 
 def test_wait_for_url():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote") as mock_remote, patch(
+    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
         wrapper._start()
@@ -177,7 +177,7 @@ def test_wait_for_url():
 
 def test_wait_for_url_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote"), patch(
+    with patch("mite_selenium.SeleniumRemote"), patch(
         "mite_selenium.WebDriverWait"
     ) as mock_web_driver_wait, patch("mite_selenium.EC"):
         wrapper._start()
@@ -189,7 +189,7 @@ def test_wait_for_url_raises_timeout_exception():
 
 def test_webdriver_get():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.Remote") as mock_remote:
+    with patch("mite_selenium.SeleniumRemote") as mock_remote:
         mock_remote.return_value.capabilities = {"browserName": "chrome"}
         wrapper._start()
         wrapper.get("https://google.com")
@@ -210,11 +210,28 @@ async def test_selenium_context_manager():
         pass
 
     # patch with async decorator misbehaving
-    with patch("mite_selenium.Remote", autospec=True) as mock_remote:
+    with patch("mite_selenium.SeleniumRemote", autospec=True) as mock_remote:
         await test(context)
 
     mock_remote.assert_called()
-    mock_remote().close.assert_called()
+    mock_remote().quit.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_selenium_context_manager_with_parens():
+    context = MockContext()
+    context.config = DICT_CAPABILITIES_CONFIG
+
+    @mite_selenium()
+    async def test(context):
+        pass
+
+    # patch with async decorator misbehaving
+    with patch("mite_selenium.SeleniumRemote", autospec=True) as mock_remote:
+        await test(context)
+
+    mock_remote.assert_called()
+    mock_remote().quit.assert_called()
 
 
 def _setup_wrapper(capabilites):
