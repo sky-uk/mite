@@ -1,5 +1,5 @@
 import json
-import os
+import time
 
 from jinja2 import Template
 
@@ -91,13 +91,16 @@ def _render_journey_transaction(
 
 
 def har_convert_to_mite(file_name, converted_file_name, sleep_s):
-    # TODO: accurate sleep times should be made possible by extracting the timestamps from the har file
-    base_path = os.getcwd()
-    with open(base_path + "/" + file_name.lstrip("/"), "r") as f:
+    with open(file_name, "r") as f:
         temp_pages = json.loads(f.read())
     journey_main = ""
     page_urls = _parse_urls(temp_pages)
     entries = _extract_and_sort_requests(temp_pages)
+    timestamp = time.strptime(
+        temp_pages["log"]["pages"][0]["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
+    previous_timestamp = time.mktime(timestamp)
+    sleep_period = 0
 
     for cur_page in entries:
         if (
@@ -111,12 +114,22 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
         )
         req_method = cur_page["request"]["method"].lower()
 
+        if sleep_s != 0:
+            sleep_period = sleep_s
+        else:
+            timestamp = time.strptime(
+                cur_page["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            timestamp = time.mktime(timestamp)
+            sleep_period = int(timestamp - previous_timestamp)
+            previous_timestamp = timestamp
+
         # main part of the journey
         journey_main += _render_journey_transaction(
-            cur_page, req_method, expected_status_code, check_groups_status, sleep_s
+            cur_page, req_method, expected_status_code, check_groups_status, sleep_period
         )
 
     journey_start = _create_journey_file_start()
 
-    with open(base_path + "/" + converted_file_name.lstrip("/"), "w") as nf:
+    with open(converted_file_name, "w") as nf:
         nf.write(journey_start + journey_main)

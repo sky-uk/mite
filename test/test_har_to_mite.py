@@ -1,4 +1,6 @@
+import os
 from copy import deepcopy
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -6,6 +8,7 @@ from mite.har_to_mite import (
     _extract_and_sort_requests,
     _parse_urls,
     _render_journey_transaction,
+    har_convert_to_mite,
     set_expected_status_code,
     set_request_body,
     set_request_headers_dict,
@@ -203,6 +206,32 @@ def test_parse_urls():
 def test_extract_and_sort_requests():
     urls = [page["request"]["url"] for page in _extract_and_sort_requests(PAGES_200)]
     assert urls == ["random_page.url", "302_redirection.url", "a_page.url"]
+
+
+def test_har_convert_to_mite():
+    with NamedTemporaryFile() as test_har:
+        testinputfile = os.path.join(os.path.dirname(__file__), "test.har")
+        testoutputfile = test_har.name
+
+        har_convert_to_mite(testinputfile, testoutputfile, 0)
+
+        with open(testoutputfile, "r") as testharoutfile:
+            testharstr = testharoutfile.read()
+        assert "await sleep(0)" in testharstr
+        assert "await sleep(49)" in testharstr
+        assert "await sleep(4)" in testharstr
+
+
+def test_har_convert_to_mite_10secs():
+    with NamedTemporaryFile() as test_har:
+        testinputfile = os.path.join(os.path.dirname(__file__), "test.har")
+        testoutputfile = test_har.name
+
+        har_convert_to_mite(testinputfile, testoutputfile, 10)
+
+        with open(testoutputfile, "r") as testharoutfile:
+            testharstr = testharoutfile.read()
+        assert "await sleep(10)" in testharstr
 
 
 @pytest.mark.skip(reason="unfinished")

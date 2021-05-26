@@ -64,6 +64,8 @@ class ScenarioManager:
                     scenario_id,
                 )
                 del self._scenarios[scenario_id]
+                if len(self._scenarios) == 0:
+                    logger.info("All scenarios have been removed from scenario tracker")
             else:
                 required[scenario_id] = number
         self._current_period_end = end_of_period
@@ -133,6 +135,8 @@ class ScenarioManager:
                             "Removed scenario %d because data pool exhausted", scenario_id
                         )
                         del self._scenarios[scenario_id]
+                        if len(self._scenarios) == 0:
+                            logger.info("All scenarios removed from scenario tracker")
                         continue
                     else:
                         if dpi is None:
