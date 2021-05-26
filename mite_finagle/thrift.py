@@ -29,7 +29,9 @@ async def _result_wait(self, seconds):
         # (like all variables in python) has function scope
         to_sleep = seconds - (time.time() - sent_time)
     if to_sleep > 0:
+        print(time.time(), "sleeping for", to_sleep)
         await asyncio.sleep(to_sleep)
+        print(time.time(), "done sleeping")
     else:
         # FIXME: log a warning
         pass

@@ -37,37 +37,37 @@ class MiteFinagleConnection:
         self._replies = asyncio.Queue()
         # FIXME: some sort of length limit to keep this from leaking...?
         self._in_flight = {}
+        self._pending = ()
 
     async def __aenter__(self):
         self._reader, self._writer = await asyncio.open_connection(
             self._address, self._port
         )
-        # await self._send_raw(CanTinit(next(self._tags), b"tinit check"))
-        # await self._main_loop(return_after_reply=CanTinit)
-        # await self._send_raw(Init(next(self._tags), 1))
-        # await self._main_loop(return_after_reply=Init)
-        return  # FIXME: to get the folding right
 
     async def __aexit__(self, exc_type, exc, tb):
         # FIXME: handle errors
         # Do we need to clean up the reader...?
+        for task in self._pending:
+            task.cancel()
         self._writer.close()
         await self._writer.wait_closed()
 
     async def replies(self):
-        pending = (self._main_loop(), self._replies.get())
+        self._pending = (self._main_loop(), self._replies.get())
         while True:
-            done, pending = await asyncio.wait(
-                pending,
+            done, self._pending = await asyncio.wait(
+                self._pending,
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for x in done:
                 yield self._process_result(x.result())
-            pending = (self._replies.get(), *pending)
+            self._pending = (self._replies.get(), *self._pending)
 
-    async def send(self, factory, *args, **kwargs):
+    async def send(self, factory, *args, mux_context={}, **kwargs):
         tag = next(_TAGS)
-        mux_msg = Dispatch(tag, {}, b"", {}, factory.get_request_bytes(*args, **kwargs))
+        mux_msg = Dispatch(
+            tag, mux_context, b"", {}, factory.get_request_bytes(*args, **kwargs)
+        )
         # A bit of an awkward dance.  We want to save the time the message was
         # sent, so that the chained_wait function can work.  We can't just
         # store the current time on the next line, though, because we are
@@ -78,11 +78,13 @@ class MiteFinagleConnection:
         # of async events, for the message reply to be processed by _main_loop
         # before control returns from the await.  (The timings of network
         # roundtrips on a remote connection make it vanishingly unlikely, but
-        # that's nto the same as impossible.)  So we need to have a two-step
+        # that's not the same as impossible.)  So we need to have a two-step
         # procedure: save the reference to the outgoing message's factory
         # before sending it, then save the time it was sent afterwards.
         self._in_flight[tag] = [factory, None]
+        print(time.time(), "send", tag)
         sent_time = await self._send_raw(mux_msg)
+        print(time.time(), "sent", tag)
         self._in_flight[tag][1] = sent_time
         return tag
 
@@ -102,6 +104,7 @@ class MiteFinagleConnection:
         while True:
             message = await Message.read_from_async_stream(self._reader)
             # print("recv", message.to_bytes())
+            print(time.time(), "read", message.tag, self._replies.qsize())
             if message.type in (Ping.type, Init.type, CanTinit.type):
                 await self._send_raw(message.make_reply())
             elif message.type in (Ping.Reply.type, Init.Reply.type, CanTinit.Reply.type):
@@ -123,7 +126,7 @@ class MiteFinagleConnection:
                 )
                 if return_msg is not None and return_msg == message.tag:
                     return reply
-                await self._replies.put(reply)
+                self._replies.put_nowait(reply)
             else:
                 breakpoint()
                 raise Exception("unknown type")

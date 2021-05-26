@@ -262,11 +262,9 @@ class Message(metaclass=_MessageMeta):
     @classmethod
     async def read_from_async_stream(cls, stream):
         """Read from an async I/O stream."""
-        size_bytes = await stream.read(4)
-        if len(size_bytes) != 4:
-            raise ValueError("couldn't read size")
+        size_bytes = await stream.readexactly(4)
         size = int.from_bytes(size_bytes, "big")
-        msg = await stream.read(size)
+        msg = await stream.readexactly(size)
         return cls.from_bytes(msg)
 
     def make_reply(self, *args, **kwargs):
