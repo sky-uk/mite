@@ -2,7 +2,7 @@ import os
 import sys
 from unittest.mock import patch
 
-from pytest import raises, mark
+from pytest import mark, raises
 from thrift.Thrift import TApplicationException
 
 from mite_finagle.thrift import ThriftMessageFactory, _ThriftError

@@ -4,15 +4,7 @@ import hypothesis.strategies as st
 from hypothesis import example, given
 from pytest import mark, raises
 
-from mite_finagle.mux import (
-    CanTinit,
-    Dispatch,
-    Init,
-    Message,
-    Ping,
-    String,
-    Dict,
-)
+from mite_finagle.mux import CanTinit, Dict, Dispatch, Init, Message, Ping, String
 
 
 class TestUtils:

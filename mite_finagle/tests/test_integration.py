@@ -5,9 +5,6 @@ from random import randint
 from unittest.mock import patch
 
 import pytest
-from thrift.protocol.TBinaryProtocol import TBinaryProtocol
-from thrift.Thrift import TMessageType
-from thrift.transport import TTransport
 
 from mite_finagle import mite_finagle
 from mite_finagle.mux import Dispatch, DispatchStatus, Message
@@ -16,7 +13,7 @@ from mite_finagle.thrift import ThriftMessageFactory
 old_path = sys.path
 sys.path = list(sys.path)
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from foo_service.Foo import Client, performfoo_result  # noqa: E402
+from foo_service.Foo import Client  # noqa: E402
 from foo_service.ttypes import FooRequest  # noqa: E402
 
 sys.path = old_path
