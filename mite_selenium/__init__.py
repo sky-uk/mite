@@ -220,7 +220,10 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
     def _start(self):
         module = importlib.import_module("seleniumwire.webdriver")
         self._context.browser = self
-        addr = socket.gethostbyname(socket.gethostname())
+        try:
+            addr = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            addr = "127.0.0.1"
         self._remote = module.Remote(
             desired_capabilities=self._capabilities,
             command_executor=self._command_executor,
@@ -230,8 +233,8 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
             file_detector=self._file_detector,
             options=self._options,
             seleniumwire_options={
-                **self._seleniumwire_options,
                 **{"addr": addr},
+                **self._seleniumwire_options,
             },
         )
         logger.debug(f"Selenium-wire machine IP: {addr}")
