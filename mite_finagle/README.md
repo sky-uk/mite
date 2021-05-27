@@ -108,7 +108,60 @@ we probably want to do some renaming.
 
 ### Mux protocol code
 
+This code includes an impementation of the finagle Mux binary protocol,
+which is documented
+[here](https://github.com/twitter/finagle/blob/91ff887d297f5d7b46dfec703fa6486a45b18b9b/finagle-mux/src/main/scala/com/twitter/finagle/mux/package.scala#).
+(See also:
+[1](https://github.com/twitter/finagle/blob/91ff887d297f5d7b46dfec703fa6486a45b18b9b/finagle-mux/src/main/scala/com/twitter/finagle/mux/transport/Message.scala#L47)
+about the message type constants,
+[2](https://github.com/twitter/finagle/blob/25878bda54de2d59ac11549a709e4cb1488f3d37/finagle-mux/src/main/scala/com/twitter/finagle/mux/pushsession/MuxServerNegotiator.scala#L70)
+about the slightly odd version negotiation handshake)
+There are three parts to this implementation:
+1. General serialization utility classes, which are responsible for
+   reading integers, bytestrings, dictionaries, etc from a stream of
+   bytes according to the mux protocol, an.d serializing them back out
+   again.
+2. The `Message` class (and associated metaclass) which implements the
+   (de)serialization of complete mux messages
+3. Classes for each specific message type
+
+These work together to allow a succinct description of the message
+structure.  Here is an example message definition for a specific kind of
+control message (used during version negotiation):
+
+```
+class CanTinit(Message):
+    type = 127
+
+    class Fields:
+        message: Body()
+
+    class Reply(Message):
+        type = -128
+
+    def args_for_reply(self):
+        return {"message": b"tinit check"}
+```
+
+This says:
+- the type constant of this message is 127
+- the message has one field, a bytestring (“body”)
+- the reply has a non-default type of -128 (usually the type of the
+  reply is the negation of the type of the original message, and this is
+  what is generated if the reply type is omitted)
+- the reply implicitly has the same fields as the original message (but
+  these can be overridden if desired)
+- when constructing a reply to a message received, the `message` will be
+  set to “tinit check” (a magic protocol constant).
+
 ## Testing
+
+There are unit tests in the `tests/` directory.  In addition, there are
+integration tests (well, “test” singular, so far...) in the
+`test_integration.py` file.  The `foo_service` directory is generated
+from the `foo_service.thrift` file using the command in a comment at the
+top of the latter file.  The tests are plumbed into the mite test suite,
+or you can run them with `pytest -- mite_finagle/tests` from the repo root.
 
 ## TODOs / future extension
 
@@ -123,6 +176,10 @@ write the http ones, but get the desired connection reuse behavior that
 we want to simulate the finagle protocol.
 
 ### Better/more complete integration suite
+
+What it says in the title
+
+### Better unit test coverage
 
 What it says in the title
 

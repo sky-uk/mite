@@ -2,6 +2,8 @@ import enum
 import typing
 from io import BytesIO
 
+# Binary serialization utilities
+
 
 class Int:
     """An integer encoded in `length` bytes, optionally signed."""
@@ -121,6 +123,9 @@ class Body:
 
     def serialize(self, value):
         return value
+
+
+# General message class
 
 
 class _MessageMeta(type):
@@ -277,6 +282,9 @@ class Message(metaclass=_MessageMeta):
         return self.Reply(self.tag, **self.args_for_reply(*args, **kwargs))
 
 
+# Specific messages
+
+
 class Ping(Message):
     """A mux ping, to check if the connection is alive.
 
@@ -308,7 +316,7 @@ class Init(Message):
 
 
 class CanTinit(Message):
-    """TODO: document this"""
+    """A special message type used in protocol version negotiation."""
 
     type = 127
 
@@ -331,7 +339,14 @@ class DispatchStatus(enum.IntEnum):
 
 
 class Dispatch(Message):
-    """TODO: document this"""
+    """A RPC procedure call message.
+
+    It contains a context (dictionary of headers), a destination string, a
+    dictionary of delegations (some sort of source-routing construct...) and a
+    bytestring body (which will be a thrift RPC message).  In practice, the
+    destinationa nd delegations are empty for our use cases.
+
+    """
 
     type = 2
 
@@ -352,6 +367,12 @@ class Dispatch(Message):
 
 
 class Discarded(Message):
+    """A message that the protocol explicitly says we should discard.
+
+    Who even knows why it exists but I'm sure there is a reason.
+
+    """
+
     type = 66
 
     class Fields:
@@ -360,6 +381,14 @@ class Discarded(Message):
 
 
 class Lease(Message):
+    """A control message.
+
+    Doesn't mean anything to us and doesn't need a reply; we just need to
+    know how to deserialize it so it doesn't confuse us when we se eit on the
+    wire.
+
+    """
+
     type = 67
 
     class Fields:
