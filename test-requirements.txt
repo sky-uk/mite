@@ -1,7 +1,6 @@
 altair
 hypothesis
 pandas
-pre-commit
 psutil
 pytest
 pytest-asyncio
