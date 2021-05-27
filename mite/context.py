@@ -41,8 +41,6 @@ class Context:
         self._config = config
         self._id_data = id_data or {}
         self._should_stop_func = should_stop_func
-        self._transaction_id = None
-        self._transaction_name = None
         self._debug = debug
         self._trans_id_gen = count(1)
 
