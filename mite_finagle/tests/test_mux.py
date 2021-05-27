@@ -61,7 +61,7 @@ class TestMessages:
     @mark.parametrize(
         "msg_type,args",
         (
-            (Init, (1,)),
+            (Init, (1, {})),
             (Ping, ()),
             (CanTinit, (b"tinit check",)),
             (Dispatch.Reply, (0, {b"foo": b"bar"}, b"quux")),
@@ -76,7 +76,7 @@ class TestMessages:
     @mark.parametrize(
         "msg,b",
         (
-            (Init(1, 1), b"\x00\x00\x00\x06D\x00\x00\x01\x00\x01"),
+            (Init(1, 1, {}), b"\x00\x00\x00\x06D\x00\x00\x01\x00\x01"),
             (Ping(1), b"\x00\x00\x00\x04A\x00\x00\x01"),
             (CanTinit(1, b"tinit check"), b"\x00\x00\x00\x0f\x7f\x00\x00\x01tinit check"),
             (
@@ -95,7 +95,7 @@ class TestMessages:
     @mark.parametrize(
         "msg,b",
         (
-            (Init(1, 1), b"\x00\x00\x00\x06D\x00\x00\x01\x00\x01"),
+            (Init(1, 1, {}), b"\x00\x00\x00\x06D\x00\x00\x01\x00\x01"),
             (Ping(1), b"\x00\x00\x00\x04A\x00\x00\x01"),
             (CanTinit(1, b"tinit check"), b"\x00\x00\x00\x0f\x7f\x00\x00\x01tinit check"),
             (
@@ -114,7 +114,7 @@ class TestMessages:
     @mark.parametrize(
         "f",
         (
-            lambda: Init(1, 1),
+            lambda: Init(1, 1, {}),
             lambda: Ping(1),
             lambda: CanTinit(1, b"tinit check"),
             lambda: Dispatch(1, {b"foo": b"bar"}, b"quux", {b"foo": b"bar"}, b"corge"),
