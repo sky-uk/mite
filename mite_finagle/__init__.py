@@ -95,8 +95,8 @@ class MiteFinagleConnection:
         await self._writer.drain()
         return sent_time
 
-    async def send_and_wait(self, msg_factory, *args, **kwargs):
-        tag = await self.send(msg_factory, *args, **kwargs)
+    async def send_and_wait(self, msg_factory, *args, mux_context={}, **kwargs):
+        tag = await self.send(msg_factory, *args, mux_context=mux_context, **kwargs)
         result = await self._main_loop(return_msg=tag)
         return self._process_result(result)
 
