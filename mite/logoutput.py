@@ -77,10 +77,10 @@ class GenericStatsOutput:
         self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
         self._logger.info(
             f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
-            + f"Req/S:{self._req_recent / dt:.1f} min:{self._resp_time_recent[0]} "
+            + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
             + f"25%:{self._pct(25)} 50%:{self._pct(50)} 75%:{self._pct(75)} "
             + f"90%:{self._pct(90)} 99%:{self._pct(99)} 99.9%:{self._pct(99.9)} "
-            + f"max:{self._resp_time_recent[-1]}",
+            + f"max:{self._pct(100)}",
         )
         self._start_t = t
         del self._resp_time_recent[:]
