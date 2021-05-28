@@ -1,4 +1,5 @@
 import logging
+import math
 import time
 
 
@@ -32,10 +33,10 @@ class DebugMessageOutput:
             self._logger.info(text)
 
 
-class HttpStatsOutput:
+class GenericStatsOutput:
     def __init__(self, period=2):
         self._period = period
-        self._logger = logging.getLogger("Http Stats")
+        self._logger = logging.getLogger(f"{self.log_name} Stats")
         self._start_t = None
         self._req_total = 0
         self._req_recent = 0
@@ -44,23 +45,47 @@ class HttpStatsOutput:
         self._resp_time_recent = []
 
     def _pct(self, percentile):
+        """Percentile calculation with linear interpolation.
+
+        If the samples have an exact split at `percentile`, return that single
+        value; otherwise interpolate the nearest two values.
+
+        Requires that `self._resp_time_recent` is sorted.
+
+        """
         if not self._resp_time_recent:
             return "None"
         assert 0 <= percentile <= 100
         index = (percentile / 100) * (len(self._resp_time_recent) - 1)
-        low_index = int(index)
-        offset = index % 1
-        if offset == 0:
-            return "%.6f" % (self._resp_time_recent[low_index],)
+        fractional_index, index = math.modf(index)
+        index = int(index)
+        if fractional_index == 0:
+            return "%.6f" % (self._resp_time_recent[index],)
         else:
-            a = self._resp_time_recent[low_index]
-            b = self._resp_time_recent[low_index + 1]
-            interpolated_amount = (b - a) * offset
+            a = self._resp_time_recent[index]
+            b = self._resp_time_recent[index + 1]
+            interpolated_amount = (b - a) * fractional_index
             return "%.6f" % (a + interpolated_amount,)
 
     @property
     def error_total(self):
         return self._error_total
+
+    def print_output(self, t):
+        dt = t - self._start_t
+        self._resp_time_recent.sort()
+        self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
+        self._logger.info(
+            f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
+            + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
+            + f"25%:{self._pct(25)} 50%:{self._pct(50)} 75%:{self._pct(75)} "
+            + f"90%:{self._pct(90)} 99%:{self._pct(99)} 99.9%:{self._pct(99.9)} "
+            + f"max:{self._pct(100)}",
+        )
+        self._start_t = t
+        del self._resp_time_recent[:]
+        self._req_recent = 0
+        self._error_recent = 0
 
     def process_message(self, message):
         if "type" not in message:
@@ -70,40 +95,25 @@ class HttpStatsOutput:
         if self._start_t is None:
             self._start_t = t
         if self._start_t + self._period < t:
-            dt = t - self._start_t
-            self._resp_time_recent.sort()
-            self._logger.info(
-                "Total> #Reqs:%d #Errs:%d", self._req_total, self._error_total
-            )
-            self._logger.info(
-                "Last %d Secs> #Reqs:%d #Errs:%d Req/S:%.1f min:%s 25%%:%s 50%%:%s "
-                "75%%:%s 90%%:%s 99%%:%s 99.9%%:%s 99.99%%:%s max:%s",
-                self._period,
-                self._req_recent,
-                self._error_recent,
-                self._req_recent / dt,
-                self._pct(0),
-                self._pct(25),
-                self._pct(50),
-                self._pct(75),
-                self._pct(90),
-                self._pct(99),
-                self._pct(99.9),
-                self._pct(99.99),
-                self._pct(100),
-            )
-            self._start_t = t
-            del self._resp_time_recent[:]
-            self._req_recent = 0
-            self._error_recent = 0
-        if msg_type in {
-            "http_metrics",
-            "http_selenium_page_load_metrics",
-            "http_selenium_network_resource_metrics",
-        }:
+            self.print_output(t)
+        if msg_type in self.message_types:
             self._resp_time_recent.append(message["total_time"])
             self._req_total += 1
             self._req_recent += 1
         elif msg_type in ("error", "exception"):
             self._error_total += 1
             self._error_recent += 1
+
+
+class HttpStatsOutput(GenericStatsOutput):
+    message_types = {
+        "http_metrics",
+        "http_selenium_page_load_metrics",
+        "http_selenium_network_resource_metrics",
+    }
+    log_name = "Http"
+
+
+class FinagleStatsOutput(GenericStatsOutput):
+    message_types = {"finagle_metrics"}
+    log_name = "Finagle"

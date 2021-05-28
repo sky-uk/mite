@@ -1,6 +1,7 @@
 import asyncio
 import atexit
 import time
+
 from sanic import Sanic, response
 
 app = Sanic()
@@ -28,11 +29,7 @@ def exitfn():
 if __name__ == "__main__":
     atexit.register(exitfn)
     loop = asyncio.get_event_loop()
-    server = app.create_server(
-        port=9898,
-        return_asyncio_server=True,
-        access_log=False
-    )
+    server = app.create_server(port=9898, return_asyncio_server=True, access_log=False)
     loop.create_task(server)
     loop.create_task(report())
     try:

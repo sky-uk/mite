@@ -1,11 +1,11 @@
-sanic
-psutil
-pandas
 altair
+hypothesis
+pandas
+psutil
 pytest
 pytest-asyncio
 pytest-cov
-pytest-httpserver
-werkzeug
-pre-commit
 pytest-httpbin
+pytest-httpserver
+sanic
+werkzeug
