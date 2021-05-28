@@ -1,3 +1,4 @@
+import asyncio
 import os
 from unittest.mock import Mock
 
@@ -8,22 +9,23 @@ from pytest import raises
 from mite.context import Context
 from mite.exceptions import MiteError
 
-test_msg = 'test msg for the unit test'
+test_msg = "test msg for the unit test"
 
 
 class MyException(Exception):
     pass
 
 
-def test_send():
+@pytest.mark.asyncio
+async def test_send():
     config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
-    ctx.send('test_type', message=test_msg, transaction='test')
+    ctx.send("test_type", message=test_msg, transaction="test")
 
-    assert sender.messages[-1]['message'] == test_msg
-    assert sender.messages[-1]['type'] == 'test_type'
+    assert sender.messages[-1]["message"] == test_msg
+    assert sender.messages[-1]["type"] == "test_type"
 
 
 @pytest.mark.asyncio
@@ -140,4 +142,33 @@ async def test_mite_error_backtrace_points_to_exn_source():
 
     assert send_fn.call_args_list[0][0][0]["location"].startswith(
         os.path.abspath(__file__)
+    )
+
+
+@pytest.mark.asyncio
+async def test_transaction_name():
+    send_fn = Mock()
+    context = Context(send_fn, {})
+
+    async with context.transaction("A"):
+        assert context._active_transaction[0] == "A"
+        async with context.transaction("B"):
+            assert context._active_transaction[0] == "A :: B"
+        assert context._active_transaction[0] == "A"
+
+
+@pytest.mark.asyncio
+async def test_parallel_transaction_names():
+    send_fn = Mock()
+    context = Context(send_fn, {})
+
+    async def sleepy_transaction(label):
+        async with context.transaction(label):
+            assert context._active_transaction[0] == label
+            await asyncio.sleep(1)
+            assert context._active_transaction[0] == label
+
+    await asyncio.gather(
+        sleepy_transaction("A"),
+        sleepy_transaction("B"),
     )

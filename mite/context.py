@@ -5,12 +5,15 @@ import sys
 import time
 import traceback
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from itertools import count
 from pathlib import PurePath
 
 from .exceptions import MiteError
 
 logger = logging.getLogger(__name__)
+
+active_transaction = ContextVar("active_transaction")
 
 _HERE = PurePath(__file__).parent
 _MITE_HTTP = _HERE.parent / "mite_http"
@@ -38,8 +41,6 @@ class Context:
         self._config = config
         self._id_data = id_data or {}
         self._should_stop_func = should_stop_func
-        self._transaction_id = None
-        self._transaction_name = None
         self._debug = debug
         self._trans_id_gen = count(1)
 
@@ -53,25 +54,33 @@ class Context:
             return self._should_stop_func()
         return False
 
+    @property
+    def _active_transaction(self):
+        try:
+            return active_transaction.get()
+        except LookupError:
+            return None, None
+
+    def _extend_transaction(self, name):
+        current_name, _ = self._active_transaction
+        if current_name:
+            name = f"{current_name} :: {name}"
+        return active_transaction.set((name, next(self._trans_id_gen)))
+
     def send(self, type, **msg):
         msg = dict(msg)
         msg["type"] = type
         msg["time"] = time.time()
         msg.update(self._id_data)
-        msg["transaction"] = self._transaction_name
-        msg["transaction_id"] = self._transaction_id
+        txn_name, txn_id = self._active_transaction
+        msg["transaction"] = txn_name
+        msg["transaction_id"] = txn_id
         self._send_fn(msg)
         logger.debug("sent message: %s", msg)
 
     @asynccontextmanager
     async def transaction(self, name):
-        old_transaction_name = self._transaction_name
-        old_transaction_id = self._transaction_id
-        self._transaction_id = next(self._trans_id_gen)
-        if old_transaction_name is not None:
-            self._transaction_name = old_transaction_name + " :: " + name
-        else:
-            self._transaction_name = name
+        token = self._extend_transaction(name)
         start_time = time.time()
         error = False
         try:
@@ -110,8 +119,7 @@ class Context:
                 end_time=time.time(),
                 had_error=error,
             )
-            self._transaction_name = old_transaction_name
-            self._transaction_id = old_transaction_id
+            active_transaction.reset(token)
 
     def _send_exception(
         self, metric_name, exn, include_stacktrace=False, include_fields=False
