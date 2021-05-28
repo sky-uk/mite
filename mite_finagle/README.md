@@ -119,7 +119,7 @@ about the slightly odd version negotiation handshake)
 There are three parts to this implementation:
 1. General serialization utility classes, which are responsible for
    reading integers, bytestrings, dictionaries, etc from a stream of
-   bytes according to the mux protocol, an.d serializing them back out
+   bytes according to the mux protocol, and serializing them back out
    again.
 2. The `Message` class (and associated metaclass) which implements the
    (de)serialization of complete mux messages
@@ -197,7 +197,7 @@ The reply yielding code works OK when the reply is a thrift object and
 ### Smarter handling of method arguments
 
 Currently if we have a thrift method that takes lots of custom types in
-its arguments, we need to import allthose from the thrift generated
+its arguments, we need to import all those from the thrift generated
 code, and construct them ourselves.  Do we want to implement some sort
 of clever coercion so that dicts (etc) can be transformed into the right
 objects?  We have all the info we need to do this; itʼs just not plumbed
