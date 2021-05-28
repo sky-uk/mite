@@ -22,10 +22,10 @@ async def test_send():
     sender = SenderMock()
     ctx = Context(sender.send, config)
 
-    ctx.send('test_type', message=test_msg, transaction='test')
+    ctx.send("test_type", message=test_msg, transaction="test")
 
-    assert sender.messages[-1]['message'] == test_msg
-    assert sender.messages[-1]['type'] == 'test_type'
+    assert sender.messages[-1]["message"] == test_msg
+    assert sender.messages[-1]["type"] == "test_type"
 
 
 @pytest.mark.asyncio

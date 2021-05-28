@@ -65,10 +65,7 @@ class Context:
         current_name, _ = self._active_transaction
         if current_name:
             name = f"{current_name} :: {name}"
-        return active_transaction.set((
-            name,
-            next(self._trans_id_gen)
-        ))
+        return active_transaction.set((name, next(self._trans_id_gen)))
 
     def send(self, type, **msg):
         msg = dict(msg)
