@@ -9,7 +9,7 @@ from pytest import raises
 from mite.context import Context
 from mite.exceptions import MiteError
 
-test_msg = 'test msg for the unit test'
+test_msg = "test msg for the unit test"
 
 
 class MyException(Exception):
