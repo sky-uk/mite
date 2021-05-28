@@ -55,20 +55,18 @@ class Context:
         return False
 
     @property
-    def _transaction_name(self):
-        return active_transaction.get()[0]
-
-    @property
-    def _transaction_id(self):
-        return active_transaction.get()[1]
+    def _active_transaction(self):
+        try:
+            return active_transaction.get()
+        except LookupError:
+            return None, None
 
     def _extend_transaction(self, name):
-        try:
-            new_name = f"{self._transaction_name} :: {name}"
-        except LookupError:
-            new_name = name
+        current_name, _ = self._active_transaction
+        if current_name:
+            name = f"{current_name} :: {name}"
         return active_transaction.set((
-            new_name,
+            name,
             next(self._trans_id_gen)
         ))
 
@@ -77,8 +75,9 @@ class Context:
         msg["type"] = type
         msg["time"] = time.time()
         msg.update(self._id_data)
-        msg["transaction"] = self._transaction_name
-        msg["transaction_id"] = self._transaction_id
+        txn_name, txn_id = self._active_transaction
+        msg["transaction"] = txn_name
+        msg["transaction_id"] = txn_id
         self._send_fn(msg)
         logger.debug("sent message: %s", msg)
 

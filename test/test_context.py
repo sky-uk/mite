@@ -16,7 +16,8 @@ class MyException(Exception):
     pass
 
 
-def test_send():
+@pytest.mark.asyncio
+async def test_send():
     config = {}
     sender = SenderMock()
     ctx = Context(sender.send, config)
@@ -150,10 +151,10 @@ async def test_transaction_name():
     context = Context(send_fn, {})
 
     async with context.transaction("A"):
-        assert context._transaction_name == "A"
+        assert context._active_transaction[0] == "A"
         async with context.transaction("B"):
-            assert context._transaction_name == "A :: B"
-        assert context._transaction_name == "A"
+            assert context._active_transaction[0] == "A :: B"
+        assert context._active_transaction[0] == "A"
 
 
 @pytest.mark.asyncio
@@ -163,9 +164,9 @@ async def test_parallel_transaction_names():
 
     async def sleepy_transaction(label):
         async with context.transaction(label):
-            assert context._transaction_name == label
+            assert context._active_transaction[0] == label
             await asyncio.sleep(1)
-            assert context._transaction_name == label
+            assert context._active_transaction[0] == label
 
     await asyncio.gather(
         sleepy_transaction("A"),
