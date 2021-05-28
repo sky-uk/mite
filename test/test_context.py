@@ -150,13 +150,10 @@ async def test_transaction_name():
     context = Context(send_fn, {})
 
     async with context.transaction("A"):
-        assert context.transaction_name == "A"
+        assert context._transaction_name == "A"
         async with context.transaction("B"):
-            assert context.transaction_name == "A :: B"
-            async with context.transaction("C"):
-                assert context.transaction_name == "A :: B :: C"
-            assert context.transaction_name == "A :: B"
-        assert context.transaction_name == "A"
+            assert context._transaction_name == "A :: B"
+        assert context._transaction_name == "A"
 
 
 @pytest.mark.asyncio
@@ -166,13 +163,11 @@ async def test_parallel_transaction_names():
 
     async def sleepy_transaction(label):
         async with context.transaction(label):
-            assert context.transaction_name == label
+            assert context._transaction_name == label
             await asyncio.sleep(1)
-            assert context.transaction_name == label
+            assert context._transaction_name == label
 
     await asyncio.gather(
         sleepy_transaction("A"),
         sleepy_transaction("B"),
-        sleepy_transaction("C"),
-        sleepy_transaction("D"),
     )

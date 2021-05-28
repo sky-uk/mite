@@ -4,8 +4,8 @@ import os
 import sys
 import time
 import traceback
-from contextvars import ContextVar
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from itertools import count
 from pathlib import PurePath
 
@@ -55,16 +55,16 @@ class Context:
         return False
 
     @property
-    def transaction_name(self):
+    def _transaction_name(self):
         return active_transaction.get()[0]
 
     @property
-    def transaction_id(self):
+    def _transaction_id(self):
         return active_transaction.get()[1]
 
-    def extend_transaction(self, name):
+    def _extend_transaction(self, name):
         try:
-            new_name = f"{self.transaction_name} :: {name}"
+            new_name = f"{self._transaction_name} :: {name}"
         except LookupError:
             new_name = name
         return active_transaction.set((
@@ -77,14 +77,14 @@ class Context:
         msg["type"] = type
         msg["time"] = time.time()
         msg.update(self._id_data)
-        msg["transaction"] = self.transaction_name
-        msg["transaction_id"] = self.transaction_id
+        msg["transaction"] = self._transaction_name
+        msg["transaction_id"] = self._transaction_id
         self._send_fn(msg)
         logger.debug("sent message: %s", msg)
 
     @asynccontextmanager
     async def transaction(self, name):
-        token = self.extend_transaction(name)
+        token = self._extend_transaction(name)
         start_time = time.time()
         error = False
         try:
