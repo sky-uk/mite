@@ -68,7 +68,8 @@ class Browser:
 
     async def _download_resource(self, url, origin, type):
         """Download a resource and then register it with the origin it came from."""
-        resource = await self._session.request("GET", url)
+        async with self._ctx.transaction(f" {url}"):
+            resource = await self._session.request("GET", url)
         origin._register_resource(resource, type)
 
     async def _download_resources(self, origin):
@@ -93,9 +94,7 @@ class Browser:
         resp = await self._session.request(method, url, *args, **kwargs)
         page = Page(resp, self)
         if embedded_res:
-            async with self._ctx.transaction(
-                self._ctx._transaction_name + " - embedded resources"
-            ):
+            async with self._ctx.transaction(" embedded resources"):
                 await self._download_resources(page)
         return page
 
