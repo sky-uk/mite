@@ -186,8 +186,14 @@ class _SeleniumWrapper:
         except TimeoutException as te:
             raise MiteError(err_msg) from te
 
+    def switch_to_default(self):
+        self._remote.switch_to.default_content()
+
     def switch_to_iframe(self, locator):
         self._remote.switch_to.frame(self._remote.find_element(*locator))
+
+    def switch_to_parent(self):
+        self._remote.switch_to.parent_frame()
 
     @property
     def current_url(self):
