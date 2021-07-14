@@ -253,6 +253,9 @@ cdef class Session:
                 raise RequestError("Max Redirects")
         return response
 
+    def set_response_callback(self, callback):
+        self._response_callback = callback
+
     async def get(self, *args, **kwargs):
         return await self._outer_request(b"GET", *args, **kwargs)
 
