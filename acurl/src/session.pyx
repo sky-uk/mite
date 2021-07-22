@@ -77,7 +77,7 @@ cdef class Session:
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
-        lst = curl_extract_cookielist(curl)
+        lst = acurl_extract_cookielist(curl)
         curl_easy_cleanup(curl)
         return cookie_seq_to_cookie_dict(tuple(parse_cookie_string(c) for c in lst))
 
@@ -100,9 +100,6 @@ cdef class Session:
         cdef curl_slist* curl_headers = NULL
         cdef CURL* curl = curl_easy_init()
         cdef object future = self.wrapper.loop.create_future()
-        cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
-        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
-        Py_INCREF(response)  # FIXME: where does it get decrefed?
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
@@ -112,6 +109,10 @@ cdef class Session:
         # FIXME: make this configurable?
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
+
+        cdef Request request = Request.__new__(Request, method, url, headers, cookies, self.shared, auth, data, cert)
+        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
+        Py_INCREF(response)  # FIXME: where does it get decrefed?
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
         acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
@@ -219,14 +220,8 @@ cdef class Session:
         if self.response_callback:
             # FIXME: should this be async?
             self.response_callback(response)
-        if (
-            allow_redirects
-            and (300 <= response.status_code < 400)
-            and response.redirect_url is not None
-        ):
-            while (
-                max_redirects > 0
-            ):
+        if (allow_redirects and (300 <= response.status_code < 400) and response.redirect_url is not None):
+            while (max_redirects > 0):
                 max_redirects -= 1
                 if response.status_code in {301, 302, 303}:
                     method = b"GET"
@@ -236,8 +231,7 @@ cdef class Session:
                     method,
                     response.redirect_url,
                     headers_tuple,
-                    # FIXME: doesn't pass cookies!
-                    (),
+                    cookie_tuple,
                     auth,
                     data,
                     cert,
