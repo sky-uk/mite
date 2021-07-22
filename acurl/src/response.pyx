@@ -11,7 +11,7 @@ cdef struct BufferNode:
     char *buffer
     BufferNode *next
 
-cdef list curl_extract_cookielist(CURL* curl):
+cdef list acurl_extract_cookielist(CURL* curl):
     cdef void* start_raw
     cdef curl_slist *start
     cdef curl_slist *node
@@ -89,7 +89,7 @@ cdef class _Response:
         return value
 
     cdef list get_cookielist(self):
-        return curl_extract_cookielist(self.curl)
+        return acurl_extract_cookielist(self.curl)
 
     def _set_prev(self, prev):
         self._prev = prev

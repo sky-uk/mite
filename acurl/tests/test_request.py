@@ -36,7 +36,7 @@ def test_request_cookies():
 @pytest.mark.asyncio
 async def test_request_cookies_from_previous(httpbin, acurl_session):
     await acurl_session.get(httpbin.url + "/cookies/set?name=value")
-    r = await acurl_session.get(httpbin.url + "/get")
+    r = await acurl_session.get(httpbin.url + "/get", cookies={"matt": "ellis"})
     assert r.request.cookies == {"name": "value"}
 
 

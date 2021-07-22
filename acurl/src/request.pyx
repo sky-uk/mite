@@ -18,6 +18,7 @@ cdef class Request:
         str url,
         tuple header_tuple,
         tuple cookie_tuple,
+        CURLSH *shared,
         tuple auth,
         bytes data,
         tuple cert,
@@ -29,7 +30,18 @@ cdef class Request:
         self.auth = auth
         self.data = data
         self.cert = cert
-        self.session_cookies = ()  # FIXME
+        self.session_cookies = self._get_session_cookies(shared)
+        
+    # NOTE: Need to fix the return type
+    cdef tuple _get_session_cookies(self, CURLSH* shared):
+        cdef CURL* curl = curl_easy_init()
+        acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, shared)
+        # NOTE: Do dummy request in order to extract the cookies list
+
+        cookies = tuple(parse_cookie_string(c) for c in acurl_extract_cookielist(curl))
+        cookies = [c.format() for c in cookies if urlparse(self.url).hostname.lower() == c.domain.lower()]
+        return cookies
+
 
     @property
     def headers(self):
@@ -37,7 +49,10 @@ cdef class Request:
 
     @property
     def cookies(self):
-        return cookie_seq_to_cookie_dict(self.cookie_tuple + self.session_cookies)
+        request_cookies = tuple(session_cookie_for_url(self.url, k, v) for k, v in self.cookie_tuple)
+        session_cookies = tuple(session_cookie_for_url(self.url, k, v) for k, v in self.session_cookies)
+        # NOTE: Make sure these types are the same - format
+        return cookie_seq_to_cookie_dict(request_cookies + session_cookies)
 
     def to_curl(self):
         cdef object data
