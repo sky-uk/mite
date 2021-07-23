@@ -244,7 +244,7 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
         self._context.raw_webdriver = self._remote
 
     def get_requests(self):
-        return self._context.raw_webdriver.self._context.raw_webdriver
+        return self._context.raw_webdriver.requests
 
     def add_request_interceptor(self, request_interceptor):
         self._remote.request_interceptor = request_interceptor
