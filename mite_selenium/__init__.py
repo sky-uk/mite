@@ -243,6 +243,9 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
         logger.debug(f"Selenium-wire machine IP: {addr}")
         self._context.raw_webdriver = self._remote
 
+    def get_requests(self):
+        return self._context.raw_webdriver.self._context.raw_webdriver
+
     def add_request_interceptor(self, request_interceptor):
         self._remote.request_interceptor = request_interceptor
 
