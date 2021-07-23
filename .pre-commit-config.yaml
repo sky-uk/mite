@@ -1,10 +1,6 @@
 repos:
-  - repo: https://github.com/asottile/seed-isort-config
-    rev: v2.1.0
-    hooks:
-    - id: seed-isort-config
   - repo: https://github.com/timothycrosley/isort
-    rev: 4.3.21-2
+    rev: 5.8.0
     hooks:
     - id: isort
       files: .*.py$
@@ -16,3 +12,5 @@ repos:
     rev: master
     hooks:
     - id: flake8
+
+exclude: ^mite_finagle/tests/foo_service/.*

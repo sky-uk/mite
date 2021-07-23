@@ -22,7 +22,7 @@ except DistributionNotFound:
 
 
 # TODO: move to test.py?
-def test_context(extensions=('http',), **config):
+def test_context(extensions=("http",), **config):
     runner_config = {}
     runner_config.update(config.items())
     c = Context(print, runner_config)
@@ -57,7 +57,7 @@ def ensure_fixed_separation(separation):
     Example usage:
     >>> async with ensure_fixed_separation(5):
     >>>     do_something()
-   """
+    """
 
     def fixed_separation():
         return separation
@@ -78,7 +78,7 @@ def ensure_average_separation(mean_separation, plus_minus=None):
     Example usage:
     >>> with ensure_average_separation(5):
     >>>     do_something()
-   """
+    """
     if plus_minus is None:
         plus_minus = mean_separation * 0.25
 
