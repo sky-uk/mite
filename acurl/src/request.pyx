@@ -1,6 +1,7 @@
 #cython: language_level=3
 
 import shlex
+from urllib.parse import urlparse
 
 cdef class Request:
     cdef readonly bytes method
@@ -18,7 +19,6 @@ cdef class Request:
         str url,
         tuple header_tuple,
         tuple cookie_tuple,
-        CURLSH *shared,
         tuple auth,
         bytes data,
         tuple cert,
@@ -26,22 +26,20 @@ cdef class Request:
         self.method = method
         self.url = url
         self.header_tuple = header_tuple
-        self.cookie_tuple = cookie_tuple
+        self.cookie_tuple = cookie_tuple # Tuple of byte strings
         self.auth = auth
         self.data = data
         self.cert = cert
-        self.session_cookies = self._get_session_cookies(shared)
-        
-    # NOTE: Need to fix the return type
-    cdef tuple _get_session_cookies(self, CURLSH* shared):
+        self.session_cookies = () # Tuple of byte strings
+
+    cdef void store_session_cookies(self, CURLSH* shared):
         cdef CURL* curl = curl_easy_init()
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, shared)
         # NOTE: Do dummy request in order to extract the cookies list
 
-        cookies = tuple(parse_cookie_string(c) for c in acurl_extract_cookielist(curl))
-        cookies = [c.format() for c in cookies if urlparse(self.url).hostname.lower() == c.domain.lower()]
-        return cookies
-
+        raw_cookies = tuple(parse_cookie_string(c) for c in acurl_extract_cookielist(curl))
+        session_cookies = tuple(c.format() for c in raw_cookies if urlparse(self.url).hostname.lower() == c.domain.lower())
+        self.session_cookies = session_cookies
 
     @property
     def headers(self):
@@ -49,9 +47,14 @@ cdef class Request:
 
     @property
     def cookies(self):
-        request_cookies = tuple(session_cookie_for_url(self.url, k, v) for k, v in self.cookie_tuple)
-        session_cookies = tuple(session_cookie_for_url(self.url, k, v) for k, v in self.session_cookies)
-        # NOTE: Make sure these types are the same - format
+        request_cookies = ()
+        for c in self.cookie_tuple:
+            if isinstance(c, Cookie) or isinstance(c, _Cookie):
+                request_cookies += (c,)
+            else:
+                request_cookies += (parse_cookie_string(c.decode("utf-8")), )
+        session_cookies = tuple(parse_cookie_string(c.decode("utf-8")) for c in self.session_cookies)
+
         return cookie_seq_to_cookie_dict(request_cookies + session_cookies)
 
     def to_curl(self):
