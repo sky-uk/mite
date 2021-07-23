@@ -110,7 +110,8 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
-        cdef Request request = Request.__new__(Request, method, url, headers, cookies, self.shared, auth, data, cert)
+        cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
+        request.store_session_cookies(self.shared)
         cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
         Py_INCREF(response)  # FIXME: where does it get decrefed?
 
