@@ -1,8 +1,19 @@
 from setuptools import setup, Extension
 from Cython.Build import cythonize
+import os
+from Cython.Compiler.Options import get_directive_defaults
+
+# https://stackoverflow.com/a/28301932/463500
+if "IS_TOX_BUILD" in os.environ:
+    directive_defaults = get_directive_defaults()
+    directive_defaults['linetrace'] = True
+    # directive_defaults['binding'] = True
+    kwargs = {"define_macros": [('CYTHON_TRACE', '1')]}
+else:
+    kwargs = {}
 
 extensions = [
-    Extension("acurl", ["src/acurl.pyx"], libraries=["curl"])
+    Extension("acurl", ["src/acurl.pyx"], libraries=["curl"], **kwargs)
 ]
 
 setup(
