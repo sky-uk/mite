@@ -3,7 +3,7 @@
 from curlinterface cimport *
 from libc.stdio cimport printf
 from cpython cimport array
-from cpython.ref cimport Py_INCREF
+from cpython.ref cimport Py_DECREF
 
 include "utils.pyx"
 include "cookie.pyx"
@@ -13,9 +13,14 @@ include "session.pyx"
 
 # Callback functions
 
+# In the classic (old) acurl interface, the socket and timer functions didn't
+# take the GIL (and didn't need to).  However, now because we are cooperating
+# with the python asyncio library we need to call back into python.  So these
+# functions do take the GIL, as indicated by `with gil` in their signatures.
+# The performance impact of this is yet tbd.
 cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
-    Py_INCREF(wrapper)  # FIXME: why
+    # Py_INCREF(wrapper)  # FIXME: no longer needed?
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
         wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
@@ -28,7 +33,7 @@ cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, 
 
 cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
-    Py_INCREF(wrapper)  # FIXME: why
+    # Py_INCREF(wrapper)  # FIXME: no longer needed?
     cdef int _running
     cdef double secs
     if timeout_ms < 0:
@@ -91,8 +96,16 @@ cdef class CurlWrapper:
             if message.msg == CURLMSG_DONE:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
-                response = <_Response>response_raw  # FIXME: check for a stray decref
+                response = <_Response>response_raw
                 response.future.set_result(response)
+                # In principle, here is where we can/should decref the
+                # response object, to match the incref in
+                # `Session._inner_request`.  The curl event loop is done with
+                # it now so we don't need the reference any more.  However,
+                # actually doing it causes errors in the tests (unraisable
+                # exception warnings, to be more precise), which demonstrates
+                # that something's a bit off still...
+                # Py_DECREF(response)
                 curl_multi_remove_handle(self.multi, easy)
             else:
                 raise Exception("oops2")
