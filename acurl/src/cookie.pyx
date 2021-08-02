@@ -5,9 +5,9 @@ from urllib.parse import urlparse
 
 
 cdef class Cookie:
-    cdef readonly str domain
-    cdef readonly str name
-    cdef readonly str value
+    cdef str domain
+    cdef str name
+    cdef str value
 
     def __cinit__(self, domain, name, value):
         self.domain = domain
@@ -15,14 +15,14 @@ cdef class Cookie:
         self.value = value
 
 cdef class _Cookie:
-    cdef readonly bint http_only
-    cdef readonly str domain
-    cdef readonly bint include_subdomains
-    cdef readonly str path
-    cdef readonly bint is_secure
-    cdef readonly int expiration  # TODO right type???
-    cdef readonly str name
-    cdef readonly str value
+    cdef bint http_only
+    cdef str domain
+    cdef bint include_subdomains
+    cdef str path
+    cdef bint is_secure
+    cdef int expiration  # TODO right type???
+    cdef str name
+    cdef str value
 
     def __cinit__(self, bint http_only, str domain, bint include_subdomains, str path, bint is_secure, int expiration, str name, str value):
         self.http_only = http_only
@@ -38,7 +38,7 @@ cdef class _Cookie:
     def has_expired(self):
         return self.expiration != 0 and time.time() > self.expiration
 
-    cpdef bytes format(self):
+    cdef bytes format(self):
         cdef array.array bits = array.array('B', [])
         if self.http_only:
             bits.frombytes(b"#HttpOnly_")
