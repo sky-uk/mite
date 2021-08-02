@@ -5,6 +5,7 @@ from cpython cimport array
 from json import loads
 from cpython.list cimport PyList_New
 from libc.stdio cimport printf
+import warnings
 
 cdef struct BufferNode:
     size_t len
@@ -59,7 +60,7 @@ cdef class _Response:
             old_ptr = ptr
             ptr = ptr.next
             free(old_ptr)
-        # Dealloc curl
+        # FIXME: Dealloc curl
 
     # In principle it would be better to do this through a normal init
     # method.  Howver, there is a restriction on what arguments can be passed
@@ -110,6 +111,7 @@ cdef class _Response:
 
     @property
     def response_code(self):
+        warnings.warn("Deprecated: Please consider using the status_code method instead", DeprecationWarning, stacklevel=2)
         return self.get_info_long(CURLINFO_RESPONSE_CODE)
 
     @property

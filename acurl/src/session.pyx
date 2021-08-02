@@ -282,8 +282,20 @@ cdef class Session:
     def set_response_callback(self, callback):
         self.response_callback = callback
 
+    async def delete(self, *args, **kwargs):
+        return await self._outer_request(b"DELETE", *args, **kwargs)
+
     async def get(self, *args, **kwargs):
         return await self._outer_request(b"GET", *args, **kwargs)
 
+    async def head(self, *args, **kwargs):
+        return await self._outer_request(b"HEAD", *args, **kwargs)
+
+    async def options(self, *args, **kwargs):
+        return await self._outer_request(b"OPTIONS", *args, **kwargs)
+
     async def post(self, *args, **kwargs):
         return await self._outer_request(b"POST", *args, **kwargs)
+
+    async def put(self, *args, **kwargs):
+        return await self._outer_request(b"PUT", *args, **kwargs)
