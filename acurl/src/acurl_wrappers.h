@@ -1,3 +1,12 @@
+/* What is the purpose of this file?  Curl only defines one function per
+   option family to set, `curl_XXX_setopt`, which takes an untyped data
+   argument.  However, cython needs to know what the types are of the data
+   that's being passed in, because it will do different conversions depending
+   on the type (python long to c integer, python string to c string, ...).
+   This file defines a bunch of typed wrappers around all the setopt functions
+   to help clue cython in.
+ */
+
 #include <curl/curl.h>
 
 static inline CURLMcode acurl_multi_setopt_pointer(CURLM * multi_handle, CURLMoption option, void * param) {

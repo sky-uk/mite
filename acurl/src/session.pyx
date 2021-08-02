@@ -27,7 +27,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
 
 cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
-    Py_INCREF(response)  # FIXME: why
+    # Py_INCREF(response)  # FIXME: is this no longer needed??
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
         response.header_buffer = node
@@ -38,7 +38,7 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
 
 cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
-    Py_INCREF(response)  # FIXME: why
+    # Py_INCREF(response)  # FIXME: is this no longer needed??
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
         response.body_buffer = node
@@ -51,7 +51,27 @@ cdef void cleanup_share(object share_capsule):
     cdef void* share_raw = PyCapsule_GetPointer(share_capsule, <const char*>NULL)
     curl_share_cleanup(<CURLSH*>share_raw)
 
-@cython.no_gc_clear  # FIXME: make sure this isn't going to leak!
+# From the cython docs
+# <https://cython.readthedocs.io/en/latest/src/userguide/extension_types.html#disabling-cycle-breaking-tp-clear>:
+# > If any Python objects can be referenced [by this class], Cython will
+# > automatically generate the tp_traverse and tp_clear slots.  There is at
+# > least one reason why this might not be what you want: if you need to cleanup
+# > some external resources in the __dealloc__ special function and your object
+# > happened to be in a reference cycle, the garbage collector may have
+# > triggered a call to tp_clear to clear the object.  In that case, any object
+# > references have vanished when __dealloc__ is called.
+#
+# This is exactly the situation here, and in previous interations of this code
+# we got some nasty crashes (segfaults) without this decorator.  It's
+# theoretically dangerous (could leak memory), but as the cython docs say:
+#
+# > If you use no_gc_clear, it is important that any given reference cycle
+# > contains at least one object without no_gc_clear.
+#
+# Since this is the only class that has this decorator, we're fine (a
+# reference cycle will never consist solely of Session objects referencing
+# other Sessions) -- tp_clear will be called on some other object in the cycle.
+@cython.no_gc_clear
 cdef class Session:
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
@@ -113,7 +133,21 @@ cdef class Session:
         cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
         request.store_session_cookies(self.shared)
         cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
-        Py_INCREF(response)  # FIXME: where does it get decrefed?
+
+        # We need to increment the reference count on the response.  To
+        # python's eyes the last reference to it disappears when we exit this
+        # function (and thus it would get collected) -- but the curl event
+        # loop has a reference to it so it needs to remain alive.  FIXME:
+        # where does it get decrefed?  In principle we need a matching
+        # Py_DECREF somewhere in the code.  But there's malignant
+        # counter-wizardry coming from cython -- when we coerce the pointer
+        # out of curl, it gets assigned into a python variable, which cython
+        # will "helpfully" decref for us when it goes out of scope -- so the
+        # decref might already be handled for us (we do prevent the magic
+        # decref in some circumstances, though).  This is not really an
+        # optimal situation and we need to get to the bottom of it...  (Is it
+        # related to the no_gc_clear and the crashes that it now prevents?)
+        Py_INCREF(response)
 
         acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
         acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
@@ -123,7 +157,7 @@ cdef class Session:
 
         cdef int i
 
-        for i in range(len(headers)):  # FIXME: not fast
+        for i in range(len(headers)):
             if not isinstance(headers[i], bytes):
                 raise ValueError("headers should be a tuple of bytestrings if set")
             curl_headers = curl_slist_append(curl_headers, headers[i])
@@ -131,30 +165,29 @@ cdef class Session:
         acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
 
         if auth is not None:
-            if (  # FIXME: not fast
+            if (
                 not isinstance(auth, tuple)
                 or len(auth) != 2
                 or not isinstance(auth[0], str)
                 or not isinstance(auth[1], str)
             ):
-                print(auth)
-                raise ValueError("auth must be a 2-tuple of strings")
+                raise ValueError(f"auth must be a 2-tuple of strings but it was: {auth}")
             acurl_easy_setopt_cstr(curl, CURLOPT_USERPWD, auth[0].encode() + b":" + auth[1].encode())
 
         if cert is not None:
-            if (  # FIXME: not fast
+            if (
                 not isinstance(cert, tuple)
                 or len(cert) != 2
                 or not isinstance(cert[0], str)
                 or not isinstance(cert[1], str)
             ):
-                raise ValueError("cert  must be a 2-tuple of strings")
+                raise ValueError(f"cert must be a 2-tuple of strings but it was: {cert}")
             acurl_easy_setopt_cstr(curl, CURLOPT_SSLKEY, cert[0])
             acurl_easy_setopt_cstr(curl, CURLOPT_SSLCERT, cert[1])
 
         acurl_easy_setopt_cstr(curl, CURLOPT_COOKIEFILE, "")
         if cookies is not None:
-            for i in range(len(cookies)):  # FIXME: not fast
+            for i in range(len(cookies)):
                 if not isinstance(cookies[i], bytes):
                     raise ValueError("cookies should be a tuple of bytes")
                 acurl_easy_setopt_cstr(curl, CURLOPT_COOKIELIST, cookies[i])
@@ -164,8 +197,6 @@ cdef class Session:
             acurl_easy_setopt_cstr(curl, CURLOPT_POSTFIELDS, data)
 
         curl_multi_add_handle(self.wrapper.multi, curl)
-
-        # FIXME: handle dummy
 
         return future
 

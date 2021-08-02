@@ -15,8 +15,6 @@ cdef list acurl_extract_cookielist(CURL* curl):
     cdef void* start_raw
     cdef curl_slist *start
     cdef curl_slist *node
-    cdef int len = 0
-    cdef int i = 0
     acurl_easy_getinfo_voidptr(curl, CURLINFO_COOKIELIST, &start_raw)
     start = <curl_slist*>start_raw
     node = start
@@ -63,6 +61,18 @@ cdef class _Response:
             free(old_ptr)
         # Dealloc curl
 
+    # In principle it would be better to do this through a normal init
+    # method.  Howver, there is a restriction on what arguments can be passed
+    # to an init method -- they must all be python types (C pointers don't
+    # work).  So we by convention say that you shouldn't do `r =
+    # _Response(...)` but rather only ever write `r = _Response.make(...)`.
+    # (There's no concrete enforcement of this requirement, other than "tests
+    # will probably break if you disobey".)  An alternative might be to move
+    # lots of the initialization of the CURL* from _Session._inner_request
+    # into this class, and lean into the idea that it's _Response that owns
+    # the CURL*.  Then _inner_request would shrink quite a bit, only being
+    # responsible for creating the request, creating the response, and then
+    # submitting the response's CURL* to the multi.
     @staticmethod
     cdef _Response make(Session session, CURL* curl, object future, unsigned long time, Request request):
         cdef _Response r = _Response.__new__(_Response)

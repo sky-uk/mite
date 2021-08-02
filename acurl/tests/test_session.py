@@ -61,13 +61,6 @@ async def test_post_data(httpserver, acurl_session):
     httpserver.check_assertions()
 
 
-@pytest.mark.skip
-def test_cookies():
-    # We'd like to write tests for the cookie functionality, but httpserver
-    # doesn't make this easy, so I'm lazily going to skip that for now
-    pass
-
-
 @pytest.mark.asyncio
 async def test_response_callback(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")

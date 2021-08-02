@@ -32,7 +32,6 @@ async def test_session_cookies(httpbin, acurl_session):
     await acurl_session.get(httpbin.url + "/cookies/set?name=value")
     cookies = acurl_session.cookies()
     assert cookies == {"name": "value"}
-    # FIXME!
     acurl_session.erase_all_cookies()
     cookie_list = acurl_session.cookies()
     assert len(cookie_list) == 0

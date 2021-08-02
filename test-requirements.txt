@@ -1,4 +1,5 @@
 altair
+Cython
 hypothesis
 pandas
 pre-commit
