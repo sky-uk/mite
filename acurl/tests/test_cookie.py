@@ -8,7 +8,7 @@ from acurl import Cookie
 
 @pytest.mark.skip
 def test_cookie_zero_expiry():
-    # FIXME: what's the right behavior here?ssss
+    # FIXME: what's the right behavior here?
     c = acurl._Cookie(False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value")
     assert not c.has_expired
 

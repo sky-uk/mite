@@ -25,12 +25,12 @@ cdef class Request:
     ):
         self.method = method
         self.url = url
-        self.header_tuple = header_tuple
-        self.cookie_tuple = cookie_tuple # Tuple of byte strings
+        self.header_tuple = header_tuple  # Tuple of byte strings
+        self.cookie_tuple = cookie_tuple  # Tuple of byte strings
         self.auth = auth
         self.data = data
         self.cert = cert
-        self.session_cookies = () # Tuple of byte strings
+        self.session_cookies = ()  # Tuple of byte strings
 
     cdef void store_session_cookies(self, CURLSH* shared):
         cdef CURL* curl = curl_easy_init()
@@ -43,7 +43,11 @@ cdef class Request:
 
     @property
     def headers(self):
-        return dict(header.split(": ", 1) for header in self.header_tuple)
+        d = dict(header.split(b": ", 1) for header in self.header_tuple)
+        return {
+            k.decode("utf-8"): v.decode("utf-8")
+            for k, v in d.items()
+        }
 
     @property
     def cookies(self):
