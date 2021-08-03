@@ -4,7 +4,7 @@ import time
 
 from sanic import Sanic, response
 
-app = Sanic()
+app = Sanic("http_server")
 
 requests_served = 0
 
