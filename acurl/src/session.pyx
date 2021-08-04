@@ -20,7 +20,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     if node == NULL:
         printf("OOOPS!!!!")  # FIXME: better checks
     node.len = size
-    node.buffer = strndup(data, size)
+    node.buffer = strndup(data, size)  # FIXME: use realloc?
     node.next = NULL
     return node
 
