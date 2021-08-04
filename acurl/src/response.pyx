@@ -65,11 +65,13 @@ cdef class _Response:
         ptr = self.header_buffer
         while ptr != NULL:
             old_ptr = ptr
+            free(ptr.buffer)
             ptr = ptr.next
             free(old_ptr)
         ptr = self.body_buffer
         while ptr != NULL:
             old_ptr = ptr
+            free(ptr.buffer)
             ptr = ptr.next
             free(old_ptr)
 
