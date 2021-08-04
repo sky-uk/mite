@@ -48,6 +48,8 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
         secs = timeout_ms / 1000
         wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
 
+# FIXME: why?!?!
+@cython.no_gc_clear
 cdef class CurlWrapper:
     cdef CURLM* multi
     cdef object timer_handle

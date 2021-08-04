@@ -34,7 +34,7 @@ cdef class Request:
         self.session_cookies = ()  # Tuple of byte strings
         self.curl_headers = NULL
 
-    cdef __dealloc__(self):
+    def __dealloc__(self):
         if self.curl_headers != NULL:
             curl_slist_free_all(self.curl_headers)
 

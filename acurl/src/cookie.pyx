@@ -1,6 +1,6 @@
 #cython: language_level=3
 
-from libc.time import time
+from libc.time cimport time
 from urllib.parse import urlparse
 
 

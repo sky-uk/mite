@@ -85,13 +85,15 @@ cdef class Session:
         self.response_callback = None
 
     def __dealloc__(self):
-        if self.wrapper.loop.is_closed():
-            # FIXME: the event loop being closed only happens during testing,
-            # so it kind of sucks to pay the price of checking for it all the
-            # time...
-            curl_share_cleanup(self.shared)
-        else:
-            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+        # FIXME!!
+        curl_share_cleanup(self.shared)
+        # if self.wrapper.loop.is_closed():
+        #     # FIXME: the event loop being closed only happens during testing,
+        #     # so it kind of sucks to pay the price of checking for it all the
+        #     # time...
+        #     curl_share_cleanup(self.shared)
+        # else:
+        #     self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
@@ -129,27 +131,6 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
-        # We need to increment the reference count on the response.  To
-        # python's eyes the last reference to it disappears when we exit this
-        # function (and thus it would get collected) -- but the curl event
-        # loop has a reference to it so it needs to remain alive.  FIXME:
-        # where does it get decrefed?  In principle we need a matching
-        # Py_DECREF somewhere in the code.  But there's malignant
-        # counter-wizardry coming from cython -- when we coerce the pointer
-        # out of curl, it gets assigned into a python variable, which cython
-        # will "helpfully" decref for us when it goes out of scope -- so the
-        # decref might already be handled for us (we do prevent the magic
-        # decref in some circumstances, though).  This is not really an
-        # optimal situation and we need to get to the bottom of it...  (Is it
-        # related to the no_gc_clear and the crashes that it now prevents?)
-        Py_INCREF(response)
-
-        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
-
         cdef int i
 
         for i in range(len(headers)):
@@ -165,6 +146,27 @@ cdef class Session:
         request.store_session_cookies(self.shared)
         request.curl_headers = curl_headers
         cdef _Response response = _Response.make(self, curl, future, time(NULL), request)
+
+        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
+
+        # We need to increment the reference count on the response.  To
+        # python's eyes the last reference to it disappears when we exit this
+        # function (and thus it would get collected) -- but the curl event
+        # loop has a reference to it so it needs to remain alive.  FIXME:
+        # where does it get decrefed?  In principle we need a matching
+        # Py_DECREF somewhere in the code.  But there's malignant
+        # counter-wizardry coming from cython -- when we coerce the pointer
+        # out of curl, it gets assigned into a python variable, which cython
+        # will "helpfully" decref for us when it goes out of scope -- so the
+        # decref might already be handled for us (we do prevent the magic
+        # decref in some circumstances, though).  This is not really an
+        # optimal situation and we need to get to the bottom of it...  (Is it
+        # related to the no_gc_clear and the crashes that it now prevents?)
+        Py_INCREF(response)
 
         if auth is not None:
             if (
@@ -250,6 +252,7 @@ cdef class Session:
             data,
             cert,
         )
+        Py_DECREF(response)  # FIXME: document what it's doing
         cdef _Response old_response
         if self.response_callback:
             # FIXME: should this be async?
