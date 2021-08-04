@@ -48,6 +48,18 @@ cdef class _Response:
         self._prev = None
 
     def __dealloc__(self):
+        # Subtle behavior alert!  We cleanup the curl handle before we free
+        # header_buffer and body_buffer.  As the curl docs say:
+        # > Occasionally you may get your progress callback or header callback
+        # > called from within curl_easy_cleanup.
+        # If that happens, then the handler would attach more nodes to the
+        # header/body buffers, which we'll need to free.  That is perhaps
+        # unlikely, given that the docs say further:
+        # > [This happens if] the protocol is of a kind that requires a
+        # > command/response sequence before disconnect.  Examples of such
+        # > protocols are FTP, POP3 and IMAP.
+        # But better safe than sorry.
+        curl_easy_cleanup(self.curl)
         cdef BufferNode* ptr
         cdef BufferNode* old_ptr
         ptr = self.header_buffer
@@ -60,7 +72,6 @@ cdef class _Response:
             old_ptr = ptr
             ptr = ptr.next
             free(old_ptr)
-        # FIXME: Dealloc curl
 
     # In principle it would be better to do this through a normal init
     # method.  Howver, there is a restriction on what arguments can be passed
@@ -111,7 +122,11 @@ cdef class _Response:
 
     @property
     def response_code(self):
-        warnings.warn("Deprecated: Please consider using the status_code method instead", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "Deprecated: Please consider using the status_code method instead",
+            DeprecationWarning,
+            stacklevel=2
+        )
         return self.get_info_long(CURLINFO_RESPONSE_CODE)
 
     @property

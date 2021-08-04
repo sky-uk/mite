@@ -2,7 +2,7 @@ from collections import defaultdict
 
 
 class _CaseInsensitiveDict:
-    # Base on https://stackoverflow.com/a/32888599 but tweaked for python3
+    # Based on https://stackoverflow.com/a/32888599 but tweaked for python3
     @staticmethod
     def _k(key):
         return key.lower() if isinstance(key, str) else key

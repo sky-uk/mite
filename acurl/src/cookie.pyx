@@ -1,6 +1,6 @@
 #cython: language_level=3
 
-import time
+from libc.time import time
 from urllib.parse import urlparse
 
 
@@ -24,7 +24,17 @@ cdef class _Cookie:
     cdef str name
     cdef str value
 
-    def __cinit__(self, bint http_only, str domain, bint include_subdomains, str path, bint is_secure, int expiration, str name, str value):
+    def __cinit__(
+        self,
+        bint http_only,
+        str domain,
+        bint include_subdomains,
+        str path,
+        bint is_secure,
+        int expiration,
+        str name,
+        str value
+    ):
         self.http_only = http_only
         self.domain = domain
         self.include_subdomains = include_subdomains
@@ -36,7 +46,7 @@ cdef class _Cookie:
 
     @property
     def has_expired(self):
-        return self.expiration != 0 and time.time() > self.expiration
+        return self.expiration != 0 and time(NULL) > self.expiration
 
     cdef bytes format(self):
         cdef array.array bits = array.array('B', [])

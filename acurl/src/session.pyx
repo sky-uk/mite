@@ -1,13 +1,12 @@
 #cython: language_level=3
 
-import time  # FIXME: use fast c fn
-
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
 from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
 from libc.stdio cimport printf
+from libc.time cimport time
 import cython
 from json import dumps
 
@@ -130,10 +129,6 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
-        cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
-        request.store_session_cookies(self.shared)
-        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
-
         # We need to increment the reference count on the response.  To
         # python's eyes the last reference to it disappears when we exit this
         # function (and thus it would get collected) -- but the curl event
@@ -161,8 +156,15 @@ cdef class Session:
             if not isinstance(headers[i], bytes):
                 raise ValueError("headers should be a tuple of bytestrings if set")
             curl_headers = curl_slist_append(curl_headers, headers[i])
-        # FIXME: free the slist eventually
         acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
+
+        # We have to postpone the initialization of the Request object until
+        # here, because we're going to transfer the ownership of the
+        # curl_headers to it
+        cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
+        request.store_session_cookies(self.shared)
+        request.curl_headers = curl_headers
+        cdef _Response response = _Response.make(self, curl, future, time(NULL), request)
 
         if auth is not None:
             if (
