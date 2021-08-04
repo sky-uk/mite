@@ -1,0 +1,1 @@
+PYTHONMALLOC=malloc valgrind --tool=memcheck --suppressions=valgrind-python.supp --leak-check=full --show-leak-kinds=all -- python acurl/leak_check.py |& tee malloc.out
