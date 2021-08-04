@@ -244,10 +244,11 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
         self._context.raw_webdriver = self._remote
 
     def wait_for_request(self, url, timeout=5):
-        return self._context.raw_webdriver.wait_for_request(url, timeout)
+        return self._remote.wait_for_request(url, timeout)
 
-    def get_requests(self):
-        return self._context.raw_webdriver.requests
+    @property
+    def requests(self):
+        return self._remote.requests
 
     def add_request_interceptor(self, request_interceptor):
         self._remote.request_interceptor = request_interceptor
