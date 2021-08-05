@@ -108,8 +108,8 @@ class GenericStatsOutput:
 class HttpStatsOutput(GenericStatsOutput):
     message_types = {
         "http_metrics",
-        "http_selenium_page_load_metrics",
-        "http_selenium_network_resource_metrics",
+        "selenium_page_load_metrics",
+        "selenium_network_resource_metrics",
     }
     log_name = "Http"
 
