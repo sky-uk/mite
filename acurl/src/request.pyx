@@ -35,12 +35,10 @@ cdef class Request:
     cdef void store_session_cookies(self, CURLSH* shared):
         cdef CURL* curl = curl_easy_init()
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, shared)
-        # NOTE: Do dummy request in order to extract the cookies list
-
         raw_cookies = tuple(parse_cookie_string(c) for c in acurl_extract_cookielist(curl))
         session_cookies = tuple(
             c.format()
-            for c in raw_cookies 
+            for c in raw_cookies
             if urlparse(self.url).hostname.lower() == c.domain.lower()
         )
         self.session_cookies = session_cookies
