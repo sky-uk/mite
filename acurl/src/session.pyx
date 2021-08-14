@@ -256,6 +256,12 @@ cdef class Session:
             data,
             cert,
         )
+        # This decref is the partner to the incref in _inner_request above --
+        # at this point curl is done with the response and so we no longer
+        # need to keep its refcount incremented to prevent the GC from
+        # cleaning it up when the only reference to it is held by curl and not
+        # python.
+        Py_DECREF(response)
         cdef _Response old_response
         if self.response_callback:
             # FIXME: should this be async?
