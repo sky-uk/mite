@@ -21,7 +21,15 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     if node == NULL:
         printf("OOOPS!!!!")  # FIXME: better checks
     node.len = size
-    node.buffer = strndup(data, size)
+    # FIXME: the curl docs give an example function that uses realloc on a
+    # single buffer rather than a linked list.  Possibly that method would be
+    # faster (as well as less complicated) -- especially if we preallocate a
+    # buffer for headers/data when allocating a response (paying a small
+    # memory cost in exchange for not having to allocate while processing
+    # response data).  It would also make the code less complicated.  Worth
+    # benchmarking the effects someday...
+    # <https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html>
+    node.buffer = strndup(data, size)  # FIXME: use realloc?
     node.next = NULL
     return node
 
