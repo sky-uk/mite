@@ -42,6 +42,7 @@ cdef class Request:
         cdef CURL* curl = curl_easy_init()
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, shared)
         raw_cookies = tuple(parse_cookie_string(c) for c in acurl_extract_cookielist(curl))
+        curl_easy_cleanup(curl)
         session_cookies = tuple(
             c.format()
             for c in raw_cookies
