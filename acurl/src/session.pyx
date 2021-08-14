@@ -137,9 +137,27 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
+        cdef int i
+
+        for i in range(len(headers)):
+            if not isinstance(headers[i], bytes):
+                raise ValueError("headers should be a tuple of bytestrings if set")
+            curl_headers = curl_slist_append(curl_headers, headers[i])
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
+
+        # We have to postpone the initialization of the Request object until
+        # here, because we're going to transfer the ownership of the
+        # curl_headers to it
         cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
         request.store_session_cookies(self.shared)
+        request.curl_headers = curl_headers
         cdef _Response response = _Response.make(self, curl, future, time(NULL), request)
+
+        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
 
         # We need to increment the reference count on the response.  To
         # python's eyes the last reference to it disappears when we exit this
@@ -155,21 +173,6 @@ cdef class Session:
         # optimal situation and we need to get to the bottom of it...  (Is it
         # related to the no_gc_clear and the crashes that it now prevents?)
         Py_INCREF(response)
-
-        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
-
-        cdef int i
-
-        for i in range(len(headers)):
-            if not isinstance(headers[i], bytes):
-                raise ValueError("headers should be a tuple of bytestrings if set")
-            curl_headers = curl_slist_append(curl_headers, headers[i])
-        # FIXME: free the slist eventually
-        acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
 
         if auth is not None:
             if (

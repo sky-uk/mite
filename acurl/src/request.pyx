@@ -12,6 +12,7 @@ cdef class Request:
     cdef readonly object data
     cdef readonly object cert
     cdef tuple session_cookies
+    cdef curl_slist* curl_headers
 
     def __cinit__(
         self,
@@ -31,6 +32,11 @@ cdef class Request:
         self.data = data
         self.cert = cert
         self.session_cookies = ()  # Tuple of byte strings
+        self.curl_headers = NULL
+
+    def __dealloc__(self):
+        if self.curl_headers != NULL:
+            curl_slist_free_all(self.curl_headers)
 
     cdef void store_session_cookies(self, CURLSH* shared):
         cdef CURL* curl = curl_easy_init()
