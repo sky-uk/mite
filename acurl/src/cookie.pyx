@@ -1,6 +1,6 @@
 #cython: language_level=3
 
-import time
+from libc.time cimport time
 from urllib.parse import urlparse
 
 
@@ -46,7 +46,7 @@ cdef class _Cookie:
 
     @property
     def has_expired(self):
-        return self.expiration != 0 and time.time() > self.expiration
+        return self.expiration != 0 and time(NULL) > self.expiration
 
     cdef bytes format(self):
         cdef array.array bits = array.array('B', [])

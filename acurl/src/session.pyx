@@ -1,13 +1,12 @@
 #cython: language_level=3
 
-import time  # FIXME: use fast c fn
-
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
 from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
 from libc.stdio cimport printf
+from libc.time cimport time
 import cython
 from json import dumps
 
@@ -140,7 +139,7 @@ cdef class Session:
 
         cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
         request.store_session_cookies(self.shared)
-        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
+        cdef _Response response = _Response.make(self, curl, future, time(NULL), request)
 
         # We need to increment the reference count on the response.  To
         # python's eyes the last reference to it disappears when we exit this
