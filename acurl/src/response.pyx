@@ -111,7 +111,11 @@ cdef class _Response:
 
     @property
     def response_code(self):
-        warnings.warn("Deprecated: Please consider using the status_code method instead", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "Deprecated: Please consider using the status_code method instead",
+            DeprecationWarning,
+            stacklevel=2
+        )
         return self.get_info_long(CURLINFO_RESPONSE_CODE)
 
     @property

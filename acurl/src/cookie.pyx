@@ -24,7 +24,17 @@ cdef class _Cookie:
     cdef str name
     cdef str value
 
-    def __cinit__(self, bint http_only, str domain, bint include_subdomains, str path, bint is_secure, int expiration, str name, str value):
+    def __cinit__(
+        self,
+        bint http_only,
+        str domain,
+        bint include_subdomains,
+        str path,
+        bint is_secure,
+        int expiration,
+        str name,
+        str value
+    ):
         self.http_only = http_only
         self.domain = domain
         self.include_subdomains = include_subdomains
