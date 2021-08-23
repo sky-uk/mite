@@ -20,3 +20,5 @@ __pycache__/
 # C
 *.so
 cython_debug/
+src/*.c
+src/*.html

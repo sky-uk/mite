@@ -16,7 +16,6 @@ class AcurlSessionWrapper:
         self.additional_metrics = {}
 
     def __getattr__(self, attrname):
-
         try:
             r = object.__getattr__(self, attrname)
             return r

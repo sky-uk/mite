@@ -1,13 +1,12 @@
 #cython: language_level=3
 
-import time  # FIXME: use fast c fn
-
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
 from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
 from libc.stdio cimport printf
+from libc.time cimport time
 import cython
 from json import dumps
 
@@ -21,7 +20,15 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     if node == NULL:
         printf("OOOPS!!!!")  # FIXME: better checks
     node.len = size
-    node.buffer = strndup(data, size)
+    # FIXME: the curl docs give an example function that uses realloc on a
+    # single buffer rather than a linked list.  Possibly that method would be
+    # faster (as well as less complicated) -- especially if we preallocate a
+    # buffer for headers/data when allocating a response (paying a small
+    # memory cost in exchange for not having to allocate while processing
+    # response data).  It would also make the code less complicated.  Worth
+    # benchmarking the effects someday...
+    # <https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html>
+    node.buffer = strndup(data, size)  # FIXME: use realloc?
     node.next = NULL
     return node
 
@@ -86,10 +93,12 @@ cdef class Session:
         self.response_callback = None
 
     def __dealloc__(self):
-        if self.wrapper.loop.is_closed():
+        if self.wrapper.loop is None or self.wrapper.loop.is_closed():
             # FIXME: the event loop being closed only happens during testing,
             # so it kind of sucks to pay the price of checking for it all the
-            # time...
+            # time.  I'm not even sure what the circumstances are under which
+            # self.wrapper.loop becomes None -- I suspect it has to do with
+            # the cycle collector.
             curl_share_cleanup(self.shared)
         else:
             self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
@@ -130,9 +139,27 @@ cdef class Session:
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
 
+        cdef int i
+
+        for i in range(len(headers)):
+            if not isinstance(headers[i], bytes):
+                raise ValueError("headers should be a tuple of bytestrings if set")
+            curl_headers = curl_slist_append(curl_headers, headers[i])
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
+
+        # We have to postpone the initialization of the Request object until
+        # here, because we're going to transfer the ownership of the
+        # curl_headers to it
         cdef Request request = Request.__new__(Request, method, url, headers, cookies, auth, data, cert)
         request.store_session_cookies(self.shared)
-        cdef _Response response = _Response.make(self, curl, future, time.time(), request)  # FIXME: use a c time fn
+        request.curl_headers = curl_headers
+        cdef _Response response = _Response.make(self, curl, future, time(NULL), request)
+
+        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
+        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
+        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
 
         # We need to increment the reference count on the response.  To
         # python's eyes the last reference to it disappears when we exit this
@@ -148,21 +175,6 @@ cdef class Session:
         # optimal situation and we need to get to the bottom of it...  (Is it
         # related to the no_gc_clear and the crashes that it now prevents?)
         Py_INCREF(response)
-
-        acurl_easy_setopt_voidptr(curl, CURLOPT_PRIVATE, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_WRITEFUNCTION, body_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
-        acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
-        acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
-
-        cdef int i
-
-        for i in range(len(headers)):
-            if not isinstance(headers[i], bytes):
-                raise ValueError("headers should be a tuple of bytestrings if set")
-            curl_headers = curl_slist_append(curl_headers, headers[i])
-        # FIXME: free the slist eventually
-        acurl_easy_setopt_voidptr(curl, CURLOPT_HTTPHEADER, curl_headers)
 
         if auth is not None:
             if (
@@ -248,6 +260,12 @@ cdef class Session:
             data,
             cert,
         )
+        # This decref is the partner to the incref in _inner_request above --
+        # at this point curl is done with the response and so we no longer
+        # need to keep its refcount incremented to prevent the GC from
+        # cleaning it up when the only reference to it is held by curl and not
+        # python.
+        Py_DECREF(response)
         cdef _Response old_response
         if self.response_callback:
             # FIXME: should this be async?
