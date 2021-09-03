@@ -62,10 +62,7 @@ cdef class Request:
     def cookies(self):
         request_cookies = ()
         for c in self.cookie_tuple:
-            if isinstance(c, Cookie) or isinstance(c, _Cookie):
-                request_cookies += (c,)
-            else:
-                request_cookies += (parse_cookie_string(c.decode("utf-8")), )
+            request_cookies += (parse_cookie_string(c.decode("utf-8")),)
         session_cookies = tuple(parse_cookie_string(c.decode("utf-8")) for c in self.session_cookies)
 
         return cookie_seq_to_cookie_dict(request_cookies + session_cookies)

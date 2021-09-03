@@ -70,7 +70,7 @@ def test_parse_cookie_string_http_only():
 
 def test_session_cookie_for_url_with_cookie_instance():
     c = Cookie("sky.com", "foo", "bar")
-    cookie = acurl.session_cookie_for_url(url="https://kys.com", name="baz", value=c)
+    cookie = acurl.session_cookie_for_url(url="https://anotherdomain.com", name="baz", value=c)
     assert cookie.domain == "sky.com"
     assert cookie.name == "foo"
     assert cookie.value == "bar"
