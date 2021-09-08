@@ -4,7 +4,7 @@ from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
 
-import acurl
+import acurl_ng
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class SessionPool:
     _session_pools = {}
 
     def __init__(self):
-        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+        self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
         self._pool = deque()
 
     @asynccontextmanager

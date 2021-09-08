@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from helpers import create_request
 
-import acurl
+import acurl_ng
 
 
 def test_request_headers():
@@ -21,8 +21,8 @@ def test_request_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl._Cookie(False, "foo.com", True, "/", False, 0, "foo", "bar").format(),
-            acurl._Cookie(False, "foo.com", True, "/", False, 0, "my_cookie", "my_value").format(),
+            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "foo", "bar").format(),
+            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "my_cookie", "my_value").format(),
         ),
     )
     assert "my_cookie" in r.cookies

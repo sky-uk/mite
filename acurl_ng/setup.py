@@ -13,7 +13,7 @@ else:
     kwargs = {}
 
 extensions = [
-    Extension("acurl", ["src/acurl.pyx"], libraries=["curl"], **kwargs)
+    Extension("acurl_ng", ["src/acurl.pyx"], libraries=["curl"], **kwargs)
 ]
 
 setup(

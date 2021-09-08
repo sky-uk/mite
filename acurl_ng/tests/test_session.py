@@ -1,4 +1,4 @@
-import acurl
+import acurl_ng
 import pytest
 from werkzeug.wrappers import Response as WZResponse
 
@@ -14,7 +14,7 @@ async def test_get(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")
     r = await acurl_session.get(httpserver.url_for("/test"))
 
-    assert isinstance(r, acurl._Response)
+    assert isinstance(r, acurl_ng._Response)
     assert r.request.method == b"GET"
     assert r.body == b"hi"
     httpserver.check_assertions()
@@ -27,7 +27,7 @@ async def test_get_headers(httpserver, acurl_session):
     ).respond_with_data("hi")
     r = await acurl_session.get(httpserver.url_for("/test"), headers={"My-Header": "is-awesome"})
 
-    assert isinstance(r, acurl._Response)
+    assert isinstance(r, acurl_ng._Response)
     assert r.request.method == b"GET"
     assert r.body == b"hi"
     httpserver.check_assertions()
@@ -41,7 +41,7 @@ async def test_post_json(httpserver, acurl_session):
 
     r = await acurl_session.post(httpserver.url_for("/test"), json={"foo": "bar"})
 
-    assert isinstance(r, acurl._Response)
+    assert isinstance(r, acurl_ng._Response)
     assert r.request.method == b"POST"
     assert r.body == b"hi"
     httpserver.check_assertions()
@@ -55,7 +55,7 @@ async def test_post_data(httpserver, acurl_session):
 
     r = await acurl_session.post(httpserver.url_for("/test"), data="foobar")
 
-    assert isinstance(r, acurl._Response)
+    assert isinstance(r, acurl_ng._Response)
     assert r.request.method == b"POST"  # FIXME: should it be a string?
     assert r.body == b"hi"
     httpserver.check_assertions()
@@ -70,7 +70,7 @@ async def test_response_callback(httpserver, acurl_session):
         nonlocal called
         if called:
             raise Exception("called too many times")
-        assert isinstance(resp, acurl._Response)
+        assert isinstance(resp, acurl_ng._Response)
         called = True
 
     acurl_session.response_callback = response_cb
@@ -101,7 +101,7 @@ async def test_max_redirects_raises(httpserver, acurl_session):
         WZResponse(status=301, headers={"Location": "/test2"})
     )
 
-    with pytest.raises(acurl.RequestError):
+    with pytest.raises(acurl_ng.RequestError):
         await acurl_session.get(httpserver.url_for("/test"), max_redirects=0)
 
 

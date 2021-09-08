@@ -1,4 +1,4 @@
-from acurl import CaseInsensitiveDict
+from acurl_ng import CaseInsensitiveDict
 
 
 def test_case_insensitive_constructor():

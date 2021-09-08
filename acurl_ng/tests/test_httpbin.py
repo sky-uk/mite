@@ -3,11 +3,11 @@ from urllib.parse import urlencode
 
 import pytest
 
-import acurl
+import acurl_ng
 
 
 async def session():
-    el = acurl.CurlWrapper(asyncio.get_running_loop())
+    el = acurl_ng.CurlWrapper(asyncio.get_running_loop())
     return el.session()
 
 

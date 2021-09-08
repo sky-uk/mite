@@ -1,7 +1,7 @@
 import pytest
 from helpers import create_request
 
-import acurl
+import acurl_ng
 
 
 def test_to_curl():
@@ -23,7 +23,7 @@ def test_to_curl_cookies():
     r = create_request(
         "GET",
         "http://foo.com",
-        cookies=(acurl._Cookie(False, "foo.com", True, "/", False, 0, "123", "456").format(),),
+        cookies=(acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "123", "456").format(),),
     )
     assert r.to_curl() == "curl -X GET --cookie 123=456 http://foo.com"
 
@@ -33,8 +33,8 @@ def test_to_curl_multiple_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl._Cookie(False, "foo.com", True, "/", False, 0, "123", "456").format(),
-            acurl._Cookie(False, "foo.com", True, "/", False, 0, "789", "abc").format(),
+            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "123", "456").format(),
+            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "789", "abc").format(),
         ),
     )
     assert r.to_curl() == "curl -X GET --cookie '123=456;789=abc' http://foo.com"
@@ -50,7 +50,7 @@ def test_to_curl_cookies_wrong_domain():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl._Cookie(
+            acurl_ng._Cookie(
                 False,
                 "bar.com",  # The domain doesn't match, the cookie should not be passed
                 True,

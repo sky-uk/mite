@@ -5,7 +5,7 @@ import pytest
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
-import acurl
+import acurl_ng
 
 
 @pytest.mark.asyncio
@@ -57,7 +57,7 @@ async def test_response_headers_with_HTTP_100(acurl_session):
         return r
 
     results = await asyncio.gather(go(), server.serve_forever(), return_exceptions=True)
-    resp = [x for x in results if isinstance(x, acurl._Response)][0]
+    resp = [x for x in results if isinstance(x, acurl_ng._Response)][0]
     assert "Foo" in resp.headers
     assert resp.headers["Foo"] == "bar"
 
@@ -89,7 +89,7 @@ async def test_response_headers_with_multiple_HTTP_100(acurl_session):
         return r
 
     results = await asyncio.gather(go(), server.serve_forever(), return_exceptions=True)
-    resp = [x for x in results if isinstance(x, acurl._Response)][0]
+    resp = [x for x in results if isinstance(x, acurl_ng._Response)][0]
     assert "Foo" in resp.headers
     assert resp.headers["Foo"] == "bar"
 
