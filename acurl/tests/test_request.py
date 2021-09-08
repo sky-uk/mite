@@ -21,10 +21,8 @@ def test_request_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl.parse_cookie_string(
-                "foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
-            ),
-            acurl.parse_cookie_string("foo.com\tFALSE\t/bar\tFALSE\t0\tfoo\tbar"),
+            acurl._Cookie(False, "foo.com", True, "/", False, 0, "foo", "bar").format(),
+            acurl._Cookie(False, "foo.com", True, "/", False, 0, "my_cookie", "my_value").format(),
         ),
     )
     assert "my_cookie" in r.cookies
