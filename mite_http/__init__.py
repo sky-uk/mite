@@ -38,8 +38,13 @@ class SessionPool:
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
-    def __init__(self):
-        self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+    def __init__(self, use_new_acurl_implementation=False):
+        if use_new_acurl_implementation:
+            import acurl_ng
+            self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+        else:
+            import acurl
+            self._wrapper = acurl.EventLoop()
         self._pool = deque()
 
     @asynccontextmanager
@@ -57,7 +62,8 @@ class SessionPool:
             try:
                 instance = cls._session_pools[loop]
             except KeyError:
-                instance = cls()
+                use_new_acurl_implementation = ctx.config.get("enable_new_acurl_implementation", False)
+                instance = cls(use_new_acurl_implementation)
                 cls._session_pools[loop] = instance
             async with instance.session_context(ctx):
                 return await func(ctx, *args, **kwargs)
