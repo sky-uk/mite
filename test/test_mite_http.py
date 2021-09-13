@@ -88,7 +88,7 @@ async def test_decorator_eventloop_memoization():
         pass
 
     class MockContext:
-        pass
+        config = {}
 
     await foo(MockContext())
 

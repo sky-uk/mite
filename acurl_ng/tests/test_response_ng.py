@@ -9,7 +9,7 @@ import acurl_ng
 
 
 @pytest.mark.asyncio
-async def test_response_headers(httpserver, acurl_session):
+async def test_response_headers(httpserver, acurl_session_ng):
     hdrs = Headers()
     hdrs.add("Foo", "bar")
     hdrs.add("Baz", "quux")
@@ -17,7 +17,7 @@ async def test_response_headers(httpserver, acurl_session):
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session.get(httpserver.url_for("/foo"))
+    r = await acurl_session_ng.get(httpserver.url_for("/foo"))
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
     assert r.headers["foo"] == "bar"
@@ -35,7 +35,7 @@ async def connected_cb(body, reader, writer):
 
 
 @pytest.mark.asyncio
-async def test_response_headers_with_HTTP_100(acurl_session):
+async def test_response_headers_with_HTTP_100(acurl_session_ng):
     body = b"".join(
         (
             b"HTTP/1.1 100 Continue\r\n",
@@ -52,7 +52,7 @@ async def test_response_headers_with_HTTP_100(acurl_session):
     await server.start_serving()
 
     async def go():
-        r = await acurl_session.get("http://localhost:10763/foo")
+        r = await acurl_session_ng.get("http://localhost:10763/foo")
         server.close()
         return r
 
@@ -63,7 +63,7 @@ async def test_response_headers_with_HTTP_100(acurl_session):
 
 
 @pytest.mark.asyncio
-async def test_response_headers_with_multiple_HTTP_100(acurl_session):
+async def test_response_headers_with_multiple_HTTP_100(acurl_session_ng):
     # It's unclear if this can happen. It doesn't sound like it should, but
     # there's documentation of it happening in IIS at least:
     # https://stackoverflow.com/questions/22818059/several-100-continue-received-from-the-server
@@ -84,7 +84,7 @@ async def test_response_headers_with_multiple_HTTP_100(acurl_session):
     await server.start_serving()
 
     async def go():
-        r = await acurl_session.get("http://localhost:10763/foo")
+        r = await acurl_session_ng.get("http://localhost:10763/foo")
         server.close()
         return r
 
@@ -95,12 +95,12 @@ async def test_response_headers_with_multiple_HTTP_100(acurl_session):
 
 
 @pytest.mark.asyncio
-async def test_response_cookies(httpserver, acurl_session):
+async def test_response_cookies(httpserver, acurl_session_ng):
     hdrs = Headers()
     hdrs.add("Set-Cookie", "foo=bar")
     hdrs.add("Set-Cookie", "quux=xyzzy")
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session.get(httpserver.url_for("/foo"))
+    r = await acurl_session_ng.get(httpserver.url_for("/foo"))
     assert r.cookies == {"foo": "bar", "quux": "xyzzy"}

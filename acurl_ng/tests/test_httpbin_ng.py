@@ -22,18 +22,18 @@ async def test_get(httpbin):
 
 
 @pytest.mark.asyncio
-async def test_cookies(httpbin, acurl_session):
-    r = await acurl_session.get(httpbin.url + "/cookies/set?name=value")
+async def test_cookies(httpbin, acurl_session_ng):
+    r = await acurl_session_ng.get(httpbin.url + "/cookies/set?name=value")
     assert r.cookies == {"name": "value"}
 
 
 @pytest.mark.asyncio
-async def test_session_cookies(httpbin, acurl_session):
-    await acurl_session.get(httpbin.url + "/cookies/set?name=value")
-    cookies = acurl_session.cookies()
+async def test_session_cookies(httpbin, acurl_session_ng):
+    await acurl_session_ng.get(httpbin.url + "/cookies/set?name=value")
+    cookies = acurl_session_ng.cookies()
     assert cookies == {"name": "value"}
-    acurl_session.erase_all_cookies()
-    cookie_list = acurl_session.cookies()
+    acurl_session_ng.erase_all_cookies()
+    cookie_list = acurl_session_ng.cookies()
     assert len(cookie_list) == 0
 
 
