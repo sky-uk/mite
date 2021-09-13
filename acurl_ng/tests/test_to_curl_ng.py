@@ -39,7 +39,9 @@ def test_to_curl_multiple_cookies():
     )
     assert r.to_curl() == "curl -X GET --cookie '123=456;789=abc' http://foo.com"
 
-
+# FIXME: curl won't send cookies that don't match the domain.
+# https://curl.se/docs/http-cookies.html
+# Should we ignore cookies that won't be sent?
 @pytest.mark.skip(reason="unimplemented")
 def test_to_curl_cookies_wrong_domain():
     # I'm not sure if this is a valid test case...Request objects should
@@ -49,17 +51,9 @@ def test_to_curl_cookies_wrong_domain():
     r = create_request(
         "GET",
         "http://foo.com",
+        # The domain doesn't match, the cookie should not be passed
         cookies=(
-            acurl_ng._Cookie(
-                False,
-                "bar.com",  # The domain doesn't match, the cookie should not be passed
-                True,
-                "/",
-                False,
-                0,
-                "123",
-                "456",
-            ),
+            acurl_ng._Cookie(False, "bar.com", True, "/", False, 0, "123", "456").format(),
         ),
     )
     assert r.to_curl() == "curl -X GET http://foo.com"
