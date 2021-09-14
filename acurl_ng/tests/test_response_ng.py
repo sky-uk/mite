@@ -47,7 +47,7 @@ async def test_response_headers_with_HTTP_100(acurl_session_ng):
         )
     )
     server = await asyncio.start_server(
-        partial(connected_cb, body), host="localhost", port=10764
+        partial(connected_cb, body), host="127.0.0.1", port=10764
     )
     await server.start_serving()
 
@@ -79,7 +79,7 @@ async def test_response_headers_with_multiple_HTTP_100(acurl_session_ng):
         )
     )
     server = await asyncio.start_server(
-        partial(connected_cb, body), host="localhost", port=10764
+        partial(connected_cb, body), host="127.0.0.1", port=10764
     )
     await server.start_serving()
 
