@@ -20,7 +20,7 @@ cdef class _Cookie:
     cdef readonly bint include_subdomains
     cdef readonly str path
     cdef readonly bint is_secure
-    cdef readonly int expiration  # TODO right type???
+    cdef readonly int expiration
     cdef readonly str name
     cdef readonly str value
 

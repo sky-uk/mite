@@ -28,13 +28,12 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     # response data).  It would also make the code less complicated.  Worth
     # benchmarking the effects someday...
     # <https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html>
-    node.buffer = strndup(data, size)  # FIXME: use realloc?
+    node.buffer = strndup(data, size)
     node.next = NULL
     return node
 
 cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
-    # Py_INCREF(response)  # FIXME: is this no longer needed??
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
         response.header_buffer = node
@@ -45,7 +44,6 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
 
 cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
-    # Py_INCREF(response)  # FIXME: is this no longer needed??
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
         response.body_buffer = node

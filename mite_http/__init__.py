@@ -4,8 +4,6 @@ from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
 
-import acurl_ng
-
 logger = logging.getLogger(__name__)
 
 
