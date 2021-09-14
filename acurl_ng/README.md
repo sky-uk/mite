@@ -1,6 +1,6 @@
 # Acurl_NG (Next Generation)
 
-Acurl_NG is a Cython implementation of the pre-existing acurl implementation, previously built entirely in C.
+Acurl_NG is a Cython refactoring/rewrite of an earlier iteration of the asynchronous curl wrapper concept, which was written in C for the mite project by Tony Simpson <agjasimpson@gmail.com>.
 It is an asynchronous wrapper around [libcurl](https://curl.se/libcurl/) which is built to interface with the Uvloop python library.
 
 ## Using Acurl_NG In Mite
