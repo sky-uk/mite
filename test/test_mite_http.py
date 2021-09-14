@@ -1,3 +1,4 @@
+import asyncio
 import os
 from unittest.mock import patch
 
@@ -87,13 +88,8 @@ async def test_decorator_eventloop_memoization():
         pass
 
     class MockContext:
-        pass
+        config = {}
 
-    with patch("mite_http.asyncio") as asyncio_mock:
-        # slightly tricksy: we only patch the copy of get_event_loop that is
-        # imported into mite_http, so that other code continues to function
-        # normally
-        asyncio_mock.get_event_loop.return_value = "foo"
-        await foo(MockContext())
+    await foo(MockContext())
 
-    assert "foo" in SessionPool._session_pools
+    assert asyncio.get_running_loop() in SessionPool._session_pools

@@ -29,6 +29,9 @@ docker run --rm -it mite sh
 
 Run `mite --help` for a full list of commands
 
+#### NOTE:
+Acurl is currently in the process of being migrated to a new implementation under the name `acurl_ng` (will be changed back in the second phase) which is currently turned off by default. To enable the new acurl implementation during tests, you will need to set the following flag: `MITE_CONF_enable_new_acurl_implementation=true` 
+
 ## Your first scenario
 
 Scenarios are a combination of 3 things, a set of journeys to run, a

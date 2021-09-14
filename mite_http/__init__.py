@@ -4,8 +4,6 @@ from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
 
-from acurl import EventLoop
-
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +14,6 @@ class AcurlSessionWrapper:
         self.additional_metrics = {}
 
     def __getattr__(self, attrname):
-
         try:
             r = object.__getattr__(self, attrname)
             return r
@@ -39,8 +36,15 @@ class SessionPool:
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
-    def __init__(self):
-        self._el = EventLoop()
+    def __init__(self, use_new_acurl_implementation=False):
+        if use_new_acurl_implementation:
+            import acurl_ng
+
+            self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+        else:
+            import acurl
+
+            self._wrapper = acurl.EventLoop()
         self._pool = deque()
 
     @asynccontextmanager
@@ -58,7 +62,10 @@ class SessionPool:
             try:
                 instance = cls._session_pools[loop]
             except KeyError:
-                instance = cls()
+                use_new_acurl_implementation = ctx.config.get(
+                    "enable_new_acurl_implementation", False
+                )
+                instance = cls(use_new_acurl_implementation)
                 cls._session_pools[loop] = instance
             async with instance.session_context(ctx):
                 return await func(ctx, *args, **kwargs)
@@ -66,7 +73,7 @@ class SessionPool:
         return wrapper
 
     async def _checkout(self, context):
-        session = self._el.session()
+        session = self._wrapper.session()
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
