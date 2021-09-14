@@ -21,8 +21,12 @@ def test_request_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "foo", "bar").format(),
-            acurl_ng._Cookie(False, "foo.com", True, "/", False, 0, "my_cookie", "my_value").format(),
+            acurl_ng._Cookie(
+                False, "foo.com", True, "/", False, 0, "foo", "bar"
+            ).format(),
+            acurl_ng._Cookie(
+                False, "foo.com", True, "/", False, 0, "my_cookie", "my_value"
+            ).format(),
         ),
     )
     assert "my_cookie" in r.cookies
@@ -33,7 +37,9 @@ def test_request_cookies():
 
 @pytest.mark.asyncio
 async def test_request_e2e(httpbin, acurl_session_ng):
-    r = await acurl_session_ng.get(httpbin.url + "/get", headers={"Foo": "bar"}, cookies={"baz": "quux"})
+    r = await acurl_session_ng.get(
+        httpbin.url + "/get", headers={"Foo": "bar"}, cookies={"baz": "quux"}
+    )
     assert r.request.cookies == {"baz": "quux"}
     assert r.request.headers == {"Foo": "bar"}
 
@@ -47,7 +53,9 @@ async def test_request_cookies_from_previous(httpbin, acurl_session_ng):
 
 @pytest.mark.asyncio
 @pytest.mark.slow
-async def test_request_cookies_from_previous_excludes_other_domains(httpbin, acurl_session_ng):
+async def test_request_cookies_from_previous_excludes_other_domains(
+    httpbin, acurl_session_ng
+):
     await acurl_session_ng.get(httpbin.url + "/cookies/set?name=value")
     # FIXME: we want to set a cookie for another domain.  There's no easy way
     # to get another domain set up loally, so we (as an exception) go out to

@@ -1,6 +1,8 @@
 import asyncio
-import acurl_ng
 import gc
+
+import acurl_ng
+
 
 async def main():
     el = acurl_ng.CurlWrapper(asyncio.get_running_loop())
@@ -17,7 +19,8 @@ async def main():
     #     r = await session.get("http://example.com")
 
     # But the simplest case is just to run the code once
-    r = await session.get("http://example.com")
+    await session.get("http://example.com")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,10 +1,14 @@
-from unittest.mock import Mock
-
 import acurl_ng
 
 
 def create_request(
-    method, url, headers=(), cookies=(), auth=None, data=None, cert=None,
+    method,
+    url,
+    headers=(),
+    cookies=(),
+    auth=None,
+    data=None,
+    cert=None,
 ):
     # Cookies should be the byte string representation of the cookie
     if isinstance(method, str):

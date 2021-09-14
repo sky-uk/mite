@@ -39,9 +39,11 @@ class SessionPool:
     def __init__(self, use_new_acurl_implementation=False):
         if use_new_acurl_implementation:
             import acurl_ng
+
             self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
         else:
             import acurl
+
             self._wrapper = acurl.EventLoop()
         self._pool = deque()
 
@@ -60,7 +62,9 @@ class SessionPool:
             try:
                 instance = cls._session_pools[loop]
             except KeyError:
-                use_new_acurl_implementation = ctx.config.get("enable_new_acurl_implementation", False)
+                use_new_acurl_implementation = ctx.config.get(
+                    "enable_new_acurl_implementation", False
+                )
                 instance = cls(use_new_acurl_implementation)
                 cls._session_pools[loop] = instance
             async with instance.session_context(ctx):

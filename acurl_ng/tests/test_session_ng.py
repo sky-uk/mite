@@ -1,6 +1,7 @@
-import acurl_ng
 import pytest
 from werkzeug.wrappers import Response as WZResponse
+
+import acurl_ng
 
 
 @pytest.mark.asyncio
@@ -25,7 +26,9 @@ async def test_get_headers(httpserver, acurl_session_ng):
     httpserver.expect_oneshot_request(
         "/test", "GET", headers={"My-Header": "is-awesome"}
     ).respond_with_data("hi")
-    r = await acurl_session_ng.get(httpserver.url_for("/test"), headers={"My-Header": "is-awesome"})
+    r = await acurl_session_ng.get(
+        httpserver.url_for("/test"), headers={"My-Header": "is-awesome"}
+    )
 
     assert isinstance(r, acurl_ng._Response)
     assert r.request.method == b"GET"
@@ -36,7 +39,10 @@ async def test_get_headers(httpserver, acurl_session_ng):
 @pytest.mark.asyncio
 async def test_post_json(httpserver, acurl_session_ng):
     httpserver.expect_oneshot_request(
-        "/test", "POST", json={"foo": "bar"}, headers={"content-type": "application/json"}
+        "/test",
+        "POST",
+        json={"foo": "bar"},
+        headers={"content-type": "application/json"},
     ).respond_with_data("hi")
 
     r = await acurl_session_ng.post(httpserver.url_for("/test"), json={"foo": "bar"})
