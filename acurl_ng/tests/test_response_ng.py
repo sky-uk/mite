@@ -47,12 +47,12 @@ async def test_response_headers_with_HTTP_100(acurl_session_ng):
         )
     )
     server = await asyncio.start_server(
-        partial(connected_cb, body), host="localhost", port=10763
+        partial(connected_cb, body), host="localhost", port=10764
     )
     await server.start_serving()
 
     async def go():
-        r = await acurl_session_ng.get("http://localhost:10763/foo")
+        r = await acurl_session_ng.get("http://localhost:10764/foo")
         server.close()
         return r
 
@@ -79,12 +79,12 @@ async def test_response_headers_with_multiple_HTTP_100(acurl_session_ng):
         )
     )
     server = await asyncio.start_server(
-        partial(connected_cb, body), host="localhost", port=10763
+        partial(connected_cb, body), host="localhost", port=10764
     )
     await server.start_serving()
 
     async def go():
-        r = await acurl_session_ng.get("http://localhost:10763/foo")
+        r = await acurl_session_ng.get("http://localhost:10764/foo")
         server.close()
         return r
 
