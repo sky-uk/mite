@@ -153,6 +153,11 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     # Run one last report before exiting
     controller.report(receiver.recieve)
     has_error = http_stats_output is not None and http_stats_output.error_total > 0
+
+    # Ensure any open files get closed
+    del receiver._raw_listeners
+    del receiver._listeners
+
     sys.exit(int(has_error))
 
 

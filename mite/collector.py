@@ -18,9 +18,9 @@ class Collector:
         filter_fn=None,
         use_json=False,
     ):
-        logger.info('Initializing collector')
+        logger.info("Initializing collector")
         if target_dir is None:
-            target_dir = 'collector_data'
+            target_dir = "collector_data"
         self._target_dir = os.path.abspath(target_dir)
         self._roll_after = roll_after
         os.makedirs(self._target_dir, exist_ok=True)
@@ -32,13 +32,16 @@ class Collector:
         self._file_counter = count()
         self._rotate_current_file()
 
+    def __del__(self):
+        self._current.close()
+
     @property
     def _current_fn(self):
-        return os.path.join(self._target_dir, 'current')
+        return os.path.join(self._target_dir, "current")
 
     @property
     def _current_st_fn(self):
-        return os.path.join(self._target_dir, 'current_start_time')
+        return os.path.join(self._target_dir, "current_start_time")
 
     def process_raw_message(self, raw):
         self._msg_count += 1
@@ -61,14 +64,14 @@ class Collector:
             self._current.close()
 
         if os.path.isfile(self._current_fn):
-            logger.debug('rotating existing current file %s', self._current_fn)
+            logger.debug("rotating existing current file %s", self._current_fn)
             with open(self._current_st_fn) as f:
                 start_time = f.read()
             end_time = int(time.time())
             c = next(self._file_counter)
             fn = os.path.join(
                 self._target_dir,
-                '_'.join(
+                "_".join(
                     str(x)
                     for x in (
                         start_time,
@@ -78,10 +81,10 @@ class Collector:
                     )
                 ),
             )
-            logger.info('moving old current %s to %s', self._current_fn, fn)
+            logger.info("moving old current %s to %s", self._current_fn, fn)
             os.rename(self._current_fn, fn)
 
-        with open(self._current_st_fn, 'w') as f:
+        with open(self._current_st_fn, "w") as f:
             f.write(str(int(time.time())))
 
-        self._current = open(self._current_fn, 'wb')
+        self._current = open(self._current_fn, "wb")
