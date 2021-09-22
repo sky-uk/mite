@@ -156,6 +156,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     # Ensure any open files get closed
     del receiver._raw_listeners
+    del receiver._listeners
 
     sys.exit(int(has_error))
 
