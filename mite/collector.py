@@ -32,6 +32,9 @@ class Collector:
         self._file_counter = count()
         self._rotate_current_file()
 
+    def __del__(self):
+        self._current.close()
+
     @property
     def _current_fn(self):
         return os.path.join(self._target_dir, "current")
@@ -53,7 +56,6 @@ class Collector:
             self._current.write(json.dumps(decoded).encode() + b"\n")
         else:
             self._current.write(msg)
-        self._current.flush()
 
     def _rotate_current_file(self):
         self._msg_count = 0
