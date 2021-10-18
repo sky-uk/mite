@@ -15,7 +15,6 @@ from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
-
 class _SeleniumWrapper:
     def __init__(self, context):
         """Constructor pulls capabilities and other webdriver config from the context
@@ -240,6 +239,11 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
                 **{"addr": addr},
             },
         )
+
+        self._remote.scopes = [
+            '^(?!.*(assets|\.js)).*$'
+        ]
+
         logger.debug(f"Selenium-wire machine IP: {addr}")
         self._context.raw_webdriver = self._remote
 

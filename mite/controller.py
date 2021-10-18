@@ -120,6 +120,9 @@ class Controller:
     def report(self, sender):
         required = self._scenario_manager.get_required_work()
         active_runner_ids = self._runner_tracker.get_active()
+
+        logger.info(f"{active_runner_ids=}")
+
         actual = self._work_tracker.get_total_work(active_runner_ids)
         sender(
             {
