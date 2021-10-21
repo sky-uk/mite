@@ -20,6 +20,9 @@ ADD . / /mite/
 WORKDIR /mite/acurl
 RUN pip install --no-cache-dir -e .
 
+WORKDIR /mite/acurl_ng
+RUN pip install --no-cache-dir -e .
+
 WORKDIR /mite
 RUN pip install --no-cache-dir -e .
 
