@@ -1,20 +1,12 @@
-# TODO: this and the commented lines at the end of the file are for multistage
-# builds, which we can use once core platform pull their finger out.
-# FROM python:3.7.3-alpine3.9 as base
+# we use a later python and alpine so that the most up to date py3-cryptography can be pulled in
+# this stops the requirement for rust be dragged in (causing much "fun" in so far as the image size bloats
+# to approx 2Gb!)
 
-# grab rust so that cryptography can be built (now a dependency for
-# selenium)
-FROM rust:1.56.0-alpine as rustbase
-FROM python:3.7.3-alpine3.9
-COPY --from=rustbase / /
+FROM python:3.8-alpine3.13
 
-RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev libffi libffi-dev libbz2 bzip2-dev xz-dev libjpeg jpeg-dev expat
-
-# setup some environment for rust compiler
-ENV PATH="/usr/local/cargo/bin/:${PATH}"
-ENV RUST_VERSION=1.56.0
-ENV CARGO_HOME="/usr/local/cargo"
-ENV RUSTUP_HOME="/usr/local/rustup"
+# py3-cryptography is added here as a means to get python cryptography onto the image (prebuilt) and without
+# need to install rust compiler
+RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev libffi libffi-dev libbz2 bzip2-dev xz-dev libjpeg jpeg-dev py3-cryptography
 
 # This little bit of magic caches the dependencies in a docker layer, so that
 # rebuilds locally are not so expensive
@@ -44,6 +36,3 @@ RUN pip install --no-cache-dir -e .
 RUN rm -r /mite/.git
 
 RUN apk del -r gnupg tar gcc cmake make libc-dev g++ zeromq-dev git
-
-# FROM python:3.7.3-alpine3.9
-# COPY --from=base / /
