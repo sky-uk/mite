@@ -7,22 +7,17 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-python3 -m venv env
-source env/bin/activate
-
 pip install -r test-requirements.txt
 pip install -r requirements.txt
        
-pip install acurl
-pip install acurl_ng
+pip install -e ./acurl
+pip install -e ./acurl_ng
 
 TEST_EXIT_CODE=1
 pytest acurl/tests
 EC1=$?
 pytest acurl_ng/tests
 EC2=$?
-
-deactivate
 
 if [ "$EC1" -eq 0 -a "$EC2" -eq 0 ];
 then
