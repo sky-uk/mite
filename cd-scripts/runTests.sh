@@ -7,7 +7,6 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-cd ../
 pip install -r test-requirements.txt
 pip install -r requirements.txt
        
