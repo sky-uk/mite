@@ -10,8 +10,8 @@ fi
 pip install -r test-requirements.txt
 pip install -r requirements.txt
        
-pip install -e acurl
-pip install -e acurl_ng
+pip install acurl
+pip install acurl_ng
 
 TEST_EXIT_CODE=1
 pytest acurl/tests
