@@ -7,8 +7,8 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-# tox seems to be giving issues, so dropping it for now
-# tox -e py39; TOX_EXIT_CODE=$?
+pip install ujson
+tox -e py39; TOX_EXIT_CODE=$?
 
 # Further ideas for jobs to run:
 # - license check
@@ -19,5 +19,4 @@ fi
 # - documentation coverage
 # - docs build (on master only)
 
-# when we start using tox again, uncomment the line below
-# [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+[ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
