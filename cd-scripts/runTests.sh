@@ -7,6 +7,7 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
+pip install ujson
 tox -e py39; TOX_EXIT_CODE=$?
 
 # Further ideas for jobs to run:
