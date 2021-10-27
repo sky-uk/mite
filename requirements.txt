@@ -1,4 +1,9 @@
 --index-url https://pypi.python.org/simple/
+urllib3 >= 1.26.7
+idna == 2.*
+#sanic == sanic-20.6.2
+pytest_httpserver == 1.0.1
+ujson >= 4.1.0
 
 -e ./acurl
 -e ./acurl_ng
