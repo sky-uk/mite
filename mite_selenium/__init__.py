@@ -84,6 +84,11 @@ class _SeleniumWrapper:
             performance_entries = self._remote.execute_script(
                 "return performance.getEntriesByType('navigation')"
             )
+            paint_entries = self._remote.execute_script(
+                "return performance.getEntriesByType('paint')"
+            )
+            first_paint = paint_entries[0]
+            first_contentful_paint = paint_entries[1]
 
             timings = self._extract_first_entry(performance_entries)
             if timings is None:
@@ -109,6 +114,8 @@ class _SeleniumWrapper:
                 "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
                 "tls_time": self._get_tls_timing(timings),
                 "total_time": timings["duration"],
+                "first_paint": first_paint["startTime"],
+                "first_paint": first_contentful_paint["startTime"]
             }
             self._context.send(
                 "selenium_page_load_metrics",
