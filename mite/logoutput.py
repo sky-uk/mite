@@ -79,7 +79,7 @@ class GenericStatsOutput:
         dt = t - self._start_t
         self._resp_time_recent.sort()
         self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
-        # only output journey logs if the --journey_logging switch is set 
+        # only output journey logs if the --journey_logging switch is set
         if self._journey_logging:
             for k, v in self._error_journeys.items():
                 self._logger.info(f"Total errors for {k} :{v}")
