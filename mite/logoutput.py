@@ -36,6 +36,9 @@ class DebugMessageOutput:
 class GenericStatsOutput:
     def __init__(self, period=2):
         self._period = period
+        # get the state of the journey_logging attribute from the
+        # parent object
+        self._journey_logging = logging.__dict__.get("journey_logging")
         self._logger = logging.getLogger(f"{self.log_name} Stats")
         self._start_t = None
         self._req_total = 0
@@ -43,6 +46,7 @@ class GenericStatsOutput:
         self._error_total = 0
         self._error_recent = 0
         self._resp_time_recent = []
+        self._error_journeys = {}
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -75,6 +79,10 @@ class GenericStatsOutput:
         dt = t - self._start_t
         self._resp_time_recent.sort()
         self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
+        # only output journey logs if the --journey_logging switch is set 
+        if self._journey_logging:
+            for k, v in self._error_journeys.items():
+                self._logger.info(f"Total errors for {k} :{v}")
         self._logger.info(
             f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
             + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
@@ -103,6 +111,17 @@ class GenericStatsOutput:
         elif msg_type in ("error", "exception"):
             self._error_total += 1
             self._error_recent += 1
+            # get the name of the erroring journey
+            journey_name = message.get("journey")
+            if journey_name != None:
+                # the dictionary stores how many times
+                # the journey has errored
+                journey_error = self._error_journeys.get(journey_name)
+                if journey_error == None:
+                    self._error_journeys[journey_name] = 1
+                else:
+                    journey_error += 1
+                    self._error_journeys[journey_name] = journey_error
 
 
 class HttpStatsOutput(GenericStatsOutput):

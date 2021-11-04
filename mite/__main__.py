@@ -66,6 +66,7 @@ Options:
     --logging-webhook=URL                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                   Reformat unix timestamps to human readable dates
+    --journey-logging                       Log errors on a per journey basis
 """
 import asyncio
 import logging
@@ -282,6 +283,10 @@ def setup_logging(opts):
         level=opts["--log-level"],
         format="[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s",
     )
+    # add the journey_logging attribute to the object
+    # default is False´
+    journey_logging = opts.get("--journey-logging", False)
+    setattr(logging, "journey_logging", journey_logging)
 
 
 def configure_python_path(opts):
