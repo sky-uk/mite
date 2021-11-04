@@ -286,6 +286,8 @@ def setup_logging(opts):
     # add the journey_logging attribute to the object
     # default is False´
     journey_logging = opts.get("--journey-logging", False)
+    if journey_logging is not False:
+        journey_logging = True
     setattr(logging, "journey_logging", journey_logging)
 
 
