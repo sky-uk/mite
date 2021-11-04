@@ -113,11 +113,11 @@ class GenericStatsOutput:
             self._error_recent += 1
             # get the name of the erroring journey
             journey_name = message.get("journey")
-            if journey_name != None:
+            if journey_name is not None:
                 # the dictionary stores how many times
                 # the journey has errored
                 journey_error = self._error_journeys.get(journey_name)
-                if journey_error == None:
+                if journey_error is None:
                     self._error_journeys[journey_name] = 1
                 else:
                     journey_error += 1
