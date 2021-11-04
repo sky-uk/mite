@@ -1,4 +1,3 @@
-import pytest
 import logging
 from mite.__main__ import setup_logging
 
@@ -9,7 +8,7 @@ def test_journey_logging():
     optsFalse = {"--log-level": "DEBUG"}
 
     setup_logging(optsTrue)
-    assert logging.__dict__.get("journey_logging") == True
+    assert logging.__dict__.get("journey_logging") is True
 
     setup_logging(optsFalse)
-    assert logging.__dict__.get("journey_logging") == False
+    assert logging.__dict__.get("journey_logging") is False
