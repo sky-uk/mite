@@ -1,4 +1,5 @@
 import logging
+
 from mite.__main__ import setup_logging
 
 
