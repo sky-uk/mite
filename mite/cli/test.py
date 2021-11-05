@@ -71,7 +71,7 @@ def _setup_msg_processors(receiver, opts):
     receiver.add_raw_listener(collector.process_raw_message)
 
     extra_processors = [
-        spec_import(x)() for x in opts["--message-processors"].split(",") if x
+        spec_import(x)(opts) for x in opts["--message-processors"].split(",") if x
     ]
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
@@ -132,7 +132,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
-    debug_message_output = DebugMessageOutput()
+    debug_message_output = DebugMessageOutput(opts)
     receiver.add_listener(debug_message_output.process_message)
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)

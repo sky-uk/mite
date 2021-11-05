@@ -283,12 +283,6 @@ def setup_logging(opts):
         level=opts["--log-level"],
         format="[%(asctime)s] <%(levelname)s> [%(name)s] [%(pathname)s:%(lineno)d %(funcName)s] %(message)s",
     )
-    # add the journey_logging attribute to the object
-    # default is False´
-    journey_logging = opts.get("--journey-logging", False)
-    if journey_logging is not False:
-        journey_logging = True
-    setattr(logging, "journey_logging", journey_logging)
 
 
 def configure_python_path(opts):

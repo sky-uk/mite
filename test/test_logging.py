@@ -1,15 +1,13 @@
-import logging
-
-from mite.__main__ import setup_logging
+from mite.logoutput import HttpStatsOutput
 
 
 def test_journey_logging():
-    optsTrue = {"--log-level": "DEBUG", "--journey-logging": ""}
+    optsTrue = {"--journey-logging": ""}
 
-    optsFalse = {"--log-level": "DEBUG"}
+    optsFalse = {}
 
-    setup_logging(optsTrue)
-    assert logging.__dict__.get("journey_logging") is True
+    h = HttpStatsOutput(optsTrue)
+    assert h._journey_logging is True
 
-    setup_logging(optsFalse)
-    assert logging.__dict__.get("journey_logging") is False
+    h = HttpStatsOutput(optsFalse)
+    assert h._journey_logging is False
