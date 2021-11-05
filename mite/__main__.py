@@ -66,6 +66,7 @@ Options:
     --logging-webhook=URL                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                   Reformat unix timestamps to human readable dates
+    --journey-logging                       Log errors on a per journey basis
 """
 import asyncio
 import logging

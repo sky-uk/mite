@@ -1,10 +1,11 @@
 import logging
 import math
 import time
+from collections import defaultdict
 
 
 class MsgOutput:
-    def __init__(self):
+    def __init__(self, opts):
         self._logger = logging.getLogger("MSG")
 
     def process_message(self, msg):
@@ -24,7 +25,7 @@ class MsgOutput:
 
 
 class DebugMessageOutput:
-    def __init__(self):
+    def __init__(self, opts):
         self._logger = logging.getLogger("Debug Logger")
 
     def process_message(self, message):
@@ -34,8 +35,13 @@ class DebugMessageOutput:
 
 
 class GenericStatsOutput:
-    def __init__(self, period=2):
+    def __init__(self, opts, period=2):
         self._period = period
+        # get the state of the journey_logging attribute from the
+        # opts dictionary
+        self._journey_logging = opts.get("--journey-logging", False)
+        if self._journey_logging is not False:
+            self._journey_logging = True
         self._logger = logging.getLogger(f"{self.log_name} Stats")
         self._start_t = None
         self._req_total = 0
@@ -43,6 +49,7 @@ class GenericStatsOutput:
         self._error_total = 0
         self._error_recent = 0
         self._resp_time_recent = []
+        self._error_journeys = defaultdict(int)
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -75,6 +82,10 @@ class GenericStatsOutput:
         dt = t - self._start_t
         self._resp_time_recent.sort()
         self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
+        # only output journey logs if the --journey_logging switch is set
+        if self._journey_logging:
+            for k, v in self._error_journeys.items():
+                self._logger.info(f"Total errors for {k} :{v}")
         self._logger.info(
             f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
             + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
@@ -103,6 +114,9 @@ class GenericStatsOutput:
         elif msg_type in ("error", "exception"):
             self._error_total += 1
             self._error_recent += 1
+            if self._journey_logging:
+                journey_name = message.get("journey")
+                self._error_journeys[journey_name] += 1
 
 
 class HttpStatsOutput(GenericStatsOutput):
