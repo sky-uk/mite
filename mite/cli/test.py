@@ -152,7 +152,9 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     loop.run_until_complete(asyncio.wait(coroutines, return_when=asyncio.FIRST_COMPLETED))
     # Run one last report before exiting
     controller.report(receiver.recieve)
-    has_error = http_stats_output is not None and http_stats_output.error_total > 0
+    has_error = http_stats_output is not None and http_stats_output.error_total > int(
+        opts.get("--max-errors-threshold")
+    )
 
     # Ensure any open files get closed
     del receiver._raw_listeners

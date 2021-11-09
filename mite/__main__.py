@@ -67,6 +67,7 @@ Options:
     --message-processors=PROCESSORS         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                   Reformat unix timestamps to human readable dates
     --journey-logging                       Log errors on a per journey basis
+    --max-errors-threshold=THRESHOLD        Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
 """
 import asyncio
 import logging
