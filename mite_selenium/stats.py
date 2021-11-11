@@ -12,6 +12,7 @@ _PAGE_LOAD_METRICS = [
     ("time_to_interactive", "seconds"),
     ("time_to_last_byte", "seconds"),
     ("tls_time", "seconds"),
+    ("first_paint", "seconds"),
     ("total_time", "seconds"),
 ]
 
@@ -22,6 +23,7 @@ _NETWORK_RESOURCE_METRICS = [
     ("time_to_first_byte", "seconds"),
     ("time_to_last_byte", "seconds"),
     ("tls_time", "seconds"),
+    ("first_paint", "seconds"),
     ("total_time", "seconds"),
 ]
 
