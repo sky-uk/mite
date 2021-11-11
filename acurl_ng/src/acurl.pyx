@@ -95,7 +95,10 @@ cdef class CurlWrapper:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
                 response = <_Response>response_raw
-                response.future.set_result(response)
+                if response.status_code == 0:
+                    response.future.set_exception(Exception("Failed to connect to host, connection closed"))
+                else:
+                    response.future.set_result(response)
 
                 curl_multi_remove_handle(self.multi, easy)
             else:

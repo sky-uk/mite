@@ -243,6 +243,8 @@ cdef class _Response:
     def _get_header_lines(self):
         cdef list headers = self.header.split("\r\n")
         headers = headers[:-2]  # drop the final blank lines
+        if len(headers) == 0:
+            return []
         while headers[0].startswith("HTTP/1.1 100"):
             headers = headers[2:]
         return headers[1:]  # drop the final response code
