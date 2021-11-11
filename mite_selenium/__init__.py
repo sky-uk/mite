@@ -146,9 +146,13 @@ class _SeleniumWrapper:
 
     def _retrieve_javascript_metrics(self):
         try:
-            return self._remote.execute_script(
+            paint_metrics = self._remote.execute_script(
+                "return performance.getEntriesByType('paint')"
+            )
+            metrics = self._remote.execute_script(
                 "return performance.getEntriesByType('resource')"
             )
+            return metrics
         except Exception:
             logger.error("Failed to retrieve resource performance entries")
             return []
