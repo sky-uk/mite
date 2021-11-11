@@ -79,6 +79,13 @@ class _SeleniumWrapper:
         else:
             return timings["connectEnd"] - timings["connectStart"]
 
+    def _extract_paint_timings(self, paint_metrics):
+        try:
+            first_paint = {metric['name']: metric['startTime'] for metric in paint_metrics if metric['name'] == 'first-paint'}
+            return first_paint
+        except Exception:
+            "Failed to retrieve paint timings"
+
     def _send_page_load_metrics(self):
         if self._browser_has_timing_capabilities():
             performance_entries = self._remote.execute_script(
@@ -87,10 +94,9 @@ class _SeleniumWrapper:
             paint_entries = self._remote.execute_script(
                 "return performance.getEntriesByType('paint')"
             )
-            first_paint = paint_entries[0]
-            first_contentful_paint = paint_entries[1]
 
             timings = self._extract_first_entry(performance_entries)
+            timings.update(self._extract_paint_timings(paint_entries))
             if timings is None:
                 return
 
@@ -113,9 +119,8 @@ class _SeleniumWrapper:
                 - timings["requestStart"],
                 "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
                 "tls_time": self._get_tls_timing(timings),
+                "first_paint": timings['first-paint'],
                 "total_time": timings["duration"],
-                "first_paint": first_paint["startTime"],
-                "first_paint": first_contentful_paint["startTime"]
             }
             self._context.send(
                 "selenium_page_load_metrics",
@@ -152,6 +157,7 @@ class _SeleniumWrapper:
             metrics = self._remote.execute_script(
                 "return performance.getEntriesByType('resource')"
             )
+            metrics[0].update(self._extract_paint_timings(paint_metrics))
             return metrics
         except Exception:
             logger.error("Failed to retrieve resource performance entries")
