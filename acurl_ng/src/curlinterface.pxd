@@ -125,6 +125,9 @@ cdef extern from "<curl/curl.h>":
     cdef int CURLINFO_PRIMARY_IP
     cdef int CURLINFO_REDIRECT_URL
 
+    # Error codes
+    cdef int CURLE_OK
+
 # Typed wrappers
 cdef extern from "acurl_wrappers.h":
     # curl_multi_setopt
@@ -144,3 +147,5 @@ cdef extern from "acurl_wrappers.h":
     CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, const char *data)
     CURLcode acurl_easy_setopt_int(CURL *easy, CURLoption option, int data)
     CURLcode acurl_easy_setopt_writecb(CURL *easy, CURLoption option, curl_write_callback data)
+    # curl_easy_strerror
+    const char *curl_easy_strerror(CURLcode errornum)

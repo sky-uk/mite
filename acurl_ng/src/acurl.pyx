@@ -11,6 +11,9 @@ include "request.pyx"
 include "response.pyx"
 include "session.pyx"
 
+class AcurlError(Exception):
+    pass
+
 # Callback functions
 
 # In the classic (old) acurl interface, the socket and timer functions didn't
@@ -95,7 +98,10 @@ cdef class CurlWrapper:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
                 response = <_Response>response_raw
-                response.future.set_result(response)
+                if message.data.result == CURLE_OK:
+                    response.future.set_result(response)
+                else:
+                    response.future.set_exception(AcurlError(f"curl failed with code {message.data.result} {curl_easy_strerror(message.data.result).decode('utf-8')}"))
 
                 curl_multi_remove_handle(self.multi, easy)
             else:
