@@ -30,7 +30,30 @@ Arguments:
     PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
 
 Examples:
+    # run the example scenario called "scenario"
     mite scenario test mite.example:scenario
+
+    # run the example journey called "journey" and set the "test_msg" config variable to "Hello from mite"
+    MITE_CONF_test_msg="Hello from mite" mite journey test mite.example:journey mite.example:datapool
+
+    # run the example journey called "journey" and set the "test_msg" config variable to "Hello from mite" using
+    # the --add-to-config switch
+    mite journey test mite.example:journey mite.example:datapool --add-to-config=test_msg:"Hello from mite"
+
+    # Individual mite components can be started in the following example manner
+    # start a mite runner that is controlled by a mite controller on 10.11.12.13:14301 that outputs to
+    # the controller on 14302
+    mite runner --controller-socket=tcp://10.11.12.13:14301 --message-socket=tcp://10.11.12.13:14302
+
+    # start a mite controller for the above runners
+    mite controller mite.example:scenario --controller-socket=tcp://0.0.0.0:14301
+
+    # start a mite duplicator that listens on 14302 and outputs on 14303 and 14304
+    mite duplicator --message-socket=tcp://0.0.0.0:14302 tcp://127.0.0.1:14303 tcp://127.0.0.1:14304
+
+    # start mite stats
+    mite stats --stats-in-socket=tcp://0.0.0.0:14303 --stats-out-socket=tcp://0.0.0.0:14305
+
 
 Options:
     -h --help                               Show this screen
@@ -66,6 +89,8 @@ Options:
     --logging-webhook=URL                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                   Reformat unix timestamps to human readable dates
+    --journey-logging                       Log errors on a per journey basis
+    --max-errors-threshold=THRESHOLD        Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
 """
 import asyncio
 import logging
