@@ -12,3 +12,4 @@ proxy = True
 browser_profile = True
 options = True
 capabilities = True
+headless = True

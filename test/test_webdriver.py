@@ -14,6 +14,7 @@ EXAMPLE_WEBDRIVER_CONFIG = {
     "webdriver_proxy": "mocks.mock_selenium:proxy",
     "webdriver_browser_profile": "mocks.mock_selenium:browser_profile",
     "webdriver_options": "mocks.mock_selenium:options",
+    "webdriver_options_headless": "mocks.mock_selenium:headless",
     "webdriver_capabilities": "mocks.mock_selenium:capabilities",
 }
 
