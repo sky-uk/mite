@@ -32,6 +32,7 @@ class _SeleniumWrapper:
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_not_none("webdriver_browser_profile")
         self._options = self._spec_import_if_not_none("webdriver_options")
+        self._options.headless = self._context.config.get("webdriver_options_headless")
 
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
