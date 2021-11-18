@@ -9,6 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Remote as SeleniumRemote
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
@@ -32,8 +33,8 @@ class _SeleniumWrapper:
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_not_none("webdriver_browser_profile")
         self._options = self._spec_import_if_not_none("webdriver_options")
-        self._options.headless = self._context.config.get("webdriver_options_headless", True)
-
+        if self._options:
+            self._options.headless = self._context.config.get("webdriver_options_headless", True)
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
         self._capabilities = spec_import(self._capabilities)
