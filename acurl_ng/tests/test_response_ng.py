@@ -34,33 +34,17 @@ async def connected_cb(body, reader, writer):
     await reader.read(-1)
 
 
-# FIXME: This test hangs after the introduction of AcurlError handling because curl returns CURLE_RECV_ERROR (56)
-@pytest.mark.skip
-async def test_response_headers_with_HTTP_100(acurl_session_ng):
-    body = b"".join(
-        (
-            b"HTTP/1.1 100 Continue\r\n",
-            b"\r\n",
-            b"HTTP/1.1 200 OK\r\n",
-            b"Foo: bar\r\n",
-            b"\r\n",
-            b"body",
-        )
+@pytest.mark.asyncio
+async def test_response_headers_with_HTTP_100(httpserver, acurl_session_ng):
+    hdrs = Headers()
+    hdrs.add("Foo", "bar")
+    httpserver.expect_request("/foo").respond_with_response(
+        Response(response="", status=200, headers=hdrs)
     )
-    server = await asyncio.start_server(
-        partial(connected_cb, body), host="127.0.0.1", port=10764
-    )
-    await server.start_serving()
+    r = await acurl_session_ng.get(httpserver.url_for("/foo"), headers={"Expect": "100-continue"})
 
-    async def go():
-        r = await acurl_session_ng.get("http://localhost:10764/foo")
-        server.close()
-        return r
-
-    results = await asyncio.gather(go(), server.serve_forever(), return_exceptions=True)
-    resp = [x for x in results if isinstance(x, acurl_ng._Response)][0]
-    assert "Foo" in resp.headers
-    assert resp.headers["Foo"] == "bar"
+    assert "Foo" in r.headers
+    assert r.headers["Foo"] == "bar"
 
 
 # FIXME: This test hangs after the introduction of AcurlError handling because curl returns CURLE_RECV_ERROR (56)
