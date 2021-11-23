@@ -52,7 +52,7 @@ def test_config_defaults():
     assert wrapper._file_detector is None
     assert wrapper._proxy is None
     assert wrapper._browser_profile is None
-    assert wrapper._options is None
+    assert wrapper._options is not None
     assert wrapper._capabilities is True
 
 

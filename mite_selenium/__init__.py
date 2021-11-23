@@ -16,6 +16,8 @@ from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
+print(type(Options()))
+
 
 class _SeleniumWrapper:
     def __init__(self, context):
@@ -33,7 +35,9 @@ class _SeleniumWrapper:
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_not_none("webdriver_browser_profile")
         self._options = self._spec_import_if_not_none("webdriver_options")
-        if self._options:
+        if not self._options:
+            self._options = Options()
+        if type(self._options) != bool:
             self._options.headless = self._context.config.get("webdriver_options_headless", True)
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
