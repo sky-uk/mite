@@ -16,8 +16,6 @@ from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
-print(type(Options()))
-
 
 class _SeleniumWrapper:
     def __init__(self, context):
