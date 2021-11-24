@@ -41,7 +41,9 @@ async def test_response_headers_with_HTTP_100(httpserver, acurl_session_ng):
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session_ng.get(httpserver.url_for("/foo"), headers={"Expect": "100-continue"})
+    r = await acurl_session_ng.get(
+        httpserver.url_for("/foo"), headers={"Expect": "100-continue"}
+    )
 
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
