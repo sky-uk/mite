@@ -29,7 +29,7 @@ WORKDIR /mite/acurl_ng
 RUN pip install --no-cache-dir -e .
 
 WORKDIR /mite
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e .[amqp]
 
 # We can't dockerignore the .git directory because we need it for calculating
 # the scm-version
