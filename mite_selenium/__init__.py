@@ -85,9 +85,19 @@ class _SeleniumWrapper:
                 "return performance.getEntriesByType('navigation')"
             )
 
-            timings = self._extract_first_entry(performance_entries)
+            paint_entries = self._remote.execute_script(
+                "return performance.getEntriesByType('paint')"
+            )
+
+            timings = self._extract_entries(performance_entries)[0]
             if timings is None:
                 return
+
+            _paint_timings = self._extract_entries(paint_entries, expected=2)
+            if _paint_timings is None:
+                return
+            else:
+                paint_timings = self._format_paint_timings(_paint_timings)
 
             protocol = timings["nextHopProtocol"]
             if protocol != "http/1.1":
@@ -98,6 +108,8 @@ class _SeleniumWrapper:
                 "dns_lookup_time": timings["domainLookupEnd"]
                 - timings["domainLookupStart"],
                 "dom_interactive": timings["domInteractive"],
+                "first_contentful_paint": paint_timings["first-contentful-paint"],
+                "first_paint": paint_timings["first-paint"],
                 "js_onload_time": timings["domContentLoadedEventEnd"]
                 - timings["domContentLoadedEventStart"],
                 "page_weight": timings["transferSize"],
@@ -115,14 +127,17 @@ class _SeleniumWrapper:
                 **self._extract_and_convert_metrics_to_seconds(metrics),
             )
 
-    def _extract_first_entry(self, entries):
-        if len(entries) != 1:
+    def _extract_entries(self, entries, expected=1):
+        if len(entries) != expected:
             logger.error(
                 f"Performance entries did not return the expected count: expected 1 - actual {len(entries)}"
             )
             return
         else:
-            return entries[0]
+            return entries[:expected]
+
+    def _format_paint_times(self entries):
+        return {metric['name'], metric['startTime'] for metric in entries}
 
     def _extract_and_convert_metrics_to_seconds(self, metrics):
         converted_metrics = dict()
