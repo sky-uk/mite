@@ -124,7 +124,7 @@ class _SeleniumWrapper:
                 metrics["first_contentful_paint"] = paint_timings["first-contentful-paint"]
                 metrics["first_paint"] =  paint_timings["first-paint"]
             
-            if metrics
+            if metrics:
                 self._context.send(
                     "selenium_page_load_metrics",
                     **self._extract_and_convert_metrics_to_seconds(metrics),
