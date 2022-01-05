@@ -90,42 +90,45 @@ class _SeleniumWrapper:
             )
 
             timings = self._extract_entries(performance_entries)[0]
-            if timings is None:
-                return
 
             _paint_timings = self._extract_entries(paint_entries, expected=2)
-            if _paint_timings is None:
-                return
-            else:
-                paint_timings = self._format_paint_timings(_paint_timings)
+            paint_timings = self._format_paint_timings(_paint_timings)
 
             protocol = timings["nextHopProtocol"]
             if protocol != "http/1.1":
                 logger.warning(
                     f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
                 )
-            metrics = {
-                "dns_lookup_time": timings["domainLookupEnd"]
-                - timings["domainLookupStart"],
-                "dom_interactive": timings["domInteractive"],
-                "first_contentful_paint": paint_timings["first-contentful-paint"],
-                "first_paint": paint_timings["first-paint"],
-                "js_onload_time": timings["domContentLoadedEventEnd"]
-                - timings["domContentLoadedEventStart"],
-                "page_weight": timings["transferSize"],
-                "render_time": timings["domInteractive"] - timings["responseEnd"],
-                "tcp_time": self._get_tcp_timing(timings),
-                "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
-                "time_to_interactive": timings["domInteractive"]
-                - timings["requestStart"],
-                "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
-                "tls_time": self._get_tls_timing(timings),
-                "total_time": timings["duration"],
-            }
-            self._context.send(
-                "selenium_page_load_metrics",
-                **self._extract_and_convert_metrics_to_seconds(metrics),
-            )
+            
+            if timings:
+                metrics = {
+                    "dns_lookup_time": timings["domainLookupEnd"]
+                    - timings["domainLookupStart"],
+                    "dom_interactive": timings["domInteractive"],
+                    "js_onload_time": timings["domContentLoadedEventEnd"]
+                    - timings["domContentLoadedEventStart"],
+                    "page_weight": timings["transferSize"],
+                    "render_time": timings["domInteractive"] - timings["responseEnd"],
+                    "tcp_time": self._get_tcp_timing(timings),
+                    "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
+                    "time_to_interactive": timings["domInteractive"]
+                    - timings["requestStart"],
+                    "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
+                    "tls_time": self._get_tls_timing(timings),
+                    "total_time": timings["duration"],
+                    }
+            else:
+                metrics = {}
+            
+            if paint_timings:
+                metrics["first_contentful_paint"] = paint_timings["first-contentful-paint"]
+                metrics["first_paint"] =  paint_timings["first-paint"]
+            
+            if metrics
+                self._context.send(
+                    "selenium_page_load_metrics",
+                    **self._extract_and_convert_metrics_to_seconds(metrics),
+                )
 
     def _extract_entries(self, entries, expected=1):
         if len(entries) != expected:
