@@ -140,7 +140,7 @@ class _SeleniumWrapper:
             return entries[:expected]
 
     def _format_paint_times(self, entries):
-        return {metric['name'], metric['startTime'] for metric in entries}
+        return {metric['name']: metric['startTime'] for metric in entries}
 
     def _extract_and_convert_metrics_to_seconds(self, metrics):
         converted_metrics = dict()
