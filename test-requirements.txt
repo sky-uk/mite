@@ -1,3 +1,4 @@
+aio-pika
 altair 
 Cython
 h2
