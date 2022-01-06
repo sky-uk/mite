@@ -99,7 +99,7 @@ class _SeleniumWrapper:
                 logger.warning(
                     f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
                 )
-            
+
             if timings:
                 metrics = {
                     "dns_lookup_time": timings["domainLookupEnd"]
@@ -110,20 +110,23 @@ class _SeleniumWrapper:
                     "page_weight": timings["transferSize"],
                     "render_time": timings["domInteractive"] - timings["responseEnd"],
                     "tcp_time": self._get_tcp_timing(timings),
-                    "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
+                    "time_to_first_byte": timings["responseStart"]
+                    - timings["connectEnd"],
                     "time_to_interactive": timings["domInteractive"]
                     - timings["requestStart"],
                     "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
                     "tls_time": self._get_tls_timing(timings),
                     "total_time": timings["duration"],
-                    }
+                }
             else:
                 metrics = {}
-            
+
             if paint_timings:
-                metrics["first_contentful_paint"] = paint_timings["first-contentful-paint"]
-                metrics["first_paint"] =  paint_timings["first-paint"]
-            
+                metrics["first_contentful_paint"] = paint_timings[
+                    "first-contentful-paint"
+                ]
+                metrics["first_paint"] = paint_timings["first-paint"]
+
             if metrics:
                 self._context.send(
                     "selenium_page_load_metrics",
@@ -140,7 +143,7 @@ class _SeleniumWrapper:
             return entries[:expected]
 
     def _format_paint_timings(self, entries):
-        return {metric['name']: metric['startTime'] for metric in entries}
+        return {metric["name"]: metric["startTime"] for metric in entries}
 
     def _extract_and_convert_metrics_to_seconds(self, metrics):
         converted_metrics = dict()

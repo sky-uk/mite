@@ -14,18 +14,13 @@ options = True
 capabilities = True
 
 mock_paint_times = [
-    {
-        "name": "first-paint",
-        "entryType": "paint",
-        "startTime": 537,
-        "duration": 0
-    },
+    {"name": "first-paint", "entryType": "paint", "startTime": 537, "duration": 0},
     {
         "name": "first-contentful-paint",
         "entryType": "paint",
         "startTime": 537,
-        "duration": 0
-    }
+        "duration": 0,
+    },
 ]
 
 mock_performance_times = [
@@ -62,6 +57,6 @@ mock_performance_times = [
         "loadEventStart": 1967,
         "loadEventEnd": 1968,
         "type": "navigate",
-        "redirectCount": 0
+        "redirectCount": 0,
     }
 ]
