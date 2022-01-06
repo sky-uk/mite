@@ -25,10 +25,7 @@ _NETWORK_RESOURCE_METRICS = [
     ("total_time", "seconds"),
 ]
 
-_PAINT_METRICS = [
-    ("first_contentful_paint", "seconds"),
-    ("first_paint", "seconds")
-]
+_PAINT_METRICS = [("first_contentful_paint", "seconds"), ("first_paint", "seconds")]
 
 _CUSTOM_METRICS = [
     ("js_execution_time", "seconds"),
