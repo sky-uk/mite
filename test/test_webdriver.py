@@ -2,6 +2,7 @@ from unittest.mock import call, patch
 
 import pytest
 from mocks.mock_context import MockContext
+from mocks.mock_selenium import mock_paint_times, mock_performance_times
 from selenium.common.exceptions import TimeoutException
 
 from mite.exceptions import MiteError
@@ -191,6 +192,9 @@ def test_webdriver_get():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
     with patch("mite_selenium.SeleniumRemote") as mock_remote:
         mock_remote.return_value.capabilities = {"browserName": "chrome"}
+        mock_remote.return_value.execute_script.side_effect = [
+                mock_performance_times,
+                mock_paint_times]
         wrapper._start()
         wrapper.get("https://google.com")
 
