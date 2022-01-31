@@ -89,18 +89,14 @@ class _SeleniumWrapper:
                 "return performance.getEntriesByType('paint')"
             )
 
-            timings = self._extract_entries(performance_entries)[0]
-
-            _paint_timings = self._extract_entries(paint_entries, expected=2)
-            paint_timings = self._format_paint_timings(_paint_timings)
-
-            protocol = timings["nextHopProtocol"]
-            if protocol != "http/1.1":
-                logger.warning(
-                    f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
-                )
-
+            _timings = self._extract_entries(performance_entries)
+            timings = _timings[0] if _timings else None
             if timings:
+                protocol = timings.get("nextHopProtocol", None)
+                if protocol != "http/1.1":
+                    logger.warning(
+                        f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
+                    )
                 metrics = {
                     "dns_lookup_time": timings["domainLookupEnd"]
                     - timings["domainLookupStart"],
@@ -121,6 +117,10 @@ class _SeleniumWrapper:
             else:
                 metrics = {}
 
+            _paint_timings = self._extract_entries(paint_entries, expected=2)
+            paint_timings = (
+                self._format_paint_timings(_paint_timings) if _paint_timings else None
+            )
             if paint_timings:
                 metrics["first_contentful_paint"] = paint_timings[
                     "first-contentful-paint"
