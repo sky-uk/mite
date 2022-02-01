@@ -92,7 +92,7 @@ class _SeleniumWrapper:
             _timings = self._extract_entries(performance_entries)
             timings = _timings[0] if _timings else None
             if timings:
-                protocol = timings.get("nextHopProtocol", None)
+                protocol = timings.get("nextHopProtocol")
                 if protocol != "http/1.1":
                     logger.warning(
                         f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
