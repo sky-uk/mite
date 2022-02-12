@@ -175,7 +175,27 @@ MITE_CONF_test_msg="Hello from mite" mite scenario test mite.example:scenario
 
 In order to scale up miteʼs capability to inject load, you will need to
 run it as a distributed suite of components.  You can learn more about
-how to accomplish this in the documentation.  <!-- TODO: link -->
+how to accomplish this in the [documentation](https://sky-uk.github.io/mite/design-deployment.html).
+
+
+### Deploy distrubted mite with docker compose
+
+Build mite: 
+```
+docker build -t mite .
+````
+
+Run mite deployments:
+```
+python deploy_local.py
+```
+or
+
+```
+docker-compose -f docker_compose.yml up
+```
+
+For more information on distributed mite usage, [distribute.md](/local/distribute.md)
 
 ## Maintainers
 
