@@ -187,10 +187,6 @@ docker build -t mite .
 
 Run mite deployments:
 ```
-python deploy_local.py
-```
-or
-```
 docker-compose -f docker_compose.yml up
 ```
 
