@@ -186,6 +186,14 @@ docker build -t mite .
 ````
 
 Run mite deployments:
+
+Use `make` from `mite/local` dir:
+```
+make up # start mite containers
+make status # check status of mite containers
+make clean # remove all mite containers
+```
+or
 ```
 docker-compose -f docker_compose.yml up
 ```
