@@ -6,5 +6,4 @@ To write:
 - api / code-level docs
 - writing journeys and scenarios
 - plugin infrastrucutre
-- docker-compose example
 - contributing guidelines
