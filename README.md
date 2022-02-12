@@ -194,7 +194,7 @@ or
 docker-compose -f docker_compose.yml up
 ```
 
-For more information on distributed mite usage, [distribute.md](/local/distributed.md)
+For more information on distributed mite usage, [info](/local/README.md)
 
 ## Maintainers
 
