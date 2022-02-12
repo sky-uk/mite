@@ -1,6 +1,16 @@
-import time
-
+from mite.scenario import StopScenario
 from mite_http import mite_http
+
+
+def volume_model_factory(n):
+    def vm(start, end):
+        if start > 60 * 15:  # Will run for 15 mins
+            raise StopScenario
+        return n
+
+    vm.__name__ = f"volume model {n}"
+    return vm
+
 
 # Mock Server
 _API_URL = "http://apiserver:8000/"  # apiserver is for docker-compose. Change this to http://localhost:8000/ for local testing
@@ -8,15 +18,15 @@ _API_URL = "http://apiserver:8000/"  # apiserver is for docker-compose. Change t
 
 
 @mite_http
-async def get_req(ctx):
+async def demo_req(ctx):
     async with ctx.transaction("Get request"):
         await ctx.http.get(_API_URL)
 
 
-volumemodel = lambda start, end: 10
+# volumemodel = lambda start, end: 10  # alternate way to define volume model
 
 
 def scenario():
     return [
-        ["local.demo:get_req", None, volumemodel],
+        ["local.demo:demo_req", None, volume_model_factory(10)],
     ]
