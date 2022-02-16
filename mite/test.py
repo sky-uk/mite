@@ -55,6 +55,10 @@ class _NewHttp:
         self._requests['put'].append(r)
         return r
 
+    async def patch(self, *args, **kwargs):
+        r = await self._parent._old_http.patch(*args, **kwargs)
+        self._requests['patch'].append(r)
+        return r
 
 def http_spy(journey):
     async def wrapper(ctx, *args):

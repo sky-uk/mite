@@ -310,6 +310,9 @@ cdef class Session:
     async def options(self, *args, **kwargs):
         return await self._outer_request(b"OPTIONS", *args, **kwargs)
 
+    async def patch(self, *args, **kwargs):
+        return await self._outer_request(b"PATCH", *args, **kwargs)
+
     async def post(self, *args, **kwargs):
         return await self._outer_request(b"POST", *args, **kwargs)
 
