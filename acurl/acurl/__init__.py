@@ -447,7 +447,7 @@ class Session:
 
     async def options(self, url, **kwargs):
         return await self.request("OPTIONS", url, **kwargs)
-    
+
     async def patch(self, url, **kwargs):
         return await self.request("PATCH", url, **kwargs)
 
