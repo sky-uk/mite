@@ -3,14 +3,14 @@ services:
   prometheus:
     image: "prom/prometheus:latest"
     ports:
-      - "9090:9090"
+      - 9090:9090
     volumes:
       - ./prometheus/prometheus_config_template.yml:/etc/prometheus/prometheus.yml
       # - /var/prometheus:/prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml",
               # "--storage.tsdb.path=/prometheus",
-              # "--web.console.libraries=/usr/share/prometheus/console_libraries",
-              # "--web.console.templates=/usr/share/prometheus/consoles",
+              "--web.console.libraries=/usr/share/prometheus/console_libraries",
+              "--web.console.templates=/usr/share/prometheus/consoles",
               "--storage.tsdb.retention.size=10GB"]
   grafana:
     build:

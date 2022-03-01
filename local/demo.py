@@ -1,6 +1,8 @@
+import os
+
 from mite.scenario import StopScenario
 from mite_http import mite_http
-import os
+
 
 def volume_model_factory(n):
     def vm(start, end):
