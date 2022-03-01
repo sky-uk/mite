@@ -7,17 +7,24 @@
 Mite is a load testing framework with distributed components written in Python.
 Requests are executed asynchronously, allowing large throughput from relatively small infrastructure.
 
-To install mite, run `pip install mite`.  This requires that you have
-libcurl installed on your system (including C header files for
-development, which are often distrbuted separately from the shared
-libraries).  On ubuntu, this can be accomplished with the command:
+## Installation
+
+```bash
+python3 -m venv ~/.virtualenvs/mite
+source ~/.virtualenvs/mite/bin/activate
+
+pip install -r requirements.txt
+```
+
+
+This requires that you have libcurl installed on your system (including C header files for development, which are often distributed separately from the shared libraries).  On Ubuntu, this can be accomplished with the command:
 
 ```
 sudo apt install libcurl4 libcurl4-openssl-dev
 ```
-
 (NB we recommend using a version of libcurl linked against openssl
 rather than gnutls, since the latter has memory leak problems)
+
 
 You can also use the dockerfile included in this repository to run
 mite.  In order to get a shell in a container with mite installed, run

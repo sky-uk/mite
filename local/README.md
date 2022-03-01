@@ -8,7 +8,7 @@ The docker-compose is setup to be able to run a separate docker container for ea
 To run mite performance test against an app, the `apiserver` container in the docker-compose.yml can be exchanged with any docker image
 
 
-For exmaple, provide a dockerfile and run command
+For example, provide a dockerfile and run command
 
 ```
   apiserver:
@@ -45,6 +45,6 @@ The docker-compose by default will also spin up a prometheus and grafana instanc
 - Prometheus: http://localhost:9090/graph
 - Grafana: http://localhost:3000/d/2_KG1Va7z/mite-docker?orgId=1 
 
-Use default grafana admin creds
+Use default grafana admin creds (admin/admin)
 
 Note: May need to re-configure datasource on grafana to be prometheus

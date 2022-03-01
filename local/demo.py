@@ -1,6 +1,6 @@
 from mite.scenario import StopScenario
 from mite_http import mite_http
-
+import os
 
 def volume_model_factory(n):
     def vm(start, end):
@@ -13,8 +13,7 @@ def volume_model_factory(n):
 
 
 # Mock Server
-_API_URL = "http://apiserver:8000/"  # apiserver is for docker-compose. Change this to http://localhost:8000/ for local testing
-# TODO make http://apiserver:8000/ env var for controller and runners and default _API_URL to localhost
+_API_URL = os.environ.get("API_URL", "http://localhost:8000/")
 
 
 @mite_http
@@ -28,5 +27,5 @@ async def demo_req(ctx):
 
 def scenario():
     return [
-        ["local.demo:demo_req", None, volume_model_factory(10)],
+        ["local.demo:demo_req", None, volume_model_factory(2)],
     ]

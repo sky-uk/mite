@@ -10,6 +10,12 @@ services:
     command: ["mite", "runner", "--controller-socket=tcp://controller:14301", "--message-socket=tcp://duplicator:14302"]
     deploy:
       replicas: 2
+    volumes:
+      - type: bind
+        source: ./local
+        target: /mite/local
+    environment:
+      - API_URL=http://apiserver:8000/
   duplicator:
     image: mite:latest
     command: ["mite", "duplicator", "--message-socket=tcp://0.0.0.0:14302", "tcp://0.0.0.0:14303"]
@@ -17,7 +23,7 @@ services:
     image: mite:latest
     command: ["mite", "stats", "--stats-in-socket=tcp://duplicator:14303", "--stats-out-socket=tcp://prometheus_exporter:14305", "--stats-include-processors=mite,mite_http"]
     deploy:
-      replicas: 2
+      replicas: 1
   prometheus_exporter:
     image: mite:latest
     command: ["mite", "prometheus_exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--web-address=0.0.0.0:9301"]
@@ -26,6 +32,12 @@ services:
     command: ["mite", "controller", "--controller-socket=tcp://0.0.0.0:14301", "--message-socket=tcp://duplicator:14302", "local.demo:scenario"]
     depends_on:
       - apiserver
+    volumes:
+      - type: bind
+        source: ./local
+        target: /mite/local
+    environment:
+      - API_URL=http://apiserver:8000/
   prometheus:
     build:
       context: .
