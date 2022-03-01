@@ -8,24 +8,30 @@ services:
   runner:
     image: mite:latest
     command: ["mite", "runner", "--controller-socket=tcp://controller:14301", "--message-socket=tcp://duplicator:14302"]
+    volumes:
+      - type: bind
+        source: ./local
+        target: /mite/local
     deploy:
-      replicas: 2
+      replicas: 1
   duplicator:
     image: mite:latest
     command: ["mite", "duplicator", "--message-socket=tcp://0.0.0.0:14302", "tcp://0.0.0.0:14303"]
   stats:
     image: mite:latest
-    command: ["mite", "stats", "--stats-in-socket=tcp://duplicator:14303", "--stats-out-socket=tcp://prometheus_exporter:14305", "--stats-include-processors=mite,mite_http"]
+    command: ["mite", "stats", "--stats-in-socket=tcp://duplicator:14303", "--stats-out-socket=tcp://prometheus_exporter:14305", "--stats-include-processors=mite,mite_http,mite_selenium"]
     deploy:
-      replicas: 2
+      replicas: 1
   prometheus_exporter:
     image: mite:latest
     command: ["mite", "prometheus_exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--web-address=0.0.0.0:9301"]
   controller:
     image: mite:latest
-    command: ["mite", "controller", "--controller-socket=tcp://0.0.0.0:14301", "--message-socket=tcp://duplicator:14302", "local.demo:scenario"]
-    depends_on:
-      - apiserver
+    command: ["mite", "controller", "--controller-socket=tcp://0.0.0.0:14301", "--message-socket=tcp://duplicator:14302", "local.demo:scenario", "--config=local.demo:config"]
+    volumes:
+      - type: bind
+        source: ./local
+        target: /mite/local
   prometheus:
     build:
       context: .

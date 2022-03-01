@@ -93,10 +93,10 @@ class _SeleniumWrapper:
             timings = _timings[0] if _timings else None
             if timings:
                 protocol = timings.get("nextHopProtocol")
-                if protocol != "http/1.1":
-                    logger.warning(
-                        f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
-                    )
+                # if protocol != "http/1.1":
+                #     logger.warning(
+                #         f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
+                #     )
                 metrics = {
                     "dns_lookup_time": timings["domainLookupEnd"]
                     - timings["domainLookupStart"],

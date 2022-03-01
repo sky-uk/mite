@@ -2,6 +2,7 @@ import asyncio
 import functools
 import logging
 from itertools import count
+from re import L
 
 from .context import Context
 from .utils import spec_import
@@ -72,6 +73,7 @@ class Runner:
             loop = asyncio.get_event_loop()
         self._loop = loop
         self._debug = debug
+        logger.info("INIT RUNNER")
 
     def _inc_work(self, id):
         if id in self._work:
@@ -91,6 +93,7 @@ class Runner:
         return self._stop
 
     async def run(self):
+        logger.info("run")
         # This is a hack for the problems we get with the runner failing to
         # exit cleanly.  331 and 337 are both prime and a fortiori relatively
         # prime, which means it will take ~30 hours for them to ever
@@ -161,6 +164,7 @@ class Runner:
                     'scenario_id': scenario_id,
                     'scenario_data_id': scenario_data_id,
                 }
+                # logger.info(f"{id_data=}")
                 context = Context(
                     self._msg_sender,
                     config,
@@ -169,11 +173,16 @@ class Runner:
                     debug=self._debug,
                 )
                 self._inc_work(scenario_id)
-                future = asyncio.ensure_future(
+                future = self._loop.create_task(
                     self._execute(
                         context, scenario_id, scenario_data_id, journey_spec, args
                     )
                 )
+                # future = asyncio.ensure_future(
+                #     self._execute(
+                #         context, scenario_id, scenario_data_id, journey_spec, args
+                #     )
+                # )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
         while self._current_work():
@@ -195,6 +204,8 @@ class Runner:
             journey_spec,
             args,
         )
+        logger.info(f"running {journey_spec=}")
+        # breakpoint()
         journey = spec_import_cached(journey_spec)
         try:
             async with context.transaction('__root__'):

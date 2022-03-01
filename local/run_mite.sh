@@ -11,5 +11,5 @@ docker-compose -f docker_compose_monitoring.yml up -d
 mite runner --controller-socket=tcp://0.0.0.0:14301 --message-socket=tcp://0.0.0.0:14302 &
 mite duplicator --message-socket=tcp://0.0.0.0:14302 tcp://0.0.0.0:14303 &
 mite stats --stats-in-socket=tcp://0.0.0.0:14303 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_http &
-mite prometheus_exporter --stats-out-socket=tcp://0.0.0.0:14305 --web-address=10.10.10.75:9301 &
-# mite controller --controller-socket=tcp://0.0.0.0:14301 --message-socket=tcp://10.11.12.13:14302 local.demo:scenario &
+mite prometheus_exporter --stats-out-socket=tcp://0.0.0.0:14305 --web-address=127.0.0.1:9301 &
+mite controller --controller-socket=tcp://0.0.0.0:14301 --message-socket=tcp://0.0.0.0:14302 local.demo:scenario &
