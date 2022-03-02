@@ -31,6 +31,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -75,10 +76,6 @@
         "steppedLine": true,
         "targets": [
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.99999, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -90,10 +87,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.9999, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -105,10 +98,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.999, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -120,10 +109,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.99, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60\n",
             "format": "time_series",
@@ -135,10 +120,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.95, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -148,10 +129,6 @@
             "refId": "H"
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.9, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -162,10 +139,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.75, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -176,10 +149,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.5, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -190,10 +159,6 @@
             "step": 1
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "EWbR14a7z"
-            },
             "exemplar": true,
             "expr": "(histogram_quantile(0.25, sum without(job)(rate(mite_http_response_time_seconds_bucket[10s])))) < 60",
             "format": "time_series",
@@ -243,10 +208,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -346,10 +308,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -440,10 +399,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -533,10 +489,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -629,10 +582,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -723,10 +673,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -812,10 +759,7 @@
       },
       {
         "columns": [],
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fontSize": "100%",
         "gridPos": {
           "h": 14,
@@ -872,10 +816,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -954,10 +895,7 @@
       },
       {
         "columns": [],
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fontSize": "100%",
         "gridPos": {
           "h": 13,
@@ -1033,10 +971,7 @@
         "bars": false,
         "dashLength": 10,
         "dashes": false,
-        "datasource": {
-          "type": "prometheus",
-          "uid": "EWbR14a7z"
-        },
+        "datasource": "prometheus",
         "fieldConfig": {
           "defaults": {
             "links": []
@@ -1123,7 +1058,7 @@
         }
       }
     ],
-    "refresh": "",
+    "refresh": "10s",
     "schemaVersion": 34,
     "style": "dark",
     "tags": [],
