@@ -9,6 +9,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Remote as SeleniumRemote
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.remote_connection import RemoteConnection
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
@@ -24,9 +25,9 @@ class _SeleniumWrapper:
         using a spec_import'"""
         self._context = context
         # Should only need the capabilities setting, other options for selenium experts
-        self._command_executor = self._context.config.get(
+        self._command_executor = RemoteConnection(self._context.config.get(
             "webdriver_command_executor", "http://127.0.0.1:4444/wd/hub"
-        )
+        ), resolve_ip=False)
         self._keep_alive = self._context.config.get("webdriver_keep_alive", False)
         self._file_detector = self._spec_import_if_not_none("webdriver_file_detector")
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
