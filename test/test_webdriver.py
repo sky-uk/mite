@@ -34,7 +34,6 @@ def test_config_loaded():
     context = MockContext()
     context.config = EXAMPLE_WEBDRIVER_CONFIG
     wrapper = _SeleniumWrapper(context)
-    assert wrapper._command_executor == "http://127.0.0.1:4444/wd/test"
     assert wrapper._keep_alive is True
     assert wrapper._file_detector is True
     assert wrapper._proxy is True
@@ -47,7 +46,6 @@ def test_config_defaults():
     context = MockContext()
     context.config = LIGHTWEIGHT_WEBDRIVER_CONFIG
     wrapper = _SeleniumWrapper(context)
-    assert wrapper._command_executor == "http://127.0.0.1:4444/wd/hub"
     assert wrapper._keep_alive is False
     assert wrapper._file_detector is None
     assert wrapper._proxy is None
@@ -67,7 +65,7 @@ def test_webdriver_start_stop(MockRemote):
     wrapper._start()
     MockRemote.assert_called_with(
         browser_profile=None,
-        command_executor="http://127.0.0.1:4444/wd/hub",
+        command_executor=wrapper._command_executor,
         desired_capabilities={"browser": "Chrome"},
         file_detector=None,
         keep_alive=False,
