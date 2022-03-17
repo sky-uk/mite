@@ -190,7 +190,7 @@ how to accomplish this in the [documentation](https://sky-uk.github.io/mite/desi
 Build mite image: 
 ```
 docker build -t mite .
-````
+```
 
 Run mite deployments:
 
