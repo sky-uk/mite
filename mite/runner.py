@@ -169,10 +169,11 @@ class Runner:
                     debug=self._debug,
                 )
                 self._inc_work(scenario_id)
-                future = asyncio.ensure_future(
+                future = asyncio.create_task(
                     self._execute(
                         context, scenario_id, scenario_data_id, journey_spec, args
-                    )
+                    ),
+                    name="{}_{}_{}".format(scenario_id, scenario_data_id, journey_spec)
                 )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
