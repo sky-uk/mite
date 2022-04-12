@@ -3,5 +3,5 @@ keyring~=19.0.2
 tox~=3.14.2
 pre-commit~=1.17.0
 flake8~=3.7.8
-black~=19.3b0
+black~=22.3.0
 coverage~=5.1
