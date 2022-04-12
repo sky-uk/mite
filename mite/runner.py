@@ -154,12 +154,12 @@ class Runner:
                 work
             ):
                 id_data = {
-                    'test': test_name,
-                    'runner_id': runner_id,
-                    'journey': journey_spec,
-                    'context_id': next(context_id_gen),
-                    'scenario_id': scenario_id,
-                    'scenario_data_id': scenario_data_id,
+                    "test": test_name,
+                    "runner_id": runner_id,
+                    "journey": journey_spec,
+                    "context_id": next(context_id_gen),
+                    "scenario_id": scenario_id,
+                    "scenario_data_id": scenario_data_id,
                 }
                 context = Context(
                     self._msg_sender,
@@ -173,7 +173,7 @@ class Runner:
                     self._execute(
                         context, scenario_id, scenario_data_id, journey_spec, args
                     ),
-                    name="{}_{}_{}".format(scenario_id, scenario_data_id, journey_spec)
+                    name="{}_{}_{}".format(scenario_id, scenario_data_id, journey_spec),
                 )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
@@ -190,7 +190,7 @@ class Runner:
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
         logger.debug(
-            'Runner._execute starting scenario_id=%r scenario_data_id=%r journey_spec=%r args=%r',
+            "Runner._execute starting scenario_id=%r scenario_data_id=%r journey_spec=%r args=%r",
             scenario_id,
             scenario_data_id,
             journey_spec,
@@ -198,7 +198,7 @@ class Runner:
         )
         journey = spec_import_cached(journey_spec)
         try:
-            async with context.transaction('__root__'):
+            async with context.transaction("__root__"):
                 if args is None:
                     await journey(context)
                 else:
