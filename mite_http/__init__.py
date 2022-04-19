@@ -108,7 +108,7 @@ def mite_http(func):
 
 
 def create_http_cookie(ctx, *args, **kwargs):
-    if ctx.config.get("use_new_acurl_implementation"):
+    if ctx.config.get("enable_new_acurl_implementation"):
         import acurl_ng
 
         return acurl_ng.Cookie(*args, **kwargs)
