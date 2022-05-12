@@ -1,6 +1,9 @@
 from setuptools import setup
 from setuptools.extension import Extension
 
+def local_scheme(version):
+    return ""
+
 
 cpy_extension = Extension(
     '_acurl',
@@ -20,6 +23,6 @@ cpy_extension = Extension(
 
 setup(
     ext_modules=[cpy_extension],
-    setup_requires="setuptools_scm",
-    use_scm_version={'root': '..', 'relative_to': __file__},
+    # setup_requires="setuptools_scm",
+    # use_scm_version={"root": "..", "relative_to": __file__, "local_scheme": local_scheme},
 )

@@ -15,6 +15,11 @@ else:
 
 extensions = [Extension("acurl_ng", ["src/acurl.pyx"], libraries=["curl"], **kwargs)]
 
+
+def local_scheme(version):
+    return ""
+
+
 setup(
     ext_modules=cythonize(
         extensions,
@@ -28,6 +33,6 @@ setup(
             "warn.unused_result": True,
         },
     ),
-    setup_requires=["setuptools_scm", "cython"],
-    use_scm_version={"root": "..", "relative_to": __file__},
+    setup_requires=["cython"],
+    # use_scm_version={"root": "..", "relative_to": __file__, "local_scheme": local_scheme},
 )
