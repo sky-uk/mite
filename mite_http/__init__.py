@@ -1,8 +1,12 @@
 import asyncio
 import logging
+import time
 from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
+
+# from aiohttp import ClientSession
+from blacksheep.client import ClientSession
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +32,39 @@ class AcurlSessionWrapper:
     def _response_callback(self):
         return self.__callback
 
+class CAClientSession(ClientSession):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def set_response_callback(self, callback):
+        self._response_callback = callback
+
+    # blacksheep
+    async def send(self, request):
+        start_time = time.time()
+
+        response = await super().send(request)
+
+
+        breakpoint()
+
+        response.url = request.url
+        response.method = request.method
+        response.status_code = response.status
+        response.start_time = start_time
+
+        self._response_callback(response)
+
+
+        return response
+
+    # aiohttp
+    async def _request(self, method: str, str_or_url, **kwargs):
+        start_time = time.time()
+        response = await super()._request(method, str_or_url, **kwargs)
+        self._response_callback(response)
+
+        return response
 
 class SessionPool:
     """No longer actually goes pooling as this is built into acurl. API just left in place.
@@ -37,14 +74,16 @@ class SessionPool:
     _session_pools = {}
 
     def __init__(self, use_new_acurl_implementation=False):
-        if use_new_acurl_implementation:
-            import acurl_ng
 
-            self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
-        else:
-            import acurl
+        self._wrapper = CAClientSession()
+        # if use_new_acurl_implementation:
+        # import acurl_ng
 
-            self._wrapper = acurl.EventLoop()
+        # self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+        # else:
+        #     import acurl
+
+        #     self._wrapper = acurl.EventLoop()
         self._pool = deque()
 
     @asynccontextmanager
@@ -73,7 +112,8 @@ class SessionPool:
         return wrapper
 
     async def _checkout(self, context):
-        session = self._wrapper.session()
+        session = self._wrapper # .session()
+        # session = self._wrapper.session()
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
@@ -83,15 +123,17 @@ class SessionPool:
             context.send(
                 "http_metrics",
                 start_time=r.start_time,
-                effective_url=r.url,
+                effective_url=str(r.url),
+                # response_code=r.status,
                 response_code=r.status_code,
-                dns_time=r.namelookup_time,
-                connect_time=r.connect_time,
-                tls_time=r.appconnect_time,
-                transfer_start_time=r.pretransfer_time,
-                first_byte_time=r.starttransfer_time,
-                total_time=r.total_time,
-                primary_ip=r.primary_ip,
+                # dns_time=r.namelookup_time,
+                # connect_time=r.connect_time,
+                # tls_time=r.appconnect_time,
+                # transfer_start_time=r.pretransfer_time,
+                # first_byte_time=r.starttransfer_time,
+                total_time=0.2,
+                # primary_ip=r.primary_ip,
+                # method=r.method,
                 method=r.request.method,
                 **session_wrapper.additional_metrics,
             )
