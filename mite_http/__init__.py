@@ -46,7 +46,7 @@ class CAClientSession(ClientSession):
         response = await super().send(request)
 
 
-        breakpoint()
+        # breakpoint()
 
         response.url = request.url
         response.method = request.method
@@ -133,8 +133,8 @@ class SessionPool:
                 # first_byte_time=r.starttransfer_time,
                 total_time=0.2,
                 # primary_ip=r.primary_ip,
-                # method=r.method,
-                method=r.request.method,
+                method=r.method,
+                # method=r.request.method,
                 **session_wrapper.additional_metrics,
             )
 

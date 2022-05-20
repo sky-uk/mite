@@ -9,8 +9,8 @@ async def journey(ctx):
         async with ensure_fixed_separation(1):
             ctx.send("test_message")
             await asyncio.sleep(0.5)
-            resp = await ctx.http.get('http://example.com')
-            breakpoint()
+            resp = await ctx.http.get('http://localhost:8000')
+        # breakpoint()
 
         return resp
 
