@@ -5,8 +5,8 @@ from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
 
-# from aiohttp import ClientSession
-from blacksheep.client import ClientSession
+from aiohttp import ClientSession
+# from blacksheep.client import ClientSession
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,11 @@ class CAClientSession(ClientSession):
     # aiohttp
     async def _request(self, method: str, str_or_url, **kwargs):
         start_time = time.time()
+        
         response = await super()._request(method, str_or_url, **kwargs)
+
+        response.start_time = start_time
+
         self._response_callback(response)
 
         return response
@@ -76,10 +80,11 @@ class SessionPool:
     def __init__(self, use_new_acurl_implementation=False):
 
         self._wrapper = CAClientSession()
+        # breakpoint()
         # if use_new_acurl_implementation:
-        # import acurl_ng
+        #     import acurl_ng
 
-        # self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+        #     self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
         # else:
         #     import acurl
 
@@ -124,8 +129,8 @@ class SessionPool:
                 "http_metrics",
                 start_time=r.start_time,
                 effective_url=str(r.url),
-                # response_code=r.status,
-                response_code=r.status_code,
+                response_code=r.status,
+                # response_code=r.status_code,
                 # dns_time=r.namelookup_time,
                 # connect_time=r.connect_time,
                 # tls_time=r.appconnect_time,
