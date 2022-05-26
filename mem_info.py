@@ -65,7 +65,7 @@ class Meminfo:
         return stats
 
     def plot_graph(self, stats):
-        fig, (mem_ax, gc_ax, gcc_ax) = plt.subplots(3)
+        fig, (mem_ax, gc_ax, gcc_ax) = plt.subplots(3, gridspec_kw={"height_ratios": [3, 1, 1]})
         fig.suptitle("Memory Usage vs. GC Count")
 
         mem_ax.set_title("Memory Usage")
@@ -73,21 +73,30 @@ class Meminfo:
         gcc_ax.set_title("Garbage Collection Collections Count")
 
         mem_ax.plot(stats["time"], stats["rss_mb"])
+        mem_ax.set_xlabel("Time (s)")
+        mem_ax.set_ylabel("Usage (MB)")
+        mem_ax.grid()
+
         gc_ax.plot(stats["time"], stats["count_0"], label="count_0")
         gc_ax.plot(stats["time"], stats["count_1"], label="count_1")
         gc_ax.plot(stats["time"], stats["count_2"], label="count_2")
+        gc_ax.set_xlabel("Time (s)")
+        gc_ax.grid()
         gc_ax.legend()
 
         gcc_ax.plot(stats["time"], stats["count_0_collections"], label="count_0_collections")
         gcc_ax.plot(stats["time"], stats["count_1_collections"], label="count_1_collections")
         gcc_ax.plot(stats["time"], stats["count_2_collections"], label="count_2_collections")
+        gcc_ax.set_xlabel("Time (s)")
+        gcc_ax.grid()
         gcc_ax.legend()
 
         png_filename = stats["filename"].replace(".msgpack", ".png")
 
         # plt.show()
         fig.tight_layout()
-        plt.savefig(png_filename, format="png", dpi=300, bbox_inches="tight", pad_inches=0.5, )
+        fig.set_size_inches(10, 10)
+        plt.savefig(png_filename, format="png", dpi=300, bbox_inches="tight", pad_inches=0.1, )
 
 
 if __name__ == "__main__":
@@ -95,7 +104,7 @@ if __name__ == "__main__":
     meminfo = Meminfo()
 
     if filename is None:
-        for _ in range(100):
+        for _ in range(10):
             meminfo.stats()
             time.sleep(.1)
 
