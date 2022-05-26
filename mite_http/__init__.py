@@ -7,6 +7,8 @@ from collections import deque
 from contextlib import asynccontextmanager
 from functools import wraps
 
+from mem_info import Meminfo
+
 logger = logging.getLogger(__name__)
 
 if os.environ.get("MITE_CONF_http_library") == "aiohttp":
@@ -96,6 +98,8 @@ class SessionPool:
     _session_pools = {}
 
     def __init__(self, http_library):
+        self.meminfo = Meminfo()
+
         if http_library in ("aiohttp", "blacksheep"):
             # aiohttp / blacksheep
             self._wrapper = Wrapper(CAClientSession())
@@ -157,6 +161,8 @@ class SessionPool:
                 method=r.request.method,
                 **session_wrapper.additional_metrics,
             )
+
+            self.meminfo.stats()
 
         session.set_response_callback(response_callback)
         return session_wrapper
