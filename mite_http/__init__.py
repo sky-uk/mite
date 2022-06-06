@@ -105,3 +105,15 @@ class SessionPool:
 
 def mite_http(func):
     return SessionPool.decorator(func)
+
+
+def create_http_cookie(ctx, *args, **kwargs):
+    if ctx.config.get("enable_new_acurl_implementation"):
+        import acurl_ng
+
+        return acurl_ng.Cookie(*args, **kwargs)
+
+    else:
+        import acurl
+
+        return acurl.Cookie(*args, **kwargs)
