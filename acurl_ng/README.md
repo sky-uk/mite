@@ -5,20 +5,14 @@ It is an asynchronous wrapper around [libcurl](https://curl.se/libcurl/) which i
 
 ## Using Acurl_NG In Mite
 
-The current implementation of Acurl_NG is behind a feature toggle which defaults to using the old implementation of acurl. To switch over to using the new version of Acurl_NG within mite, the flag `MITE_CONF_enable_new_acurl_implementation="True"`
-
-The gateway into Acurl_NG is through the CurlWrapper (discussed in [Architectural Notes](#Architectural-Notes)) and requires an event loop being passed to it's constructor. Below is the mite implementation of acurl, using the aforementioned flag to switch between versions of acurl:
+The gateway into Acurl_NG is through the CurlWrapper (discussed in [Architectural Notes](#Architectural-Notes)) and requires an event loop being passed to it's constructor. Below is the mite implementation of acurl:
 
 ```python
 class SessionPool:
     ...
-    def __init__(self, use_new_acurl_implementation=False):
-        if use_new_acurl_implementation:
-            import acurl_ng
-            self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
-        else:
-            import acurl
-            self._wrapper = acurl.EventLoop()
+    def __init__(self):
+        import acurl_ng
+        self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
         ...
 ```
 
