@@ -1,5 +1,4 @@
 --index-url https://pypi.python.org/simple/
 
--e ./acurl
 -e ./acurl_ng
 -e .[finagle]
