@@ -4,7 +4,7 @@ from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
-import acurl_ng
+import acurl
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class SessionPool:
     _session_pools = {}
 
     def __init__(self):
-        self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
+        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
         self._pool = deque()
 
     @asynccontextmanager
@@ -97,12 +97,4 @@ def mite_http(func):
 
 
 def create_http_cookie(ctx, *args, **kwargs):
-    if ctx.config.get("enable_new_acurl_implementation"):
-        import acurl_ng
-
-        return acurl_ng.Cookie(*args, **kwargs)
-
-    else:
-        import acurl
-
-        return acurl.Cookie(*args, **kwargs)
+    return acurl.Cookie(*args, **kwargs)

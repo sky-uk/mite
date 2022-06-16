@@ -1,4 +1,4 @@
-import acurl_ng
+import acurl
 
 
 def create_request(
@@ -14,4 +14,4 @@ def create_request(
     if isinstance(method, str):
         method = method.encode()
     headers = tuple(h.encode("utf-8") if hasattr(h, "encode") else h for h in headers)
-    return acurl_ng.Request(method, url, headers, cookies, auth, data, cert)
+    return acurl.Request(method, url, headers, cookies, auth, data, cert)

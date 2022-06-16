@@ -13,7 +13,7 @@ if "IS_TOX_BUILD" in os.environ:
 else:
     kwargs = {}
 
-extensions = [Extension("acurl_ng", ["src/acurl.pyx"], libraries=["curl"], **kwargs)]
+extensions = [Extension("acurl", ["src/acurl.pyx"], libraries=["curl"], **kwargs)]
 
 setup(
     ext_modules=cythonize(

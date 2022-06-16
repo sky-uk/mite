@@ -4,7 +4,7 @@ from werkzeug.wrappers import Response
 
 
 @pytest.mark.asyncio
-async def test_response_headers(httpserver, acurl_session_ng):
+async def test_response_headers(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Foo", "bar")
     hdrs.add("Baz", "quux")
@@ -12,7 +12,7 @@ async def test_response_headers(httpserver, acurl_session_ng):
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session_ng.get(httpserver.url_for("/foo"))
+    r = await acurl_session.get(httpserver.url_for("/foo"))
     assert "Foo" in r.headers
     assert r.headers["Foo"] == "bar"
     assert r.headers["foo"] == "bar"
@@ -30,13 +30,13 @@ async def connected_cb(body, reader, writer):
 
 
 @pytest.mark.asyncio
-async def test_response_headers_with_HTTP_100(httpserver, acurl_session_ng):
+async def test_response_headers_with_HTTP_100(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Foo", "bar")
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session_ng.get(
+    r = await acurl_session.get(
         httpserver.url_for("/foo"), headers={"Expect": "100-continue"}
     )
 
@@ -45,12 +45,12 @@ async def test_response_headers_with_HTTP_100(httpserver, acurl_session_ng):
 
 
 @pytest.mark.asyncio
-async def test_response_cookies(httpserver, acurl_session_ng):
+async def test_response_cookies(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Set-Cookie", "foo=bar")
     hdrs.add("Set-Cookie", "quux=xyzzy")
     httpserver.expect_request("/foo").respond_with_response(
         Response(response="", status=200, headers=hdrs)
     )
-    r = await acurl_session_ng.get(httpserver.url_for("/foo"))
+    r = await acurl_session.get(httpserver.url_for("/foo"))
     assert r.cookies == {"foo": "bar", "quux": "xyzzy"}
