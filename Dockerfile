@@ -8,6 +8,8 @@ FROM python:3.9-alpine3.13
 # need to install rust compiler
 RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev libffi libffi-dev libbz2 bzip2-dev xz-dev libjpeg jpeg-dev py3-cryptography
 
+# This little bit of magic caches the dependencies in a docker layer, so that
+# rebuilds locally are not so expensive 
 COPY acurl/setup.cfg /acurl-setup.cfg
 COPY setup.cfg /mite-setup.cfg
 
