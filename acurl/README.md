@@ -1,20 +1,27 @@
-## Architectural notes
+# Acurl
 
-Acurl creates an event loop to manage its tasks.  It communicates among
-those tasks by using pipes (pairs of file descriptors).  Onto the write
-half of these file descriptors, it writes a stream of (usually) pointers
-to objects in the processʼs memory.  The read half receives these
-pointers and acts on them.  There are 4 pipes hat acurl uses, which are
-set up in `Eventloop_new`:
+It is an asynchronous wrapper around [libcurl](https://curl.se/libcurl/) which is built to interface with the Uvloop python library.
 
-- `req_in` connects `Session_request` (write) to `start_request` (read).
-- `req_out` connects `response_complete` (write) to
-  `Eventloop_get_completed` (read).  There is a secondary codepath
-  through `start_request` that also writes to `req_out` if the request
-  is a so-called dummy request.  Dummy requests are an internal API used
-  to convince curl to do (something related to cookie management).
-- `stop` connects `Eventloop_stop`(write) to `stop_eventloop` (read).  (The
-  implementation of `Eventloop_stop` was broken until the refactoring at
-  the end of July 2019, indicating that it probably never actually worked.)
-- `curl_easy_cleanup` `Response_dealloc` (write) to
-  `curl_easy_cleanup_in_eventloop` (read).
+## Using Acurl In Mite
+
+The gateway into Acurl is through the CurlWrapper (discussed in [Architectural Notes](#Architectural-Notes)) and requires an event loop being passed to its constructor. Below is the mite implementation of acurl:
+
+```python
+class SessionPool:
+    ...
+    def __init__(self):
+        import acurl
+        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+        ...
+```
+
+## Architectural Notes
+
+Acurl uses a single loop maintained within python using UVloop.
+
+Acurl surfaces the CurlWrapper interface which takes the asyncio event loop as an argument. The wrapper deals directly with the curl_multi interface from libcurl, defining 2 functions (`curl_perform_write` and `curl_perform_read`) for checking both read and write availability of file descriptors.
+
+There are 2 notable functions within the [core Acurl implementation](./src/acurl.pyx), notably `handle_socket` and `start_timer`:
+
+- `handle_socket` is passed as a callback function to the curl_multi interface and upon calls to the `curl_multi_socket_action` function, will receive updates regarding the socket status. We then handle those statuses by either adding or removing the aforementioned readers or writers.
+- `start_timer` is another callback function that is passed to the curl_multi interface and is used as a way to handle timeouts and retries within curl. Upon a timeout, the timeout callback will be called and the transfer can be retried.

@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from helpers_ng import create_request
 
-import acurl_ng
+import acurl
 
 
 def test_request_headers():
@@ -21,10 +21,8 @@ def test_request_cookies():
         "GET",
         "http://foo.com",
         cookies=(
-            acurl_ng._Cookie(
-                False, "foo.com", True, "/", False, 0, "foo", "bar"
-            ).format(),
-            acurl_ng._Cookie(
+            acurl._Cookie(False, "foo.com", True, "/", False, 0, "foo", "bar").format(),
+            acurl._Cookie(
                 False, "foo.com", True, "/", False, 0, "my_cookie", "my_value"
             ).format(),
         ),
@@ -36,8 +34,8 @@ def test_request_cookies():
 
 
 @pytest.mark.asyncio
-async def test_request_e2e(httpbin, acurl_session_ng):
-    r = await acurl_session_ng.get(
+async def test_request_e2e(httpbin, acurl_session):
+    r = await acurl_session.get(
         httpbin.url + "/get", headers={"Foo": "bar"}, cookies={"baz": "quux"}
     )
     assert r.request.cookies == {"baz": "quux"}
@@ -45,21 +43,21 @@ async def test_request_e2e(httpbin, acurl_session_ng):
 
 
 @pytest.mark.asyncio
-async def test_request_cookies_from_previous(httpbin, acurl_session_ng):
-    await acurl_session_ng.get(httpbin.url + "/cookies/set?name=value")
-    r = await acurl_session_ng.get(httpbin.url + "/get", cookies={"foo": "bar"})
+async def test_request_cookies_from_previous(httpbin, acurl_session):
+    await acurl_session.get(httpbin.url + "/cookies/set?name=value")
+    r = await acurl_session.get(httpbin.url + "/get", cookies={"foo": "bar"})
     assert r.request.cookies == {"name": "value", "foo": "bar"}
 
 
 @pytest.mark.asyncio
 @pytest.mark.slow
 async def test_request_cookies_from_previous_excludes_other_domains(
-    httpbin, acurl_session_ng
+    httpbin, acurl_session
 ):
-    await acurl_session_ng.get(httpbin.url + "/cookies/set?name=value")
+    await acurl_session.get(httpbin.url + "/cookies/set?name=value")
     # FIXME: we want to set a cookie for another domain.  There's no easy way
     # to get another domain set up loally, so we (as an exception) go out to
     # the network for this test.
-    await acurl_session_ng.get("https://httpbin.org/cookies/set?foo=bar")
-    r = await acurl_session_ng.get(httpbin.url + "/get")
+    await acurl_session.get("https://httpbin.org/cookies/set?foo=bar")
+    r = await acurl_session.get(httpbin.url + "/get")
     assert r.request.cookies == {"name": "value"}

@@ -1,8 +1,10 @@
 import asyncio
 import logging
 from collections import deque
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from functools import wraps
+
+import acurl
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +16,8 @@ class AcurlSessionWrapper:
         self.additional_metrics = {}
 
     def __getattr__(self, attrname):
-        try:
-            r = object.__getattr__(self, attrname)
-            return r
-        except AttributeError:
-            pass
+        with suppress(AttributeError):
+            return object.__getattr__(self, attrname)
         return getattr(self.__session, attrname)
 
     def set_response_callback(self, cb):
@@ -36,15 +35,8 @@ class SessionPool:
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
-    def __init__(self, use_new_acurl_implementation=False):
-        if use_new_acurl_implementation:
-            import acurl_ng
-
-            self._wrapper = acurl_ng.CurlWrapper(asyncio.get_event_loop())
-        else:
-            import acurl
-
-            self._wrapper = acurl.EventLoop()
+    def __init__(self):
+        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
         self._pool = deque()
 
     @asynccontextmanager
@@ -62,10 +54,7 @@ class SessionPool:
             try:
                 instance = cls._session_pools[loop]
             except KeyError:
-                use_new_acurl_implementation = ctx.config.get(
-                    "enable_new_acurl_implementation", False
-                )
-                instance = cls(use_new_acurl_implementation)
+                instance = cls()
                 cls._session_pools[loop] = instance
             async with instance.session_context(ctx):
                 return await func(ctx, *args, **kwargs)
@@ -108,12 +97,4 @@ def mite_http(func):
 
 
 def create_http_cookie(ctx, *args, **kwargs):
-    if ctx.config.get("enable_new_acurl_implementation"):
-        import acurl_ng
-
-        return acurl_ng.Cookie(*args, **kwargs)
-
-    else:
-        import acurl
-
-        return acurl.Cookie(*args, **kwargs)
+    return acurl.Cookie(*args, **kwargs)

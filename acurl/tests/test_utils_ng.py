@@ -1,4 +1,4 @@
-from acurl.utils import CaseInsensitiveDict
+from acurl import CaseInsensitiveDict
 
 
 def test_case_insensitive_constructor():

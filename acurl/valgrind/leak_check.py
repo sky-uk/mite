@@ -1,11 +1,11 @@
 import asyncio
 import gc
 
-import acurl_ng
+import acurl
 
 
 async def main():
-    el = acurl_ng.CurlWrapper(asyncio.get_running_loop())
+    el = acurl.CurlWrapper(asyncio.get_running_loop())
     session = el.session()
 
     # Sometimes a leak won't be apparent when running a line of code just
