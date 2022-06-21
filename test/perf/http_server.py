@@ -25,7 +25,6 @@ async def report():
 
 @app.after_server_stop
 def exitfn(app, loop):
-    print("SEEYA")
     print(f"{str(time.time())}: served {requests_served} requests")
 
 
