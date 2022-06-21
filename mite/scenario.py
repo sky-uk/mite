@@ -73,11 +73,10 @@ class ScenarioManager:
 
     def get_required_work(self):
         if self._in_start:
-            if self._now() > self._start_delay:
-                self._in_start = False
-                self._start_time = time.time()
-            else:
+            if self._now() <= self._start_delay:
                 return self._required
+            self._in_start = False
+            self._start_time = time.time()
         now = self._now()
         if now >= self._current_period_end:
             self._update_required_and_period(
@@ -111,7 +110,7 @@ class ScenarioManager:
 
         def _yield(diff):
             for k, v in diff.items():
-                for i in range(v):
+                for _ in range(v):
                     yield k
 
         scenario_ids = list(_yield(diff))

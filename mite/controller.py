@@ -133,10 +133,8 @@ class Controller:
         )
 
     def should_stop(self):
-        logger.debug(
-            "Scenario manager active: %s" % (self._scenario_manager.is_active(),)
-        )
-        logger.debug("Active runners: %s" % (self._runner_tracker.get_active_count(),))
+        logger.debug(f"Scenario manager active: {self._scenario_manager.is_active()}")
+        logger.debug(f"Active runners: {self._runner_tracker.get_active_count()}")
         return (
             not self._scenario_manager.is_active()
         ) and self._runner_tracker.get_active_count() == 0

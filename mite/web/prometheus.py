@@ -22,8 +22,7 @@ class PrometheusStat:
         self.metrics = defaultdict(float, message["metrics"])
 
     def format(self):
-        lines = []
-        lines.append(f"# TYPE {self.name} {type(self).__name__.lower()}")
+        lines = [f"# TYPE {self.name} {type(self).__name__.lower()}"]
         with self._lock:
             for k, v in self.metrics.items():
                 labels = dict(zip(self.labels, k))
@@ -70,23 +69,23 @@ class Histogram:
                     bin_counts[i] += count
 
     def format(self):
-        lines = []
-        lines.append("# TYPE %s histogram" % (self.name,))
+        lines = [f"# TYPE {self.name} histogram"]
         with self._lock:
             for key in sorted(self.sums.keys()):
                 bin_counts = self.bin_counts[key]
-                sum = self.sums[key]
+                message_sum = self.sums[key]
                 total_count = self.total_counts[key]
                 labels = format_dict(dict(zip(self.labels, key)))
-                for bin_label, bin_count in zip(self.bins, bin_counts):
-                    lines.append(
-                        '%s_bucket{%s,le="%.6f"} %d'
-                        % (self.name, labels, bin_label, bin_count)
-                    )
+
+                lines.extend(
+                    '%s_bucket{%s,le="%.6f"} %d'
+                    % (self.name, labels, bin_label, bin_count)
+                    for bin_label, bin_count in zip(self.bins, bin_counts)
+                )
                 lines.append(
                     '%s_bucket{%s,le="+Inf"} %d' % (self.name, labels, total_count)
                 )
-                lines.append("%s_sum{%s} %.6f" % (self.name, labels, sum))
+                lines.append("%s_sum{%s} %.6f" % (self.name, labels, message_sum))
                 lines.append("%s_count{%s} %d" % (self.name, labels, total_count))
         return "\n".join(lines)
 
@@ -99,7 +98,7 @@ class PrometheusMetrics:
         self.stats = {}
 
     def process(self, msg):
-        logger.debug("message to iterate in prometheus metrics: %s" % (msg,))
+        logger.debug(f"message to iterate in prometheus metrics: {msg}")
         for stat in msg:
             name = stat["name"]
             if name not in self.stats:
@@ -108,7 +107,5 @@ class PrometheusMetrics:
                 self.stats[name].update(stat)
 
     def format(self):
-        blocks = []
-        for stat in self.stats.values():
-            blocks.append(stat.format())
+        blocks = [stat.format() for stat in self.stats.values()]
         return "\n\n".join(blocks)

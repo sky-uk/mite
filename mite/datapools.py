@@ -27,19 +27,19 @@ class RecyclableIterableDataPool:
     async def checkout(self, config):
         self._initialize_once()
         if self._available:
-            id = self._available.popleft()
-            return DataPoolItem(id, self._data[id])
+            item_id = self._available.popleft()
+            return DataPoolItem(item_id, self._data[item_id])
         else:
             raise Exception("Recyclable iterable datapool was emptied!")
 
-    async def checkin(self, id):
+    async def checkin(self, item_id):
         if self._available is None:
             logger.error(
-                f"{repr(self)}: checkin called for {id} before the datapool "
+                f"{repr(self)}: checkin called for {item_id} before the datapool "
                 "was initialized!  Maybe a stale runner is hanging around"
             )
             return
-        self._available.append(id)
+        self._available.append(item_id)
 
 
 class IterableDataPool:
@@ -48,13 +48,12 @@ class IterableDataPool:
 
     async def checkout(self, config):
         try:
-            id, data = next(self._iter)
-        except StopIteration:
-            raise DataPoolExhausted()
-        dpi = DataPoolItem(id, data)
-        return dpi
+            item_id, data = next(self._iter)
+        except StopIteration as e:
+            raise DataPoolExhausted() from e
+        return DataPoolItem(item_id, data)
 
-    async def checkin(self, id):
+    async def checkin(self, item_id):
         pass
 
 
@@ -71,7 +70,7 @@ class SingleRunDataPool:
         self.has_ran = False
         self.data_item = data_item
 
-    async def checkin(self, id):
+    async def checkin(self, item_id):
         pass
 
     async def checkout(self, config):
@@ -86,7 +85,7 @@ class SingleRunDataPoolWrapper:
         self.has_ran = False
         self.data_pool = data_pool
 
-    async def checkin(self, id):
+    async def checkin(self, item_id):
         pass
 
     async def checkout(self, config):

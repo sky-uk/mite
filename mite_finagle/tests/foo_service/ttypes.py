@@ -36,11 +36,8 @@ class FooRequest(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRING:
-                    self.mystring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                else:
-                    iprot.skip(ftype)
+            if fid == 1 and ftype == TType.STRING:
+                self.mystring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -66,7 +63,7 @@ class FooRequest(object):
     def __repr__(self):
         L = ['%s=%r' % (key, value)
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -95,11 +92,8 @@ class FooResponse(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRING:
-                    self.responsestring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                else:
-                    iprot.skip(ftype)
+            if fid == 1 and ftype == TType.STRING:
+                self.responsestring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -125,7 +119,7 @@ class FooResponse(object):
     def __repr__(self):
         L = ['%s=%r' % (key, value)
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__

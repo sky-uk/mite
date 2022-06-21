@@ -73,9 +73,8 @@ class _SeleniumWrapper:
     def _get_tls_timing(self, timings):
         if self._is_using_tls(timings["name"]):
             return timings["connectEnd"] - timings["secureConnectionStart"]
-        else:
-            logger.info("Secure TLS connection not used, defaulting tls_time to 0")
-            return 0
+        logger.info("Secure TLS connection not used, defaulting tls_time to 0")
+        return 0
 
     def _get_tcp_timing(self, timings):
         if self._is_using_tls(timings["name"]):
@@ -84,73 +83,70 @@ class _SeleniumWrapper:
             return timings["connectEnd"] - timings["connectStart"]
 
     def _send_page_load_metrics(self):
-        if self._browser_has_timing_capabilities():
-            performance_entries = self._remote.execute_script(
-                "return performance.getEntriesByType('navigation')"
-            )
+        if not self._browser_has_timing_capabilities():
+            return
+        performance_entries = self._remote.execute_script(
+            "return performance.getEntriesByType('navigation')"
+        )
 
-            paint_entries = self._remote.execute_script(
-                "return performance.getEntriesByType('paint')"
-            )
+        paint_entries = self._remote.execute_script(
+            "return performance.getEntriesByType('paint')"
+        )
 
-            _timings = self._extract_entries(performance_entries)
-            timings = _timings[0] if _timings else None
-            if timings:
-                protocol = timings.get("nextHopProtocol")
-                if protocol != "http/1.1":
-                    logger.warning(
-                        f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
-                    )
-                metrics = {
-                    "dns_lookup_time": timings["domainLookupEnd"]
-                    - timings["domainLookupStart"],
-                    "dom_interactive": timings["domInteractive"],
-                    "js_onload_time": timings["domContentLoadedEventEnd"]
-                    - timings["domContentLoadedEventStart"],
-                    "page_weight": timings["transferSize"],
-                    "render_time": timings["domInteractive"] - timings["responseEnd"],
-                    "tcp_time": self._get_tcp_timing(timings),
-                    "time_to_first_byte": timings["responseStart"]
-                    - timings["connectEnd"],
-                    "time_to_interactive": timings["domInteractive"]
-                    - timings["requestStart"],
-                    "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
-                    "tls_time": self._get_tls_timing(timings),
-                    "total_time": timings["duration"],
-                }
-            else:
-                metrics = {}
-
-            _paint_timings = self._extract_entries(paint_entries, expected=2)
-            paint_timings = (
-                self._format_paint_timings(_paint_timings) if _paint_timings else None
-            )
-            if paint_timings:
-                metrics["first_contentful_paint"] = paint_timings[
-                    "first-contentful-paint"
-                ]
-                metrics["first_paint"] = paint_timings["first-paint"]
-
-            if metrics:
-                self._context.send(
-                    "selenium_page_load_metrics",
-                    **self._extract_and_convert_metrics_to_seconds(metrics),
+        _timings = self._extract_entries(performance_entries)
+        timings = _timings[0] if _timings else None
+        if timings:
+            protocol = timings.get("nextHopProtocol")
+            if protocol != "http/1.1":
+                logger.warning(
+                    f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
                 )
+            metrics = {
+                "dns_lookup_time": timings["domainLookupEnd"]
+                - timings["domainLookupStart"],
+                "dom_interactive": timings["domInteractive"],
+                "js_onload_time": timings["domContentLoadedEventEnd"]
+                - timings["domContentLoadedEventStart"],
+                "page_weight": timings["transferSize"],
+                "render_time": timings["domInteractive"] - timings["responseEnd"],
+                "tcp_time": self._get_tcp_timing(timings),
+                "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
+                "time_to_interactive": timings["domInteractive"]
+                - timings["requestStart"],
+                "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
+                "tls_time": self._get_tls_timing(timings),
+                "total_time": timings["duration"],
+            }
+        else:
+            metrics = {}
+
+        _paint_timings = self._extract_entries(paint_entries, expected=2)
+        paint_timings = (
+            self._format_paint_timings(_paint_timings) if _paint_timings else None
+        )
+        if paint_timings:
+            metrics["first_contentful_paint"] = paint_timings["first-contentful-paint"]
+            metrics["first_paint"] = paint_timings["first-paint"]
+
+        if metrics:
+            self._context.send(
+                "selenium_page_load_metrics",
+                **self._extract_and_convert_metrics_to_seconds(metrics),
+            )
 
     def _extract_entries(self, entries, expected=1):
-        if len(entries) != expected:
-            logger.error(
-                f"Performance entries did not return the expected count: expected 1 - actual {len(entries)}"
-            )
-            return
-        else:
+        if len(entries) == expected:
             return entries[:expected]
+        logger.error(
+            f"Performance entries did not return the expected count: expected 1 - actual {len(entries)}"
+        )
+        return
 
     def _format_paint_timings(self, entries):
         return {metric["name"]: metric["startTime"] for metric in entries}
 
     def _extract_and_convert_metrics_to_seconds(self, metrics):
-        converted_metrics = dict()
+        converted_metrics = {}
         non_time_based_metrics = ["page_weight", "resource_path"]
         for k, v in metrics.items():
             if k not in non_time_based_metrics:
@@ -281,11 +277,7 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
 
 @asynccontextmanager
 async def _selenium_context_manager(context, wire):
-    if wire:
-        sw = _SeleniumWireWrapper(context)
-    else:
-        sw = _SeleniumWrapper(context)
-
+    sw = _SeleniumWireWrapper(context) if wire else _SeleniumWrapper(context)
     try:
         sw._start()
         yield

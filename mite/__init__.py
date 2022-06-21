@@ -4,6 +4,8 @@
 
 """
 
+
+import contextlib
 import random
 import time
 
@@ -14,19 +16,15 @@ import mite.utils
 from .context import Context
 from .exceptions import MiteError  # noqa: F401
 
-try:
+with contextlib.suppress(DistributionNotFound):
     __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    # package is not installed
-    pass
 
 
 # TODO: move to test.py?
 def test_context(extensions=("http",), **config):
     runner_config = {}
     runner_config.update(config.items())
-    c = Context(print, runner_config)
-    return c
+    return Context(print, runner_config)
 
 
 class ensure_separation_from_callable:

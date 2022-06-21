@@ -25,9 +25,7 @@ class ElementNotFoundError(MiteError):
     def __init__(self, **kwargs):
         text = (kwargs.pop("text") or "").replace("'", "").replace('"', "")
         super().__init__(
-            "Could not find element in page with search terms: {}".format(
-                sorted(kwargs.items())
-            ),
+            f"Could not find element in page with search terms: {sorted(kwargs.items())}",
             text=text,
             **kwargs,
         )
@@ -94,7 +92,7 @@ class Browser:
         page = Page(resp, self)
         if embedded_res:
             async with self._ctx.transaction(
-                self._ctx._transaction_name + " - embedded resources"
+                f"{self._ctx._transaction_name} - embedded resources"
             ):
                 await self._download_resources(page)
         return page
@@ -158,7 +156,11 @@ class Page(Resource):
         self.resources = []
         self.frames = []
 
-    def assert_element_in(self, name=None, attrs={}, recursive=True, text=None, **kwargs):
+    def assert_element_in(
+        self, name=None, attrs=None, recursive=True, text=None, **kwargs
+    ):
+        if attrs is None:
+            attrs = {}
         if self.find(name=name, attrs=attrs, recursive=recursive, text=text, **kwargs):
             return True
         else:
@@ -244,8 +246,7 @@ class Page(Resource):
         pass
 
     def get_form(self, name=None):
-        form = [f for f in self.get_forms() if name is None or f.name == name][0]
-        return form
+        return [f for f in self.get_forms() if name is None or f.name == name][0]
 
     def get_forms(self):
         return [Form(e, self) for e in self.find_all("form")]
@@ -373,11 +374,10 @@ class Form:
                     yield BaseFormField(field)
 
     def __getitem__(self, item):
-        result = self.fields.get(item) or self.files.get(item)
-        if result:
+        if result := self.fields.get(item) or self.files.get(item):
             return result
         else:
-            raise KeyError("{} not in form fields".format(item))
+            raise KeyError(f"{item} not in form fields")
 
     def __delitem__(self, item):
         del self.fields[item]
@@ -415,10 +415,7 @@ class Form:
 
 def _field_is_disabled(element):
     status = element.attrs.get("disabled")
-    if status and status.lower() in ["disabled", "true"]:
-        return True
-    else:
-        return False
+    return bool(status and status.lower() in ["disabled", "true"])
 
 
 class BaseFormField:

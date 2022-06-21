@@ -44,7 +44,7 @@ async def _amqp_context_manager(context):
     try:
         yield
     except aio_pika.AMQPException as e:
-        raise AMQPError(f"Received an error from AMQP:\n{e.message}")
+        raise AMQPError(f"Received an error from AMQP:\n{e.message}") from e
     finally:
         aw.uninstall(context)
 

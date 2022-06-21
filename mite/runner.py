@@ -204,8 +204,7 @@ class Runner:
                 else:
                     await journey(context, *args)
         except Exception as e:
-            if not getattr(e, "handled", False):
-                if self._debug:
-                    breakpoint()
-                    raise
+            if not getattr(e, "handled", False) and self._debug:
+                breakpoint()
+                raise
         return scenario_id, scenario_data_id

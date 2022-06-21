@@ -105,7 +105,7 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
     for cur_page in entries:
         if (
             not cur_page["response"]["status"]
-            or not cur_page["request"]["url"] in page_urls
+            or cur_page["request"]["url"] not in page_urls
         ):
             continue
 

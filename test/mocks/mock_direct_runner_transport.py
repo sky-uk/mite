@@ -1,11 +1,11 @@
 test_work = [
-    (1, 1, 'legacy:journeytest1', ('1',)),
-    (2, 2, 'legacy:journeytest2', ('2',)),
-    (3, 3, 'legacy:journeytest3', ('3',)),
-    (4, 4, 'legacy:journeytest3', ('4',)),
-    (5, 5, 'legacy:journeytest3', ('5',)),
-    (6, 6, 'legacy:journeytest3', ('6',)),
-    (7, 7, 'legacy:journeytest3', ('7',)),
+    (1, 1, "legacy:journeytest1", ("1",)),
+    (2, 2, "legacy:journeytest2", ("2",)),
+    (3, 3, "legacy:journeytest3", ("3",)),
+    (4, 4, "legacy:journeytest3", ("4",)),
+    (5, 5, "legacy:journeytest3", ("5",)),
+    (6, 6, "legacy:journeytest3", ("6",)),
+    (7, 7, "legacy:journeytest3", ("7",)),
 ]
 
 
@@ -14,7 +14,7 @@ class DirectRunnerTransportMock:
         self,
         runner_id=10,
         test_name="mite unit test mock",
-        config_list=(('unit_test_mock_value', 'x'),),
+        config_list=(("unit_test_mock_value", "x"),),
         work=test_work,
     ):
         # The format of work is:
@@ -36,6 +36,6 @@ class DirectRunnerTransportMock:
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
         self._completed_data += completed_data_ids
-        to_send = self._work if not self._sent_work else []
+        to_send = [] if self._sent_work else self._work
         self._sent_work = True
         return to_send, [], True
