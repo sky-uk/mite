@@ -9,7 +9,9 @@ from acurl import Cookie
 @pytest.mark.skip
 def test_cookie_zero_expiry():
     # FIXME: what's the right behavior here?
-    c = acurl._Cookie(False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value")
+    c = acurl._Cookie(
+        False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value"
+    )
     assert not c.has_expired
 
 
@@ -28,12 +30,16 @@ def test_cookie_not_expired():
 
 
 def test_cookie_has_expired():
-    c = acurl._Cookie(False, "foo.com", False, "/bar", False, 1, "my_cookie", "my_value")
+    c = acurl._Cookie(
+        False, "foo.com", False, "/bar", False, 1, "my_cookie", "my_value"
+    )
     assert c.has_expired
 
 
 def test_cookie_format():
-    c = acurl._Cookie(False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value")
+    c = acurl._Cookie(
+        False, "foo.com", False, "/bar", False, 0, "my_cookie", "my_value"
+    )
     assert c.format() == b"foo.com\tFALSE\t/bar\tFALSE\t0\tmy_cookie\tmy_value"
 
 
@@ -86,7 +92,9 @@ def test_session_cookie_for_url_with_cookie_instance():
 
 
 def test_session_cookie_for_url_with_string_value():
-    cookie = acurl.session_cookie_for_url(url="https://sky.com", name="foo", value="bar")
+    cookie = acurl.session_cookie_for_url(
+        url="https://sky.com", name="foo", value="bar"
+    )
     assert cookie.domain == ".sky.com"
     assert cookie.name == "foo"
     assert cookie.value == "bar"

@@ -34,7 +34,7 @@ def test_case_insensitive_del_item():
     del my_dict["Foo"]
     assert list(my_dict.keys()) == ["baz"]
     del my_dict["Baz"]
-    assert list(my_dict.keys()) == []
+    assert not list(my_dict.keys())
 
 
 def test_case_insensitive_contains():
@@ -47,7 +47,7 @@ def test_case_insensitive_pop():
     my_dict = CaseInsensitiveDict({"Foo": "Bar", "baz": "Qux"})
     assert my_dict.pop("Foo") == "Bar"
     assert my_dict.pop("Baz") == "Qux"
-    assert list(my_dict.keys()) == []
+    assert not list(my_dict.keys())
 
 
 def test_case_insensitive_popitem():
