@@ -67,11 +67,11 @@ class GenericStatsOutput:
         fractional_index, index = math.modf(index)
         index = int(index)
         if fractional_index == 0:
-            return f"{self._resp_time_recent[index]}.6f"
+            return f"{self._resp_time_recent[index]}:.6f"
         a = self._resp_time_recent[index]
         b = self._resp_time_recent[index + 1]
         interpolated_amount = (b - a) * fractional_index
-        return f"{a + interpolated_amount}.6f"
+        return f"{a + interpolated_amount}:.6f"
 
     @property
     def error_total(self):
