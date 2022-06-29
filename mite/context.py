@@ -50,7 +50,7 @@ class Context:
 
     @property
     def should_stop(self):
-        return False if self._should_stop_func is None else self._should_stop_func()
+        return self._should_stop_func and self._should_stop_func() or False
 
     @property
     def _active_transaction(self):
