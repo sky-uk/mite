@@ -26,7 +26,7 @@ class PrometheusStat:
         with self._lock:
             for k, v in self.metrics.items():
                 labels = dict(zip(self.labels, k))
-                lines.append("%s {%s} %s" % (self.name, format_dict(labels), v))
+                lines.append(f"{self.name} {{{format_dict(labels)}}} {v}")
         return "\n".join(lines)
 
 
@@ -78,15 +78,12 @@ class Histogram:
                 labels = format_dict(dict(zip(self.labels, key)))
 
                 lines.extend(
-                    '%s_bucket{%s,le="%.6f"} %d'
-                    % (self.name, labels, bin_label, bin_count)
+                    f'{self.name}_bucket{{{labels},le="{bin_label:.6f}"}} {bin_count}'
                     for bin_label, bin_count in zip(self.bins, bin_counts)
                 )
-                lines.append(
-                    '%s_bucket{%s,le="+Inf"} %d' % (self.name, labels, total_count)
-                )
-                lines.append("%s_sum{%s} %.6f" % (self.name, labels, message_sum))
-                lines.append("%s_count{%s} %d" % (self.name, labels, total_count))
+                lines.append(f'{self.name}_bucket{{{labels},le="+Inf"}} {total_count}')
+                lines.append(f"{self.name}_sum{{{labels}}} {message_sum:.6f}")
+                lines.append(f"{self.name}_count{{{labels}}} {total_count}")
         return "\n".join(lines)
 
 

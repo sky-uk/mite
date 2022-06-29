@@ -164,7 +164,7 @@ class performfoo_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
         return f"{self.__class__.__name__}({', '.join(L)})"
 
@@ -176,7 +176,7 @@ class performfoo_args(object):
 all_structs.append(performfoo_args)
 performfoo_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [FooRequest, None], None, ),  # 1
+    (1, TType.STRUCT, "request", [FooRequest, None], None, ),  # 1
 )
 
 
@@ -212,9 +212,9 @@ class performfoo_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('performfoo_result')
+        oprot.writeStructBegin("performfoo_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            oprot.writeFieldBegin("success", TType.STRUCT, 0)
             self.success.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -224,7 +224,7 @@ class performfoo_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
         return f"{self.__class__.__name__}({', '.join(L)})"
 
@@ -235,7 +235,7 @@ class performfoo_result(object):
         return not (self == other)
 all_structs.append(performfoo_result)
 performfoo_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [FooResponse, None], None, ),  # 0
+    (0, TType.STRUCT, "success", [FooResponse, None], None, ),  # 0
 )
 fix_spec(all_structs)
 del all_structs

@@ -17,7 +17,7 @@ EMBEDDED_URL_REGEX = re.compile(
 class OptionError(MiteError):
     def __init__(self, value, options):
         super().__init__(
-            "%r not in options %r" % (value, options), value=value, options=options
+            f"{value} not in options {options}", value=value, options=options
         )
 
 
@@ -403,14 +403,7 @@ class Form:
         )
 
     def __repr__(self):
-        return "<%s name=%r method=%r action=%r fields=%r files=%r>" % (
-            self.__class__.__name__,
-            self.name,
-            self.method,
-            self.action,
-            self.fields,
-            self.files,
-        )
+        return f"<{self.__class__.__name__} name={self.name} method={self.method} action={self.action} fields={self.fields} files={self.files}>"
 
 
 def _field_is_disabled(element):
@@ -444,12 +437,7 @@ class BaseFormField:
         self._value = value
 
     def __repr__(self):
-        return "<%s name=%r value=%r disabled=%r>" % (
-            self.__class__.__name__,
-            self.name,
-            self.value,
-            self.disabled,
-        )
+        return f"<{self.__class__.__name__} name={self.name} value={self.value} disabled={self.disabled}>"
 
 
 class SelectField(BaseFormField):
@@ -512,13 +500,7 @@ class RadioField:
             raise OptionError(value, self.options)
 
     def __repr__(self):
-        return "<%s name=%r value=%r options=%r disabled=%r>" % (
-            self.__class__.__name__,
-            self.name,
-            self.value,
-            self.options,
-            self.disabled,
-        )
+        return f"<{self.__class__.__name__} name={self.name} value={self.value} options={self.options} disabled={self.disabled}>"
 
 
 class FileInputField(BaseFormField):

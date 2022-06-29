@@ -13,7 +13,7 @@ def pack_msg(msg):  # pragma: no cover
 
 
 def spec_import(spec):
-    module, attr = spec.split(':', 1)
+    module, attr = spec.split(":", 1)
     return getattr(importlib.import_module(module), attr)
 
 
@@ -22,14 +22,14 @@ async def sleep(delay, always=False, **kwargs):  # pragma: no cover
 
 
 def _msg_backend_module(opts):
-    msg_backend = opts['--message-backend']
-    if msg_backend == 'nanomsg':
+    msg_backend = opts["--message-backend"]
+    if msg_backend == "nanomsg":
         from . import nanomsg
 
         return nanomsg
-    elif msg_backend == 'ZMQ':
+    elif msg_backend == "ZMQ":
         from . import zmq
 
         return zmq
     else:
-        raise ValueError('Unsupported backend %r' % (msg_backend,))
+        raise ValueError(f"Unsupported backend {msg_backend}")
