@@ -84,6 +84,7 @@ class SessionPool:
                 method=r.request.method,
                 **session_wrapper.additional_metrics,
             )
+            # print(r.total_time)
 
         session.set_response_callback(response_callback)
         return session_wrapper

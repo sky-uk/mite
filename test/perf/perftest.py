@@ -19,13 +19,19 @@ if os.path.dirname(__file__) != "":
 
 def run_test(scenario):
     try:
-        http_server = psutil.Popen(("python", "./http_server.py"), stdout=subprocess.PIPE)
+        http_server = psutil.Popen(("python", "./http_server_aiohttp.py"), stdout=subprocess.PIPE)
+        
+        
+        my_env = os.environ.copy()
+        my_env["PYTHONASYNCIODEBUG"] = "1"
+
         runner = psutil.Popen(
             (
                 "mite",
                 "runner",
                 # "--log-level=DEBUG"
-            )
+            ),
+            env=my_env
         )
         duplicator = psutil.Popen(("mite", "duplicator", "tcp://127.0.0.1:14303"))
         # TODO: we should make sure that the collector has a tmpfs in RAM to
@@ -35,7 +41,7 @@ def run_test(scenario):
             (
                 "mite",
                 "controller",
-                "--spawn-rate=1000000",
+                "--spawn-rate=1000",
                 # "--log-level=DEBUG",
                 scenario,
             )
@@ -51,6 +57,8 @@ def run_test(scenario):
             with runner.oneshot(), duplicator.oneshot(), controller.oneshot():
                 #  TODO: why does it go zombie?
                 if controller.status() in (psutil.STATUS_DEAD, psutil.STATUS_ZOMBIE):
+                    # print("Controller dead 🧟‍♂️")
+                    # breakpoint()
                     break
                 elapsed = math.floor(time.time() - start)
                 rows += (
@@ -104,22 +112,25 @@ if __name__ == "__main__":
 
     data = []
     scenarios = (
-        "mite_perftest:scenario1",
-        "mite_perftest:scenario10",
-        "mite_perftest:scenario100",
+        # "mite_perftest:scenario1",
+        # "mite_perftest:scenario10",
+        # "mite_perftest:scenario100",
         "mite_perftest:scenario1000",
     )
     for scenario in scenarios:
         data += run_test(scenario)
+    
+    # sys.exit()
 
     outdir = os.path.join(
-        f"{os.environ['MITE_PERFTEST_OUT']}",
+        f"{os.environ.get('MITE_PERFTEST_OUT','./output')}",
         f"{now.year}-{now.month:02d}-{now.day:02d}",
-        f"{sys.argv[1]}-{now.hour:02d}-{now.minute:02d}",
+        f"{now.hour:02d}-{now.minute:02d}",
     )
     os.makedirs(outdir, exist_ok=True)
     os.chdir(outdir)
 
+    # sys.exit()
     df = pd.DataFrame(data)
 
     df.to_csv("samples.csv")

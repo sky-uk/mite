@@ -2,6 +2,7 @@ import asyncio
 import functools
 import logging
 from itertools import count
+import time
 
 from .context import Context
 from .utils import spec_import
@@ -49,6 +50,35 @@ class RunnerControllerTransportExample:  # pragma: no cover
         pass
 
 
+class EventLoopDelayMonitor:
+
+    def __init__(self, loop=None, start=True, interval=1, logger=None):
+        self._interval = interval
+        self._log = logger or logging.getLogger(__name__)
+        self._loop = loop or asyncio.get_event_loop()
+        if start:
+            self.start()
+
+    def run(self):
+        self._loop.call_later(self._interval, self._handler, self._loop.time())
+
+    def _handler(self, start_time):
+        latency = (self._loop.time() - start_time) - self._interval
+        self._log.error('EventLoop delay %.4f', latency)
+        if not self.is_stopped():
+            self.run()
+
+    def is_stopped(self):
+        return self._stopped
+
+    def start(self):
+        self._stopped = False
+        self.run()
+
+    def stop(self):
+        self._stopped = True
+
+
 class Runner:
     def __init__(
         self,
@@ -70,6 +100,11 @@ class Runner:
         self._max_work = max_work
         if loop is None:
             loop = asyncio.get_event_loop()
+        loop.slow_callback_duration = 0.2
+        print(loop.slow_callback_duration)
+
+        EventLoopDelayMonitor(interval=1)
+
         self._loop = loop
         self._debug = debug
 
@@ -119,6 +154,7 @@ class Runner:
         def on_completion(f):
             nonlocal waiter, _completed
             _completed.append(f)
+            # print(f"Completed {len(_completed)}")
             if not waiter.done():
                 waiter.set_result(None)
 
@@ -139,6 +175,7 @@ class Runner:
                 self._dec_work(scenario_id)
                 if scenario_data_id is not None:
                     c.append((scenario_id, scenario_data_id))
+            # print("Deleting _completed")
             del _completed[:]
             return c
 
@@ -146,6 +183,7 @@ class Runner:
         waiter = self._loop.create_future()
         completed_data_ids = []
         while not self._stop:
+            # print(f"{time.time()} {self._current_work()=}")
             work, config_list, self._stop = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, self._max_work
             )
@@ -161,6 +199,7 @@ class Runner:
                     "scenario_id": scenario_id,
                     "scenario_data_id": scenario_data_id,
                 }
+                # print(id_data)
                 context = Context(
                     self._msg_sender,
                     config,
@@ -177,15 +216,19 @@ class Runner:
                 )
                 future.add_done_callback(on_completion)
             completed_data_ids = await wait()
+            # print(f"completed: {_completed=}")
+        logger.debug("stopping..")
         while self._current_work():
             _, config_list, _ = await self._transport.request_work(
                 runner_id, self._current_work(), completed_data_ids, 0
             )
             config.update(config_list)
             completed_data_ids = await wait()
+        logger.debug("CUrrent work finished")
         await self._transport.request_work(
             runner_id, self._current_work(), completed_data_ids, 0
         )
+        logger.debug("Bye.")
         await self._transport.bye(runner_id)
 
     async def _execute(self, context, scenario_id, scenario_data_id, journey_spec, args):
@@ -198,11 +241,13 @@ class Runner:
         )
         journey = spec_import_cached(journey_spec)
         try:
+            # print(f"{context._id_data['context_id']} running {journey_spec}")
             async with context.transaction("__root__"):
                 if args is None:
                     await journey(context)
                 else:
                     await journey(context, *args)
+            # print(f"{context._id_data['context_id']} FINISHED {journey_spec}")
         except Exception as e:
             if not getattr(e, "handled", False):
                 if self._debug:
