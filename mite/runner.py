@@ -51,20 +51,25 @@ class RunnerControllerTransportExample:  # pragma: no cover
 
 
 class EventLoopDelayMonitor:
-
-    def __init__(self, loop=None, start=True, interval=1, logger=None):
+    def __init__(self, loop=None, context=None, interval=1):
         self._interval = interval
-        self._log = logger or logging.getLogger(__name__)
+        self._log = logging.getLogger(__name__)
         self._loop = loop or asyncio.get_event_loop()
-        if start:
-            self.start()
+        self._context = context
+
+        self.start()
 
     def run(self):
         self._loop.call_later(self._interval, self._handler, self._loop.time())
 
     def _handler(self, start_time):
         latency = (self._loop.time() - start_time) - self._interval
-        self._log.error("EventLoop delay %.4f, tasks: %d", latency, len(asyncio.all_tasks()))
+        # self._log.error("EventLoop delay %.4f, tasks: %d", latency, len(asyncio.all_tasks()))
+        self._context.send(
+            "eventloop_delay",
+            latency=latency,
+            loop_tasks=len(asyncio.all_tasks()),
+        )
         if not self.is_stopped():
             self.run()
 
@@ -100,10 +105,12 @@ class Runner:
         self._max_work = max_work
         if loop is None:
             loop = asyncio.get_event_loop()
-        loop.slow_callback_duration = 0.2
-        print(loop.slow_callback_duration)
 
-        EventLoopDelayMonitor(interval=1)
+        EventLoopDelayMonitor(
+            loop=loop,
+            context=Context(self._msg_sender, None),
+            interval=1,
+        )
 
         self._loop = loop
         self._debug = debug
