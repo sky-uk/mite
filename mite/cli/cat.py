@@ -7,6 +7,13 @@ import msgpack
 from mite.utils import pack_msg
 
 
+class BytesEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            return obj.decode("utf-8")
+        return json.JSONEncoder.default(self, obj)
+
+
 def prettify_timestamps(d):
     for key in ("time", "start_time", "end_time"):
         if key in d:
@@ -21,7 +28,7 @@ def cat(opts):
         for row in unpacker:
             if opts["--prettify-timestamps"]:
                 prettify_timestamps(row)
-            json.dump(row, sys.stdout)
+            json.dump(row, sys.stdout, cls=BytesEncoder)
             sys.stdout.write("\n")
 
 

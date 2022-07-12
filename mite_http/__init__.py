@@ -81,7 +81,7 @@ class SessionPool:
                 first_byte_time=r.starttransfer_time,
                 total_time=r.total_time,
                 primary_ip=r.primary_ip,
-                method=r.request.method,
+                method=r.request.method.decode("utf-8"),
                 **session_wrapper.additional_metrics,
             )
 
