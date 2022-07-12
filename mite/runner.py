@@ -64,7 +64,7 @@ class EventLoopDelayMonitor:
 
     def _handler(self, start_time):
         latency = (self._loop.time() - start_time) - self._interval
-        self._log.error('EventLoop delay %.4f', latency)
+        self._log.error("EventLoop delay %.4f, tasks: %d", latency, len(asyncio.all_tasks()))
         if not self.is_stopped():
             self.run()
 
