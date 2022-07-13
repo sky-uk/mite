@@ -22,8 +22,11 @@ def run_test(scenario):
         http_server = psutil.Popen(("python", "./http_server_aiohttp.py"), stdout=subprocess.PIPE)
         
         
+        # my_env = os.environ.copy()
+        # my_env["PYTHONASYNCIODEBUG"] = "1"
+        
         my_env = os.environ.copy()
-        my_env["PYTHONASYNCIODEBUG"] = "1"
+        my_env["MITE_LOG_SLOW_EVENTLOOP"] = "1"
 
         runner = psutil.Popen(
             (

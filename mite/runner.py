@@ -2,7 +2,7 @@ import asyncio
 import functools
 import logging
 from itertools import count
-import time
+import os
 
 from .context import Context
 from .utils import spec_import
@@ -51,11 +51,12 @@ class RunnerControllerTransportExample:  # pragma: no cover
 
 
 class EventLoopDelayMonitor:
-    def __init__(self, loop=None, context=None, interval=1):
+    def __init__(self, loop=None, context=None, runner_id=None, interval=1):
         self._interval = interval
         self._log = logging.getLogger(__name__)
         self._loop = loop or asyncio.get_event_loop()
         self._context = context
+        self.runner_id = runner_id
 
         self.start()
 
@@ -69,6 +70,7 @@ class EventLoopDelayMonitor:
             "eventloop_delay",
             latency=latency,
             loop_tasks=len(asyncio.all_tasks()),
+            runner_id=self.runner_id,
         )
         if not self.is_stopped():
             self.run()
@@ -105,12 +107,6 @@ class Runner:
         self._max_work = max_work
         if loop is None:
             loop = asyncio.get_event_loop()
-
-        EventLoopDelayMonitor(
-            loop=loop,
-            context=Context(self._msg_sender, None),
-            interval=1,
-        )
 
         self._loop = loop
         self._debug = debug
@@ -155,8 +151,16 @@ class Runner:
         config = {}
         runner_id, test_name, config_list = await self._transport.hello()
         config.update(config_list)
-        logger.debug("Entering run loop")
+        logger.info("Entering run loop")
         _completed = []
+
+        # if os.environ.get("MITE_LOG_SLOW_EVENTLOOP", False):
+        EventLoopDelayMonitor(
+            loop=self._loop,
+            context=Context(self._msg_sender, None),
+            runner_id=runner_id,
+            interval=1,
+        )
 
         def on_completion(f):
             nonlocal waiter, _completed
