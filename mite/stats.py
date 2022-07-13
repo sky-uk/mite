@@ -171,6 +171,11 @@ _MITE_STATS = [
         matcher=matcher_by_type("controller_report"),
         extractor=extractor(["test"], "num_runners"),
     ),
+    Gauge(
+        name="mite_eventloop_delay",
+        matcher=matcher_by_type("eventloop_delay"),
+        extractor=extractor(["runner_id"], "latency"),
+    ),
 ]
 
 

@@ -39,7 +39,27 @@ def run_test(scenario):
         duplicator = psutil.Popen(("mite", "duplicator", "tcp://127.0.0.1:14303"))
         # TODO: we should make sure that the collector has a tmpfs in RAM to
         # run in, so that disk performance doesn't get into the mix...
-        collector = psutil.Popen(("mite", "collector"))
+        # collector = psutil.Popen(("mite", "collector"))
+
+        stats = psutil.Popen(
+            (
+                "mite",
+                "stats",
+                "--stats-in-socket=tcp://127.0.0.1:14303",
+                "--stats-out-socket=tcp://0.0.0.0:14305",
+                "--stats-include-processors=mite,mite_http",
+            )
+        )
+
+        exporter = psutil.Popen(
+            (
+                "mite",
+                "prometheus_exporter",
+                "--stats-out-socket=tcp://127.0.0.1:14305",
+                "--web-address=0.0.0.0:9301",
+            )
+        )
+
         controller = psutil.Popen(
             (
                 "mite",
@@ -105,7 +125,8 @@ def run_test(scenario):
 
         return rows
     finally:
-        for process in (runner, collector, duplicator, http_server):
+        # collector
+        for process in (runner, duplicator, http_server, stats, exporter):
             if process is not None:
                 process.terminate()
 
