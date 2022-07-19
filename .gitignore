@@ -101,3 +101,5 @@ collector_data/
 
 coverage_html_report/
 /pip-wheel-metadata/
+
+.DS_Store
