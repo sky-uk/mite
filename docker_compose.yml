@@ -1,7 +1,7 @@
 version: '3.9'
 services:
   apiserver:
-    image: python:3.9-alpine3.13
+    image: python:3.10-alpine3.16
     command: ["python", "-m", "http.server", "8000"]
     ports:
     - "8000:8000"
