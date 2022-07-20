@@ -71,8 +71,7 @@ class Client(Iface):
 class Processor(Iface, TProcessor):
     def __init__(self, handler):
         self._handler = handler
-        self._processMap = {}
-        self._processMap["performfoo"] = Processor.process_performfoo
+        self._processMap = {"performfoo": Processor.process_performfoo}
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -85,7 +84,7 @@ class Processor(Iface, TProcessor):
         if name not in self._processMap:
             iprot.skip(TType.STRUCT)
             iprot.readMessageEnd()
-            x = TApplicationException(TApplicationException.UNKNOWN_METHOD, 'Unknown function %s' % (name))
+            x = TApplicationException(TApplicationException.UNKNOWN_METHOD, f'Unknown function {name}')
             oprot.writeMessageBegin(name, TMessageType.EXCEPTION, seqid)
             x.write(oprot)
             oprot.writeMessageEnd()
@@ -141,12 +140,9 @@ class performfoo_args(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = FooRequest()
-                    self.request.read(iprot)
-                else:
-                    iprot.skip(ftype)
+            if fid == 1 and ftype == TType.STRUCT:
+                self.request = FooRequest()
+                self.request.read(iprot)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -168,9 +164,9 @@ class performfoo_args(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -180,7 +176,7 @@ class performfoo_args(object):
 all_structs.append(performfoo_args)
 performfoo_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [FooRequest, None], None, ),  # 1
+    (1, TType.STRUCT, "request", [FooRequest, None], None, ),  # 1
 )
 
 
@@ -204,12 +200,9 @@ class performfoo_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = FooResponse()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
+            if fid == 0 and ftype == TType.STRUCT:
+                self.success = FooResponse()
+                self.success.read(iprot)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -219,9 +212,9 @@ class performfoo_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('performfoo_result')
+        oprot.writeStructBegin("performfoo_result")
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            oprot.writeFieldBegin("success", TType.STRUCT, 0)
             self.success.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -231,9 +224,9 @@ class performfoo_result(object):
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -242,7 +235,7 @@ class performfoo_result(object):
         return not (self == other)
 all_structs.append(performfoo_result)
 performfoo_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [FooResponse, None], None, ),  # 0
+    (0, TType.STRUCT, "success", [FooResponse, None], None, ),  # 0
 )
 fix_spec(all_structs)
 del all_structs

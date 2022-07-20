@@ -9,7 +9,7 @@ try:
     from .thrift import _ThriftError
 except ImportError as e:
     # FIXME: are we sure this is the only kind of ImportError we will get?
-    raise Exception(
+    raise ModuleNotFoundError(
         "The mite_finagle module requires the thrift package to be installed"
     ) from e
 
@@ -115,7 +115,7 @@ class MiteFinagleConnection:
                     return
             elif message.type == Dispatch.Reply.type:
                 if (data := self._in_flight.pop(message.tag, None)) is None:
-                    raise Exception("unknown reply tag received")
+                    raise ValueError("unknown reply tag received")
                 factory, sent_time = data
                 reply = factory.get_reply_object(message.body)
                 reply._sent_time = sent_time
@@ -129,7 +129,7 @@ class MiteFinagleConnection:
                 self._replies.put_nowait(reply)
             else:
                 breakpoint()
-                raise Exception("unknown type")
+                raise ValueError("unknown type")
 
     def _send_stat(self, name, sent_time, had_error):
         self._context.send(

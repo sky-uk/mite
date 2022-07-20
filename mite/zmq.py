@@ -129,14 +129,13 @@ class RunnerTransport:
             )
         )
         msg = self._sock.recv()
-        result = unpack_msg(msg)
-        return result
+        return unpack_msg(msg)
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
         logger.debug(
-            "Requesting work runner_id=%s current_work=%s completed_data_ids=%s max_work=%s"
-            % (runner_id, current_work, completed_data_ids, max_work)
+            f"Requesting work runner_id={runner_id} current_work={current_work} completed_data_ids={completed_data_ids} max_work={max_work}"
         )
+
         return await self._loop.run_in_executor(
             None,
             self._request_work,
@@ -180,7 +179,7 @@ class ControllerServer:
             elif _type == _MSG_TYPE_BYE:
                 self._sock.send(pack_msg(controller.bye(content)))
             else:
-                raise Exception(f"something weird happened! _type is {_type}")
+                raise ValueError(f"something weird happened! _type is {_type}")
             # Insert a zero-length sleep to allow asyncio to service other
             # coroutines.  Notably, this allows the controller report sending
             # coroutine to run.

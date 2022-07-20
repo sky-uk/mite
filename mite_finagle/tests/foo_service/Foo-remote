@@ -20,18 +20,18 @@ from foo_service import Foo
 from foo_service.ttypes import *
 
 if len(sys.argv) <= 1 or sys.argv[1] == '--help':
-    print('')
-    print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
-    print('')
-    print('Functions:')
-    print('  FooResponse performfoo(FooRequest request)')
-    print('')
+    print("")
+    print(f"Usage: {sys.argv[0]} [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]")
+    print("")
+    print("Functions:")
+    print("  FooResponse performfoo(FooRequest request)")
+    print("")
     sys.exit(0)
 
 pp = pprint.PrettyPrinter(indent=2)
-host = 'localhost'
+host = "localhost"
 port = 9090
-uri = ''
+uri = ""
 framed = False
 ssl = False
 validate = True
@@ -41,48 +41,45 @@ certfile = None
 http = False
 argi = 1
 
-if sys.argv[argi] == '-h':
-    parts = sys.argv[argi + 1].split(':')
+if sys.argv[argi] == "-h":
+    parts = sys.argv[argi + 1].split(":")
     host = parts[0]
     if len(parts) > 1:
         port = int(parts[1])
     argi += 2
 
-if sys.argv[argi] == '-u':
+if sys.argv[argi] == "-u":
     url = urlparse(sys.argv[argi + 1])
-    parts = url[1].split(':')
+    parts = url[1].split(":")
     host = parts[0]
-    if len(parts) > 1:
-        port = int(parts[1])
-    else:
-        port = 80
+    port = int(parts[1]) if len(parts) > 1 else 80
     uri = url[2]
     if url[4]:
-        uri += '?%s' % url[4]
+        uri += f"?{url[4]}"
     http = True
     argi += 2
 
-if sys.argv[argi] == '-f' or sys.argv[argi] == '-framed':
+if sys.argv[argi] in ["-f", "-framed"]:
     framed = True
     argi += 1
 
-if sys.argv[argi] == '-s' or sys.argv[argi] == '-ssl':
+if sys.argv[argi] in ["-s", "-ssl"]:
     ssl = True
     argi += 1
 
-if sys.argv[argi] == '-novalidate':
+if sys.argv[argi] == "-novalidate":
     validate = False
     argi += 1
 
-if sys.argv[argi] == '-ca_certs':
+if sys.argv[argi] == "-ca_certs":
     ca_certs = sys.argv[argi+1]
     argi += 2
 
-if sys.argv[argi] == '-keyfile':
+if sys.argv[argi] == "-keyfile":
     keyfile = sys.argv[argi+1]
     argi += 2
 
-if sys.argv[argi] == '-certfile':
+if sys.argv[argi] == "-certfile":
     certfile = sys.argv[argi+1]
     argi += 2
 
@@ -104,14 +101,14 @@ protocol = TBinaryProtocol(transport)
 client = Foo.Client(protocol)
 transport.open()
 
-if cmd == 'performfoo':
+if cmd == "performfoo":
     if len(args) != 1:
-        print('performfoo requires 1 args')
+        print("performfoo requires 1 args")
         sys.exit(1)
     pp.pprint(client.performfoo(eval(args[0]),))
 
 else:
-    print('Unrecognized method %s' % cmd)
+    print("Unrecognized method {cmd}")
     sys.exit(1)
 
 transport.close()

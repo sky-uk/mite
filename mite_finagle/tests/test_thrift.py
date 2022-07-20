@@ -18,7 +18,6 @@ sys.path = old_path
 
 def test_init():
     ThriftMessageFactory("performfoo", Client)
-    assert True
 
 
 def test_init_with_wrong_client_raises():

@@ -35,10 +35,7 @@ class ConfigManager:
         return self._config.get(name, [default])[0]
 
     def __repr__(self):
-        return "ConfigManager(version={}, {})".format(
-            self._version,
-            " ,".join(["{}={}".format(k, v) for k, v in self._config.items()]),
-        )
+        return f'ConfigManager(version={self._version}, {" ,".join([f"{k}={v}" for k, v in self._config.items()])})'
 
     def __str__(self):
         self.__repr__()
@@ -47,11 +44,11 @@ class ConfigManager:
 def default_config_loader():
     result = {}
     for name, value in os.environ.items():
-        if name.startswith('MITE_CONF_'):
+        if name.startswith("MITE_CONF_"):
             key_name = name[10:]
             logger.info(f'Setting config "{key_name}" from environment variable')
             result[key_name] = value
-        if name.startswith('MITE_EVAL_CONF_'):
+        if name.startswith("MITE_EVAL_CONF_"):
             key_name = name[15:]
             logger.info(f'Setting config "{key_name}" by eval\'ing environment variable')
             result[key_name] = eval(value)

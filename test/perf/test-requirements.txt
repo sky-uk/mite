@@ -1,3 +1,4 @@
+aiohttp
 sanic
 psutil
 pandas

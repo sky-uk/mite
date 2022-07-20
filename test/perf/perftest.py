@@ -6,7 +6,6 @@ import os
 import re
 import signal
 import subprocess
-import sys
 import time
 
 import altair as alt
@@ -55,22 +54,22 @@ def run_test(scenario):
                 elapsed = math.floor(time.time() - start)
                 rows += (
                     {
-                        'elapsed': elapsed,
-                        'process': 'runner',
-                        'cpu': runner.cpu_percent(),
-                        'mem': runner.memory_info().rss,
+                        "elapsed": elapsed,
+                        "process": "runner",
+                        "cpu": runner.cpu_percent(),
+                        "mem": runner.memory_info().rss,
                     },
                     {
-                        'elapsed': elapsed,
-                        'process': 'duplicator',
-                        'cpu': duplicator.cpu_percent(),
-                        'mem': duplicator.memory_info().rss,
+                        "elapsed": elapsed,
+                        "process": "duplicator",
+                        "cpu": duplicator.cpu_percent(),
+                        "mem": duplicator.memory_info().rss,
                     },
                     {
-                        'elapsed': elapsed,
-                        'process': 'controller',
-                        'cpu': controller.cpu_percent(),
-                        'mem': controller.memory_info().rss,
+                        "elapsed": elapsed,
+                        "process": "controller",
+                        "cpu": controller.cpu_percent(),
+                        "mem": controller.memory_info().rss,
                     },
                 )
                 time.sleep(5)
@@ -83,14 +82,14 @@ def run_test(scenario):
         ):
             rows.append(
                 {
-                    'elapsed': math.floor(float(secs) - start),
-                    'process': 'http',
-                    'requests': int(requests),
+                    "elapsed": math.floor(float(secs) - start),
+                    "process": "http",
+                    "requests": int(requests),
                 }
             )
 
         for d in rows:
-            d['scenario'] = scenario
+            d["scenario"] = scenario
 
         return rows
     finally:
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     outdir = os.path.join(
         f"{os.environ['MITE_PERFTEST_OUT']}",
         f"{now.year}-{now.month:02d}-{now.day:02d}",
-        f"{sys.argv[1]}-{now.hour:02d}-{now.minute:02d}",
+        f"{now.hour:02d}-{now.minute:02d}",
     )
     os.makedirs(outdir, exist_ok=True)
     os.chdir(outdir)
@@ -127,22 +126,22 @@ if __name__ == "__main__":
     chart = alt.vconcat()
     for scenario in scenarios:
         subdata = df.loc[df.scenario == scenario]
-        base = alt.Chart(subdata).encode(x=alt.X('elapsed', axis=alt.Axis(tickMinStep=5)))
+        base = alt.Chart(subdata).encode(x=alt.X("elapsed", axis=alt.Axis(tickMinStep=5)))
         cpu = base.mark_line(point=True).encode(
-            y='cpu', color='process', tooltip=["process", "cpu"]
+            y="cpu", color="process", tooltip=["process", "cpu"]
         )
         mem = base.mark_line(point=True, strokeDash=[5, 5]).encode(
-            y=alt.Y('mem', axis=alt.Axis(format="~s", title="memory")),
-            color='process',
+            y=alt.Y("mem", axis=alt.Axis(format="~s", title="memory")),
+            color="process",
             tooltip=[alt.Tooltip("process"), alt.Tooltip("mem", format="~s")],
         )
         requests = base.mark_line(point=True, strokeDash=[10, 2, 2, 2]).encode(
-            y=alt.Y('requests', axis=None), color='process', tooltip=['requests']
+            y=alt.Y("requests", axis=None), color="process", tooltip=["requests"]
         )
         subchart = (
             alt.layer(cpu, mem, requests)
             .interactive()
-            .resolve_scale(y='independent')
+            .resolve_scale(y="independent")
             .properties(title=scenario)
         )
 

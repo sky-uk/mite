@@ -13,14 +13,14 @@ class MsgOutput:
         if stacktrace and self._logger.isEnabledFor(logging.WARNING):
             message = msg.pop("message", None)
             ex_type = msg.pop("ex_type", None)
-            start = "[%s] %.6f" % (msg.pop("type", None), msg.pop("time", None))
-            end = ", ".join("%s=%r" % (k, v) for k, v in sorted(msg.items()))
+            start = f'[{msg.pop("type", None)}] {msg.pop("time", None):.6f}'
+            end = ", ".join(f"{k}={v}" for k, v in sorted(msg.items()))
             self._logger.warning(
                 "%s %s\n%s: %s\n%s", start, end, ex_type, message, stacktrace
             )
         elif self._logger.isEnabledFor(logging.DEBUG):
-            start = "[%s] %.6f" % (msg.pop("type", None), msg.pop("time", None))
-            end = ", ".join("%s=%r" % (k, v) for k, v in sorted(msg.items()))
+            start = f'[{msg.pop("type", None)}] {msg.pop("time", None):.6f}'
+            end = ", ".join(f"{k}={v}" for k, v in sorted(msg.items()))
             self._logger.debug("%s %s", start, end)
 
 
@@ -67,12 +67,11 @@ class GenericStatsOutput:
         fractional_index, index = math.modf(index)
         index = int(index)
         if fractional_index == 0:
-            return "%.6f" % (self._resp_time_recent[index],)
-        else:
-            a = self._resp_time_recent[index]
-            b = self._resp_time_recent[index + 1]
-            interpolated_amount = (b - a) * fractional_index
-            return "%.6f" % (a + interpolated_amount,)
+            return f"{self._resp_time_recent[index]}:.6f"
+        a = self._resp_time_recent[index]
+        b = self._resp_time_recent[index + 1]
+        interpolated_amount = (b - a) * fractional_index
+        return f"{a + interpolated_amount}:.6f"
 
     @property
     def error_total(self):

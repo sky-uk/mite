@@ -36,11 +36,8 @@ class FooRequest(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRING:
-                    self.mystring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                else:
-                    iprot.skip(ftype)
+            if fid == 1 and ftype == TType.STRING:
+                self.mystring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -50,23 +47,23 @@ class FooRequest(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('FooRequest')
+        oprot.writeStructBegin("FooRequest")
         if self.mystring is not None:
-            oprot.writeFieldBegin('mystring', TType.STRING, 1)
-            oprot.writeString(self.mystring.encode('utf-8') if sys.version_info[0] == 2 else self.mystring)
+            oprot.writeFieldBegin("mystring", TType.STRING, 1)
+            oprot.writeString(self.mystring.encode("utf-8") if sys.version_info[0] == 2 else self.mystring)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
 
     def validate(self):
         if self.mystring is None:
-            raise TProtocolException(message='Required field mystring is unset!')
+            raise TProtocolException(message="Required field mystring is unset!")
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -95,11 +92,8 @@ class FooResponse(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRING:
-                    self.responsestring = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                else:
-                    iprot.skip(ftype)
+            if fid == 1 and ftype == TType.STRING:
+                self.responsestring = iprot.readString().decode("utf-8") if sys.version_info[0] == 2 else iprot.readString()
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -109,23 +103,23 @@ class FooResponse(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('FooResponse')
+        oprot.writeStructBegin("FooResponse")
         if self.responsestring is not None:
-            oprot.writeFieldBegin('responsestring', TType.STRING, 1)
-            oprot.writeString(self.responsestring.encode('utf-8') if sys.version_info[0] == 2 else self.responsestring)
+            oprot.writeFieldBegin("responsestring", TType.STRING, 1)
+            oprot.writeString(self.responsestring.encode("utf-8") if sys.version_info[0] == 2 else self.responsestring)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
 
     def validate(self):
         if self.responsestring is None:
-            raise TProtocolException(message='Required field responsestring is unset!')
+            raise TProtocolException(message="Required field responsestring is unset!")
         return
 
     def __repr__(self):
-        L = ['%s=%r' % (key, value)
+        L = [f"{key}={value}"
              for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+        return f"{self.__class__.__name__}({', '.join(L)})"
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
@@ -135,12 +129,12 @@ class FooResponse(object):
 all_structs.append(FooRequest)
 FooRequest.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'mystring', 'UTF8', None, ),  # 1
+    (1, TType.STRING, "mystring", "UTF8", None, ),  # 1
 )
 all_structs.append(FooResponse)
 FooResponse.thrift_spec = (
     None,  # 0
-    (1, TType.STRING, 'responsestring', 'UTF8', None, ),  # 1
+    (1, TType.STRING, "responsestring", "UTF8", None, ),  # 1
 )
 fix_spec(all_structs)
 del all_structs

@@ -179,7 +179,7 @@ def _controller_log_start(scenario_spec, logging_url):
     # The design decision has been made to do this logging synchronously
     # rather than using the usual mite data pipeline, because we want to make
     # sure the log is nailed down before we start doing any test activity.
-    url = logging_url + "start"
+    url = f"{logging_url}start"
     logger.info(f"Logging test start to {url}")
     resp = urlopen(
         UrlLibRequest(
@@ -211,7 +211,7 @@ def _controller_log_end(logging_id, logging_url):
     if not logging_url.endswith("/"):
         logging_url += "/"
 
-    url = logging_url + "end"
+    url = f"{logging_url}end"
     logger.info(f"Logging test end to {url}")
     resp = urlopen(UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode()))
     if resp.status != 204:

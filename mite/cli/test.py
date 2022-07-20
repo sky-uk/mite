@@ -173,8 +173,7 @@ def scenario_test_cmd(opts):
 
 def journey_test_cmd(opts):
     journey_spec = opts["JOURNEY_SPEC"]
-    datapool_spec = opts["DATAPOOL_SPEC"]
-    if datapool_spec:
+    if datapool_spec := opts["DATAPOOL_SPEC"]:
         datapool = spec_import(datapool_spec)
     else:
         datapool = None
@@ -189,8 +188,7 @@ def journey_test_cmd(opts):
 
 def journey_run_cmd(opts):
     journey_spec = opts["JOURNEY_SPEC"]
-    datapool_spec = opts["DATAPOOL_SPEC"]
-    if datapool_spec:
+    if datapool_spec := opts["DATAPOOL_SPEC"]:
         datapool = SingleRunDataPoolWrapper(spec_import(datapool_spec))
     else:
         datapool = None

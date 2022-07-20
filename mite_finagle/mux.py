@@ -43,8 +43,7 @@ class RestString:
     """A string, occupying the rest of the message."""
 
     def read(self, input):
-        r = input.read()
-        return r
+        return input.read()
 
     def serialize(self, s):
         return s
@@ -73,8 +72,8 @@ class Dict:
                 d[key] = value
                 nkey -= 1
             return d
-        except ValueError:
-            raise ValueError("couldn't read dict")
+        except ValueError as e:
+            raise ValueError("couldn't read dict") from e
 
     def serialize(self, d):
         return self._length.serialize(len(d)) + b"".join(
@@ -196,7 +195,7 @@ class Message(metaclass=_MessageMeta):
         self.tag = tag
         field_names = [name for name, _ in self._fields() if name not in kwargs]
         assert len(field_names) == len(args)
-        kwargs.update({name: value for name, value in zip(field_names, args)})
+        kwargs.update(dict(zip(field_names, args)))
         for k, v in kwargs.items():
             setattr(self, k, v)
 

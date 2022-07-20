@@ -67,15 +67,8 @@ class Compound(_VolumeModel):
     _realized: bool = field(init=False, default=False)
 
     def __post_init__(self, _left, _right):
-        if isinstance(_left, Compound):
-            l = _left._components
-        else:
-            l = (_left,)
-        if isinstance(_right, Compound):
-            r = _right._components
-        else:
-            r = (_right,)
-
+        l = _left._components if isinstance(_left, Compound) else (_left,)
+        r = _right._components if isinstance(_right, Compound) else (_right,)
         self._components = tuple(l + r)
         self.duration = _left.duration + _right.duration
 
@@ -85,38 +78,38 @@ class Compound(_VolumeModel):
         for i, c in enumerate(cs):
             if isinstance(c, Ramp):
                 if i == 0:
-                    if c.frm is not None:
-                        frm = c.frm
-                    else:
-                        raise Exception(
+                    if c.frm is None:
+                        raise ValueError(
                             "You must specify 'frm' on the first "
                             "Ramp in a chain of Volume Models"
                         )
-                else:
-                    if c.frm is not None:
-                        # FIXME: not an error if frm == the preceding model's
-                        # end tps
-                        raise Exception(
-                            "A ramp with 'frm' specified must be "
-                            "the first volume model in a chain"
-                        )
                     else:
-                        frm = cs[i - 1][1](cs[i - 1][1].duration, 0)
+                        frm = c.frm
+                elif c.frm is not None:
+                    # FIXME: not an error if frm == the preceding model's
+                    # end tps
+                    raise ValueError(
+                        "A ramp with 'frm' specified must be "
+                        "the first volume model in a chain"
+                    )
+                else:
+                    frm = cs[i - 1][1](cs[i - 1][1].duration, 0)
                 try:
                     to = cs[i + 1](0, 1)
                     if c.to is not None:
                         # FIXME: not actually an error if to == the tps of
                         # the next volume model...
-                        raise Exception(
+                        raise ValueError(
                             "A ramp with 'to' specified must be "
                             "the last volume model in a chain"
                         )
-                except IndexError:
+                except IndexError as e:
                     if c.to is None:
-                        raise Exception(
+                        raise ValueError(
                             "You must specify 'to' on the final "
                             "Ramp in a chain of Volume Models"
-                        )
+                        ) from e
+
                     to = c.to
                 c = _RealRamp(duration=c.duration, _frm=frm, _to=to)
             cs[i] = (x, c)
@@ -135,8 +128,8 @@ class Compound(_VolumeModel):
         try:
             c = applicable[-1]
             return c[1](start - c[0], end - c[0])
-        except StopIteration:  # pragma: no cover
-            raise Exception("should never happen!")
+        except StopIteration as e:  # pragma: no cover
+            raise Exception("should never happen!") from e
 
 
 def oneshot_vm(when=-1, stop_scenario=False):

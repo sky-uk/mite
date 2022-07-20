@@ -59,7 +59,7 @@ def _get_scenario_with_kwargs(scenario_spec, config_manager, sender):
         elif param_name == "sender":
             scenarios_kwargs["sender"] = sender
         else:
-            raise Exception(
+            raise ValueError(
                 f"Don't know how to inject {param_name} into a scenario function!"
             )
     return scenarios_fn(**scenarios_kwargs)

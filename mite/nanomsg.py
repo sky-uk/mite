@@ -12,7 +12,7 @@ class Duplicator:
     def __init__(self, in_address, out_addresses):
         self._in_socket = nanomsg.Socket(nanomsg.PULL)
         self._in_socket.bind(in_address)
-        self._out_sockets = [nanomsg.Socket(nanomsg.PUSH) for i in out_addresses]
+        self._out_sockets = [nanomsg.Socket(nanomsg.PUSH) for _ in out_addresses]
         for socket, address in zip(self._out_sockets, out_addresses):
             socket.bind(address)
         self._loop = asyncio.get_event_loop()
@@ -105,8 +105,7 @@ class RunnerTransport:
                 )
             )
         )
-        result = unpack_msg(self._sock.recv())
-        return result
+        return unpack_msg(self._sock.recv())
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
         return await self._loop.run_in_executor(

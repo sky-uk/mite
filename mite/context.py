@@ -50,9 +50,7 @@ class Context:
 
     @property
     def should_stop(self):
-        if self._should_stop_func is not None:
-            return self._should_stop_func()
-        return False
+        return self._should_stop_func and self._should_stop_func() or False
 
     @property
     def _active_transaction(self):
@@ -128,10 +126,7 @@ class Context:
         ex_type = type(exn).__name__
         tb = sys.exc_info()[2]
         location = _tb_format_location(tb)
-        if include_fields:
-            kwargs = {**exn.fields}
-        else:
-            kwargs = {}
+        kwargs = {**exn.fields} if include_fields else {}
         if include_stacktrace:
             # FIXME: this winds up sending quite a lot of data on the wire
             # that we don't actually use most of the time... do we want to

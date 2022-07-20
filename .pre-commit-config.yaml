@@ -1,15 +1,15 @@
 repos:
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.8.0
+    rev: 5.10.1
     hooks:
     - id: isort
       files: .*.py$
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 22.6.0
     hooks:
     - id: black
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: master
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
     hooks:
     - id: flake8
 
