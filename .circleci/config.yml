@@ -40,13 +40,16 @@ jobs:
       - run:
           name: tox
           # This assumes pytest is installed via the install-package step above
-          command: tox -e py310
+          command: echo hi #tox -e py310
   
   tag:
     docker:
       - image: cimg/python:3.10
     steps:
       - checkout
+      - run:
+          name: debug
+          command: pwd && ls
       - run:
           name: tag github version
           command: bash cd-scripts/cdRelease.sh
