@@ -15,8 +15,6 @@ workflows:
     jobs:
       - build-and-test
       - tag
-        requires:
-          - build
         filters:
           branches:
             only: master
@@ -39,6 +37,8 @@ jobs:
           command: tox -e py310
   
   tag:
+    requires:
+    - build
     steps:
       - run:
         name: tag github version
