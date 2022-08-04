@@ -1,17 +1,11 @@
 version: 2.1
 
 orbs:
-  # The python orb contains a set of prepackaged circleci configuration you can use repeatedly in your configurations files
-  # Orb commands and jobs help you with common scripting around a language/tool
-  # so you dont have to copy and paste it everywhere.
-  # See the orb documentation here: https://circleci.com/developer/orbs/orb/circleci/python
   python: circleci/python@2.0.3
 
 
 workflows:
   mite:
-    # Inside the workflow, you define the jobs you want to run.
-    # For more details on extending your workflow, see the configuration docs: https://circleci.com/docs/2.0/configuration-reference/#workflows
     jobs:
       - build-and-test
       - tag:
@@ -32,7 +26,6 @@ jobs:
   build-and-test:
     docker:
       - image: cimg/python:3.10
-
     steps:
       - checkout
       - python/install-packages:
@@ -55,9 +48,6 @@ jobs:
           fingerprints:
             - "fc:39:a2:b8:32:23:52:a5:fe:45:b6:9b:12:e7:30:2a"
       - checkout
-      - run:
-          name: debug
-          command: pwd && ls
       - run:
           name: tag github version
           command: bash cd-scripts/cdRelease.sh -v patch
