@@ -81,6 +81,4 @@ jobs:
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
       - run:
           name: upload to pypi
-          command: |
-            . venv/bin/activate
-            twine upload dist/*
+          command: twine upload dist/*
