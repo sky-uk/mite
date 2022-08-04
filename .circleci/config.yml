@@ -52,4 +52,4 @@ jobs:
           command: pwd && ls
       - run:
           name: tag github version
-          command: bash cd-scripts/cdRelease.sh patch
+          command: bash cd-scripts/cdRelease.sh -v patch
