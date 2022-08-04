@@ -29,19 +29,18 @@ jobs:
 
     steps:
       - checkout
-      # - python/install-packages:
-      #     pkg-manager: pip
-      # - python/install-packages:
-      #     pip-dependency-file: test-requirements.txt
-      #     pkg-manager: pip
-      # - python/install-packages:
-      #     pip-dependency-file: dev-requirements.txt
-      #     pkg-manager: pip
-      # - run:
-      #     name: tox
-      #     # This assumes pytest is installed via the install-package step above
-      #     command: echo hi #tox -e py310
-  
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: test-requirements.txt
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
+          pkg-manager: pip
+      - run:
+          name: tox
+          command: tox -e py310
+
   tag:
     docker:
       - image: cimg/python:3.10
@@ -56,3 +55,26 @@ jobs:
       - run:
           name: tag github version
           command: bash cd-scripts/cdRelease.sh -v patch
+
+  deploy:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          args: twine
+          pkg-manager: pip
+          pypi-cache: false
+      - run:
+          name: init .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = __token__" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run:
+          name: upload to pypi
+          command: |
+            . venv/bin/activate
+            twine upload dist/*
