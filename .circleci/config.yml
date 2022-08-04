@@ -20,6 +20,12 @@ workflows:
           filters:
             branches:
               only: master
+      - deploy:
+          requires:
+            - tag
+          filters:
+            branches:
+              only: master
 
 
 jobs:
