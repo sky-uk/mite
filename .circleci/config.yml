@@ -27,11 +27,16 @@ jobs:
   tag:
     requires:
       - build
+    
     filters:
       branches:
         only:
           - master
-    - run:
-      name: tag github version
-      command: |
-        ./cd-scripts/cdRelease.sh
+
+    steps:
+      # Step 1: obtain repo from GitHub
+      - checkout
+      - run:
+        name: tag github version
+        command: |
+          ./cd-scripts/cdRelease.sh
