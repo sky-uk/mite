@@ -60,7 +60,7 @@ jobs:
       - python/install-packages:
           pkg-manager: pip
       - python/install-packages:
-          args: twine wheel Cython
+          args: twine wheel auditwheel Cython
           pkg-manager: pip
           pypi-cache: false
       - run:
@@ -73,8 +73,11 @@ jobs:
           name: build acurl package
           command: cd acurl && python setup.py -q sdist bdist_wheel
       - run:
+          name: manywheel acurl package
+          command: cd acurl && auditwheel repair dist/acurl*whl -w dist/
+      - run:
           name: build mite package
           command: python setup.py -q sdist bdist_wheel
       - run:
           name: upload packages to pypi
-          command: twine upload dist/* acurl/dist/*
+          command: twine upload dist/* acurl/dist/*manylinux*
