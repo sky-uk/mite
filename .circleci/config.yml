@@ -74,7 +74,7 @@ jobs:
           command: cd acurl && python setup.py -q sdist bdist_wheel
       - run:
           name: manywheel acurl package
-          command: cd acurl && auditwheel repair --plat manylinux2014_x86_64 dist/acurl*whl -w dist/
+          command: cd acurl && auditwheel repair --plat manylinux2010_x86_64 dist/acurl*whl -w dist/
       - run:
           name: build mite package
           command: python setup.py -q sdist bdist_wheel
