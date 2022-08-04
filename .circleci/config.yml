@@ -49,4 +49,4 @@ jobs:
       - checkout
       - run:
           name: tag github version
-          command: ./cd-scripts/cdRelease.sh
+          command: bash cd-scripts/cdRelease.sh
