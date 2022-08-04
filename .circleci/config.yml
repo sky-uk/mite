@@ -15,6 +15,8 @@ workflows:
     jobs:
       - build-and-test
       - tag:
+          requires:
+            - build-and-test
           filters:
             branches:
               only: master
@@ -40,11 +42,8 @@ jobs:
   tag:
     docker:
       - image: cimg/python:3.10
-    requires:
-      - build
     steps:
       - checkout
       - run:
-        name: tag github version
-        command: |
-          ./cd-scripts/cdRelease.sh
+          name: tag github version
+          command: ./cd-scripts/cdRelease.sh
