@@ -60,7 +60,7 @@ jobs:
       - python/install-packages:
           pkg-manager: pip
       - python/install-packages:
-          args: twine wheel
+          args: twine wheel Cython
           pkg-manager: pip
           pypi-cache: false
       - run:
