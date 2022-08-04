@@ -1,5 +1,4 @@
-# Python CircleCI 2.0 configuration file
-version: 2
+version: 2.1
 jobs:
   build:
     docker:
@@ -24,3 +23,15 @@ jobs:
           command: |
             . venv/bin/activate
             tox -e py310
+  
+  tag:
+    requires:
+      - build
+    filters:
+      branches:
+        only:
+          - master
+    - run:
+      name: tag github version
+      command: |
+        ./cd-scripts/cdRelease.sh
