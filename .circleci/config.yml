@@ -70,8 +70,11 @@ jobs:
             echo -e "username = __token__" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
       - run:
-          name: build package
+          name: build acurl package
+          command: cd acurl && python setup.py -q sdist bdist_wheel
+      - run:
+          name: build mite package
           command: python setup.py -q sdist bdist_wheel
       - run:
-          name: upload to pypi
-          command: twine upload dist/*
+          name: upload packages to pypi
+          command: twine upload dist/* acurl/dist/*
