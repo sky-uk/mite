@@ -11,17 +11,17 @@ do
 done
 
 #get highest tag number, and add 1.0.0 if doesn't exist
-CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
+CURRENT_VERSION=$(git describe --abbrev=0 --tags 2>/dev/null)
 
-if [[ $CURRENT_VERSION == '' ]]
+if [[ $CURRENT_VERSION == "" ]]
 then
-  CURRENT_VERSION='1.0.0'
+  CURRENT_VERSION="v1.0.0"
 fi
 # echo "Current Version: $CURRENT_VERSION"
 
 
 #replace . with space so can split into an array
-CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
+CURRENT_VERSION_PARTS=($(echo $CURRENT_VERSION | sed -E 's/v([0-9]+)\.([0-9]+)\.?([0-9]+)?/\1 \2 \3/'))
 
 #get number parts
 MAJOR=${CURRENT_VERSION_PARTS[0]}
@@ -34,13 +34,13 @@ PATCH=${CURRENT_VERSION_PARTS[2]}
 
 # exit 0
 
-if [[ $VERSION == 'major' ]]
+if [[ $VERSION == "major" ]]
 then
   MAJOR=$((MAJOR+1))
-elif [[ $VERSION == 'minor' ]]
+elif [[ $VERSION == "minor" ]]
 then
   MINOR=$((MINOR+1))
-elif [[ $VERSION == 'patch' ]]
+elif [[ $VERSION == "patch" ]]
 then
   PATCH=$((PATCH+1))
 else
