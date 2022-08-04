@@ -15,8 +15,8 @@ workflows:
     jobs:
       - build-and-test
       - tag
-          requires:
-            - build
+        requires:
+          - build
         filters:
           branches:
             only: master
