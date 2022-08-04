@@ -46,6 +46,9 @@ jobs:
     docker:
       - image: cimg/python:3.10
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "fc:39:a2:b8:32:23:52:a5:fe:45:b6:9b:12:e7:30:2a"
       - checkout
       - run:
           name: debug
