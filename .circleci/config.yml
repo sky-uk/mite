@@ -38,9 +38,12 @@ jobs:
           command: tox -e py310
   
   tag:
+    docker:
+      - image: cimg/python:3.10
     requires:
       - build
     steps:
+      - checkout
       - run:
         name: tag github version
         command: |
