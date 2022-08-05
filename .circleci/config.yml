@@ -7,19 +7,20 @@ orbs:
 workflows:
   mite:
     jobs:
-      - build-and-test
-      - tag:
-          requires:
-            - build-and-test
-          filters:
-            branches:
-              only: master
-      - deploy:
-          requires:
-            - tag
-          filters:
-            branches:
-              only: master
+      # - build-and-test
+      # - tag:
+      #     requires:
+      #       - build-and-test
+      #     filters:
+      #       branches:
+      #         only: master
+      # - deploy:
+      #     requires:
+      #       - tag
+      #     filters:
+      #       branches:
+      #         only: master
+      - linux-wheels
 
 
 jobs:
