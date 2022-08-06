@@ -90,6 +90,7 @@ jobs:
       - image: cimg/python:3.10
     environment:
       CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
+      CIBW_SKIP: cp36-manylinux_i686
     steps:
       - checkout
       - setup_remote_docker
