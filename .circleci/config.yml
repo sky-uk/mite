@@ -21,6 +21,7 @@ workflows:
       #       branches:
       #         only: master
       - linux-wheels
+      - osx-wheels
 
 
 jobs:
@@ -87,6 +88,8 @@ jobs:
     working_directory: ~/linux-wheels
     docker:
       - image: cimg/python:3.10
+    environment:
+      CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
     steps:
       - checkout
       - setup_remote_docker
@@ -94,6 +97,20 @@ jobs:
           name: Build the Linux wheels.
           command: |
             pip3 install --user cibuildwheel==2.8.1 Cython
+            cd acurl && cibuildwheel --output-dir ../wheelhouse
+      - store_artifacts:
+          path: wheelhouse/
+
+  osx-wheels:
+    working_directory: ~/osx-wheels
+    macos:
+      xcode: 12.5.1
+    steps:
+      - checkout
+      - run:
+          name: Build the OS X wheels.
+          command: |
+            pip3 install cibuildwheel==2.8.1 Cython
             cd acurl && cibuildwheel --output-dir ../wheelhouse
       - store_artifacts:
           path: wheelhouse/

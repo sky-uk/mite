@@ -28,6 +28,6 @@ setup(
             "warn.unused_result": True,
         },
     ),
-    setup_requires=["setuptools_scm", "cython"],
-    use_scm_version={"root": "..", "relative_to": __file__},
+    setup_requires=["cython"],
+    # use_scm_version={"root": "..", "relative_to": __file__},
 )
