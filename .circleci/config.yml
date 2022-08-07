@@ -98,7 +98,7 @@ jobs:
           name: Build the Linux wheels.
           command: |
             pip3 install --user cibuildwheel==2.8.1 Cython
-            cibuildwheel --output-dir ./wheelhouse
+            pip wheel -w ./wheelhouse .
             cd acurl && cibuildwheel --output-dir ../wheelhouse
       - store_artifacts:
           path: wheelhouse/
@@ -113,7 +113,7 @@ jobs:
           name: Build the OS X wheels.
           command: |
             pip3 install cibuildwheel==2.8.1 Cython
-            cibuildwheel --output-dir ./wheelhouse
+            pip wheel -w ./wheelhouse .
             cd acurl && cibuildwheel --output-dir ../wheelhouse
       - store_artifacts:
           path: wheelhouse/
