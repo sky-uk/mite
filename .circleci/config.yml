@@ -23,13 +23,13 @@ workflows:
           filters:
             branches:
               only: master
-      - linux-wheels
+      - linux-wheels:
           requires:
             - tag
           filters:
             branches:
               only: master
-      - osx-wheels
+      - osx-wheels:
           requires:
             - tag
           filters:
