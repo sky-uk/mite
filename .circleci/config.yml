@@ -85,6 +85,8 @@ jobs:
       #     command: twine upload dist/* acurl/dist/*manylinux*
 
   linux-wheels:
+    # we only need to build the 'mite' wheels on one platform
+    # so we only need to run `python3 -m build` in this job
     working_directory: ~/linux-wheels
     docker:
       - image: cimg/python:3.10
@@ -97,8 +99,8 @@ jobs:
       - run:
           name: Build the Linux wheels.
           command: |
-            pip3 install --user cibuildwheel==2.8.1 Cython
-            pip3 wheel -w ./wheelhouse .
+            pip3 install --user cibuildwheel==2.8.1 build Cython
+            python3 -m build --outdir ./wheelhouse
             cd acurl && cibuildwheel --output-dir ../wheelhouse
       - store_artifacts:
           path: wheelhouse/
@@ -113,7 +115,6 @@ jobs:
           name: Build the OS X wheels.
           command: |
             pip3 install cibuildwheel==2.8.1 Cython
-            pip3 wheel -w ./wheelhouse .
             cd acurl && cibuildwheel --output-dir ../wheelhouse
       - store_artifacts:
           path: wheelhouse/
