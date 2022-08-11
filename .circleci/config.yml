@@ -17,7 +17,7 @@ workflows:
   mite:
     jobs:
       - check-acurl-version
-      - build-and-test
+      - build-and-test:
           requires:
             - check-acurl-version
       - tag:
