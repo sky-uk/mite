@@ -153,8 +153,8 @@ jobs:
           name: Build the OS X wheels.
           command: |
             source /tmp/workspace/env_vars
-            pip3 install cibuildwheel==2.8.1 Cython twine
             if [ "$ACURL_CHANGED" = true ]; then
+              pip3 install cibuildwheel==2.8.1 Cython twine
               cd acurl
               cibuildwheel --output-dir ../wheelhouse --archs x86_64,arm64
             fi
@@ -166,6 +166,10 @@ jobs:
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
       - run:
           name: upload packages to pypi
-          command: twine upload wheelhouse/*
+          command: |
+            source /tmp/workspace/env_vars
+            if [ "$ACURL_CHANGED" = true ]; then
+              twine upload wheelhouse/*
+            fi
       - store_artifacts:
           path: wheelhouse/

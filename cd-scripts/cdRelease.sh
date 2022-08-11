@@ -46,7 +46,12 @@ NEEDS_TAG=$(git describe --contains $GIT_COMMIT 2>/dev/null)
 if [ -z "$NEEDS_TAG" ]; then
   echo "Creating git tag: $NEW_TAG"
   git tag $NEW_TAG
-  git push --tags
+
+  if [ $? -eq 0 ]; then
+    git push --tags
+  else
+    exit 1
+  fi
 fi
 
 exit 0 
