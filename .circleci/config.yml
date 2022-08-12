@@ -87,7 +87,7 @@ jobs:
           command: pre-commit run --origin HEAD --source origin/master || git diff
       - run:
           name: tox
-          command: tox -e py310
+          command: tox
 
   tag:
     docker:
