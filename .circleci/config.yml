@@ -141,6 +141,8 @@ jobs:
       - run:
           name: tag github version
           command: |
+            git config user.email "mite@noreply.github.com"
+            git config user.name "CircleCI"
             pip3 install docopt GitPython packaging
             python3 cd-scripts/cdRelease.py patch
 
