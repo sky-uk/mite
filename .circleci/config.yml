@@ -6,6 +6,7 @@ orbs:
 # Further ideas for jobs to run:
 # - license check
 # - make sure test coverage increases
+# - merge all tox tests into one using pyenv
 # And, once we're sure that the pipeline is working:
 # - integration/performance tests
 # Once we have docs:
@@ -17,12 +18,20 @@ workflows:
   mite:
     jobs:
       - check-acurl-version
-      - build-and-test:
+      - build-and-test-38:
+          requires:
+            - check-acurl-version
+      - build-and-test-39:
+          requires:
+            - check-acurl-version
+      - build-and-test-310:
           requires:
             - check-acurl-version
       - tag:
           requires:
-            - build-and-test
+            - build-and-test-38
+            - build-and-test-39
+            - build-and-test-310
             - check-acurl-version
           filters:
             branches:
@@ -69,7 +78,39 @@ jobs:
           paths:
             - env_vars
 
-  build-and-test:
+  build-and-test-38:
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: test-requirements.txt
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
+          pkg-manager: pip
+      - run:
+          name: tox
+          command: tox -e py38
+  build-and-test-39:
+    docker:
+      - image: cimg/python:3.9
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: test-requirements.txt
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
+          pkg-manager: pip
+      - run:
+          name: tox
+          command: tox -e py39
+  build-and-test-310:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -87,7 +128,7 @@ jobs:
           command: pre-commit run --origin HEAD --source origin/master || git diff
       - run:
           name: tox
-          command: tox
+          command: tox -e py310
 
   tag:
     docker:
@@ -144,7 +185,6 @@ jobs:
   osx-wheels:
     working_directory: ~/osx-wheels
     macos:
-      # I don't know what version to go with
       # https://circleci.com/docs/testing-ios#supported-xcode-versions
       xcode: 12.5.1
     steps:
