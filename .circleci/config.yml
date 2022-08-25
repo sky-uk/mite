@@ -87,10 +87,11 @@ jobs:
       - run:
           name: tag github version
           command: |
-            if [[ -z "$CIRCLE_PR_NUMBER" ]]; then
-              echo $CIRCLE_PR_NUMBER
+            if [[ -z "$CIRCLE_PULL_REQUEST" ]]; then
+              PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | sed s*https://github.com/sky-uk/mite/pull/**)
+              echo $PR_NUMBER
             else
-              echo "Can not find CIRCLE_PR_NUMBER"
+              echo "Can not find CIRCLE_PULL_REQUEST"
             fi
 
 
