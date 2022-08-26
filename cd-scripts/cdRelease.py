@@ -82,7 +82,7 @@ def parse_pr(opts):
     )
     pr_message = resp.json()["body"]
 
-    matches = re.findall(r"- \[x\] (\w+)(?:$|\n)", pr_message, re.IGNORECASE)
+    matches = re.findall(r"- \[x\] (\w+)(?:$|[\n\r])", pr_message, re.IGNORECASE)
 
     # Return a lowercase list, in case the user has changed the case during
     # the creation of their pull request
