@@ -115,6 +115,11 @@ def main():
 
     if opts["--pr_number"]:
         version_parts_to_increment = parse_pr(opts)
+        if not version_parts_to_increment:
+            logger.info("No release")
+            with open("/tmp/workspace/env_vars", "a") as f:
+                f.write("export VERSION_INCREMENT=false")
+            sys.exit(0)
         new_tag = increment_version_from_pr(
             current_latest_version, version_parts_to_increment
         )
