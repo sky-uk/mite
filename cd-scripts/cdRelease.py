@@ -132,9 +132,7 @@ def main():
     else:
         new_tag = increment_version_manually(current_latest_version, opts)
 
-    print(new_tag)
-
-    # create_and_push_tag(repo, new_tag)
+    create_and_push_tag(repo, new_tag)
 
     sys.exit(0)
 
