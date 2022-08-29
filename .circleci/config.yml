@@ -33,7 +33,10 @@ workflows:
             # - build-and-test-39
             # - build-and-test-310
             - check-acurl-version
-      - test-env-vars
+      - test-env-vars:
+          requires:
+            - tag
+
       #     filters:
       #       branches:
       #         only: master
