@@ -39,6 +39,10 @@ def increment_version_from_pr(clv, version_parts_to_increment):
         patch = 0
     elif "patch" in version_parts_to_increment:
         patch += 1
+    else:
+        raise ValueError(
+            f"Does not contain a valid specification of a version to increment: {version_parts_to_increment}"
+        )
 
     return f"v{major}.{minor}.{patch}"
 
@@ -82,11 +86,13 @@ def parse_pr(opts):
     )
     pr_message = resp.json()["body"]
 
-    matches = re.findall(r"- \[x\] (\w+)(?:$|[\n\r])", pr_message, re.IGNORECASE)
+    matches = re.findall(
+        r"^- \[x\] (major|minor|patch)\r$", pr_message, re.IGNORECASE | re.MULTILINE
+    )
 
     # Return a lowercase list, in case the user has changed the case during
     # the creation of their pull request
-    return [x.lower() for x in matches]
+    return [m.lower() for m in matches if m.lower() in ("major", "minor", "patch")]
 
 
 def main():
@@ -126,7 +132,9 @@ def main():
     else:
         new_tag = increment_version_manually(current_latest_version, opts)
 
-    create_and_push_tag(repo, new_tag)
+    print(new_tag)
+
+    # create_and_push_tag(repo, new_tag)
 
     sys.exit(0)
 

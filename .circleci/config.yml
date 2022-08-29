@@ -18,36 +18,37 @@ workflows:
   mite:
     jobs:
       - check-acurl-version
-      - build-and-test-38:
-          requires:
-            - check-acurl-version
-      - build-and-test-39:
-          requires:
-            - check-acurl-version
-      - build-and-test-310:
-          requires:
-            - check-acurl-version
+      # - build-and-test-38:
+      #     requires:
+      #       - check-acurl-version
+      # - build-and-test-39:
+      #     requires:
+      #       - check-acurl-version
+      # - build-and-test-310:
+      #     requires:
+      #       - check-acurl-version
       - tag:
           requires:
-            - build-and-test-38
-            - build-and-test-39
-            - build-and-test-310
+            # - build-and-test-38
+            # - build-and-test-39
+            # - build-and-test-310
             - check-acurl-version
-          filters:
-            branches:
-              only: master
-      - linux-wheels:
-          requires:
-            - tag
-          filters:
-            branches:
-              only: master
-      - osx-wheels:
-          requires:
-            - tag
-          filters:
-            branches:
-              only: master
+      - test-env-vars
+      #     filters:
+      #       branches:
+      #         only: master
+      # - linux-wheels:
+      #     requires:
+      #       - tag
+      #     filters:
+      #       branches:
+      #         only: master
+      # - osx-wheels:
+      #     requires:
+      #       - tag
+      #     filters:
+      #       branches:
+      #         only: master
 
 
 jobs:
@@ -156,6 +157,25 @@ jobs:
           root: /tmp/workspace
           paths:
             - env_vars
+
+
+  test-env-vars:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: test env vars.
+          command: |
+            source /tmp/workspace/env_vars
+
+            if [ "$VERSION_INCREMENT" = false ]; then
+              echo "Mite version not incremented, not building"
+            else
+              echo "Building mite"
+            fi
 
 
   linux-wheels:
