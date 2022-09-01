@@ -32,7 +32,6 @@ workflows:
             - build-and-test-38
             - build-and-test-39
             - build-and-test-310
-            - check-acurl-version
           filters:
             branches:
               only: master
@@ -138,13 +137,25 @@ jobs:
           fingerprints:
             - "fc:39:a2:b8:32:23:52:a5:fe:45:b6:9b:12:e7:30:2a"
       - checkout
+      - attach_workspace:
+          at: /tmp/workspace
       - run:
           name: tag github version
           command: |
             git config user.email "mite@noreply.github.com"
             git config user.name "CircleCI"
-            pip3 install docopt GitPython packaging
-            python3 cd-scripts/cdRelease.py patch
+            pip3 install docopt GitPython packaging requests
+            if [[ -v CIRCLE_PULL_REQUEST ]]; then
+              PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | sed s*https://github.com/sky-uk/mite/pull/**)
+              python3 cd-scripts/cdRelease.py --pr_number=$PR_NUMBER
+            else
+              python3 cd-scripts/cdRelease.py patch
+            fi
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - env_vars
+
 
   linux-wheels:
     # we only need to build the 'mite' wheels on one platform
@@ -164,8 +175,13 @@ jobs:
           name: Build the Linux wheels.
           command: |
             source /tmp/workspace/env_vars
-            pip3 install --user cibuildwheel==2.8.1 build Cython twine
-            python3 -m build --outdir ./wheelhouse
+
+            if [ "$VERSION_INCREMENT" = false ]; then
+              echo "Mite version not incremented, not building"
+            else
+              pip3 install --user cibuildwheel==2.8.1 build Cython twine
+              python3 -m build --outdir ./wheelhouse
+            fi
 
             if [ "$ACURL_CHANGED" = true ]; then
               cd acurl
