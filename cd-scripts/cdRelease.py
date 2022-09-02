@@ -105,13 +105,13 @@ def main():
 
     repo = git.Repo(".")
 
-    # if current_tag := next(
-    #     (tag for tag in repo.tags if tag.commit == repo.head.commit), None
-    # ):
-    #     logger.error(
-    #         f"Commit hash '{repo.head.commit}' Already has a tag '{current_tag}'"
-    #     )
-    #     sys.exit(1)
+    if current_tag := next(
+        (tag for tag in repo.tags if tag.commit == repo.head.commit), None
+    ):
+        logger.error(
+            f"Commit hash '{repo.head.commit}' Already has a tag '{current_tag}'"
+        )
+        sys.exit(1)
 
     try:
         latest_tag = repo.git.describe(["--abbrev=0", "--tags"])
@@ -146,11 +146,7 @@ def main():
             current_latest_version, version_parts_to_increment
         )
 
-    print(new_tag)
-
-    sys.exit(0)
-
-    # create_and_push_tag(repo, new_tag)
+    create_and_push_tag(repo, new_tag)
 
     sys.exit(0)
 
