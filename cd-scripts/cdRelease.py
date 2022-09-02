@@ -82,9 +82,7 @@ def create_and_push_tag(repo, tag):
 
 
 def parse_pr(pr_number):
-    resp = requests.get(
-        f"https://api.github.com/repos/sky-uk/mite/pulls/{pr_number}"
-    )
+    resp = requests.get(f"https://api.github.com/repos/sky-uk/mite/pulls/{pr_number}")
     pr_message = resp.json()["body"]
 
     matches = re.findall(
@@ -120,17 +118,12 @@ def main():
 
     current_latest_version = parse(latest_tag)
 
-    
-    if any([
-        opts["--major"],
-        opts["--minor"],
-        opts["--patch"],
-    ]):
+    if any([opts["--major"], opts["--minor"], opts["--patch"]]):
         # Get version increment from command line arg.
         new_tag = increment_version_manually(current_latest_version, opts)
     else:
+        # Get version increment from value set in PR message body
         if opts["--pr_number"]:
-            # Get version increment from value set in PR message body
             version_parts_to_increment = parse_pr(opts["--pr_number"])
         else:
             commit_message = repo.git.log("--format=%B", n=1)
