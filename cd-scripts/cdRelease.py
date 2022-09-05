@@ -1,15 +1,16 @@
 """cdRelease
 
 Usage:
-    cdRelease.py [options] major
-    cdRelease.py [options] minor
-    cdRelease.py [options] patch
+    cdRelease.py [options] [--patch|--minor|--major]
     cdRelease.py [options] [--pr_number=<pr_number>]
 
     cdRelease.py (-h | --help)
 
 Options:
     -h --help       Show this screen
+    --patch         Increment patch version segment
+    --minor         Increment minor version segment
+    --major         Increment major version segment
 
 """
 
@@ -48,15 +49,15 @@ def increment_version_from_pr(clv, version_parts_to_increment):
 
 
 def increment_version_manually(clv, opts):
-    if opts["major"]:
+    if opts["--major"]:
         major = clv.major + 1
         minor = 0
         patch = 0
-    elif opts["minor"]:
+    elif opts["--minor"]:
         major = clv.major
         minor = clv.minor + 1
         patch = 0
-    elif opts["patch"]:
+    elif opts["--patch"]:
         major = clv.major
         minor = clv.minor
         patch = clv.micro + 1
@@ -80,10 +81,8 @@ def create_and_push_tag(repo, tag):
         sys.exit(1)
 
 
-def parse_pr(opts):
-    resp = requests.get(
-        f"https://api.github.com/repos/sky-uk/mite/pulls/{opts['--pr_number']}"
-    )
+def parse_pr(pr_number):
+    resp = requests.get(f"https://api.github.com/repos/sky-uk/mite/pulls/{pr_number}")
     pr_message = resp.json()["body"]
 
     matches = re.findall(
@@ -119,8 +118,18 @@ def main():
 
     current_latest_version = parse(latest_tag)
 
-    if opts["--pr_number"]:
-        version_parts_to_increment = parse_pr(opts)
+    if any([opts["--major"], opts["--minor"], opts["--patch"]]):
+        # Get version increment from command line arg.
+        new_tag = increment_version_manually(current_latest_version, opts)
+    else:
+        # Get version increment from value set in PR message body
+        if opts["--pr_number"]:
+            version_parts_to_increment = parse_pr(opts["--pr_number"])
+        else:
+            commit_message = repo.git.log("--format=%B", n=1)
+            matches = re.findall(r"^.*\(#(\d+)\)$", commit_message, re.MULTILINE)
+            version_parts_to_increment = parse_pr(matches[0])
+
         if not version_parts_to_increment:
             logger.info("No release")
             with open("/tmp/workspace/env_vars", "a") as f:
@@ -129,8 +138,6 @@ def main():
         new_tag = increment_version_from_pr(
             current_latest_version, version_parts_to_increment
         )
-    else:
-        new_tag = increment_version_manually(current_latest_version, opts)
 
     create_and_push_tag(repo, new_tag)
 

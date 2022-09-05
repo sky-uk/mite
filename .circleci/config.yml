@@ -145,12 +145,7 @@ jobs:
             git config user.email "mite@noreply.github.com"
             git config user.name "CircleCI"
             pip3 install docopt GitPython packaging requests
-            if [[ -v CIRCLE_PULL_REQUEST ]]; then
-              PR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | sed s*https://github.com/sky-uk/mite/pull/**)
-              python3 cd-scripts/cdRelease.py --pr_number=$PR_NUMBER
-            else
-              python3 cd-scripts/cdRelease.py patch
-            fi
+            python3 cd-scripts/cdRelease.py
       - persist_to_workspace:
           root: /tmp/workspace
           paths:
