@@ -138,7 +138,7 @@ class _SeleniumWrapper:
         if len(entries) == expected:
             return entries[:expected]
         logger.error(
-            f"Performance entries did not return the expected count: expected 1 - actual {len(entries)}"
+            f"Performance entries did not return the expected count: expected {expected} - actual {len(entries)}"
         )
         return
 
