@@ -1,7 +1,7 @@
 from dataclasses import InitVar, dataclass, field
 from typing import Optional
 
-from mite.scenario import StopScenario
+from mite.scenario import StopVolumeModel
 
 
 @dataclass
@@ -13,7 +13,7 @@ class _VolumeModel:
 
     def __call__(self, start, end):
         if start > self.duration:
-            raise StopScenario
+            raise StopVolumeModel
         return self._volume(start, end)
 
     def __add__(self, other):
@@ -146,7 +146,7 @@ def oneshot_vm(when=-1, stop_scenario=False):
             has_run = True
             return 1
         if stop_scenario:
-            raise StopScenario
+            raise StopVolumeModel
         return 0
 
     _vm.duration = when
