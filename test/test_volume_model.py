@@ -1,6 +1,6 @@
 from pytest import raises
 
-from mite.scenario import StopScenario
+from mite.scenario import StopVolumeModel
 from mite.volume_model import Constant, Nothing, Ramp
 
 
@@ -12,7 +12,7 @@ class TestNothing:
     def test_nothing_raises_stop(self):
         vm = Nothing(duration=60)
         assert vm(60, 61) == 0
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(61, 62)
 
 
@@ -24,7 +24,7 @@ class TestConstant:
     def test_constant_raises_stop(self):
         vm = Constant(duration=60, tps=1)
         assert vm(60, 61) == 1
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(61, 62)
 
 
@@ -33,7 +33,7 @@ class TestCompound:
         vm = Nothing(10) + Constant(duration=10, tps=1)
         assert vm(1, 2) == 0
         assert vm(10, 11) == 1
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(21, 22)
 
     def test_addition_to_other_type_raises(self):
@@ -48,7 +48,7 @@ class TestRamp:
         assert vm(10, 11) == 0
         assert vm(15, 16) == 1
         assert vm(20, 21) == 2
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(31, 32)
 
     def test_ramp_to_zero(self):
@@ -57,7 +57,7 @@ class TestRamp:
         assert vm(10, 11) == 2
         assert vm(15, 16) == 1
         assert vm(20, 21) == 0
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(21, 22)
 
     def test_ramp_from_zero(self):
@@ -66,7 +66,7 @@ class TestRamp:
         assert vm(5, 6) == 1
         assert vm(10, 11) == 2
         assert vm(20, 21) == 2
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(21, 22)
 
     def test_final_ramp_without_to_raises(self):
@@ -108,5 +108,5 @@ class TestRamp:
         assert vm(10, 11) == 0
         assert vm(15, 16) == 1
         assert vm(20, 21) == 2
-        with raises(StopScenario):
+        with raises(StopVolumeModel):
             vm(31, 32)

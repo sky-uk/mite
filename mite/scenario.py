@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 Scenario = namedtuple("Scenario", "journey_spec datapool volumemodel".split())
 
 
-class StopScenario(Exception):
+class StopVolumeModel(Exception):
     pass
 
 
@@ -58,9 +58,9 @@ class ScenarioManager:
         for scenario_id, scenario in list(self._scenarios.items()):
             try:
                 number = int(scenario.volumemodel(start_of_period, end_of_period))
-            except StopScenario:
+            except StopVolumeModel:
                 logger.info(
-                    "Removed scenario %d because volume model raised StopScenario",
+                    "Removed scenario %d because volume model raised StopVolumeModel",
                     scenario_id,
                 )
                 del self._scenarios[scenario_id]

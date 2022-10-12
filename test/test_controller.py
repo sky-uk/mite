@@ -13,7 +13,7 @@ from mite.__main__ import duplicator as main_duplicator
 from mite.__main__ import runner as main_runner
 from mite.config import ConfigManager
 from mite.controller import Controller
-from mite.scenario import ScenarioManager, StopScenario
+from mite.scenario import ScenarioManager, StopVolumeModel
 
 TESTNAME = "unit_test_name"
 
@@ -72,7 +72,7 @@ class DummySender:
 
 def dummy_vm(s, e):
     if s > 10:
-        raise StopScenario
+        raise StopVolumeModel
     return 1
 
 
