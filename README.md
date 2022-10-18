@@ -105,7 +105,7 @@ within a window of time.  The window is definied as a start and an end
 time (measured in seconds since the beginning of the test), which will be
 fed to the model by the framework.  This allows complex calculations to
 specify the current volume based on the current time.  The volume model
-can also raise `StopScenario` to inform mite that the load injection
+can also raise `StopVolumeModel` to inform mite that the load injection
 should stop for a given journey.  For this example we'll use a simple
 volume model which merely runs ten journeys simultaneously, forever.
 
