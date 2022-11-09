@@ -181,7 +181,7 @@ jobs:
             if [ "$ACURL_CHANGED" = true ]; then
               cd acurl
               python3 -m build --sdist --outdir ../wheelhouse
-              cibuildwheel --output-dir ../wheelhouse
+              cibuildwheel --output-dir ../wheelhouse --archs x86_64,aarch64
             fi
       - run:
           name: init .pypirc
