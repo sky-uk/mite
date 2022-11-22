@@ -52,7 +52,7 @@ workflows:
 jobs:
   check-acurl-version:
     docker:
-      - image: cimg/python:3.10
+      - image: circleci/python:3.10
     steps:
       - checkout
       - run:
@@ -79,7 +79,7 @@ jobs:
 
   build-and-test-38:
     docker:
-      - image: cimg/python:3.8
+      - image: circleci/python:3.8
     steps:
       - checkout
       - python/install-packages:
@@ -95,7 +95,7 @@ jobs:
           command: tox -e py38
   build-and-test-39:
     docker:
-      - image: cimg/python:3.9
+      - image: circleci/python:3.9
     steps:
       - checkout
       - python/install-packages:
@@ -111,7 +111,7 @@ jobs:
           command: tox -e py39
   build-and-test-310:
     docker:
-      - image: cimg/python:3.10
+      - image: circleci/python:3.10
     steps:
       - checkout
       - python/install-packages:
@@ -131,7 +131,7 @@ jobs:
 
   tag:
     docker:
-      - image: cimg/python:3.10
+      - image: circleci/python:3.10
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -157,7 +157,7 @@ jobs:
     # so we only need to run `python3 -m build` in this job
     working_directory: ~/linux-wheels
     docker:
-      - image: cimg/python:3.10
+      - image: circleci/python:3.10
     environment:
       CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
       CIBW_SKIP: "*i686"
@@ -182,7 +182,6 @@ jobs:
               cd acurl
               pip3 install --user cibuildwheel==2.8.1 build Cython twine
               python3 -m build --sdist --outdir ../wheelhouse
-              cibuildwheel --output-dir ../wheelhouse
             fi
       - run:
           name: init .pypirc

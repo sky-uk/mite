@@ -1,0 +1,2 @@
+include src/*.c
+include src/acurl_wrappers.h
