@@ -88,7 +88,8 @@ class Browser:
         """Perform a request and return a page object"""
         # Wrap everything in page object
         embedded_res = kwargs.pop("embedded_res", self._embedded_res)
-        resp = await self._session.request(method, url, *args, **kwargs)
+        method_func = getattr(self._session, method.lower())
+        resp = await method_func(url, *args, **kwargs)
         page = Page(resp, self)
         if embedded_res:
             async with self._ctx.transaction(

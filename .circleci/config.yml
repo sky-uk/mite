@@ -174,12 +174,13 @@ jobs:
             if [ "$VERSION_INCREMENT" = false ]; then
               echo "Mite version not incremented, not building"
             else
-              pip3 install --user cibuildwheel==2.8.1 build Cython twine
+              pip3 install --user cibuildwheel==2.8.1 build twine
               python3 -m build --outdir ./wheelhouse
             fi
 
             if [ "$ACURL_CHANGED" = true ]; then
               cd acurl
+              pip3 install --user cibuildwheel==2.8.1 build Cython twine
               python3 -m build --sdist --outdir ../wheelhouse
             fi
       - run:
