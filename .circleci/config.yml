@@ -27,11 +27,15 @@ workflows:
       - build-and-test-310:
           requires:
             - check-acurl-version
+      - build-and-test-311:
+          requires:
+            - check-acurl-version
       - tag:
           requires:
             - build-and-test-38
             - build-and-test-39
             - build-and-test-310
+            - build-and-test-311
           filters:
             branches:
               only: master
