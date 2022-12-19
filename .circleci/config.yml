@@ -56,7 +56,7 @@ workflows:
 jobs:
   check-acurl-version:
     docker:
-      - image: circleci/python:3.11
+      - image: circleci/python:3.11-rc
     steps:
       - checkout
       - run:
@@ -134,7 +134,7 @@ jobs:
           command: tox -e py310
   build-and-test-311:
     docker:
-      - image: circleci/python:3.11
+      - image: circleci/python:3.11-rc
     steps:
       - checkout
       - python/install-packages:
@@ -154,7 +154,7 @@ jobs:
 
   tag:
     docker:
-      - image: circleci/python:3.11
+      - image: circleci/python:3.11-rc
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -180,7 +180,7 @@ jobs:
     # so we only need to run `python3 -m build` in this job
     working_directory: ~/linux-wheels
     docker:
-      - image: circleci/python:3.11
+      - image: circleci/python:3.11-rc
     environment:
       CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
       CIBW_SKIP: "*i686"
