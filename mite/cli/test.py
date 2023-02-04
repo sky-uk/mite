@@ -213,22 +213,11 @@ def journey_cmd(opts):
         journey_run_cmd(opts)
 
 # ========== pickle command
-import pickle
 from urllib.parse import urlparse, quote_from_bytes
 from base64 import b64encode
 from json import dumps
-import os
 from mite.volume_model import Constant
 
-
-def save_pickle(obj, outfile):
-    with open(outfile, 'wb') as f:
-        pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-def load_pickle(infile):
-    with open(infile, 'rb') as f:
-        obj = pickle.load(f)
-    return obj
 
 def generate_proxy_url(proxy_addr, **data):
     encoded_data = quote_from_bytes(b64encode(dumps(data).encode()))
@@ -239,70 +228,33 @@ def generate_proxy_url(proxy_addr, **data):
     )
     return url.geturl()
 
-# def _pickle_dump(opts):
-#     scenario_spec = opts["SCENARIO_SPEC"]
-#     config_manager = _create_config_manager(opts)
-#     sender = _create_sender(opts)
-#     scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
 
-    # target_dir = opts["--jar"] if opts.get("--jar") else os.getcwd()
-
-#     assert os.path.exists(target_dir), "--jar does not exist"
-    
-#     scenario_dir = os.path.join(target_dir, scenario_spec)
-
-#     if not os.path.exists(scenario_dir):
-#         os.mkdir(scenario_dir)
-        
-#     for journey_spec, datapool, volumemodel in scenarios:
-#         save_pickle(
-#             (journey_spec, datapool, volumemodel),
-#             os.path.join(scenario_dir, journey_spec)
-#         )
-
-def _pickle_dump(opts):
-    scenario_spec = opts["SCENARIO_SPEC"]
-    config_manager = _create_config_manager(opts)
-    sender = _create_sender(opts)
-    scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
-
-    target_dir = opts["--jar"] if opts.get("--jar") else os.getcwd()
-    assert os.path.exists(target_dir), "--jar file does not exist"
-    outfile = os.path.join(target_dir, scenario_spec) + ".pkl"
-
-    save_pickle(list(scenarios), outfile)
-
-def _pickle_load(opts):
-    scenario = load_pickle(opts["SCENARIO_PICKLE"])
+def journeyproxy(opts):
     app = opts["--app"]
     env = opts["--env"]
     proxy = opts["--proxy"]
     app_base_url_secret = f"{app}_base_url"
+    config_manager = _create_config_manager(opts)
+    sender = _create_sender(opts)
+    scenarios = _get_scenario_with_kwargs(opts["SCENARIO_SPEC"], config_manager, sender)
 
-
-    for journey_spec, datapool, volumemodel in scenario:
-        config_manager = _create_config_manager(opts)
+    for journey_spec, datapool, volumemodel in scenarios:
+        _config_manager = _create_config_manager(opts)
 
         proxy_base_url = generate_proxy_url(
             proxy_addr=proxy,
             env=env,
             app=app,
             journey_spec=journey_spec,
-            base_url=config_manager.get(app_base_url_secret)
+            base_url=_config_manager.get(app_base_url_secret)
         )
 
-        config_manager.set(app_base_url_secret, proxy_base_url)
-        vm = Constant(duration=5, tps=int(opts.get("--volume", 1)))
+        _config_manager.set(app_base_url_secret, proxy_base_url)
+        vm = Constant(duration=5, tps=5)
         test_scenarios(
         journey_spec,
         opts,
         [(journey_spec, datapool, vm)],
-        config_manager,
-    )
-    
+        _config_manager,
+    )  
 
-def pickle_cmd(opts):
-    if opts["dump"]:
-        _pickle_dump(opts)
-    elif opts["load"]:
-        _pickle_load(opts)

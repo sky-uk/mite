@@ -16,8 +16,7 @@ Usage:
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
-    mite [options] pickle dump [--jar=TARGET_DIR] SCENARIO_SPEC
-    mite [options] pickle load [--app=APP] [--env=ENV] [--proxy=PROXY] SCENARIO_PICKLE
+    mite [options] journeyproxy [--app=APP] [--env=ENV] [--proxy=PROXY] SCENARIO_SPEC
 
     mite --help
     mite --version
@@ -117,7 +116,7 @@ from .cli.common import (
     _get_scenario_with_kwargs,
 )
 from .cli.duplicator import duplicator
-from .cli.test import journey_cmd, scenario_cmd, pickle_cmd
+from .cli.test import journey_cmd, scenario_cmd, journeyproxy
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
@@ -354,8 +353,8 @@ def main():
         cat(opts)
     elif opts["uncat"]:
         uncat(opts)
-    elif opts["pickle"]:
-        pickle_cmd(opts)
+    elif opts["journeyproxy"]:
+        journeyproxy(opts)
 
 if __name__ == "__main__":
     main()
