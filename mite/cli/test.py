@@ -217,8 +217,9 @@ from urllib.parse import urlparse, quote_from_bytes
 from base64 import b64encode
 from json import dumps
 from mite.volume_model import Constant
-
-
+import atexit
+import requests
+import os
 def generate_proxy_url(proxy_addr, **data):
     encoded_data = quote_from_bytes(b64encode(dumps(data).encode()))
     url = urlparse(proxy_addr if "://" in proxy_addr else "http://" + proxy_addr)
@@ -238,6 +239,7 @@ def journeyproxy(opts):
     sender = _create_sender(opts)
     scenarios = _get_scenario_with_kwargs(opts["SCENARIO_SPEC"], config_manager, sender)
 
+    atexit.register(requests.get, os.path.join(proxy, "journeyproxyexit"))
     for journey_spec, datapool, volumemodel in scenarios:
         _config_manager = _create_config_manager(opts)
 
