@@ -1,5 +1,15 @@
 version: 2.1
 
+# Further ideas for jobs to run:
+# - license check
+# - make sure test coverage increases
+# - merge all tox tests into one using pyenv
+# And, once we're sure that the pipeline is working:
+# - integration/performance tests
+# Once we have docs:
+# - documentation coverage
+# - docs build (on master only)
+
 workflows:
   mite:
     jobs:
@@ -58,14 +68,12 @@ jobs:
       - image: python:3.11.2
     environment:
       PYENV_ROOT: /root/.pyenv
-      # PATH: /root/.pyenv/shims:/root/.pyenv/bin:$PATH
       PYTHON_VERSION: 3.11.2
       PIPENV_DEFAULT_PYTHON_VERSION: 3.11.2
-
     steps:
       - checkout
       - run:
-          name: Install pyenv
+          name: Install pyenv, run tox
           command: |
             echo 'export PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"' >> "$BASH_ENV"
             source "$BASH_ENV"
@@ -76,7 +84,6 @@ jobs:
             pyenv local 3.11.2 3.10.10 3.9.16
             pip install tox
             tox
-
 
   tag:
     docker:
@@ -99,7 +106,6 @@ jobs:
           root: /tmp/workspace
           paths:
             - env_vars
-
 
   linux-wheels:
     # we only need to build the 'mite' wheels on one platform
