@@ -140,20 +140,17 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     if opts["--debugging"]:
         loop.set_debug(True)
 
-
+    tasks = [
+        loop.create_task(controller_report(controller, receiver)),
+        loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
+    ]
 
     if opts["--memory-tracing"]:
         tracemalloc.start()
         initial_snapshot = tracemalloc.take_snapshot()
-        coroutines = (asyncio.create_task(mem_snapshot(initial_snapshot)),)
+        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
 
-
-    task1 = loop.create_task(controller_report(controller, receiver))
-    task2 = loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
-
-    loop.run_until_complete(task1)
-    loop.run_until_complete(task2)
-
+    loop.run_until_complete(asyncio.gather(*tasks))
 
     # Run one last report before exiting
     controller.report(receiver.recieve)
