@@ -10,5 +10,5 @@ exclude = '''
   | .eggs
 )/
 '''
-target-version = ['py38']
+target-version = ['py311']
 line-length = 90

@@ -140,16 +140,18 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     if opts["--debugging"]:
         loop.set_debug(True)
 
-    coroutines = (
-        controller_report(controller, receiver),
-        _create_runner(opts, transport, receiver.recieve).run(),
-    )
+    tasks = [
+        loop.create_task(controller_report(controller, receiver)),
+        loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
+    ]
+
     if opts["--memory-tracing"]:
         tracemalloc.start()
         initial_snapshot = tracemalloc.take_snapshot()
-        coroutines += (mem_snapshot(initial_snapshot),)
+        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
 
-    loop.run_until_complete(asyncio.wait(coroutines, return_when=asyncio.FIRST_COMPLETED))
+    loop.run_until_complete(asyncio.gather(*tasks))
+
     # Run one last report before exiting
     controller.report(receiver.recieve)
     has_error = http_stats_output is not None and http_stats_output.error_total > int(

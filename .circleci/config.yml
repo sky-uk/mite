@@ -1,8 +1,5 @@
 version: 2.1
 
-orbs:
-  python: circleci/python@2.0.3
-
 # Further ideas for jobs to run:
 # - license check
 # - make sure test coverage increases
@@ -13,25 +10,16 @@ orbs:
 # - documentation coverage
 # - docs build (on master only)
 
-
 workflows:
   mite:
     jobs:
       - check-acurl-version
-      - build-and-test-38:
-          requires:
-            - check-acurl-version
-      - build-and-test-39:
-          requires:
-            - check-acurl-version
-      - build-and-test-310:
+      - build:
           requires:
             - check-acurl-version
       - tag:
           requires:
-            - build-and-test-38
-            - build-and-test-39
-            - build-and-test-310
+            - build
           filters:
             branches:
               only: master
@@ -50,26 +38,25 @@ workflows:
 
 
 jobs:
+
   check-acurl-version:
     docker:
-      - image: circleci/python:3.10
+      - image: python:3.11.2
     steps:
       - checkout
       - run:
           command: |
             ACURL_CHANGED=false
-
             if [[ -n $(git show --name-only ${CIRCLE_SHA1} ./acurl) ]]; then
               echo "Acurl has changed"
+              apt-get update && apt-get install -y jq
               ACURL_CHANGED=true
-
               LATEST_ACURL_VERSION=$(curl -s https://pypi.org/pypi/acurl/json | jq -r '.info .version')
               if [[ -n $(grep "version = $LATEST_ACURL_VERSION$" acurl/setup.cfg) ]]; then
                 echo "Acurl has changed, but the version of acurl hasn't changed"
                 exit 1
               fi
             fi
-
             mkdir -p /tmp/workspace
             echo "export ACURL_CHANGED=\"$ACURL_CHANGED\"" >> /tmp/workspace/env_vars
       - persist_to_workspace:
@@ -77,61 +64,31 @@ jobs:
           paths:
             - env_vars
 
-  build-and-test-38:
+  build:
     docker:
-      - image: circleci/python:3.8
+      - image: python:3.11.2
+    environment:
+      PYENV_ROOT: /root/.pyenv
+      PYTHON_VERSION: 3.11.2
+      PIPENV_DEFAULT_PYTHON_VERSION: 3.11.2
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: test-requirements.txt
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: dev-requirements.txt
-          pkg-manager: pip
       - run:
-          name: tox
-          command: tox -e py38
-  build-and-test-39:
-    docker:
-      - image: circleci/python:3.9
-    steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: test-requirements.txt
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: dev-requirements.txt
-          pkg-manager: pip
-      - run:
-          name: tox
-          command: tox -e py39
-  build-and-test-310:
-    docker:
-      - image: circleci/python:3.10
-    steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: test-requirements.txt
-          pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: dev-requirements.txt
-          pkg-manager: pip
-      - run:
-          name: pre-commit checks
-          command: pre-commit run --origin HEAD --source origin/master || git diff
-      - run:
-          name: tox
-          command: tox -e py310
+          name: Install pyenv, run tox
+          command: |
+            echo 'export PATH="/root/.pyenv/shims:/root/.pyenv/bin:$PATH"' >> "$BASH_ENV"
+            source "$BASH_ENV"
+            curl https://pyenv.run | bash
+            for version in 3.9.16 3.10.10 3.11.2; do
+              pyenv install $version
+            done
+            pyenv local 3.11.2 3.10.10 3.9.16
+            pip install tox
+            tox
 
   tag:
     docker:
-      - image: circleci/python:3.10
+      - image: python:3.11.2
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -151,13 +108,12 @@ jobs:
           paths:
             - env_vars
 
-
   linux-wheels:
     # we only need to build the 'mite' wheels on one platform
     # so we only need to run `python3 -m build` in this job
     working_directory: ~/linux-wheels
     docker:
-      - image: circleci/python:3.10
+      - image: python:3.11.2
     environment:
       CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
       CIBW_SKIP: "*i686"
@@ -170,14 +126,12 @@ jobs:
           name: Build the Linux wheels.
           command: |
             source /tmp/workspace/env_vars
-
             if [ "$VERSION_INCREMENT" = false ]; then
               echo "Mite version not incremented, not building"
             else
               pip3 install --user cibuildwheel==2.8.1 build twine
               python3 -m build --outdir ./wheelhouse
             fi
-
             if [ "$ACURL_CHANGED" = true ]; then
               cd acurl
               pip3 install --user cibuildwheel==2.8.1 build Cython twine
