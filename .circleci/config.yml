@@ -145,7 +145,7 @@ jobs:
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
       - run:
           name: upload packages to pypi
-          command: twine upload wheelhouse/*
+          command: /root/.local/bin/twine upload wheelhouse/*
       - store_artifacts:
           path: wheelhouse/
 
