@@ -150,7 +150,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         initial_snapshot = tracemalloc.take_snapshot()
         tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
 
-    loop.run_until_complete(asyncio.gather(*tasks))
+    loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
     # Run one last report before exiting
     controller.report(receiver.recieve)
