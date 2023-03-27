@@ -2,7 +2,7 @@
 # this stops the requirement for rust be dragged in (causing much "fun" in so far as the image size bloats
 # to approx 2Gb!)
 
-FROM python:3.10-alpine3.16
+FROM python:3.11-alpine3.16
 
 # py3-cryptography is added here as a means to get python cryptography onto the image (prebuilt) and without
 # need to install rust compiler
