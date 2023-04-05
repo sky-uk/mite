@@ -1,4 +1,0 @@
-include src/*.c
-include src/*.pyx
-include src/*.pxd
-include src/acurl_wrappers.h

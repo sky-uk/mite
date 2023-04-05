@@ -64,7 +64,7 @@ and two numbers (which will be supplied by the datapool, see below).
 
 The context is important for every journey.  It provides a number of
 useful methods for timing/naming of transactions, sending messages and
-defaults to including http functionality from acurl.  Functionality can
+defaults to including http functionality from aiohttp.  Functionality can
 be included in the journey by attaching it to the context.
 
 In the above example we see an example of naming a transaction `async
