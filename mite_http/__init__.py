@@ -50,7 +50,7 @@ class Response:
     status_code: int
     text: str
     url: URL
-    json: Optional[Dict] = None
+    json: Optional[Callable] = None
     request: Request = None
     total_time: float = 0.0
 
@@ -96,6 +96,14 @@ class CAClientSession(ClientSession):
             # bit of a hack to maintain backwards compatability
             return self.to_curl(_response.request_info, **kwargs)
 
+        def json():
+            # see above
+            return json_data
+
+        if kwargs.get("auth") and kwargs.get("headers", dict()).get("Authorization"):
+            # https://github.com/aio-libs/aiohttp/blob/master/aiohttp/client.py#L434
+            del kwargs["auth"]
+
         if kwargs.get("auth"):
             kwargs["auth"] = BasicAuth(*kwargs["auth"])
 
@@ -121,8 +129,10 @@ class CAClientSession(ClientSession):
             text=await _response.text(),
             url=_response.url
         )
+
         if "json" in response.content_type:
-            response.json = await _response.json()
+            json_data = await _response.json()
+            response.json = json
 
         response.request = Request(
             url=_response.request_info.url,
