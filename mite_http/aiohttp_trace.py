@@ -5,15 +5,17 @@ import aiohttp
 
 @dataclass
 class ResultsCollector:
+    start_time: float = 0
     dns_lookup_and_dial: float = 0
     connect: float = 0
     first_byte: float = 0
+    transfer_start_time: float = 0
     transfer: float = 0
     total: float = 0
     is_redirect: bool = False
 
 
-def request_tracer(results_collector):
+def request_tracer(results_collector: ResultsCollector):
 
     async def on_request_start(session, context, params):
         context.on_request_start = session.loop.time()
@@ -48,8 +50,6 @@ def request_tracer(results_collector):
         total = session.loop.time() - context.on_request_start
         context.on_request_end = total
 
-        breakpoint()
-
         if hasattr(context, "on_dns_resolvehost_end"):
             dns_lookup_and_dial = context.on_dns_resolvehost_end - context.on_dns_resolvehost_start
         else:
@@ -63,9 +63,11 @@ def request_tracer(results_collector):
         transfer = total - connect
         is_redirect = context.is_redirect
 
+        results_collector.start_time = context.on_request_start
         results_collector.dns_lookup_and_dial = round(dns_lookup_and_dial * 1000, 2)
         results_collector.connect = round(connect * 1000, 2)
-        results_collector.first_byte = context.on_connection_create_end
+        results_collector.first_byte = connect + dns_lookup_and_dial
+        results_collector.transfer_start_time = context.on_request_chunk_sent
         results_collector.transfer = round(transfer * 1000, 2)
         results_collector.total = round(total * 1000, 2)
         results_collector.is_redirect = is_redirect

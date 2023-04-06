@@ -1,19 +1,58 @@
 import asyncio
-import logging
 import json
+import logging
 import shlex
 from collections import deque
 from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass
 from functools import wraps
+from http.cookies import SimpleCookie
+from io import StringIO
+from typing import Callable, Dict, Optional, Tuple
 
-from aiohttp import ClientSession
-
-from .aiohttp_trace import request_tracer, ResultsCollector
+import attr
+from aiohttp import BasicAuth, ClientSession, RequestInfo
+from yarl import URL
 
 import mite
-
+from mite_http.aiohttp_trace import ResultsCollector, request_tracer
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Request:
+    url: URL
+    method: str
+    headers: Dict
+    real_url: URL = attr.ib()
+    to_curl: Callable[[], str] = None
+
+
+@dataclass
+class Response:
+    # content
+    content_length: int
+    content_type: str
+    cookies: SimpleCookie
+    # encoding: str
+    headers: Dict
+    history: Tuple
+    host: str
+    links: Dict
+    method: str
+    ok: bool
+    raise_for_status: Callable
+    raw_headers: Tuple
+    read: Callable
+    real_url: URL
+    reason: str
+    status_code: int
+    text: str
+    url: URL
+    json: Optional[Dict] = None
+    request: Request = None
+    total_time: float = 0.0
 
 
 class CAClientSession(ClientSession):
@@ -27,29 +66,73 @@ class CAClientSession(ClientSession):
     def set_response_callback(self, callback):
         self._response_callback = callback
 
-    async def to_curl(self, request, **kwargs):
+    def to_curl(self, request: RequestInfo, **kwargs):
+        # [TODO] add cookies
+
         # Get the request method, URL, headers and body
         method = request.method.upper()
         url = str(request.url)
         headers = request.headers
 
-        # Generate the curl command string
-        curl_command = f"curl -X {method} '{url}'"
-        for key, value in headers.items():
-            curl_command += f" -H '{key}: {value}'"
+        # Generate the curl command string using StringIO
+        with StringIO() as curl_command:
+            curl_command.write(f"curl -X {method} '{url}'")
+            for key, value in headers.items():
+                curl_command.write(f" -H '{key}: {value}'")
 
-        if kwargs.get("json"):
-            curl_command += f" -d '{json.dumps(kwargs.get('json'))}'"
-        if kwargs.get("data"):
-            curl_command += f" -d {shlex.quote(kwargs.get('data').decode('utf-8'))}"
+            if json_data := kwargs.get("json"):
+                curl_command.write(f" -d '{json.dumps(json_data)}'")
+            elif data := kwargs.get("data"):
+                curl_command.write(f" -d {shlex.quote(data.decode('utf-8'))}")
 
-        return curl_command
+            if auth := kwargs.get("auth"):
+                user_login = shlex.quote(f"{auth[0]}:{auth[1]}")
+                curl_command.write(f" --user {user_login}")
+
+            return curl_command.getvalue()
 
     async def _request(self, method: str, str_or_url, **kwargs):
-        response = await super()._request(method, str_or_url, **kwargs)
-        self._response_callback(response)
+        def curl():
+            # bit of a hack to maintain backwards compatability
+            return self.to_curl(_response.request_info, **kwargs)
 
-        response.curl = await self.to_curl(response.request_info, **kwargs)
+        if kwargs.get("auth"):
+            kwargs["auth"] = BasicAuth(*kwargs["auth"])
+
+        _response = await super()._request(method, str_or_url, **kwargs)
+
+        response = Response(
+            content_length=_response.content_length,
+            content_type=_response.content_type,
+            cookies=_response.cookies,
+            # encoding=_response.get_encoding(),
+            headers=dict(_response.headers),
+            history=_response.history,
+            host=_response.host,
+            links=_response.links,
+            method=_response.method,
+            ok=_response.ok,
+            raise_for_status=_response.raise_for_status,
+            raw_headers=_response.raw_headers,
+            read=_response.read,
+            real_url=_response.real_url,
+            reason=_response.reason,
+            status_code=_response.status,
+            text=await _response.text(),
+            url=_response.url
+        )
+        if "json" in response.content_type:
+            response.json = await _response.json()
+
+        response.request = Request(
+            url=_response.request_info.url,
+            method=_response.request_info.method,
+            headers=dict(_response.request_info.headers),
+            real_url=_response.request_info.real_url,
+            to_curl=curl  # bit of a hack to maintain backwards compatability
+        )
+
+        self._response_callback(response)
 
         return response
 
@@ -91,7 +174,9 @@ class SessionPool:
     def __init__(self):
         self.trace = ResultsCollector()
 
-        self._wrapper = Wrapper(CAClientSession(trace_configs=[request_tracer(self.trace)]))
+        self._wrapper = Wrapper(CAClientSession(
+            trace_configs=[request_tracer(self.trace)]
+        ))
         self._pool = deque()
 
     @asynccontextmanager
@@ -125,19 +210,21 @@ class SessionPool:
             if session_wrapper._response_callback is not None:
                 session_wrapper._response_callback(r, session_wrapper.additional_metrics)
 
+            r.total_time = trace.total
+
             context.send(
                 "http_metrics",
-                # start_time=r.start_time,
+                start_time=trace.start_time,
                 effective_url=str(r.url),
-                response_code=r.status,
+                response_code=r.status_code,
                 dns_time=trace.dns_lookup_and_dial,
                 connect_time=trace.connect,
                 # tls_time=r.appconnect_time,
-                # transfer_start_time=r.pretransfer_time,
+                transfer_start_time=trace.transfer_start_time,
                 first_byte_time=trace.first_byte,
                 total_time=trace.total,
                 # primary_ip=r.primary_ip,
-                method=r.request_info.method,
+                method=r.method,
                 **session_wrapper.additional_metrics,
             )
 
