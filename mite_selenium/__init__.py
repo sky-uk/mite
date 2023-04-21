@@ -3,6 +3,7 @@ import logging
 import socket
 import time
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from functools import wraps
 
 from selenium.common.exceptions import TimeoutException
@@ -13,7 +14,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
-from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
