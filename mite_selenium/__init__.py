@@ -3,6 +3,7 @@ import logging
 import socket
 import time
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from functools import wraps
 
 from selenium.common.exceptions import TimeoutException
@@ -35,7 +36,7 @@ class _SeleniumWrapper:
         self._file_detector = self._spec_import_if_not_none("webdriver_file_detector")
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
         self._browser_profile = self._spec_import_if_not_none("webdriver_browser_profile")
-        self._options = self._spec_import_if_not_none("webdriver_options")
+        self._options = deepcopy(self._spec_import_if_not_none("webdriver_options"))
 
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
