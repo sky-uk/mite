@@ -1,6 +1,6 @@
 # Mite
 
-[![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
 
 ## Load Testing Framework
 
@@ -10,10 +10,7 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 ## Installation
 
 ```bash
-python3 -m venv ~/.virtualenvs/mite
-source ~/.virtualenvs/mite/bin/activate
-
-pip install -r requirements.txt
+pip install mite
 ```
 
 
@@ -210,8 +207,8 @@ If you run into any trouble or need support getting to grips with Mite,
 reach out on [Slack](https://sky.slack.com/messages/mite) if you work at Sky,
  or contact one of the maintainers if you're an external contributer:
 
-| [<img src="https://avatars.githubusercontent.com/jb098" width=100 height=100 alt="Jordan Brennan" /><br />Jordan Brennan](https://github.com/jb098)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/aecay" width=100 height=100 alt="Aaron Ecay" /> <br />Aaron Ecay](https://github.com/aecay)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/DavAnnunz" width=100 height=100 alt="Davide Annunziata" /><br />Davide Annunziata](https://github.com/DavAnnunz)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/arroncanhamskyuk" width=100 height=100 alt="Arron Canham" /><br />Arron Canham](https://github.com/arroncanhamskyuk)<br /><sub>💻</sub> |
-| :---: | :---: | :---: | :---: |
+| [<img src="https://avatars.githubusercontent.com/jb098" width=100 height=100 alt="Jordan Brennan" /><br />Jordan Brennan](https://github.com/jb098)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/aecay" width=100 height=100 alt="Aaron Ecay" /> <br />Aaron Ecay](https://github.com/aecay)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/DavAnnunz" width=100 height=100 alt="Davide Annunziata" /><br />Davide Annunziata](https://github.com/DavAnnunz)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/ryanlinnit-sky" width=100 height=100 alt="Ryan Linnit" /><br />Ryan Linnit](https://github.com/ryanlinnit-sky)<br /><sub>💻</sub> | [<img src="https://avatars.githubusercontent.com/cosmaprc" width=100 height=100 alt="Cosmin Purcherea" /><br />Cosmin Purcherea](https://github.com/cosmaprc)<br /><sub>💻</sub> |
+| :---: | :---: | :---: | :---: | :---: |
 
 **Special thanks to the following contributors:**
 
