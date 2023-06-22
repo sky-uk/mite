@@ -107,6 +107,10 @@ class CAClientSession(ClientSession):
         if kwargs.get("auth"):
             kwargs["auth"] = BasicAuth(*kwargs["auth"])
 
+        # `version` isn't a parameter for the aiohttp `_request` method
+        if kwargs.get("version"):
+            del kwargs["version"]
+
         _response = await super()._request(method, str_or_url, **kwargs)
 
         response = Response(
@@ -127,7 +131,7 @@ class CAClientSession(ClientSession):
             reason=_response.reason,
             status_code=_response.status,
             text=await _response.text(),
-            url=_response.url
+            url=_response.url,
         )
 
         if "json" in response.content_type:
@@ -139,7 +143,7 @@ class CAClientSession(ClientSession):
             method=_response.request_info.method,
             headers=dict(_response.request_info.headers),
             real_url=_response.request_info.real_url,
-            to_curl=curl  # bit of a hack to maintain backwards compatability
+            to_curl=curl,  # bit of a hack to maintain backwards compatability
         )
 
         self._response_callback(response)
@@ -184,9 +188,7 @@ class SessionPool:
     def __init__(self):
         self.trace = ResultsCollector()
 
-        self._wrapper = Wrapper(CAClientSession(
-            trace_configs=[request_tracer(self.trace)]
-        ))
+        self._wrapper = Wrapper(CAClientSession(trace_configs=[request_tracer(self.trace)]))
         self._pool = deque()
 
     @asynccontextmanager
