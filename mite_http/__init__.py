@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from functools import wraps
 from http.cookies import SimpleCookie
 from io import StringIO
-from typing import Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import attr
 from aiohttp import BasicAuth, ClientSession, RequestInfo
+from multidict import CIMultiDictProxy
 from yarl import URL
 
 import mite
@@ -37,6 +38,7 @@ class Response:
     cookies: SimpleCookie
     # encoding: str
     headers: Dict
+    aiohttp_headers: CIMultiDictProxy
     history: Tuple
     host: str
     links: Dict
@@ -83,7 +85,10 @@ class CAClientSession(ClientSession):
             if json_data := kwargs.get("json"):
                 curl_command.write(f" -d '{json.dumps(json_data)}'")
             elif data := kwargs.get("data"):
-                curl_command.write(f" -d {shlex.quote(data.decode('utf-8'))}")
+                if isinstance(data, str):
+                    curl_command.write(f" -d {shlex.quote(data)}")
+                else:
+                    curl_command.write(f" -d {shlex.quote(data.decode('utf-8'))}")
 
             if auth := kwargs.get("auth"):
                 user_login = shlex.quote(f"{auth[0]}:{auth[1]}")
@@ -119,6 +124,7 @@ class CAClientSession(ClientSession):
             cookies=_response.cookies,
             # encoding=_response.get_encoding(),
             headers=dict(_response.headers),
+            aiohttp_headers=_response.headers,
             history=_response.history,
             host=_response.host,
             links=_response.links,
@@ -188,7 +194,9 @@ class SessionPool:
     def __init__(self):
         self.trace = ResultsCollector()
 
-        self._wrapper = Wrapper(CAClientSession(trace_configs=[request_tracer(self.trace)]))
+        self._wrapper = Wrapper(
+            CAClientSession(trace_configs=[request_tracer(self.trace)])
+        )
         self._pool = deque()
 
     @asynccontextmanager
