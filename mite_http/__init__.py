@@ -118,7 +118,12 @@ class CAClientSession(ClientSession):
         if kwargs.get("version"):
             del kwargs["version"]
 
-        _response = await super()._request(method, str_or_url, **kwargs)
+        _response = await super()._request(
+            method,
+            str_or_url,
+            skip_auto_headers=["Content-Type", "Accept-Encoding"],
+            **kwargs,
+        )
 
         response = Response(
             content_length=_response.content_length,
