@@ -87,6 +87,8 @@ class CAClientSession(ClientSession):
             elif data := kwargs.get("data"):
                 if isinstance(data, str):
                     curl_command.write(f" -d {shlex.quote(data)}")
+                elif isinstance(data, dict):
+                    curl_command.write(f" -d {shlex.quote(str(data))}")
                 else:
                     curl_command.write(f" -d {shlex.quote(data.decode('utf-8'))}")
 
