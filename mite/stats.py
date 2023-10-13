@@ -183,7 +183,10 @@ class Stats:
             if exclude is not None and entry_point.name in exclude:
                 continue
             logging.info(f"Registering stats processors from {entry_point.name}")
-            self._all_stats += entry_point.load()
+            try:
+                self._all_stats += entry_point.load()
+            except Exception as e:
+                logging.error(e)
 
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
