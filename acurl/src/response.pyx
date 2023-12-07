@@ -1,4 +1,4 @@
-#cython: language_level=3
+#cython: language_level=3, profile=True
 
 from libc.stdlib cimport free
 from cpython cimport array

@@ -23,6 +23,7 @@ class AcurlError(Exception):
 # The performance impact of this is yet tbd.
 cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
+    print("handle_socket")
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
         wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
@@ -37,15 +38,21 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     cdef int _running
     cdef double secs
+    print("start_timeout")
+    print("timeout_ms", timeout_ms)
+    timeout_ms = 500
     if timeout_ms < 0:
+        print("start_timeout - timeout_ms < 0")
         if wrapper.timer_handle is not None:
             wrapper.timer_handle.cancel()
             wrapper.timer_handle = None
     elif timeout_ms == 0:
+        print("start_timeout - timeout_ms == 0")
         with nogil:
             curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
         wrapper.loop.call_soon(wrapper.check_multi_info, wrapper)  # FIXME: are we sure we're on the main thread?
     else:
+        print("start_timeout - else")
         secs = timeout_ms / 1000
         wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
 
@@ -57,6 +64,7 @@ cdef class CurlWrapper:
     def __cinit__(self, object loop):
         self.multi = curl_multi_init()
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, 1000)  # FIXME: magic number
+        print("setting handle_socket as callback")
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)
         acurl_multi_setopt_timercb(self.multi, CURLMOPT_TIMERFUNCTION, start_timeout)
@@ -67,6 +75,7 @@ cdef class CurlWrapper:
     cdef void curl_perform_read(self, int fd):
         cdef int _running
         cdef CURLM* multi = self.multi
+        print("curl_perform_read")
         with nogil:
             curl_multi_socket_action(multi, fd, CURL_CSELECT_IN, &_running)
         self.check_multi_info()
@@ -74,6 +83,7 @@ cdef class CurlWrapper:
     cdef void curl_perform_write(self, int fd):
         cdef int _running
         cdef CURLM* multi = self.multi
+        print("curl_perform_write")
         with nogil:
             curl_multi_socket_action(multi, fd, CURL_CSELECT_OUT, &_running)
         self.check_multi_info()
@@ -81,32 +91,72 @@ cdef class CurlWrapper:
     cdef void timeout_expired(self):
         cdef int _running
         cdef CURLM* multi = self.multi
+        print("timeout_expired")
         with nogil:
             curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
         self.check_multi_info()
 
     cdef void check_multi_info(self):
-        cdef CURLMsg *message
+        cdef CURLMsg *message = NULL
+        """
+        struct CURLMsg {
+            CURLMSG msg;       /* what this message means */
+            CURL *easy_handle; /* the handle it concerns */
+            union {
+                void *whatever;    /* message-specific data */
+                CURLcode result;   /* return code for transfer */
+            } data;
+        };
+        """
         cdef int _pending
         cdef CURL *easy
         cdef _Response response
         cdef void *response_raw
 
+        print("check_multi_info")
+
+        # while message == NULL:
+        #     print("calling curl_multi_info_read")
+        #     message = curl_multi_info_read(self.multi, &_pending)
+        #     print("pending messages in queue", _pending)
+        #     print("message == NULL:", message == NULL)
+
         message = curl_multi_info_read(self.multi, &_pending)
+
+        if message == NULL:
+            print("message NULL, returning")
+            # easy = message.easy_handle
+            # print("acurl_easy_getinfo_voidptr")
+            # acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
+            # print("setting response")
+            # response = <_Response>response_raw
+            # response.future.set_exception(AcurlError("message returned null"))
+            return
+
         while message != NULL:
+            print("message not NULL")
             if message.msg == CURLMSG_DONE:
+                print("CURLMSG_DONE")
                 easy = message.easy_handle
+
+                print("acurl_easy_getinfo_voidptr")
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
+                print("setting response")
                 response = <_Response>response_raw
                 if message.data.result == CURLE_OK:
+                    print("CURLE_OK")
                     response.future.set_result(response)
                 else:
+                    print("NOT CURLE_OK")
                     response.future.set_exception(AcurlError(f"curl failed with code {message.data.result} {curl_easy_strerror(message.data.result).decode('utf-8')}"))
 
+                print("curl_multi_remove_handle")
                 curl_multi_remove_handle(self.multi, easy)
             else:
                 raise Exception("oops2")
+            print("setting message")
             message = curl_multi_info_read(self.multi, &_pending)
+
 
     def session(self):
         return Session.__new__(Session, self)
