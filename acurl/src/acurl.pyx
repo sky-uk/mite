@@ -42,9 +42,7 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
             wrapper.timer_handle.cancel()
             wrapper.timer_handle = None
     elif timeout_ms == 0:
-        with nogil:
-            curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_running)
-        wrapper.loop.call_soon(wrapper.check_multi_info, wrapper)  # FIXME: are we sure we're on the main thread?
+        wrapper.loop.call_soon(wrapper.timeout_expired, wrapper)
     else:
         secs = timeout_ms / 1000
         wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
