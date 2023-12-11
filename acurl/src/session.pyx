@@ -1,4 +1,4 @@
-#cython: language_level=3, profile=True
+#cython: language_level=3
 
 from libc.stdlib cimport malloc
 from libc.string cimport strndup
@@ -132,12 +132,10 @@ cdef class Session:
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
         acurl_easy_setopt_cstr(curl, CURLOPT_CUSTOMREQUEST, method)
         # curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1)  # DEBUG
-        # acurl_easy_setopt_int(curl, CURLMOPT_TIMERFUNCTION, 500)
         acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, b"")
         # FIXME: make this configurable?
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYPEER, 0)
         acurl_easy_setopt_int(curl, CURLOPT_SSL_VERIFYHOST, 0)
-        # acurl_easy_setopt_int(curl, CURLOPT_VERBOSE, 1)
 
         cdef int i
 
@@ -305,21 +303,7 @@ cdef class Session:
 
     async def get(self, *args, **kwargs):
         print("Session.get")
-        # return "helloworld"
         return await self._outer_request(b"GET", *args, **kwargs)
-
-    def sync_get(self, url, *args, **kwargs):
-        cdef _Response response = self._inner_request(
-            method=b"GET",
-            url=url,
-            headers=(),
-            cookies=None,
-            auth=None,
-            data=None,
-            cert=None,
-        )
-
-        return response
 
     async def head(self, *args, **kwargs):
         return await self._outer_request(b"HEAD", *args, **kwargs)

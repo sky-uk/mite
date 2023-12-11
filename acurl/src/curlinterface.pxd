@@ -107,7 +107,6 @@ cdef extern from "<curl/curl.h>":
     cdef int CURLOPT_COOKIELIST
     cdef int CURLOPT_POSTFIELDSIZE
     cdef int CURLOPT_POSTFIELDS
-    # cdef int CURLOPT_VERBOSE
 
     # Info
     ctypedef int CURLINFO
