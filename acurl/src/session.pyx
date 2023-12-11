@@ -302,7 +302,6 @@ cdef class Session:
         return await self._outer_request(b"DELETE", *args, **kwargs)
 
     async def get(self, *args, **kwargs):
-        print("Session.get")
         return await self._outer_request(b"GET", *args, **kwargs)
 
     async def head(self, *args, **kwargs):
