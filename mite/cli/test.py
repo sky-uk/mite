@@ -124,6 +124,23 @@ async def controller_report(controller, receiver):
         await asyncio.sleep(1)
         controller.report(receiver.recieve)
 
+def tasks(opts,controller,receiver,transport):
+    loop = asyncio.get_running_loop()
+    if opts["--debugging"]:
+        loop.set_debug(True)
+
+    tasks = [
+        loop.create_task(controller_report(controller, receiver)),
+        loop.create_task(_create_runner(opts, transport, msg_sender=receiver.recieve).run())
+    ]
+
+    if opts["--memory-tracing"]:
+        tracemalloc.start()
+        initial_snapshot = tracemalloc.take_snapshot()
+        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
+
+    return tasks
+
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
@@ -136,21 +153,10 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     receiver.add_listener(debug_message_output.process_message)
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
-    loop = asyncio.get_event_loop()
-    if opts["--debugging"]:
-        loop.set_debug(True)
+    #loop = asyncio.get_running_loop()
+    
 
-    tasks = [
-        loop.create_task(controller_report(controller, receiver)),
-        loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
-    ]
-
-    if opts["--memory-tracing"]:
-        tracemalloc.start()
-        initial_snapshot = tracemalloc.take_snapshot()
-        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
-
-    loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
+    asyncio.run(asyncio.wait(tasks(opts,controller,receiver,transport), return_when=asyncio.FIRST_COMPLETED))
 
     # Run one last report before exiting
     controller.report(receiver.recieve)
