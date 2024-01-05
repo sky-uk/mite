@@ -143,7 +143,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     tasks = [
         loop.create_task(controller_report(controller, receiver)),
         loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
-    ]	
+    ]
 
     if opts["--memory-tracing"]:
         tracemalloc.start()
