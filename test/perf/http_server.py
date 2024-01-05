@@ -40,8 +40,8 @@ if __name__ == "__main__":
     # When using app.run(), this actually triggers before the serv_coro.
     # But, in this example, we are using the convenience method, even if it is
     # out of order.
-    asyncio.run(server.before_start())
-    asyncio.run(server.after_start())
+    loop.run_until_complete(server.before_start())
+    loop.run_until_complete(server.after_start())
     try:
         loop.run_forever()
     except KeyboardInterrupt:
