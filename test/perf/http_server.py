@@ -33,8 +33,8 @@ if __name__ == "__main__":
     serv_coro = app.create_server(host="0.0.0.0", port=9898, return_asyncio_server=True)
     loop = asyncio.get_event_loop()
     serv_task = asyncio.ensure_future(serv_coro, loop=loop)
-    server: AsyncioServer = asyncio.run(serv_task)
-    asyncio.run(server.startup())
+    server: AsyncioServer = loop.run_until_complete(serv_task)
+    loop.run_until_complete(server.startup())
     loop.create_task(report())
 
     # When using app.run(), this actually triggers before the serv_coro.
@@ -47,13 +47,13 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         loop.stop()
     finally:
-        asyncio.run(server.before_stop())
+        loop.run_until_complete(server.before_stop())
 
         # Wait for server to close
         close_task = server.close()
-        asyncio.run(close_task)
+        loop.run_until_complete(close_task)
 
         # Complete all tasks on the loop
         for connection in server.connections:
             connection.close_if_idle()
-        asyncio.run(server.after_stop())
+        loop.run_until_complete(server.after_stop())
