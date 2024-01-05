@@ -136,19 +136,19 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     receiver.add_listener(debug_message_output.process_message)
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
-    loop = asyncio.get_event_loop()	    #loop = asyncio.get_running_loop()
-    if opts["--debugging"]:	
-        loop.set_debug(True)	
+    loop = asyncio.get_event_loop()
+    if opts["--debugging"]:
+        loop.set_debug(True)
 
-    tasks = [	
-        loop.create_task(controller_report(controller, receiver)),	
-        loop.create_task(_create_runner(opts, transport, receiver.recieve).run())	
+    tasks = [
+        loop.create_task(controller_report(controller, receiver)),
+        loop.create_task(_create_runner(opts, transport, receiver.recieve).run())
     ]	
 
-    if opts["--memory-tracing"]:	
-        tracemalloc.start()	
-        initial_snapshot = tracemalloc.take_snapshot()	
-        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))	
+    if opts["--memory-tracing"]:
+        tracemalloc.start()
+        initial_snapshot = tracemalloc.take_snapshot()
+        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
 
     loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
