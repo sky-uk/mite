@@ -30,4 +30,4 @@ def stats(opts):
     stats = Stats(sender=agg_sender.send, include=include, exclude=exclude)
     receiver.add_listener(stats.process)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(receiver.run())
+    asyncio.run(receiver.run())
