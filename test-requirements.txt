@@ -1,5 +1,5 @@
 aio-pika
-aio-kafka
+aiokafka
 altair 
 Cython
 h2
