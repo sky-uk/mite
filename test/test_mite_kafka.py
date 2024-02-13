@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+import aiokafka 
 import pytest
 from mocks.mock_context import MockContext
 
