@@ -67,11 +67,11 @@ async def test_mite_connect_consumer():
 
 def test_kafka_produce_message():
     w = _KafkaWrapper()
-    m = w.message(b"hi")
+    m = w.send_message("my_topic", b"hi")
     assert isinstance(m, AIOKafkaProducer.send_and_wait("my_topic", m))
 
 
 def test_kafka_consume_message():
     w = _KafkaWrapper()
-    m = w.message(b"hi")
-    assert isinstance(m, AIOKafkaConsumer.getone())
+    m = w.receive_messages()
+    assert isinstance(m, AIOKafkaConsumer.getmany())
