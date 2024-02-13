@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-
 from mite.exceptions import MiteError
 
 logger = logging.getLogger(__name__)
@@ -24,29 +23,30 @@ class _KafkaWrapper:
         del context.kafka
 
     async def create_producer(self, *args, **kwargs):
-        return AIOKafkaProducer(*args, loop=self._loop, **kwargs)
+        kwargs.setdefault("loop", self._loop)
+        return AIOKafkaProducer(*args, **kwargs)
 
     async def create_consumer(self, *args, **kwargs):
-        return AIOKafkaConsumer(*args, loop=self._loop, **kwargs)
+        kwargs.setdefault("loop", self._loop)
+        return AIOKafkaConsumer(*args, **kwargs)
 
-    async def start_producer(self, producer):
-        await producer.start()
+    async def send_and_wait(self, producer, topic, key=None, value=None, **kwargs):
+        try:
+            await producer.start()
+            await producer.send_and_wait(topic, key=key, value=value, **kwargs)
+        finally:
+            await producer.stop()
 
-    async def stop_producer(self, producer):
-        await producer.stop()
+    async def get_message(self, consumer, *topics, **kwargs):
+        try:
+            await consumer.start()
+            async for msg in consumer:
+                return msg
+        finally:
+            await consumer.stop()
 
-    async def start_consumer(self, consumer):
-        await consumer.start()
-
-    async def stop_consumer(self, consumer):
-        await consumer.stop()
-
-    async def send_message(self, producer, topic, message):
-        await producer.send(topic, message)
-
-    async def receive_messages(self, consumer, topic):
-        async for message in consumer:
-            yield message
+    async def create_message(self, value, **kwargs):
+        return value
 
 
 @asynccontextmanager
@@ -56,7 +56,7 @@ async def _kafka_context_manager(context):
     try:
         yield
     except Exception as e:
-        raise KafkaError(f"Received an error from Kafka:\n{str(e)}") from e
+        raise KafkaError(f"Received an error from Kafka:\n{e}") from e
     finally:
         kw.uninstall(context)
 
