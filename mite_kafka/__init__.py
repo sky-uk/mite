@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-from aiokafka.errors import KafkaError
 
 from mite.exceptions import MiteError
 
@@ -24,18 +23,30 @@ class _KafkaWrapper:
     def uninstall(self, context):
         del context.kafka
 
-    async def connect_producer(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
-        return await AIOKafkaProducer(*args, **kwargs).start()
+    async def create_producer(self, *args, **kwargs):
+        return AIOKafkaProducer(*args, loop=self._loop, **kwargs)
 
-    async def connect_consumer(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
-        return await AIOKafkaConsumer(*args, **kwargs).start()
+    async def create_consumer(self, *args, **kwargs):
+        return AIOKafkaConsumer(*args, loop=self._loop, **kwargs)
 
-    async def message(self, body, **kwargs):
-        if isinstance(body, str):
-            body = body.encode("utf-8")
-        return body
+    async def start_producer(self, producer):
+        await producer.start()
+
+    async def stop_producer(self, producer):
+        await producer.stop()
+
+    async def start_consumer(self, consumer):
+        await consumer.start()
+
+    async def stop_consumer(self, consumer):
+        await consumer.stop()
+
+    async def send_message(self, producer, topic, message):
+        await producer.send(topic, message)
+
+    async def receive_messages(self, consumer, topic):
+        async for message in consumer:
+            yield message
 
 
 @asynccontextmanager
@@ -44,8 +55,8 @@ async def _kafka_context_manager(context):
     kw.install(context)
     try:
         yield
-    except KafkaError as e:
-        raise KafkaError(f"Received an error from Kafka:\n{e.message}") from e
+    except Exception as e:
+        raise KafkaError(f"Received an error from Kafka:\n{str(e)}") from e
     finally:
         kw.uninstall(context)
 
