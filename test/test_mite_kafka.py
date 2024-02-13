@@ -2,6 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import aiokafka 
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import pytest
 from mocks.mock_context import MockContext
 
@@ -59,18 +60,18 @@ async def test_mite_connect_consumer():
     async def dummy_journey(ctx):
         await ctx.kafka.connect_consumer(url)
 
-    with patch("aio_pika.connect_consumer", new=connect_mock):
+    with patch("aiokafka.connect_consumer", new=connect_mock):
         await dummy_journey(context)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
-def test_kafka_message():
+def test_kafka_produce_message():
     w = _KafkaWrapper()
     m = w.message(b"hi")
-    assert isinstance(m, aiokafka.Message)
+    assert isinstance(m, AIOKafkaProducer.send_and_wait("my_topic", m))
 
 
-def test_kafka_message_string():
+def test_kafka_consume_message():
     w = _KafkaWrapper()
-    m = w.message("hi")
-    assert isinstance(m, aiokafka.Message)
+    m = w.message(b"hi")
+    assert isinstance(m, AIOKafkaConsumer.getone())
