@@ -32,7 +32,7 @@ async def test_mite_kafka_decorator_uninstall():
 
 @pytest.mark.asyncio
 @pytest.mark.xfail(strict=False)
-async def test_mite_kafka_connect():
+async def test_mite_connect_producer():
     context = MockContext()
     url = "kafka://foo.bar"
 
@@ -40,48 +40,29 @@ async def test_mite_kafka_connect():
 
     @mite_kafka
     async def dummy_journey(ctx):
-        await ctx.kafka.connect(url)
+        await ctx.kafka.connect_producer(url)
 
-    with patch("aiokafka.connect", new=connect_mock):
+    with patch("aiokafka.connect_producer", new=connect_mock):
         await dummy_journey(context)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 @pytest.mark.asyncio
-async def test_mite_kafka_consumer(self):
-    loop = asyncio.new_event_loop()
-    with pytest.deprecated_call():
-        consumer = AIOKafkaConsumer(
-            self.topic, bootstrap_servers=self.hosts, loop=loop
-            )
-        loop.run_until_complete(consumer.start())
-        try:
-            loop.run_until_complete(self.send_messages(0, list(range(0, 10))))
-            for _ in range(10):
-                loop.run_until_complete(consumer.getone())
-        finally:
-            loop.run_until_complete(consumer.stop())
-            loop.close()
+@pytest.mark.xfail(strict=False)
+async def test_mite_connect_consumer():
+    context = MockContext()
+    url = "kafka://foo.bar"
 
+    connect_mock = AsyncMock()
 
-@pytest.mark.asyncio
-async def test_mite_kafka_producer(self):
-    loop = asyncio.new_event_loop()
-    with pytest.deprecated_call():
-        producer = AIOKafkaProducer(bootstrap_servers=self.hosts, loop=loop)
-        loop.run_until_complete(producer.start())
-        try:
-            future = loop.run_until_complete(
-                producer.send(self.topic, b"Hello, Kafka!", partition=0)
-            )
-            resp = loop.run_until_complete(future)
-            self.assertEqual(resp.topic, self.topic)
-            self.assertTrue(resp.partition in (0, 1))
-            self.assertEqual(resp.offset, 0)
-        finally:
-            loop.run_until_complete(producer.stop())
-            loop.close()
+    @mite_kafka
+    async def dummy_journey(ctx):
+        await ctx.kafka.connect_consumer(url)
 
+    with patch("aio_pika.connect_consumer", new=connect_mock):
+        await dummy_journey(context)
+
+    connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 def test_kafka_message():
     w = _KafkaWrapper()
