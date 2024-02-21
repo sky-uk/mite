@@ -223,6 +223,7 @@ cdef class Session:
         cert=None,
         allow_redirects=True,
         max_redirects=5,
+        version=None
     ):
         if not isinstance(method, bytes):
             raise ValueError("method must be bytes")
@@ -257,6 +258,7 @@ cdef class Session:
             auth,
             data,
             cert,
+            version
         )
         # This decref is the partner to the incref in _inner_request above --
         # at this point curl is done with the response and so we no longer
