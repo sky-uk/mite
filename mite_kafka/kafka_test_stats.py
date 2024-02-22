@@ -43,8 +43,7 @@ async def consume_from_kafka(ctx):
 
 # Example usage of the functions
 async def main():
-    message_to_send = "Hello Kafka!"
-    await produce_to_kafka(message_to_send)
+    await produce_to_kafka()
 
     # Wait for a while before consuming messages
     await asyncio.sleep(2)
