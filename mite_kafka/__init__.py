@@ -18,8 +18,6 @@ class _KafkaWrapper:
         self._loop = asyncio.get_event_loop()
 
     def install(self, context):
-        if not isinstance(context, KafkaContext):
-            raise ValueError("Context must be an instance of KafkaContext")
         context.kafka = self
 
     def uninstall(self, context):
@@ -66,4 +64,5 @@ def mite_kafka(func):
     async def wrapper(ctx, *args, **kwargs):
         async with _kafka_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
+        
     return wrapper
