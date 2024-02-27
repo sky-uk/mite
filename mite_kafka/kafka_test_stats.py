@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+from mite.scenario import StopVolumeModel
 from mite_kafka import KafkaError, mite_kafka, KafkaContext
 
 # Set up logging
@@ -13,6 +13,15 @@ KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 # Define your Kafka topic
 KAFKA_TOPIC = 'test_topic1'
 
+def volume_model_factory(n):
+    def vm(start, end):
+        if start > 60 * 1:  # Will run for 15 mins
+            raise StopVolumeModel
+        return n
+
+    vm.__name__ = f"volume model {n}"
+    return vm
+
 # Example function to produce messages to Kafka
 @mite_kafka
 async def produce_to_kafka(ctx):
@@ -21,7 +30,7 @@ async def produce_to_kafka(ctx):
     try:
         await ctx.kafka.send_and_wait(producer, KAFKA_TOPIC, value=message.encode('utf-8'))
         logger.info(f"Message sent to Kafka: {message}")
-        ctx.send("mite_kafka_producer_stats", message=message, topic=KAFKA_TOPIC)
+        ctx.send("kafka_producer_stats", message=message, topic=KAFKA_TOPIC)
     except KafkaError as e:
         logger.error(f"Error sending message to Kafka: {e}")
     finally:
@@ -35,11 +44,16 @@ async def consume_from_kafka(ctx):
         await consumer.start()
         async for message in consumer:
             logger.info(f"Received message from Kafka: {message.value.decode('utf-8')}")
-            ctx.send("mite_kafka_consumer_stats", message=message, topic=KAFKA_TOPIC)
+            ctx.send("kafka_consumer_stats", message=message, topic=KAFKA_TOPIC)
     except KafkaError as e:
         logger.error(f"Error consuming message from Kafka: {e}")
     finally:
         await consumer.stop()
+
+def scenario():
+    return [
+        ["mite_kafka.kafka_test_stats:produce_to_kafka", None, volume_model_factory(2)],
+    ]
 
 # Example usage of the functions
 async def main():
