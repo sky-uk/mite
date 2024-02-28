@@ -12,8 +12,8 @@ mite runner --controller-socket=tcp://127.0.0.1:14301 --message-socket=tcp://127
 mite runner --controller-socket=tcp://127.0.0.1:14301 --message-socket=tcp://127.0.0.1:14312 &
 mite duplicator --message-socket=tcp://0.0.0.0:14302 tcp://0.0.0.0:14305 &
 mite duplicator --message-socket=tcp://0.0.0.0:14312 tcp://0.0.0.0:14314 &
-mite stats --stats-in-socket=tcp://127.0.0.1:14303 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_kafka &
-mite stats --stats-in-socket=tcp://127.0.0.1:14314 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_kafka &
+mite stats --stats-in-socket=tcp://127.0.0.1:14303 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_http,mite_kafka &
+mite stats --stats-in-socket=tcp://127.0.0.1:14314 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_http,mite_kafka &
 mite prometheus_exporter --stats-out-socket=tcp://127.0.0.1:14305 --web-address=0.0.0.0:9301 &
 
 # Start a mock web server

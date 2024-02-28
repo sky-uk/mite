@@ -15,7 +15,7 @@ KAFKA_TOPIC = 'test_topic1'
 
 def volume_model_factory(n):
     def vm(start, end):
-        if start > 1:  # Will run for 15 mins
+        if start > 60:  # Will run for 15 mins
             raise StopVolumeModel
         return n
 
@@ -25,16 +25,16 @@ def volume_model_factory(n):
 # Example function to produce messages to Kafka
 @mite_kafka
 async def produce_to_kafka(ctx):
+    sent_ids = 0 
     message = "Hello Kafka!"
     producer = await ctx.kafka.create_producer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     try:
         await ctx.kafka.send_and_wait(producer, KAFKA_TOPIC, value=message.encode('utf-8'))
-        logger.info(f"Message sent to Kafka: {message}")
-        ctx.send("kafka_producer_stats", message=message, topic=KAFKA_TOPIC)
+        logger.info(f"Message sent to Kafka: {message} to the topic {KAFKA_TOPIC}")
+        sent_ids +=1
+        ctx.send("kafka_producer_stats", message=message, topic_name=KAFKA_TOPIC,total_sent=sent_ids)
     except KafkaError as e:
         logger.error(f"Error sending message to Kafka: {e}")
-    finally:
-        await producer.stop()
 
 # Example function to consume messages from Kafka
 @mite_kafka
