@@ -15,7 +15,7 @@ KAFKA_TOPIC = 'test_topic1'
 
 def volume_model_factory(n):
     def vm(start, end):
-        if start > 60 * 1:  # Will run for 15 mins
+        if start > 1:  # Will run for 15 mins
             raise StopVolumeModel
         return n
 
