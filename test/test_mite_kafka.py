@@ -72,5 +72,5 @@ def test_kafka_produce_message():
 
 def test_kafka_consume_message():
     w = _KafkaWrapper()
-    m = w.get_message()
+    m = w.get_message("my_topic")
     assert isinstance(m, AIOKafkaConsumer.getmany())
