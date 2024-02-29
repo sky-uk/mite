@@ -15,7 +15,7 @@ KAFKA_TOPIC = 'test_topic3'
 
 def volume_model_factory(n):
     def vm(start, end):
-        if start > 1:  # Will run for 15 mins
+        if start > 60 :  # Will run for 15 mins
             raise StopVolumeModel
         return n
 
@@ -42,12 +42,15 @@ async def consume_from_kafka(ctx):
     receive_ids = 0
     consumer = await ctx.kafka.create_consumer(KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     try:
-        message = await ctx.kafka.get_message(consumer, KAFKA_TOPIC)
-        logger.info(f"Received message from Kafka: {message.value.decode('utf-8')}")
-        receive_ids +=1
-        ctx.send("kafka_consumer_stats", message=message, topic=KAFKA_TOPIC, total_received = receive_ids)
+        async for message in consumer:
+            logger.info(f"Received message from Kafka: {message.value.decode('utf-8')}")
+            receive_ids += 1
+            ctx.send("kafka_consumer_stats", message=message, topic_name=KAFKA_TOPIC, total_received=receive_ids)
     except KafkaError as e:
         logger.error(f"Error consuming message from Kafka: {e}")
+    finally:
+        await consumer.stop()
+
         
 def scenario():
     return [
