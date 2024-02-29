@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from mite.scenario import StopVolumeModel
-from mite_kafka import KafkaError, mite_kafka, KafkaContext
+from mite_kafka import KafkaError, mite_kafka
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 
 # Define your Kafka topic
-KAFKA_TOPIC = 'test_topic1'
+KAFKA_TOPIC = 'test_topic3'
 
 def volume_model_factory(n):
     def vm(start, end):
-        if start > 60:  # Will run for 15 mins
+        if start > 1:  # Will run for 15 mins
             raise StopVolumeModel
         return n
 
@@ -39,31 +39,18 @@ async def produce_to_kafka(ctx):
 # Example function to consume messages from Kafka
 @mite_kafka
 async def consume_from_kafka(ctx):
-    consumer = await ctx.kafka.create_consumer(KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS, group_id='test')
+    receive_ids = 0
+    consumer = await ctx.kafka.create_consumer(KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     try:
-        await consumer.start()
-        async for message in consumer:
-            logger.info(f"Received message from Kafka: {message.value.decode('utf-8')}")
-            ctx.send("kafka_consumer_stats", message=message, topic=KAFKA_TOPIC)
+        message = await ctx.kafka.get_message(consumer, KAFKA_TOPIC)
+        logger.info(f"Received message from Kafka: {message.value.decode('utf-8')}")
+        receive_ids +=1
+        ctx.send("kafka_consumer_stats", message=message, topic=KAFKA_TOPIC, total_received = receive_ids)
     except KafkaError as e:
         logger.error(f"Error consuming message from Kafka: {e}")
-    finally:
-        await consumer.stop()
-
+        
 def scenario():
     return [
         ["mite_kafka.kafka_test_stats:produce_to_kafka", None, volume_model_factory(2)],
+        # ["mite_kafka.kafka_test_stats:consume_from_kafka", None, volume_model_factory(2)]
     ]
-
-# Example usage of the functions
-async def main():
-    await produce_to_kafka()
-
-    # Wait for a while before consuming messages
-    await asyncio.sleep(2)
-
-    await consume_from_kafka()
-
-if __name__ == "__main__":
-    context = KafkaContext()
-    asyncio.run(main())

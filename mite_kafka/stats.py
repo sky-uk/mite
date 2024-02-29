@@ -4,9 +4,10 @@ from mite.stats import Accumulator,extractor, Extractor,matcher_by_type
 
 
 def _kafka_extract(msg):
-    for key, value in msg["total_received"].items():
-        yield (key, msg["topic_name"]), len(value)
-
+    return {
+        "total_received": msg["total_received"],
+        "topic_name": msg["topic_name"]
+    }
 
 _KAFKA_STATS = [
     Accumulator(
