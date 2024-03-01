@@ -37,7 +37,7 @@ async def test_mite_connect_producer():
 
     connect_mock = AsyncMock()
 
-    with patch("your_module._KafkaWrapper.create_producer", new=connect_mock):
+    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock):
         await context.kafka.connect_producer(url)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
@@ -49,7 +49,7 @@ async def test_mite_connect_consumer():
 
     connect_mock = AsyncMock()
 
-    with patch("your_module._KafkaWrapper.create_consumer", new=connect_mock):
+    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock):
         await context.kafka.connect_consumer(url)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
