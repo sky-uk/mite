@@ -54,6 +54,6 @@ async def consume_from_kafka(ctx):
         
 def scenario():
     return [
-        ["mite_kafka.kafka_test_stats:produce_to_kafka", None, volume_model_factory(2)],
+        ["mite_kafka.kafka_test_scenario:produce_to_kafka", None, volume_model_factory(2)],
         # ["mite_kafka.kafka_test_stats:consume_from_kafka", None, volume_model_factory(2)]
     ]

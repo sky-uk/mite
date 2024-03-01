@@ -8,9 +8,15 @@ from mocks.mock_context import MockContext
 from mite_kafka import _KafkaWrapper, mite_kafka
 
 
-@pytest.mark.asyncio
-async def test_mite_kafka_decorator():
+@pytest.fixture
+def mock_context():
     context = MockContext()
+    context.kafka = _KafkaWrapper()  # Assign _KafkaWrapper instance to the kafka attribute
+    return context
+
+@pytest.mark.asyncio
+async def test_mite_kafka_decorator(mock_context):
+    context = mock_context
 
     @mite_kafka
     async def dummy_journey(ctx):
@@ -19,8 +25,8 @@ async def test_mite_kafka_decorator():
     await dummy_journey(context)
 
 @pytest.mark.asyncio
-async def test_mite_kafka_decorator_uninstall():
-    context = MockContext()
+async def test_mite_kafka_decorator_uninstall(mock_context):
+    context = mock_context
 
     @mite_kafka
     async def dummy_journey(ctx):
@@ -31,39 +37,39 @@ async def test_mite_kafka_decorator_uninstall():
     assert getattr(context, "kafka", None) is None
 
 @pytest.mark.asyncio
-async def test_mite_connect_producer():
-    context = MockContext()
+async def test_mite_connect_producer(mock_context):
+    context = mock_context
     url = "kafka://foo.bar"
 
     connect_mock = AsyncMock()
 
-    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock):
+    with patch("your_module._KafkaWrapper.create_producer", new=connect_mock):
         await context.kafka.connect_producer(url)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 @pytest.mark.asyncio
-async def test_mite_connect_consumer():
-    context = MockContext()
+async def test_mite_connect_consumer(mock_context):
+    context = mock_context
     url = "kafka://foo.bar"
 
     connect_mock = AsyncMock()
 
-    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock):
+    with patch("your_module._KafkaWrapper.create_consumer", new=connect_mock):
         await context.kafka.connect_consumer(url)
 
     connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 @pytest.mark.asyncio
-async def test_kafka_produce_message():
-    w = _KafkaWrapper()
-    producer = await w.create_producer()
-    m = await w.send_and_wait(producer, "my_topic", b"hi")
+async def test_kafka_produce_message(mock_context):
+    context = mock_context
+    producer = await context.kafka.create_producer()
+    m = await context.kafka.send_and_wait(producer, "my_topic", b"hi")
     assert m is not None
 
 @pytest.mark.asyncio
-async def test_kafka_consume_message():
-    w = _KafkaWrapper()
-    consumer = await w.create_consumer()
-    m = await w.get_message(consumer, "my_topic")
+async def test_kafka_consume_message(mock_context):
+    context = mock_context
+    consumer = await context.kafka.create_consumer()
+    m = await context.kafka.get_message(consumer, "my_topic")
     assert m is not None
