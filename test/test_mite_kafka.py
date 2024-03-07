@@ -1,12 +1,9 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import pytest
 from mite_kafka import _KafkaWrapper, mite_kafka
-
-class MockContext:
-    pass
+from mocks.mock_context import MockContext
 
 @pytest.mark.asyncio
 async def test_mite_kafka_decorator():
@@ -14,7 +11,7 @@ async def test_mite_kafka_decorator():
 
     @mite_kafka
     async def dummy_journey(ctx):
-        assert hasattr(ctx, "kafka")
+        assert ctx.kafka is not None
 
     await dummy_journey(context)
 
@@ -28,7 +25,8 @@ async def test_mite_kafka_decorator_uninstall():
 
     await dummy_journey(context)
 
-    assert not hasattr(context, "kafka")
+    assert getattr(context, "kafka", None) is None
+
 
 @pytest.mark.asyncio
 async def test_mite_connect_producer():
@@ -38,7 +36,7 @@ async def test_mite_connect_producer():
     connect_mock = AsyncMock()
 
     with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock) as mock_create_producer:
-        await context.kafka.connect_producer(url)
+        await context.kafka.create_producer(url)
 
     mock_create_producer.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
@@ -51,7 +49,7 @@ async def test_mite_connect_consumer():
     connect_mock = AsyncMock()
 
     with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock) as mock_create_consumer:
-        await context.kafka.connect_consumer(url)
+        await context.kafka.create_consumer(url)
 
     mock_create_consumer.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
