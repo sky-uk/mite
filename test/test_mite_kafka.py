@@ -35,10 +35,14 @@ async def test_mite_connect_producer():
 
     connect_mock = AsyncMock()
 
-    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock) as mock_create_producer:
-        await context.kafka.create_producer(url)
+    @mite_kafka
+    async def dummy_journey(ctx):
+        await ctx.kafka.create_producer(url)
 
-    mock_create_producer.assert_called_once_with(url, loop=asyncio.get_event_loop())
+    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock):
+        await dummy_journey(context)
+
+    connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 
 @pytest.mark.asyncio
@@ -48,10 +52,14 @@ async def test_mite_connect_consumer():
 
     connect_mock = AsyncMock()
 
-    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock) as mock_create_consumer:
-        await context.kafka.create_consumer(url)
+    @mite_kafka
+    async def dummy_journey(ctx):
+        await ctx.kafka.create_consumer(url)
 
-    mock_create_consumer.assert_called_once_with(url, loop=asyncio.get_event_loop())
+    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock):
+        await dummy_journey(context)
+
+    connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 @pytest.mark.asyncio
 async def test_kafka_produce_message():
