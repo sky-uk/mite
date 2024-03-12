@@ -8,6 +8,10 @@ from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from mite.exceptions import MiteError
 from mite_kafka import mite_kafka, KafkaError, _KafkaWrapper
 
+class MockContext:
+    def __init__(self):
+        self.kafka = None
+
 @pytest.mark.asyncio
 async def test_mite_kafka_decorator():
     context = MockContext()
