@@ -62,12 +62,7 @@ async def _kafka_context_manager(context):
 
 def mite_kafka(func):
     async def wrapper(ctx, *args, **kwargs):
-        kafka_wrapper = _KafkaWrapper()
-        ctx.kafka = kafka_wrapper  # Assigning _KafkaWrapper instance to ctx.kafka
-        try:
-            async with _kafka_context_manager(ctx):
-                return await func(ctx, *args, **kwargs)
-        finally:
-            ctx.kafka = None  # Resetting ctx.kafka to None after function execution
+        async with _kafka_context_manager(ctx):
+            return await func(ctx, *args, **kwargs)
 
     return wrapper
