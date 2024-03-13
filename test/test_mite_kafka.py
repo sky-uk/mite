@@ -28,3 +28,24 @@ async def test_mite_kafka_decorator_uninstall():
     assert getattr(context, "kafka", None) is None
 
 
+@pytest.mark.asyncio
+async def test_create_producer():
+    # Create a mock instance of AIOKafkaProducer
+    producer_mock = AsyncMock()
+    
+    # Patch the AIOKafkaProducer with the mock
+    with patch('mite_kafka.AIOKafkaProducer', return_value=producer_mock) as mock_kafka_producer:
+        # Create an instance of _KafkaWrapper
+        kafka_wrapper = _KafkaWrapper()
+        
+        # Call the create_producer method
+        await kafka_wrapper.create_producer('bootstrap_servers', client_id='test_client')
+
+        # Assert that AIOKafkaProducer is called with the correct arguments
+        mock_kafka_producer.assert_called_once_with('bootstrap_servers', loop=asyncio.get_event_loop(), client_id='test_client')
+
+        # Assert that the producer is started
+        producer_mock.start.assert_awaited_once()
+
+        # Assert that the producer is stopped
+        producer_mock.stop.assert_awaited_once()
