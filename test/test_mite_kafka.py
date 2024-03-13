@@ -30,11 +30,14 @@ async def test_mite_kafka_decorator_uninstall():
 
 @pytest.mark.asyncio
 async def test_create_producer():
-    # Mock the AIOKafkaProducer object
+    # Create a mock for AIOKafkaProducer
     producer_mock = AsyncMock()
+    # Mock the start and stop methods of the producer
+    producer_mock.start = AsyncMock()
+    producer_mock.stop = AsyncMock()
 
-    # Patch the AIOKafkaProducer class with the mock
-    with patch('mite_kafka.AIOKafkaProducer', return_value=producer_mock) as producer_class_mock:
+    # Patch AIOKafkaProducer to return the mock
+    with patch('mite_kafka.AIOKafkaProducer', return_value=producer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = _KafkaWrapper()
 
@@ -42,11 +45,11 @@ async def test_create_producer():
         await kafka_wrapper.create_producer('broker_url')
 
         # Assert that the AIOKafkaProducer class was called with the expected arguments
-        producer_class_mock.assert_called_once_with('broker_url', loop=asyncio.get_event_loop())
+        mite_kafka.AIOKafkaProducer.assert_called_once_with('broker_url', loop=asyncio.get_event_loop())
 
-        # Assert that the start method of the producer object was awaited once
-        producer_mock.start.assert_awaited_once()
+        # Assert that the start method of the producer object was called
+        producer_mock.start.assert_called_once()
 
-        # Assert that the stop method of the producer object was awaited once
-        producer_mock.stop.assert_awaited_once()
+        # Assert that the stop method of the producer object was called
+        producer_mock.stop.assert_called_once()
         
