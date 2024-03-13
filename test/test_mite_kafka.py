@@ -39,10 +39,10 @@ async def test_mite_connect_producer():
     async def dummy_journey(ctx):
         await ctx.kafka.create_producer(url)
 
-    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock):
+    with patch("mite_kafka._KafkaWrapper.create_producer", new=connect_mock) as create_producer_mock:
         await dummy_journey(context)
 
-    connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
+    create_producer_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
 
 
 @pytest.mark.asyncio
@@ -56,9 +56,7 @@ async def test_mite_connect_consumer():
     async def dummy_journey(ctx):
         await ctx.kafka.create_consumer(url)
 
-    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock):
+    with patch("mite_kafka._KafkaWrapper.create_consumer", new=connect_mock) as create_consumer_mock:
         await dummy_journey(context)
 
-    connect_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
-
-
+    create_consumer_mock.assert_called_once_with(url, loop=asyncio.get_event_loop())
