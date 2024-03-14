@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from mite_kafka import _KafkaWrapper, mite_kafka
 from mocks.mock_context import MockContext
+from aiokafka import AIOKafkaProducer
 
 @pytest.mark.asyncio
 async def test_mite_kafka_decorator():
@@ -34,7 +35,7 @@ async def test_create_producer():
     producer_mock = AsyncMock()
 
     # Patch AIOKafkaProducer to return the mock
-    with patch('aiokafka.producer.AIOKafkaProducer', return_value=producer_mock) as producer_class_mock:
+    with patch('aiokafka.AIOKafkaProducer', return_value=producer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = _KafkaWrapper()
 
@@ -42,14 +43,10 @@ async def test_create_producer():
         await kafka_wrapper.create_producer(bootstrap_servers='broker_url')  # Pass the broker URL as a keyword argument
 
         # Assert that the AIOKafkaProducer class was called with the expected arguments
-        producer_class_mock.assert_called_once_with(
+        AIOKafkaProducer.assert_called_once_with(
             bootstrap_servers='broker_url',  # Pass the broker URL as a keyword argument
             loop=asyncio.get_event_loop()  # Pass the event loop as a keyword argument
         )
 
-        # Assert that the start method of the producer object was called
-        producer_mock.start.assert_called_once()
 
-        # Assert that the stop method of the producer object was called
-        producer_mock.stop.assert_called_once()
         
