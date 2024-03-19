@@ -39,7 +39,7 @@ async def test_kafka_producer():
 
         mocked.side_effect = dummy
         await kafka_wrapper.create_producer(bootstrap_servers='broker_url')
-        await kafka_wrapper.send_and_wait(b"some_topic", b"hello")
+        await kafka_wrapper.send_and_wait("some_topic", "hello")
 
         AIOKafkaProducer.assert_called_once_with(
             bootstrap_servers='broker_url',
