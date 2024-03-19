@@ -31,7 +31,6 @@ async def test_mite_kafka_decorator_uninstall():
 
 @pytest.mark.asyncio
 async def test_kafka_producer():
-    producer_mock = AsyncMock()
     kafka_wrapper = _KafkaWrapper()
     with patch.object(AIOKafkaClient, "_metadata_update") as mocked:
         async def dummy(*d, **kw):
@@ -40,7 +39,7 @@ async def test_kafka_producer():
         mocked.side_effect = dummy
         await kafka_wrapper.create_producer(bootstrap_servers='broker_url')
 
-        AIOKafkaProducer.assert_called_once_with(
+        mocked.assert_called_once_with(
             bootstrap_servers='broker_url',
             loop=asyncio.get_event_loop())
      
