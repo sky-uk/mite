@@ -5,6 +5,7 @@ import pytest
 from mite_kafka import _KafkaWrapper, mite_kafka
 from mocks.mock_context import MockContext
 from aiokafka.producer import AIOKafkaProducer
+from aiokafka import AIOKafkaClient
 
 @pytest.mark.asyncio
 async def test_mite_kafka_decorator():
@@ -32,7 +33,7 @@ async def test_mite_kafka_decorator_uninstall():
 async def test_kafka_producer():
     producer_mock = AsyncMock()
     kafka_wrapper = _KafkaWrapper()
-    with patch.object("aiokafka.producer.AIOKafkaProducer", return_value=producer_mock) as mocked:
+    with patch.object(AIOKafkaClient, "_metadata_update") as mocked:
         async def dummy(*d, **kw):
             return
 
