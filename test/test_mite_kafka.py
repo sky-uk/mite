@@ -41,6 +41,6 @@ async def test_create_producer():
         await kafka_wrapper.create_producer(bootstrap_servers='broker_url')  # Pass the broker URL as a keyword argument
         # Assert that the AIOKafkaProducer class was called with the expected arguments
         # AIOKafkaProducer.return_value.assert_called()
-        mock_producer.assert_called_once()
+        mock_producer.assert_called_once_with('broker_url',loop=asyncio.get_event_loop())
 
         
