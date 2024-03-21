@@ -42,7 +42,7 @@ async def test_create_producer():
         # Assert that the AIOKafkaProducer class was called with the expected arguments
         # AIOKafkaProducer.return_value.assert_called()
         await asyncio.sleep(0)
-        producer_mock.assert_called()
+        producer_mock.assert_called_once_with()
 
 
 
@@ -59,6 +59,6 @@ async def test_create_producer_two():
         # Assert that the AIOKafkaProducer class was called with the expected arguments
         # AIOKafkaProducer.return_value.assert_called()
         await asyncio.sleep(0)
-        producer_mock.assert_called_once_with()
+        producer_mock.assert_called_once_with(bootstrap_servers='broker_url',loop=asyncio.get_event_loop())
 
 
