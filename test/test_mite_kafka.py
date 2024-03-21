@@ -42,6 +42,23 @@ async def test_create_producer():
         # Assert that the AIOKafkaProducer class was called with the expected arguments
         # AIOKafkaProducer.return_value.assert_called()
         await asyncio.sleep(0)
+        producer_mock.assert_called()
+
+
+
+@pytest.mark.asyncio
+async def test_create_producer_two():
+    # Create a mock for AIOKafkaProducer
+    producer_mock = AsyncMock()
+    # Patch AIOKafkaProducer to return the mock
+    with patch('aiokafka.producer.AIOKafkaProducer', new_callable=producer_mock):
+        # Create an instance of _KafkaWrapper
+        kafka_wrapper = _KafkaWrapper()
+        # Call the create_producer method
+        await kafka_wrapper.create_producer(bootstrap_servers='broker_url')  # Pass the broker URL as a keyword argument
+        # Assert that the AIOKafkaProducer class was called with the expected arguments
+        # AIOKafkaProducer.return_value.assert_called()
+        await asyncio.sleep(0)
         producer_mock.assert_called_once_with()
 
 
