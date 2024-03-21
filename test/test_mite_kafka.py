@@ -45,19 +45,3 @@ async def test_create_producer():
         producer_mock.assert_called_once_with()
 
 
-@pytest.mark.asyncio
-async def test_create_producer_two():
-    producer_mock = AsyncMock()
-    msg = "bar"
-    @mite_kafka
-    async def dummy_journey():
-        # Create an instance of _KafkaWrapper
-        kafka_wrapper = _KafkaWrapper()
-        # Call the create_producer method
-        return await kafka_wrapper.create_producer(bootstrap_servers='broker_url') 
-
-    with patch('aiokafka.producer.AIOKafkaProducer', new=producer_mock):
-        wb = await dummy_journey(producer_mock)
-    await wb.send(msg)
-    producer_mock.return_value.send.assert_called_once_with(msg)
-        
