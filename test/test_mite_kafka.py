@@ -34,7 +34,7 @@ async def test_create_producer():
     # Create a mock for AIOKafkaProducer
     producer_mock = AsyncMock()
     # Patch AIOKafkaProducer to return the mock
-    with patch('aiokafka.producer.AIOKafkaProducer', new_callable=producer_mock) as mock_producer:
+    with patch('aiokafka.producer.AIOKafkaProducer', new_callable=producer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = _KafkaWrapper()
         # Call the create_producer method
@@ -42,6 +42,6 @@ async def test_create_producer():
         # Assert that the AIOKafkaProducer class was called with the expected arguments
         # AIOKafkaProducer.return_value.assert_called()
         await asyncio.sleep(0)
-        mock_producer.assert_called_once_with('broker_url',loop=asyncio.get_event_loop())
+        producer_mock.assert_called_once_with('broker_url',loop=asyncio.get_event_loop())
 
         
