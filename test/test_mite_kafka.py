@@ -4,8 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from mite_kafka import _KafkaWrapper, mite_kafka
 from mocks.mock_context import MockContext
-from aiokafka.producer import AIOKafkaProducer
-from aiokafka import AIOKafkaClient
+
 
 @pytest.mark.asyncio
 async def test_mite_kafka_decorator():
@@ -38,7 +37,7 @@ async def test_producer():
         # Create an instance of _KafkaWrapper
         kafka_wrapper = _KafkaWrapper()
         # Call the create_producer method
-        producer = await kafka_wrapper.create_producer(bootstrap_servers='broker_url')  # Pass the broker URL as a keyword argument
+        producer = await kafka_wrapper.create_producer(bootstrap_servers='kafka://foo.bar')  # Pass the broker URL as a keyword argument
         # Call the send_and_wait method
         await kafka_wrapper.send_and_wait(producer, 'some_topic', 'Hello Kafka')
         # Assert that the AIOKafkaProducer class was called with the expected arguments
