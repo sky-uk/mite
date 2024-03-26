@@ -29,13 +29,6 @@ workflows:
           filters:
             branches:
               only: master
-      - osx-wheels:
-          requires:
-            - tag
-          filters:
-            branches:
-              only: master
-
 
 jobs:
 
@@ -146,39 +139,5 @@ jobs:
       - run:
           name: upload packages to pypi
           command: /root/.local/bin/twine upload wheelhouse/*
-      - store_artifacts:
-          path: wheelhouse/
-
-  osx-wheels:
-    working_directory: ~/osx-wheels
-    macos:
-      # https://circleci.com/docs/testing-ios#supported-xcode-versions
-      xcode: 12.5.1
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Build the OS X wheels.
-          command: |
-            source /tmp/workspace/env_vars
-            if [ "$ACURL_CHANGED" = true ]; then
-              pip3 install cibuildwheel==2.8.1 Cython twine
-              cd acurl
-              cibuildwheel --output-dir ../wheelhouse --archs x86_64,arm64
-            fi
-      - run:
-          name: init .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = __token__" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-      - run:
-          name: upload packages to pypi
-          command: |
-            source /tmp/workspace/env_vars
-            if [ "$ACURL_CHANGED" = true ]; then
-              twine upload wheelhouse/*
-            fi
       - store_artifacts:
           path: wheelhouse/
