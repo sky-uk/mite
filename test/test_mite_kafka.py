@@ -31,10 +31,9 @@ async def test_mite_kafka_decorator_uninstall():
     assert getattr(context, "kafka", None) is None
 
 @pytest.mark.asyncio
-async def test_producer():
+async def test_create_producer():
     # Create a mock for AIOKafkaProducer
     producer_mock = AsyncMock()
-    producer = aiokafka.AIOKafkaProducer(bootstrap_servers="localhost:9092")
 
     # Patch AIOKafkaProducer to return the mock
     with patch('aiokafka.producer.AIOKafkaProducer', new_callable=producer_mock):
@@ -46,4 +45,18 @@ async def test_producer():
         await asyncio.sleep(0)
         producer_mock.assert_called_once_with()
 
+@pytest.mark.asyncio
+async def test_create_consumer():
+    # Create a mock for AIOKafkaConsumer
+    consumer_mock = AsyncMock()
+
+    # Patch AIOKafkaConsumer to return the mock
+    with patch('aiokafka.comnsumer.AIOKafkaConsumer', new_callable=consumer_mock):
+        # Create an instance of _KafkaWrapper
+        kafka_wrapper = _KafkaWrapper()
+        # Call the create_consumer method
+        await kafka_wrapper.create_consumer(bootstrap_servers='broker_url')  # Pass the broker URL as a keyword argument
+        # Assert that the AIOKafkaConsumer class was called with the expected arguments
+        await asyncio.sleep(0)
+        consumer_mock.assert_called_once_with()
         
