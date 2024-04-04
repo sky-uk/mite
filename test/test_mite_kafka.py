@@ -51,7 +51,7 @@ async def test_create_consumer():
     consumer_mock = AsyncMock()
 
     # Patch AIOKafkaConsumer to return the mock
-    with patch('aiokafka.comnsumer.AIOKafkaConsumer', new_callable=consumer_mock):
+    with patch('aiokafka.consumer.AIOKafkaConsumer', new_callable=consumer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = _KafkaWrapper()
         # Call the create_consumer method
