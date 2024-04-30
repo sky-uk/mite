@@ -1,9 +1,9 @@
 version: 1
-context: identity
+context: sky-identity
 triggering: multibranch
 
 defaultNodes:
-  default: id-mite-slave
+  default: sky-identity-nonprod-mite-slave-buildkit
 
 modules:
   mite-ci:
