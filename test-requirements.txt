@@ -13,4 +13,4 @@ pytest-cov
 pytest-httpbin
 pytest-httpserver
 sanic
-werkzeug==2.0.3
+werkzeug==3.0.3
