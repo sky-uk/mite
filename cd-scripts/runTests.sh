@@ -8,7 +8,7 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
 fi
 
 pip install ujson
-tox -e py311; TOX_EXIT_CODE=$?
+tox -p -e py39, py310, py311; TOX_EXIT_CODE=$?
 
 # Further ideas for jobs to run:
 # - license check
