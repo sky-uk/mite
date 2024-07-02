@@ -27,10 +27,9 @@ function checkAcurl() {
 }
 
 function buildLinuxWheels() {
-    # linux-wheels
-    # environment: - Do we need the 2 below?
-    # CIBW_BEFORE_ALL_LINUX: "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
-    # CIBW_SKIP: "*i686"
+    
+    echo "export CIBW_BEFORE_ALL_LINUX=\"yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev\"" >> /tmp/workspace/env_vars
+    echo "export CIBW_SKIP=\"*i686\"" >> /tmp/workspace/env_vars
 
     source /tmp/workspace/env_vars
     if [ "$VERSION_INCREMENT" = false ]; then
