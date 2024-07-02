@@ -39,6 +39,8 @@ ACURL_CHANGED=false
 #     exit 1
 #     fi
 # fi
+
+ACURL_CHANGED=true
 mkdir -p /tmp/workspace
 echo "export ACURL_CHANGED=\"$ACURL_CHANGED\"" >> /tmp/workspace/env_vars
 
@@ -56,10 +58,10 @@ if [ "$ACURL_CHANGED" = true ]; then
     python3 -m build --sdist --outdir ../wheelhouse
 fi
 
-# ini .pypirc
-# echo -e "[pypi]" >> ~/.pypirc
-#             echo -e "username = __token__" >> ~/.pypirc
-#             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+# ------ init .pypirc
+echo -e "[pypi]" >> ~/.pypirc
+echo -e "username = __token__" >> ~/.pypirc
+echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
-# upload packages to pypi
-#           command: /root/.local/bin/twine upload wheelhouse/*
+# ------ upload packages to pypi
+# command: /root/.local/bin/twine upload wheelhouse/*
