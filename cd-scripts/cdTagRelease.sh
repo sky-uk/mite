@@ -51,20 +51,22 @@ function initPypirc() {
     echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 }
 
+###### MAIN SECTION ######
+
 # TAG STEP - It has sshkeys and fingerprints in the circle-ci config. Do we need them?
 # FYI This script doesn't run if the runTest job is triggered on a branch!
-echo "##### Starting TAG process"
+echo "##### Starting TAG process #####"
 tagBuild
 
-echo "##### Look for Acurl changes"
+echo "##### Look for Acurl changes #####"
 checkAcurl
 
-echo "##### Build Linux-Wheels"
+echo "##### Build Linux-Wheels #####"
 buildLinuxWheels
 
-echo "##### Init .pypirc"
+echo "##### Init .pypirc #####"
 initPypirc
 
-echo "##### Upload package"
-echo "- currently skipping it."
+echo "##### Upload package #####"
+echo "-- currently skipping it."
 # /root/.local/bin/twine upload wheelhouse/*
