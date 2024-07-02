@@ -1,5 +1,5 @@
 ACURL_CHANGED=false
-if [[ -n $(git show --name-only ${CD_VCS_REF}} ./acurl) ]]; then
+if [[ -n $(git show --name-only ${CD_VCS_REF} ./acurl) ]]; then
     echo "Acurl has changed"
     apt-get update && apt-get install -y jq
     ACURL_CHANGED=true

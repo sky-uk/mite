@@ -7,9 +7,10 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
+
 echo "TESTING check_acurl_version.sh"
-ls
 ./cd-scripts/check_acurl_version.sh
+
 
 pip install ujson
 tox -e py310; TOX_EXIT_CODE=$?
