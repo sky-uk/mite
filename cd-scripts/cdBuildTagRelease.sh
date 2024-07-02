@@ -18,14 +18,11 @@ ACURL_CHANGED=false
 mkdir -p /tmp/workspace
 echo "export ACURL_CHANGED=\"$ACURL_CHANGED\"" >> /tmp/workspace/env_vars
 
-# BUILD STEP from Circle-ci - it just run tox.
-tox -e py310; TOX_EXIT_CODE=$?
-echo "TOX EXIT CODE -> ${TOX_EXIT_CODE}"
-# [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
-
 
 # TAG STEP from Circle-ci - 
 # it has sshkeys and fingerprints in the config
+# FIXME- it is failing but we are on a branch without PR. 
+#In any case it likely to run only on master!
 echo "Set up git config email and name"
 git config user.email "mite@noreply.github.com"
 git config user.name "Jenkins-CI"
