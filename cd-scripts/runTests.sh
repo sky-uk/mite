@@ -9,7 +9,7 @@ fi
 
 
 echo "TESTING check_acurl_version.sh"
-./cd-scripts/check_acurl_version.sh
+./cd-scripts/cdBuildTagRelease.sh
 
 
 pip install ujson
