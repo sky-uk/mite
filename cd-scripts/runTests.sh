@@ -12,16 +12,16 @@ echo "TESTING check_acurl_version.sh"
 ./cd-scripts/cdBuildTagRelease.sh
 
 
-pip install ujson
-tox -e py310; TOX_EXIT_CODE=$?
+# pip install ujson
+# tox -e py310; TOX_EXIT_CODE=$?
 
-# Further ideas for jobs to run:
-# - license check
-# - make sure test coverage increases
-# And, once we're sure that the pipeline is working:
-# - integration/performance tests
-# Once we have docs:
-# - documentation coverage
-# - docs build (on master only)
+# # Further ideas for jobs to run:
+# # - license check
+# # - make sure test coverage increases
+# # And, once we're sure that the pipeline is working:
+# # - integration/performance tests
+# # Once we have docs:
+# # - documentation coverage
+# # - docs build (on master only)
 
-[ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+# [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1

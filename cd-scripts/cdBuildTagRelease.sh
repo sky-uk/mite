@@ -21,3 +21,11 @@ echo "export ACURL_CHANGED=\"$ACURL_CHANGED\"" >> /tmp/workspace/env_vars
 # BUILD STEP from Circle-ci - it just run tox.
 tox -e py310; TOX_EXIT_CODE=$?
 [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+
+
+# TAG STEP from Circle-ci - 
+# it has sshkeys and fingerprints in the config
+git config user.email "mite@noreply.github.com"
+git config user.name "Jenkins-CI"
+pip3 install docopt GitPython packaging requests
+python3 cd-scripts/cdRelease.py
