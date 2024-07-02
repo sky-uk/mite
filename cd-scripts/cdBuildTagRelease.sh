@@ -25,7 +25,10 @@ tox -e py310; TOX_EXIT_CODE=$?
 
 # TAG STEP from Circle-ci - 
 # it has sshkeys and fingerprints in the config
+echo "Set up git config email and name"
 git config user.email "mite@noreply.github.com"
 git config user.name "Jenkins-CI"
+echo " install pip requirements for the tag script"
 pip3 install docopt GitPython packaging requests
+echo "run cdRelease"
 python3 cd-scripts/cdRelease.py
