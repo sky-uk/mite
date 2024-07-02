@@ -1,5 +1,17 @@
 #!/bin/sh -x
 
+function isOnMaster() {
+    current_revision=$(git rev-parse HEAD)
+    branch=$(git branch -r --contains $current_revision)
+    set +e
+    echo "$branch" | grep -q "origin/master$"
+    result=$?
+    set -e
+    return ${result}
+}
+
+
+echo "##### Run pre-commit checks #####"
 /home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
@@ -7,21 +19,15 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-
-echo "TESTING check_acurl_version.sh"
-./cd-scripts/cdBuildTagRelease.sh
-
-
-pip install ujson
-tox -e py310; TOX_EXIT_CODE=$?
-
-# Further ideas for jobs to run:
-# - license check
-# - make sure test coverage increases
-# And, once we're sure that the pipeline is working:
-# - integration/performance tests
-# Once we have docs:
-# - documentation coverage
-# - docs build (on master only)
-
+echo "##### Run tests with tox #####"
+tox; TOX_EXIT_CODE=$?
 [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+
+if isOnMaster ; then
+    echo "##### Job running on MASTER. Proceeding with the Tag and Release script. ######"
+    ./cd-scripts/cdTagRelease.sh
+else
+    echo "###### Job running on a Branch. Stopping here. ######"
+    echo "- But we are testing so we are going to run it anyway lol"
+    ./cd-scripts/cdTagRelease.sh
+fi
