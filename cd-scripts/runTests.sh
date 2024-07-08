@@ -28,6 +28,4 @@ if isOnMaster ; then
     ./cd-scripts/cdTagRelease.sh
 else
     echo "###### Job running on a Branch. Stopping here. ######"
-    echo "- But we are testing so we are going to run it anyway lol"
-    ./cd-scripts/cdTagRelease.sh
 fi
