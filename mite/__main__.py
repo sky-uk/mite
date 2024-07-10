@@ -56,41 +56,44 @@ Examples:
 
 
 Options:
-    -h --help                               Show this screen
-    --version                               Show version
-    --debugging                             Drop into debugger (pdb) on journey error and exit.  Select debugger with PYTHONBREAKPOINT and PYTHONPOSTMORTEM
-    --memory-tracing                        Print heap alloc diffs every 60 seconds
-    --log-level=LEVEL                       Set logger level, one of DEBUG, INFO, WARNING, ERROR, CRITICAL [default: INFO]
-    --config=CONFIG_SPEC                    Set a config loader to a callable loaded via a spec [default: mite.config:default_config_loader]
-    --add-to-config=NEW_VALUE               Add a key:value to the config map, in addition to what's loaded from a file
-    --spawn-rate=NUM_PER_SECOND             Maximum spawn rate [default: 1000]
-    --max-loop-delay=SECONDS                Runner internal loop delay maximum [default: 1]
-    --min-loop-delay=SECONDS                Runner internal loop delay minimum [default: 0]
-    --runner-max-journeys=NUMBER            Max number of concurrent journeys a runner can run
-    --controller-socket=SOCKET              Controller socket [default: tcp://127.0.0.1:14301]
-    --message-socket=SOCKET                 Message socket [default: tcp://127.0.0.1:14302]
-    --collector-socket=SOCKET               Socket [default: tcp://127.0.0.1:14303]
-    --stats-in-socket=SOCKET                Socket [default: tcp://127.0.0.1:14304]
-    --stats-out-socket=SOCKET               Socket [default: tcp://127.0.0.1:14305]
-    --stats-include-processors=PROCESSORS   Stats processor names to include, as a comma separated list (no spaces)
-    --stats-exclude-processors=PROCESSORS   Stats processor names to exclude, as a comma separated list (no spaces)
-    --recorder-socket=SOCKET                Socket [default: tcp://127.0.0.1:14306]
-    --delay-start-seconds=DELAY             Delay start allowing others to connect [default: 0]
-    --volume=VOLUME                         Volume to run journey at [default: 1]
-    --web-address=HOST_PORT                 Web bind address [default: 127.0.0.1:9301]
-    --message-backend=BACKEND               Backend to transport messages over [default: ZMQ]
-    --exclude-working-directory             By default mite puts the current directory on the python path
-    --collector-dir=DIRECTORY               Set the collectors output directory [default: collector_data]
-    --collector-filter=SPEC                 Function spec to filter messages collected by the collector
-    --collector-roll=NUM_LINES              How many lines per collector output file [default: 100000]
-    --collector-use-json                    Output in json format rather than msgpack
-    --recorder-dir=DIRECTORY                Set the recorders output directory [default: recorder_data]
-    --sleep-time=SLEEP                      Set the second to await between each request [default: 1]
-    --logging-webhook=URL                   URL of an HTTP server to log test runs to
-    --message-processors=PROCESSORS         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
-    --prettify-timestamps                   Reformat unix timestamps to human readable dates
-    --journey-logging                       Log errors on a per journey basis
-    --max-errors-threshold=THRESHOLD        Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
+    -h --help                                 Show this screen
+    --version                                 Show version
+    --debugging                               Drop into debugger (pdb) on journey error and exit.  Select debugger with PYTHONBREAKPOINT and PYTHONPOSTMORTEM
+    --memory-tracing                          Print heap alloc diffs every 60 seconds
+    --log-level=LEVEL                         Set logger level, one of DEBUG, INFO, WARNING, ERROR, CRITICAL [default: INFO]
+    --config=CONFIG_SPEC                      Set a config loader to a callable loaded via a spec [default: mite.config:default_config_loader]
+    --add-to-config=NEW_VALUE                 Add a key:value to the config map, in addition to what's loaded from a file
+    --spawn-rate=NUM_PER_SECOND               Maximum spawn rate [default: 1000]
+    --max-loop-delay=SECONDS                  Runner internal loop delay maximum [default: 1]
+    --min-loop-delay=SECONDS                  Runner internal loop delay minimum [default: 0]
+    --runner-max-journeys=NUMBER              Max number of concurrent journeys a runner can run
+    --controller-socket=SOCKET                Controller socket [default: tcp://127.0.0.1:14301]
+    --message-socket=SOCKET                   Message socket [default: tcp://127.0.0.1:14302]
+    --collector-socket=SOCKET                 Socket [default: tcp://127.0.0.1:14303]
+    --stats-in-socket=SOCKET                  Socket [default: tcp://127.0.0.1:14304]
+    --stats-out-socket=SOCKET                 Socket [default: tcp://127.0.0.1:14305]
+    --stats-include-processors=PROCESSORS     Stats processor names to include, as a comma separated list (no spaces)
+    --stats-exclude-processors=PROCESSORS     Stats processor names to exclude, as a comma separated list (no spaces)
+    --recorder-socket=SOCKET                  Socket [default: tcp://127.0.0.1:14306]
+    --delay-start-seconds=DELAY               Delay start allowing others to connect [default: 0]
+    --volume=VOLUME                           Volume to run journey at [default: 1]
+    --web-address=HOST_PORT                   Web bind address [default: 127.0.0.1:9301]
+    --message-backend=BACKEND                 Backend to transport messages over [default: ZMQ]
+    --exclude-working-directory               By default mite puts the current directory on the python path
+    --collector-dir=DIRECTORY                 Set the collectors output directory [default: collector_data]
+    --collector-filter=SPEC                   Function spec to filter messages collected by the collector
+    --collector-roll=NUM_LINES                How many lines per collector output file [default: 100000]
+    --collector-use-json                      Output in json format rather than msgpack
+    --recorder-dir=DIRECTORY                  Set the recorders output directory [default: recorder_data]
+    --sleep-time=SLEEP                        Set the second to await between each request [default: 1]
+    --logging-webhook=URL                     URL of an HTTP server to log test runs to
+    --message-processors=PROCESSORS           Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
+    --prettify-timestamps                     Reformat unix timestamps to human readable dates
+    --journey-logging                         Log errors on a per journey basis
+    --hide-constant-logs                      Hide logs that are printed every 2 seconds
+    --max-errors-threshold=THRESHOLD          Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
+    --max-response-time-threshold=THRESHOLD   Set the maximum mean response time accepted before setting exit status to 1 [default: 0]
+    --mean-response-time-threshold=THRESHOLD  Set the mean response time accepted before setting exit status to 1 [default: 0]
 """
 import asyncio
 import logging

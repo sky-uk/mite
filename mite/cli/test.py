@@ -158,6 +158,22 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         opts.get("--max-errors-threshold")
     )
 
+    if opts.get("--max-response-time-threshold") != "0":
+        max_response_time = http_stats_output._resp_time_max * 1000
+        if max_response_time > int(opts["--max-response-time-threshold"]):
+            has_error = True
+
+            logging.error(
+                "Max response time exceeded: %sms", max_response_time
+            )
+    if opts.get("--mean-response-time-threshold") != "0":
+        mean_response_time = http_stats_output.mean_resp_time * 1000
+        if mean_response_time > int(opts["--mean-response-time-threshold"]):
+            has_error = True
+            logging.error(
+                "Mean response time exceeded: %sms", mean_response_time
+            )
+
     # Ensure any open files get closed
     del receiver._raw_listeners
     del receiver._listeners
