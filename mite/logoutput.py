@@ -118,7 +118,6 @@ class GenericStatsOutput:
             self._resp_time_mean_store.append(mean_resp_time)
 
             self.print_output(t)
-
         if msg_type in self.message_types:
             self._resp_time_recent.append(message["total_time"])
             self._req_total += 1

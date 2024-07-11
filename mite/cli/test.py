@@ -162,7 +162,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         max_response_time = http_stats_output._resp_time_max * 1000
         if max_response_time > int(opts["--max-response-time-threshold"]):
             has_error = True
-
             logging.error(
                 "Max response time exceeded: %sms", max_response_time
             )
