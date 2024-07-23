@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash
 
 function isOnMaster() {
     current_revision=$(git rev-parse HEAD)

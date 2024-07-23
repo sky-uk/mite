@@ -1,10 +1,13 @@
-#!/bin/sh -x
+#!/bin/bash
 
 function tagBuild() {   
     git config user.email "mite@noreply.github.com"
     git config user.name "Jenkins-CI"
     pip3 install docopt GitPython packaging requests
     python3 cd-scripts/cdRelease.py
+    if (( $? == 1)); then
+        VERSION_INCREMENT=false
+    fi
 }
 
 function checkAcurl() {
@@ -50,18 +53,22 @@ function initPypirc() {
 
 ###### MAIN SECTION ######
 
-echo "##### Starting TAG process #####"
+echo "##### Starting tag process and check for version increment #####"
 tagBuild
 
 echo "##### Look for Acurl changes #####"
 checkAcurl
+
 echo "##### Build Linux-Wheels #####"
 buildLinuxWheels
 
-echo "##### Init .pypirc #####"
-initPypirc
+if [ "$VERSION_INCREMENT" = false ]; then
+        echo "Mite version not incremented, nothing to upload"
+else
+    echo "##### Init .pypirc #####"
+    initPypirc
 
-echo "##### Upload package #####"
-echo "- Pushing to testpy to make sure everything works correctly first"
-
-python3 -m twine upload --repository testpypi wheelhouse/*
+    echo "##### Upload package #####"
+    echo "- Pushing to testpy to make sure everything works correctly first"
+    python3 -m twine upload --repository testpypi wheelhouse/*
+fi
