@@ -46,7 +46,7 @@ function buildLinuxWheels() {
 }
 
 function initPypirc() {
-    echo -e "[testpypi]" > ~/.pypirc
+    echo -e "[pypi]" > ~/.pypirc
     echo -e "username = __token__" >> ~/.pypirc
     echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
 }
@@ -69,6 +69,5 @@ else
     initPypirc
 
     echo "##### Upload package #####"
-    echo "- Pushing to testpy to make sure everything works correctly first"
-    python3 -m twine upload --repository testpypi wheelhouse/*
+    python3 -m twine upload wheelhouse/*
 fi
