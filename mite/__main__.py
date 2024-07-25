@@ -90,6 +90,7 @@ Options:
     --message-processors=PROCESSORS           Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                     Reformat unix timestamps to human readable dates
     --journey-logging                         Log errors on a per journey basis
+    --report                                  Report stats at the end of the test
     --hide-constant-logs                      Hide logs that are printed every 2 seconds
     --max-errors-threshold=THRESHOLD          Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
     --max-response-time-threshold=THRESHOLD   Set the maximum response time accepted before setting exit status to 1 [default: 0]

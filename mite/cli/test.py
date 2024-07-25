@@ -161,7 +161,19 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         opts.get("--max-errors-threshold")
     )
 
-    benchmark_report(opts, http_stats_output)
+    if opts.get("--max-response-time-threshold") != "0":
+        max_response_time = http_stats_output._resp_time_max * 1000
+        if max_response_time > int(opts["--max-response-time-threshold"]):
+            has_error = True
+            logging.error("Max response time exceeded: %sms", max_response_time)
+    if opts.get("--mean-response-time-threshold") != "0":
+        mean_response_time = http_stats_output.mean_resp_time * 1000
+        if mean_response_time > int(opts["--mean-response-time-threshold"]):
+            has_error = True
+            logging.error("Mean response time exceeded: %sms", mean_response_time)
+
+    if opts.get("--report"):
+        benchmark_report(opts, http_stats_output)
 
     # Ensure any open files get closed
     del receiver._raw_listeners
@@ -179,11 +191,7 @@ def human_readable_bytes(size):
 
 
 def benchmark_report(opts, http_stats_output):
-    has_error = False
-
     report_output = """
-
-Benchmark Report
 
 \t\tAvg\t\tMin\t\tMax
 Latency\t\t{mean_resp_time:.2f}ms\t\t{min_resp_time:.2f}ms\t\t{max_resp_time:.2f}ms
@@ -191,17 +199,6 @@ Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.
 
 {total_reqs} requests in {total_time:.2f}s, {data_transfer:.2f}{data_unit} data transfered
 """
-
-    if opts.get("--max-response-time-threshold") != "0":
-        max_response_time = http_stats_output._resp_time_max * 1000
-        if max_response_time > int(opts["--max-response-time-threshold"]):
-            has_error = True
-            logging.error("Max response time exceeded: %sms", max_response_time)
-    if opts.get("--mean-response-time-threshold") != "0":
-        mean_response_time = http_stats_output.mean_resp_time * 1000
-        if mean_response_time > int(opts["--mean-response-time-threshold"]):
-            has_error = True
-            logging.error("Mean response time exceeded: %sms", mean_response_time)
 
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
 
@@ -220,8 +217,6 @@ Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.
             data_unit=data_unit,
         )
     )
-
-    return has_error
 
 
 def scenario_test_cmd(opts):
