@@ -171,16 +171,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 def benchmark_report(opts, http_stats_output):
     has_error = False
 
-    report_output_w_stddev = """
-
-Benchmark Report
-
-\t\tAvg\t\tMin\t\tMax\t\tStd Dev\t\t+/- Std Dev
-Latency\t\t{mean_resp_time:.2f}ms\t\t{min_resp_time:.2f}ms\t\t{max_resp_time:.2f}ms\t{std_dev_resp_time:.2f}ms\t+/- {std_dev_resp_time:.2f}ms
-Req/Sec\t\t{req_per_sec:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.2f}\t\t{std_dev_req_per_sec:.2f}\t\t+/- {std_dev_req_per_sec:.2f}
-
-{total_reqs} requests in {total_time:.2f}s, {data_transfer:.2f} {data_unit} data transfered
-"""
     report_output = """
 
 Benchmark Report
@@ -220,20 +210,6 @@ Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.
         data_transfer=http_stats_output._data_transferred,
         data_unit="B",
     ))
-    # print(report_output_w_stddev.format(
-    #     mean_resp_time=http_stats_output.mean_resp_time * 1000,
-    #     min_resp_time=http_stats_output._resp_time_min * 1000,
-    #     max_resp_time=http_stats_output._resp_time_max * 1000,
-    #     std_dev_resp_time=999,
-    #     req_per_sec=999,
-    #     min_req_per_sec=999,
-    #     max_req_per_sec=999,
-    #     std_dev_req_per_sec=999,
-    #     total_reqs=999,
-    #     total_time=999,
-    #     data_transfer=999,
-    #     data_unit="KB",
-    # ))
 
     return has_error
 
