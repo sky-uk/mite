@@ -57,8 +57,6 @@ class GenericStatsOutput:
         self._resp_time_mean_store = []
         self._req_sec_min = 0
         self._req_sec_max = 0
-        self._req_sec_mean = 0
-        self._req_sec_mean_store = []
         self._scenarios_completed_time = 0
         self._data_transferred = 0
         self._error_journeys = defaultdict(int)
