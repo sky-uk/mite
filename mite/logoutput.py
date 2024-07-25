@@ -59,6 +59,7 @@ class GenericStatsOutput:
         self._req_sec_max = 0
         self._req_sec_mean = 0
         self._req_sec_mean_store = []
+        self._scenarios_completed_time = 0
         self._data_transferred = 0
         self._error_journeys = defaultdict(int)
 
@@ -130,7 +131,6 @@ class GenericStatsOutput:
             mean_resp_time = sum(self._resp_time_recent) / len(self._resp_time_recent)
             self._resp_time_mean_store.append(mean_resp_time)
 
-
             if self._req_recent:
                 dt = t - self._start_t
                 req_sec = self._req_recent / dt
@@ -171,6 +171,10 @@ class GenericStatsOutput:
         if not self._resp_time_recent:
             return 0
         return min(self._resp_time_recent)
+
+    @property
+    def req_sec_mean(self):
+        return self._req_total / (self._scenarios_completed_time - self._init_time)
 
 
 class HttpStatsOutput(GenericStatsOutput):
