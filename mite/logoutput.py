@@ -44,15 +44,22 @@ class GenericStatsOutput:
             self._journey_logging = True
         self._hide_constant_logs = opts.get("--hide-constant-logs")
         self._logger = logging.getLogger(f"{self.log_name} Stats")
+        self._init_time = time.time()
         self._start_t = None
         self._req_total = 0
         self._req_recent = 0
         self._error_total = 0
         self._error_recent = 0
         self._resp_time_recent = []
+        self._resp_time_min = 0
         self._resp_time_max = 0
         self._resp_time_mean = 0
         self._resp_time_mean_store = []
+        self._req_sec_min = 0
+        self._req_sec_max = 0
+        self._req_sec_mean = 0
+        self._req_sec_mean_store = []
+        self._data_transferred = 0
         self._error_journeys = defaultdict(int)
 
     def _pct(self, percentile):
@@ -111,15 +118,33 @@ class GenericStatsOutput:
         if self._start_t is None:
             self._start_t = t
         if self._start_t + self._period < t:
-            if self.max_resp_time_recent > self._resp_time_max:
-                self._resp_time_max = self.max_resp_time_recent
+
+            if self._resp_time_recent:
+                if self._resp_time_min == 0:
+                    self._resp_time_min = self.min_resp_time
+                else:
+                    self._resp_time_min = min(self.min_resp_time, self._resp_time_min)
+
+                self._resp_time_max = max(self.max_resp_time_recent, self._resp_time_max)
 
             mean_resp_time = sum(self._resp_time_recent) / len(self._resp_time_recent)
             self._resp_time_mean_store.append(mean_resp_time)
 
+
+            if self._req_recent:
+                dt = t - self._start_t
+                req_sec = self._req_recent / dt
+                if self._req_sec_min == 0:
+                    self._req_sec_min = req_sec
+                else:
+                    self._req_sec_min = min(req_sec, self._req_sec_min)
+
+                self._req_sec_max = max(req_sec, self._req_sec_max)
+
             self.print_output(t)
         if msg_type in self.message_types:
             self._resp_time_recent.append(message["total_time"])
+            self._data_transferred += message.get("download_size", 0)
             self._req_total += 1
             self._req_recent += 1
         elif msg_type in ("error", "exception"):
@@ -131,11 +156,21 @@ class GenericStatsOutput:
 
     @property
     def mean_resp_time(self):
+        if not self._resp_time_mean_store:
+            return 0
         return sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
 
     @property
     def max_resp_time_recent(self):
+        if not self._resp_time_recent:
+            return 0
         return max(self._resp_time_recent)
+
+    @property
+    def min_resp_time(self):
+        if not self._resp_time_recent:
+            return 0
+        return min(self._resp_time_recent)
 
 
 class HttpStatsOutput(GenericStatsOutput):
