@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   apiserver:
     image: python:3.11-alpine3.16
