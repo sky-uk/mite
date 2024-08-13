@@ -82,6 +82,7 @@ class SessionPool:
                 total_time=r.total_time,
                 primary_ip=r.primary_ip,
                 method=r.request.method,
+                download_size=r.download_size,
                 **session_wrapper.additional_metrics,
             )
 
