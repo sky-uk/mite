@@ -193,13 +193,15 @@ def human_readable_bytes(size):
 def benchmark_report(opts, http_stats_output):
     report_output = """
 
-\t\tAvg\t\tMin\t\tMax
-Latency\t\t{mean_resp_time:.2f}ms\t\t{min_resp_time:.2f}ms\t\t{max_resp_time:.2f}ms
-Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.2f}
+Report
 
-{total_reqs} requests in {total_time:.2f}s, {data_transfer:.2f}{data_unit} data transfered
+Metric\t\tAvg\t\tMin\t\tMax\t\tStd Dev\t\t+/- Std Dev
+------------------------------------------------------------------------------------------
+Latency\t\t{mean_resp_time:.2f}ms\t{min_resp_time:.2f}ms\t{max_resp_time:.2f}ms\t{std_dev_resp_time:.2f}ms\t\t+/- {std_dev_resp_time:.2f}ms
+Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.2f}\t\t{std_dev_req_per_sec:.2f}\t\t+/- {std_dev_req_per_sec:.2f}
+------------------------------------------------------------------------------------------
+{total_reqs} requests in {total_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred
 """
-
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
 
     print(
@@ -210,6 +212,8 @@ Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.
             req_per_sec_mean=http_stats_output.req_sec_mean,
             min_req_per_sec=http_stats_output._req_sec_min,
             max_req_per_sec=http_stats_output._req_sec_max,
+            std_dev_resp_time=http_stats_output.resp_time_standard_deviation,
+            std_dev_req_per_sec=http_stats_output.req_sec_standard_deviation,
             total_reqs=http_stats_output._req_total,
             total_time=http_stats_output._scenarios_completed_time
             - http_stats_output._init_time,

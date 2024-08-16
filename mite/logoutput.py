@@ -43,6 +43,7 @@ class GenericStatsOutput:
         if self._journey_logging is not False:
             self._journey_logging = True
         self._hide_constant_logs = opts.get("--hide-constant-logs")
+        self._report = opts.get("--report")
         self._logger = logging.getLogger(f"{self.log_name} Stats")
         self._init_time = time.time()
         self._start_t = None
@@ -55,10 +56,12 @@ class GenericStatsOutput:
         self._resp_time_max = 0
         self._resp_time_mean = 0
         self._resp_time_mean_store = []
+        self._req_sec_store=[]
         self._req_sec_min = 0
         self._req_sec_max = 0
         self._scenarios_completed_time = 0
         self._data_transferred = 0
+        self._standard_deviation = 0
         self._error_journeys = defaultdict(int)
 
     def _pct(self, percentile):
@@ -105,7 +108,8 @@ class GenericStatsOutput:
                 + f"max:{self._pct(100)}",
             )
         self._start_t = t
-        del self._resp_time_recent[:]
+        if not self._report:
+            del self._resp_time_recent[:]
         self._req_recent = 0
         self._error_recent = 0
 
@@ -132,6 +136,8 @@ class GenericStatsOutput:
 
             if self._req_recent:
                 req_sec = self._req_recent / (t - self._start_t)
+                if self._report:
+                    self._req_sec_store.append(req_sec)
                 if self._req_sec_min == 0:
                     self._req_sec_min = req_sec
                 else:
@@ -173,6 +179,31 @@ class GenericStatsOutput:
     @property
     def req_sec_mean(self):
         return self._req_total / (self._scenarios_completed_time - self._init_time)
+    
+    @property
+    def resp_time_standard_deviation(self):
+        if not self._resp_time_mean_store:
+            return 0
+        variance = []
+        mean_resp_time = sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
+        for resp_time in self._resp_time_recent:
+            variance.append(math.sqrt((resp_time-mean_resp_time)**2))
+        std_deviation = sum(variance) / len(self._resp_time_recent)
+        del self._resp_time_recent[:]
+        return std_deviation
+    
+    @property
+    def req_sec_standard_deviation(self):
+        if self._req_total == 0:
+            return 0
+        variance = []
+        mean_req_sec = self._req_total / (self._scenarios_completed_time - self._init_time)
+        for req_sec in self._req_sec_store:
+            variance.append(math.sqrt(req_sec-mean_req_sec)**2)
+        std_deviation = sum(variance) / len(self._req_sec_store)
+        del self._req_sec_store[:]
+        return std_deviation
+
 
 
 class HttpStatsOutput(GenericStatsOutput):
