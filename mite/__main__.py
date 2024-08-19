@@ -95,6 +95,7 @@ Options:
     --max-errors-threshold=THRESHOLD          Set the maximum number of errors accepted before setting exit status to 1 [default: 0]
     --max-response-time-threshold=THRESHOLD   Set the maximum response time accepted before setting exit status to 1 [default: 0]
     --mean-response-time-threshold=THRESHOLD  Set the mean response time accepted before setting exit status to 1 [default: 0]
+    --response-time-standard-deviation-threshold=THRESHOLD Set the standard deviation in response time accepted before setting exit status to 1 [default: 0]
 """
 import asyncio
 import logging
