@@ -180,16 +180,26 @@ class GenericStatsOutput:
     def req_sec_mean(self):
         return self._req_total / (self._scenarios_completed_time - self._init_time)
     
+    # @property
+    # def stats_within_standard_deviation(self, value_store, stddev, mean):
+    #     upper_limit = mean + stddev
+    #     lower_limit = mean - stddev
+    #     count = 0
+    #     for value in value_store:
+    #         if (upper_limit >= value) or (value >= lower_limit):
+    #             count = count+1
+    #     return (count / len(value_store)) * 100
+    
     @property
     def resp_time_standard_deviation(self):
         if not self._resp_time_mean_store:
             return 0
         variance = []
-        mean_resp_time = sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
         for resp_time in self._resp_time_recent:
-            variance.append(math.sqrt((resp_time-mean_resp_time)**2))
+            variance.append(math.sqrt((resp_time-self.mean_resp_time)**2))
         std_deviation = sum(variance) / len(self._resp_time_recent)
-        del self._resp_time_recent[:]
+        # resp_time_within_stddev = self.resp_time_within_standard_deviation
+        # del self._resp_time_recent[:]
         return std_deviation
     
     @property
@@ -197,14 +207,36 @@ class GenericStatsOutput:
         if self._req_total == 0:
             return 0
         variance = []
-        mean_req_sec = self._req_total / (self._scenarios_completed_time - self._init_time)
         for req_sec in self._req_sec_store:
-            variance.append(math.sqrt(req_sec-mean_req_sec)**2)
+            variance.append(math.sqrt(req_sec-self.req_sec_mean)**2)
         std_deviation = sum(variance) / len(self._req_sec_store)
-        del self._req_sec_store[:]
+        # req_sec_within_stddev = self.req_sec_within_standard_deviation
+        # del self._req_sec_store[:]
         return std_deviation
-
-
+    
+    @property
+    def resp_time_within_standard_deviation(self):
+        upper_limit = self.mean_resp_time + self.resp_time_standard_deviation
+        lower_limit = self.mean_resp_time - self.resp_time_standard_deviation
+        count = 0
+        for resp_time in self._resp_time_recent:
+            if (upper_limit >= resp_time) and (resp_time >= lower_limit):
+                count = count +1
+        stats_percentage = count / len(self._resp_time_recent) * 100
+        del self._resp_time_recent[:]
+        return stats_percentage
+    
+    @property
+    def req_sec_within_standard_deviation(self):
+        upper_limit = self.req_sec_mean + self.req_sec_standard_deviation
+        lower_limit = self.req_sec_mean - self.req_sec_standard_deviation
+        count = 0
+        for req_sec in self._req_sec_store:
+            if (upper_limit >= req_sec) and (req_sec >= lower_limit):
+                count = count+1
+        stats_percetage = count / len(self._req_sec_store) * 100
+        del self._req_sec_store[:]
+        return stats_percetage
 
 class HttpStatsOutput(GenericStatsOutput):
     message_types = {
