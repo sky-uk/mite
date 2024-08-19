@@ -126,9 +126,9 @@ class GenericStatsOutput:
 
                 self._resp_time_max = max(self.max_resp_time_recent, self._resp_time_max)
 
-            self._resp_time_mean_store.append(
-                sum(self._resp_time_recent) / len(self._resp_time_recent)
-            )
+                self._resp_time_mean_store.append(
+                    sum(self._resp_time_recent) / len(self._resp_time_recent)
+                )
 
             if self._req_recent:
                 req_sec = self._req_recent / (t - self._start_t)
