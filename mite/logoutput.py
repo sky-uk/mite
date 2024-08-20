@@ -42,13 +42,23 @@ class GenericStatsOutput:
         self._journey_logging = opts.get("--journey-logging", False)
         if self._journey_logging is not False:
             self._journey_logging = True
+        self._hide_constant_logs = opts.get("--hide-constant-logs")
         self._logger = logging.getLogger(f"{self.log_name} Stats")
+        self._init_time = time.time()
         self._start_t = None
         self._req_total = 0
         self._req_recent = 0
         self._error_total = 0
         self._error_recent = 0
         self._resp_time_recent = []
+        self._resp_time_min = 0
+        self._resp_time_max = 0
+        self._resp_time_mean = 0
+        self._resp_time_mean_store = []
+        self._req_sec_min = 0
+        self._req_sec_max = 0
+        self._scenarios_completed_time = 0
+        self._data_transferred = 0
         self._error_journeys = defaultdict(int)
 
     def _pct(self, percentile):
@@ -80,18 +90,20 @@ class GenericStatsOutput:
     def print_output(self, t):
         dt = t - self._start_t
         self._resp_time_recent.sort()
-        self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
+        if not self._hide_constant_logs:
+            self._logger.info(f"Total> #Reqs:{self._req_total} #Errs:{self._error_total}")
         # only output journey logs if the --journey_logging switch is set
         if self._journey_logging:
             for k, v in self._error_journeys.items():
                 self._logger.info(f"Total errors for {k} :{v}")
-        self._logger.info(
-            f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
-            + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
-            + f"25%:{self._pct(25)} 50%:{self._pct(50)} 75%:{self._pct(75)} "
-            + f"90%:{self._pct(90)} 99%:{self._pct(99)} 99.9%:{self._pct(99.9)} "
-            + f"max:{self._pct(100)}",
-        )
+        if not self._hide_constant_logs:
+            self._logger.info(
+                f"Last {self._period} Secs> #Reqs:{self._req_recent} #Errs:{self._error_recent} "
+                + f"Req/S:{self._req_recent / dt:.1f} min:{self._pct(0)} "
+                + f"25%:{self._pct(25)} 50%:{self._pct(50)} 75%:{self._pct(75)} "
+                + f"90%:{self._pct(90)} 99%:{self._pct(99)} 99.9%:{self._pct(99.9)} "
+                + f"max:{self._pct(100)}",
+            )
         self._start_t = t
         del self._resp_time_recent[:]
         self._req_recent = 0
@@ -105,9 +117,32 @@ class GenericStatsOutput:
         if self._start_t is None:
             self._start_t = t
         if self._start_t + self._period < t:
+
+            if self._resp_time_recent:
+                if self._resp_time_min == 0:
+                    self._resp_time_min = self.min_resp_time
+                else:
+                    self._resp_time_min = min(self.min_resp_time, self._resp_time_min)
+
+                self._resp_time_max = max(self.max_resp_time_recent, self._resp_time_max)
+
+                self._resp_time_mean_store.append(
+                    sum(self._resp_time_recent) / len(self._resp_time_recent)
+                )
+
+            if self._req_recent:
+                req_sec = self._req_recent / (t - self._start_t)
+                if self._req_sec_min == 0:
+                    self._req_sec_min = req_sec
+                else:
+                    self._req_sec_min = min(req_sec, self._req_sec_min)
+
+                self._req_sec_max = max(req_sec, self._req_sec_max)
+
             self.print_output(t)
         if msg_type in self.message_types:
             self._resp_time_recent.append(message["total_time"])
+            self._data_transferred += message.get("download_size", 0)
             self._req_total += 1
             self._req_recent += 1
         elif msg_type in ("error", "exception"):
@@ -116,6 +151,28 @@ class GenericStatsOutput:
             if self._journey_logging:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
+
+    @property
+    def mean_resp_time(self):
+        if not self._resp_time_mean_store:
+            return 0
+        return sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
+
+    @property
+    def max_resp_time_recent(self):
+        if not self._resp_time_recent:
+            return 0
+        return max(self._resp_time_recent)
+
+    @property
+    def min_resp_time(self):
+        if not self._resp_time_recent:
+            return 0
+        return min(self._resp_time_recent)
+
+    @property
+    def req_sec_mean(self):
+        return self._req_total / (self._scenarios_completed_time - self._init_time)
 
 
 class HttpStatsOutput(GenericStatsOutput):

@@ -128,19 +128,17 @@ def main():
         else:
             commit_message = repo.git.log("--format=%B", n=1)
             matches = re.findall(r"^.*\(#(\d+)\)$", commit_message, re.MULTILINE)
-            version_parts_to_increment = parse_pr(matches[0])
+            version_parts_to_increment = parse_pr(matches[0]) if len(matches) else None
 
         if not version_parts_to_increment:
             logger.info("No release")
-            with open("/tmp/workspace/env_vars", "a") as f:
-                f.write("export VERSION_INCREMENT=false")
-            sys.exit(0)
+            sys.exit(1)
+
         new_tag = increment_version_from_pr(
             current_latest_version, version_parts_to_increment
         )
 
     create_and_push_tag(repo, new_tag)
-
     sys.exit(0)
 
 

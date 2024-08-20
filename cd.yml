@@ -1,9 +1,20 @@
 version: 1
-context: identity
+
+# Further ideas for jobs to run:
+# - license check
+# - make sure test coverage increases
+# - merge all tox tests into one using pyenv
+# And, once we're sure that the pipeline is working:
+# - integration/performance tests
+# Once we have docs:
+# - documentation coverage
+# - docs build (on master only)
+
+context: sky-identity
 triggering: multibranch
 
 defaultNodes:
-  default: id-mite-slave
+  default: sky-identity-nonprod-mite-slave-buildkit
 
 modules:
   mite-ci:
