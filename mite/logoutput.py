@@ -196,7 +196,7 @@ class GenericStatsOutput:
             return 0
         variance = []
         for req_sec in self._req_sec_store:
-            variance.append(math.sqrt(req_sec-self.req_sec_mean)**2)
+            variance.append(math.sqrt((req_sec-self.req_sec_mean)**2))
         std_deviation = sum(variance) / len(self._req_sec_store)
         return std_deviation
     
