@@ -34,8 +34,8 @@ def test_label_extractor_txn_msg():
 
 
 class EntryPointMock:
-    def __init__(self, val):
-        self.__val = val
+    def __init__(self, group=""):
+        self.__val = group
 
     @property
     def name(self):
@@ -48,7 +48,7 @@ class EntryPointMock:
 class TestModularity:
     def test_modularity(self):
         with mock.patch("logging.info") as logging_info, mock.patch(
-            "pkg_resources.iter_entry_points", return_value=[EntryPointMock("x")]
+            "importlib.metadata.entry_points", return_value=[EntryPointMock(group="x")]
         ) as iter_entry_points:
             s = Stats(None)
             iter_entry_points.assert_called_once()
@@ -57,16 +57,16 @@ class TestModularity:
 
     def test_modularity_include(self):
         with mock.patch(
-            "pkg_resources.iter_entry_points",
-            return_value=[EntryPointMock("x"), EntryPointMock("y")],
+            "importlib.metadata.entry_points",
+            return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
             s = Stats(None, include=["x"])
             assert s._all_stats == ["x"]
 
     def test_modularity_exclude(self):
         with mock.patch(
-            "pkg_resources.iter_entry_points",
-            return_value=[EntryPointMock("x"), EntryPointMock("y")],
+            "importlib.metadata.entry_points",
+            return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]

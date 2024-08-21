@@ -1,3 +1,4 @@
+import importlib
 import logging
 import time
 from collections import defaultdict
@@ -5,7 +6,6 @@ from dataclasses import dataclass, field
 from numbers import Number
 from typing import Any, Callable, DefaultDict, Sequence, Tuple
 
-import pkg_resources
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ _MITE_STATS = [
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
         self._all_stats = []
-        for entry_point in pkg_resources.iter_entry_points("mite_stats"):
+        for entry_point in importlib.metadata.entry_points(group="mite_stats"):
             if include is not None and entry_point.name not in include:
                 continue
             if exclude is not None and entry_point.name in exclude:

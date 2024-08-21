@@ -9,15 +9,15 @@ import contextlib
 import random
 import time
 
-from pkg_resources import DistributionNotFound, get_distribution
+from importlib.metadata import distribution, PackageNotFoundError
 
 import mite.utils
 
 from .context import Context
 from .exceptions import MiteError  # noqa: F401
 
-with contextlib.suppress(DistributionNotFound):
-    __version__ = get_distribution(__name__).version
+with contextlib.suppress(PackageNotFoundError):
+    __version__ = distribution(__name__).version
 
 
 # TODO: move to test.py?
