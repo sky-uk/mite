@@ -90,16 +90,8 @@ cdef class Session:
         self.wrapper = wrapper
         self.response_callback = None
 
-    def __dealloc__(self):
-        if self.wrapper.loop is None or self.wrapper.loop.is_closed():
-            # FIXME: the event loop being closed only happens during testing,
-            # so it kind of sucks to pay the price of checking for it all the
-            # time.  I'm not even sure what the circumstances are under which
-            # self.wrapper.loop becomes None -- I suspect it has to do with
-            # the cycle collector.
-            curl_share_cleanup(self.shared)
-        else:
-            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+    def __del__(self):
+        self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
