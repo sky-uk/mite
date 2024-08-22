@@ -24,11 +24,9 @@ class _KafkaWrapper:
         del context.kafka
 
     async def create_producer(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
         return AIOKafkaProducer(*args, **kwargs)
 
     async def create_consumer(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
         return AIOKafkaConsumer(*args, **kwargs)
 
     async def send_and_wait(self, producer, topic, key=None, value=None, **kwargs):

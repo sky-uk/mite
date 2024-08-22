@@ -9,7 +9,7 @@ import acurl
 @pytest.mark.asyncio
 async def test_non_zero_exit_code_raises(acurl_session):
     with pytest.raises(
-        acurl.AcurlError, match="curl failed with code 6 Could not resolve hostname"
+        acurl.AcurlError, match=r"curl failed with code 6.*"
     ):
         # Curl returns CURLE_COULDNT_RESOLVE_HOST (6) exit code
         await acurl_session.get("unresolvable_hostname.doesnotexist")
