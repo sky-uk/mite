@@ -46,9 +46,14 @@ function buildLinuxWheels() {
 }
 
 function initPypirc() {
-    echo -e "[pypi]" > ~/.pypirc
+    echo -e "[mite]" > ~/.pypirc
+    echo -e "repository = https://pypi.org/project/mite/" >> ~/.pypirc
     echo -e "username = __token__" >> ~/.pypirc
-    echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
+    echo -e "password = $PYPI_MITE_TOKEN" >> ~/.pypirc
+    echo -e "[acurl]" >> ~/.pypirc
+    echo -e "repository = https://pypi.org/project/acurl/" >> ~/.pypirc
+    echo -e "username = __token__" >> ~/.pypirc
+    echo -e "password = $PYPI_ACURL_TOKEN" >> ~/.pypirc
 }
 
 ###### MAIN SECTION ######
@@ -69,5 +74,6 @@ else
     initPypirc
 
     echo "##### Upload package #####"
-    python3 -m twine upload wheelhouse/*
+    python3 -m twine upload wheelhouse/mite* --repository mite
+    python3 -m twine upload wheelhouse/acurl* --repository acurl
 fi
