@@ -2,6 +2,7 @@ import logging
 import math
 import time
 from collections import defaultdict
+import numpy as np
 
 
 class MsgOutput:
@@ -55,8 +56,9 @@ class GenericStatsOutput:
         self._resp_time_min = 0
         self._resp_time_max = 0
         self._resp_time_mean = 0
+        self._resp_time_store = []
         self._resp_time_mean_store = []
-        self._req_sec_store=[]
+        self._req_sec_store = []
         self._req_sec_min = 0
         self._req_sec_max = 0
         self._scenarios_completed_time = 0
@@ -84,7 +86,7 @@ class GenericStatsOutput:
         a = self._resp_time_recent[index]
         b = self._resp_time_recent[index + 1]
         interpolated_amount = (b - a) * fractional_index
-        return f"{a + interpolated_amount}:.6f"
+        return f"{a + interpolated_amount:.6f}"
 
     @property
     def error_total(self):
@@ -108,8 +110,8 @@ class GenericStatsOutput:
                 + f"max:{self._pct(100)}",
             )
         self._start_t = t
-        if not self._report:
-            del self._resp_time_recent[:]
+        self._resp_time_store.extend(self._resp_time_recent)
+        del self._resp_time_recent[:]
         self._req_recent = 0
         self._error_recent = 0
 
@@ -158,12 +160,23 @@ class GenericStatsOutput:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
 
+    # @property
+    # def mean_resp_time(self):
+    #     if not self._resp_time_store:
+    #         return 0
+    #     return sum(self._resp_time_store) / len(self._resp_time_store)
+    @property
+    def resp_time_array(self):
+        print(f"resp time array is \n{np.array(self._resp_time_store)}")
+        return np.array(self._resp_time_store)
+    
     @property
     def mean_resp_time(self):
-        if not self._resp_time_mean_store:
+        if not self._resp_time_store:
             return 0
-        return sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
-
+        # resp_time_array = np.array(self._resp_time_store)
+        return np.mean(self.resp_time_array)
+    
     @property
     def max_resp_time_recent(self):
         if not self._resp_time_recent:
@@ -180,15 +193,22 @@ class GenericStatsOutput:
     def req_sec_mean(self):
         return self._req_total / (self._scenarios_completed_time - self._init_time)
     
+    # @property
+    # def resp_time_standard_deviation(self):
+    #     if not self._resp_time_store:
+    #         return 0
+    #     variance = []
+    #     for resp_time in self._resp_time_store:
+    #         variance.append(math.sqrt((resp_time-self.mean_resp_time)**2))
+    #     std_deviation = sum(variance) / len(self._resp_time_store)
+    #     print(f"resp time is {self._resp_time_store}")
+    #     return std_deviation
+    
     @property
     def resp_time_standard_deviation(self):
-        if not self._resp_time_mean_store:
+        if not self._resp_time_store:
             return 0
-        variance = []
-        for resp_time in self._resp_time_recent:
-            variance.append(math.sqrt((resp_time-self.mean_resp_time)**2))
-        std_deviation = sum(variance) / len(self._resp_time_recent)
-        return std_deviation
+        return np.std(self.resp_time_array)
     
     @property
     def req_sec_standard_deviation(self):
@@ -200,17 +220,25 @@ class GenericStatsOutput:
         std_deviation = sum(variance) / len(self._req_sec_store)
         return std_deviation
     
+    # @property
+    # def resp_time_within_standard_deviation(self):
+    #     upper_limit = self.mean_resp_time + self.resp_time_standard_deviation
+    #     # lower_limit = self.mean_resp_time - self.resp_time_standard_deviation
+    #     count = 0
+    #     for resp_time in self._resp_time_store:
+    #         if (upper_limit >= resp_time): # and (resp_time >= lower_limit):
+    #             count = count +1
+    #     stats_percentage = count / len(self._resp_time_store) * 100
+    #     # print(f"\nresp_time_store is {self._resp_time_store} \n")
+    #     # print(f"len of resp time store is {len(self._resp_time_store)}\n")
+    #     # del self._resp_time_store[:]
+    #     return stats_percentage
+    
     @property
     def resp_time_within_standard_deviation(self):
-        upper_limit = self.mean_resp_time + self.resp_time_standard_deviation
-        lower_limit = self.mean_resp_time - self.resp_time_standard_deviation
-        count = 0
-        for resp_time in self._resp_time_recent:
-            if (upper_limit >= resp_time) and (resp_time >= lower_limit):
-                count = count +1
-        stats_percentage = count / len(self._resp_time_recent) * 100
-        del self._resp_time_recent[:]
-        return stats_percentage
+        if not self._resp_time_store:
+            return 0
+        return np.mean(((self.resp_time_array <= (self.mean_resp_time + self.resp_time_standard_deviation)) & (self.resp_time_array >= (self.mean_resp_time - self.resp_time_standard_deviation)))* 100)
     
     @property
     def req_sec_within_standard_deviation(self):
@@ -221,7 +249,8 @@ class GenericStatsOutput:
             if (upper_limit >= req_sec) and (req_sec >= lower_limit):
                 count = count+1
         stats_percetage = count / len(self._req_sec_store) * 100
-        del self._req_sec_store[:]
+        # print(f"req_sec_store is {self._req_sec_store}\nsum of req_sec_store is {sum(self._req_sec_store)}")
+        # del self._req_sec_store[:]
         return stats_percetage
 
 class HttpStatsOutput(GenericStatsOutput):
