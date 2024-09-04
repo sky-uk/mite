@@ -193,30 +193,28 @@ class GenericStatsOutput:
             return 0
         return statistics.stdev(self._req_sec_store)
 
+    # Calculating percentage of resp times that lie within deviation limits (Mean +/- Standard deviation)
     @property
     def resp_time_within_standard_deviation(self):
         if not self._resp_time_store:
             return 0
         return (
             sum(
-                (self.mean_resp_time - self.resp_time_standard_deviation)
-                <= x
-                <= (self.mean_resp_time + self.resp_time_standard_deviation)
+                abs(x - self.mean_resp_time) < self.resp_time_standard_deviation
                 for x in self._resp_time_store
             )
             / len(self._resp_time_store)
             * 100
         )
 
+    # Calculating percentage of req/sec that lie within deviation limits (Mean +/- Standard deviation)
     @property
     def req_sec_within_standard_deviation(self):
         if self._req_total == 0:
             return 0
         return (
             sum(
-                (self.req_sec_mean - self.req_sec_standard_deviation)
-                <= x
-                <= (self.req_sec_mean + self.req_sec_standard_deviation)
+                abs(x - self.req_sec_mean) < self.req_sec_standard_deviation
                 for x in self._req_sec_store
             )
             / len(self._req_sec_store)
