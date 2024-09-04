@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import tracemalloc
+
 from prettytable import PrettyTable
 
 from mite.datapools import SingleRunDataPoolWrapper
@@ -162,7 +163,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         opts.get("--max-errors-threshold")
     )
 
-    
     if opts.get("--max-response-time-threshold") != "0":
         max_response_time = http_stats_output._resp_time_max * 1000
         if max_response_time > int(opts["--max-response-time-threshold"]):
@@ -179,7 +179,9 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         resp_time_stddev = http_stats_output.resp_time_standard_deviation * 1000
         if resp_time_stddev > int(opts["--standard-deviation-response-time-threshold"]):
             has_error = True
-            logging.error("Response time standard deviation exceeded: %sms", resp_time_stddev)
+            logging.error(
+                "Response time standard deviation exceeded: %sms", resp_time_stddev
+            )
 
     if opts.get("--standard-deviation-req-sec-threshold") != "0":
         req_sec_stddev = http_stats_output.req_sec_standard_deviation
@@ -189,7 +191,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     if opts.get("--report"):
         benchmark_report(http_stats_output)
-   
 
     # Ensure any open files get closed
     del receiver._raw_listeners
@@ -209,28 +210,38 @@ def human_readable_bytes(size):
 def benchmark_report(http_stats_output):
     table = PrettyTable()
     table.field_names = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
-    number_format = lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+    number_format = (
+        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+    )
 
-    table.add_row([
-    "Latency",
-    f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
-    f"{http_stats_output._resp_time_min * 1000:.2f}ms",
-    f"{http_stats_output._resp_time_max * 1000:.2f}ms",
-    f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
-    f"{http_stats_output.resp_time_within_standard_deviation:.2f}%"])
-    
-    table.add_row([
-    "Req/Sec",
-    number_format(http_stats_output.req_sec_mean),
-    number_format(http_stats_output._req_sec_min),
-    number_format(http_stats_output._req_sec_max),
-    number_format(http_stats_output.req_sec_standard_deviation),
-    f"{http_stats_output.req_sec_within_standard_deviation:.2f}%"])
+    table.add_row(
+        [
+            "Latency",
+            f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
+            f"{http_stats_output._resp_time_min * 1000:.2f}ms",
+            f"{http_stats_output._resp_time_max * 1000:.2f}ms",
+            f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
+            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
+        ]
+    )
+
+    table.add_row(
+        [
+            "Req/Sec",
+            number_format(http_stats_output.req_sec_mean),
+            number_format(http_stats_output._req_sec_min),
+            number_format(http_stats_output._req_sec_max),
+            number_format(http_stats_output.req_sec_standard_deviation),
+            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
+        ]
+    )
 
     table.align["Metric"] = "l"
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
     print(table)
-    print(f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred")
+    print(
+        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred"
+    )
 
 
 def scenario_test_cmd(opts):

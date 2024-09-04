@@ -1,8 +1,8 @@
 import logging
 import math
+import statistics
 import time
 from collections import defaultdict
-import statistics
 
 
 class MsgOutput:
@@ -127,7 +127,9 @@ class GenericStatsOutput:
                 if self._resp_time_min == 0:
                     self._resp_time_min = self.min_resp_time_recent
                 else:
-                    self._resp_time_min = min(self.min_resp_time_recent, self._resp_time_min)
+                    self._resp_time_min = min(
+                        self.min_resp_time_recent, self._resp_time_min
+                    )
 
                 self._resp_time_max = max(self.max_resp_time_recent, self._resp_time_max)
 
@@ -154,7 +156,7 @@ class GenericStatsOutput:
             if self._journey_logging:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
-    
+
     @property
     def mean_resp_time(self):
         if not self._resp_time_store:
@@ -178,32 +180,49 @@ class GenericStatsOutput:
         if self._req_total == 0:
             return 0
         return statistics.fmean(self._req_sec_store)
-    
+
     @property
     def resp_time_standard_deviation(self):
         if not self._resp_time_store:
             return 0
         return statistics.stdev(self._resp_time_store)
-    
+
     @property
     def req_sec_standard_deviation(self):
         if self._req_total == 0:
             return 0
         return statistics.stdev(self._req_sec_store)
-    
+
     @property
     def resp_time_within_standard_deviation(self):
         if not self._resp_time_store:
             return 0
-        return sum((self.mean_resp_time - self.resp_time_standard_deviation) <= x <= (self.mean_resp_time + self.resp_time_standard_deviation) 
-                   for x in self._resp_time_store) / len(self._resp_time_store) * 100
+        return (
+            sum(
+                (self.mean_resp_time - self.resp_time_standard_deviation)
+                <= x
+                <= (self.mean_resp_time + self.resp_time_standard_deviation)
+                for x in self._resp_time_store
+            )
+            / len(self._resp_time_store)
+            * 100
+        )
 
     @property
     def req_sec_within_standard_deviation(self):
         if self._req_total == 0:
             return 0
-        return sum((self.req_sec_mean - self.req_sec_standard_deviation) <= x <= (self.req_sec_mean + self.req_sec_standard_deviation) 
-                   for x in self._req_sec_store) / len(self._req_sec_store) * 100
+        return (
+            sum(
+                (self.req_sec_mean - self.req_sec_standard_deviation)
+                <= x
+                <= (self.req_sec_mean + self.req_sec_standard_deviation)
+                for x in self._req_sec_store
+            )
+            / len(self._req_sec_store)
+            * 100
+        )
+
 
 class HttpStatsOutput(GenericStatsOutput):
     message_types = {
