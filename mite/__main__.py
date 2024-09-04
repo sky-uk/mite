@@ -96,6 +96,7 @@ Options:
     --max-response-time-threshold=THRESHOLD                 Set the maximum response time accepted before setting exit status to 1 [default: 0]
     --mean-response-time-threshold=THRESHOLD                Set the mean response time accepted before setting exit status to 1 [default: 0]
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
+    --standard-deviation-req-sec-threshold=THRESHOLD      Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
 """
 import asyncio
 import logging

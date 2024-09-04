@@ -181,6 +181,12 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             has_error = True
             logging.error("Response time standard deviation exceeded: %sms", resp_time_stddev)
 
+    if opts.get("--standard-deviation-req-sec-threshold") != "0":
+        req_sec_stddev = http_stats_output.req_sec_standard_deviation
+        if req_sec_stddev > int(opts["--standard-deviation-req-sec-threshold"]):
+            has_error = True
+            logging.error("Request per second exceeded: %s", req_sec_stddev)
+
     if opts.get("--report"):
         benchmark_report(http_stats_output)
    

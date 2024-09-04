@@ -262,8 +262,10 @@ class GenericStatsOutput:
     def resp_time_within_standard_deviation(self):
         if not self._resp_time_store:
             return 0
-        return statistics.mean(((self.resp_time_array <= (self.mean_resp_time + self.resp_time_standard_deviation)) & (self.resp_time_array >= (self.mean_resp_time - self.resp_time_standard_deviation)))) * 100
-    
+        # return statistics.mean(((self._resp_time_store <= (self.mean_resp_time + self.resp_time_standard_deviation)) & (self._resp_time_store >= (self.mean_resp_time - self.resp_time_standard_deviation)))) * 100
+        return sum((self.mean_resp_time - self.resp_time_standard_deviation) <= x <= (self.mean_resp_time + self.resp_time_standard_deviation) 
+                   for x in self._resp_time_store) / len(self._resp_time_store) * 100
+
     # @property
     # def req_sec_within_standard_deviation(self):
     #     upper_limit = self.req_sec_mean + self.req_sec_standard_deviation
@@ -281,7 +283,9 @@ class GenericStatsOutput:
     def req_sec_within_standard_deviation(self):
         if self._req_total == 0:
             return 0
-        return statistics.mean(((self.req_sec_array <= (self.req_sec_mean + self.req_sec_standard_deviation)) & (self.req_sec_array >= (self.req_sec_mean - self.req_sec_standard_deviation)))) * 100
+        # return statistics.mean(((self._req_sec_store <= (self.req_sec_mean + self.req_sec_standard_deviation)) & (self._req_sec_store >= (self.req_sec_mean - self.req_sec_standard_deviation)))) * 100
+        return sum((self.req_sec_mean - self.req_sec_standard_deviation) <= x <= (self.req_sec_mean + self.req_sec_standard_deviation) 
+                   for x in self._req_sec_store) / len(self._req_sec_store) * 100
 
 class HttpStatsOutput(GenericStatsOutput):
     message_types = {
