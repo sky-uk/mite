@@ -3,6 +3,7 @@ import math
 import time
 from collections import defaultdict
 import numpy as np
+import statistics
 
 
 class MsgOutput:
@@ -110,7 +111,8 @@ class GenericStatsOutput:
                 + f"max:{self._pct(100)}",
             )
         self._start_t = t
-        self._resp_time_store.extend(self._resp_time_recent)
+        # breakpoint()
+        # self._resp_time_store.extend(self._resp_time_recent)
         del self._resp_time_recent[:]
         self._req_recent = 0
         self._error_recent = 0
@@ -125,6 +127,7 @@ class GenericStatsOutput:
         if self._start_t + self._period < t:
 
             if self._resp_time_recent:
+                self._resp_time_store.extend(self._resp_time_recent)
                 if self._resp_time_min == 0:
                     self._resp_time_min = self.min_resp_time
                 else:
@@ -165,33 +168,46 @@ class GenericStatsOutput:
     #     if not self._resp_time_store:
     #         return 0
     #     return sum(self._resp_time_store) / len(self._resp_time_store)
-    @property
-    def resp_time_array(self):
-        print(f"resp time array is \n{np.array(self._resp_time_store)}")
-        return np.array(self._resp_time_store)
+    # @property
+    # def resp_time_array(self):
+    #     # print(f"resp time array is \n{np.array(self._resp_time_store)}")
+    #     return np.array(self._resp_time_store)
+    
+    # @property
+    # def req_sec_array(self):
+    #     return np.array(self._req_sec_store)
     
     @property
     def mean_resp_time(self):
         if not self._resp_time_store:
             return 0
         # resp_time_array = np.array(self._resp_time_store)
-        return np.mean(self.resp_time_array)
-    
+        # return np.mean(self.resp_time_array)
+        return statistics.fmean(self._resp_time_store)
+
     @property
     def max_resp_time_recent(self):
         if not self._resp_time_recent:
             return 0
-        return max(self._resp_time_recent)
+        return max(self._resp_time_store)
 
     @property
     def min_resp_time(self):
         if not self._resp_time_recent:
             return 0
-        return min(self._resp_time_recent)
+        # breakpoint()
+        return min(self._resp_time_store)
 
     @property
     def req_sec_mean(self):
-        return self._req_total / (self._scenarios_completed_time - self._init_time)
+        # return self._req_total / (self._scenarios_completed_time - self._init_time)
+        return statistics.fmean(self._req_sec_store)
+    
+    # @property
+    # def req_sec_mean(self):
+    #     if self._req_total == 0:
+    #         return 0
+    #     return np.mean(self.req_sec_array)
     
     # @property
     # def resp_time_standard_deviation(self):
@@ -208,17 +224,25 @@ class GenericStatsOutput:
     def resp_time_standard_deviation(self):
         if not self._resp_time_store:
             return 0
-        return np.std(self.resp_time_array)
+        # return np.std(self.resp_time_array)
+        return statistics.stdev(self._resp_time_store)
     
+    # @property
+    # def req_sec_standard_deviation(self):
+    #     if self._req_total == 0:
+    #         return 0
+    #     variance = []
+    #     for req_sec in self._req_sec_store:
+    #         variance.append(math.sqrt((req_sec-self.req_sec_mean)**2))
+    #     std_deviation = sum(variance) / len(self._req_sec_store)
+    #     return std_deviation
+
     @property
     def req_sec_standard_deviation(self):
         if self._req_total == 0:
             return 0
-        variance = []
-        for req_sec in self._req_sec_store:
-            variance.append(math.sqrt((req_sec-self.req_sec_mean)**2))
-        std_deviation = sum(variance) / len(self._req_sec_store)
-        return std_deviation
+        # return np.std(self.req_sec_array)
+        return statistics.stdev(self._req_sec_store)
     
     # @property
     # def resp_time_within_standard_deviation(self):
@@ -238,20 +262,26 @@ class GenericStatsOutput:
     def resp_time_within_standard_deviation(self):
         if not self._resp_time_store:
             return 0
-        return np.mean(((self.resp_time_array <= (self.mean_resp_time + self.resp_time_standard_deviation)) & (self.resp_time_array >= (self.mean_resp_time - self.resp_time_standard_deviation)))* 100)
+        return statistics.mean(((self.resp_time_array <= (self.mean_resp_time + self.resp_time_standard_deviation)) & (self.resp_time_array >= (self.mean_resp_time - self.resp_time_standard_deviation)))) * 100
     
+    # @property
+    # def req_sec_within_standard_deviation(self):
+    #     upper_limit = self.req_sec_mean + self.req_sec_standard_deviation
+    #     lower_limit = self.req_sec_mean - self.req_sec_standard_deviation
+    #     count = 0
+    #     for req_sec in self._req_sec_store:
+    #         if (upper_limit >= req_sec) and (req_sec >= lower_limit):
+    #             count = count+1
+    #     stats_percetage = count / len(self._req_sec_store) * 100
+    #     # print(f"req_sec_store is {self._req_sec_store}\nsum of req_sec_store is {sum(self._req_sec_store)}")
+    #     # del self._req_sec_store[:]
+    #     return stats_percetage
+
     @property
     def req_sec_within_standard_deviation(self):
-        upper_limit = self.req_sec_mean + self.req_sec_standard_deviation
-        lower_limit = self.req_sec_mean - self.req_sec_standard_deviation
-        count = 0
-        for req_sec in self._req_sec_store:
-            if (upper_limit >= req_sec) and (req_sec >= lower_limit):
-                count = count+1
-        stats_percetage = count / len(self._req_sec_store) * 100
-        # print(f"req_sec_store is {self._req_sec_store}\nsum of req_sec_store is {sum(self._req_sec_store)}")
-        # del self._req_sec_store[:]
-        return stats_percetage
+        if self._req_total == 0:
+            return 0
+        return statistics.mean(((self.req_sec_array <= (self.req_sec_mean + self.req_sec_standard_deviation)) & (self.req_sec_array >= (self.req_sec_mean - self.req_sec_standard_deviation)))) * 100
 
 class HttpStatsOutput(GenericStatsOutput):
     message_types = {
