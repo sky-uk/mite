@@ -30,6 +30,8 @@ cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, 
     if action == CURL_POLL_REMOVE:
         wrapper.loop.remove_reader(sock)
         wrapper.loop.remove_writer(sock)
+    # The following exception is never expected to be hit. Further conversation
+    # regarding this can be found in the PR: https://github.com/sky-uk/mite/pull/280#discussion_r1723665976
     if action != CURL_POLL_IN and action != CURL_POLL_OUT and action != CURL_POLL_INOUT and action != CURL_POLL_REMOVE:
         raise Exception("oops")
 
