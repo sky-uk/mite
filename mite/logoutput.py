@@ -1,5 +1,6 @@
 import logging
 import math
+import statistics
 import time
 from collections import defaultdict
 
@@ -43,6 +44,7 @@ class GenericStatsOutput:
         if self._journey_logging is not False:
             self._journey_logging = True
         self._hide_constant_logs = opts.get("--hide-constant-logs")
+        self._report = opts.get("--report")
         self._logger = logging.getLogger(f"{self.log_name} Stats")
         self._init_time = time.time()
         self._start_t = None
@@ -54,11 +56,13 @@ class GenericStatsOutput:
         self._resp_time_min = 0
         self._resp_time_max = 0
         self._resp_time_mean = 0
-        self._resp_time_mean_store = []
+        self._resp_time_store = []
+        self._req_sec_store = []
         self._req_sec_min = 0
         self._req_sec_max = 0
         self._scenarios_completed_time = 0
         self._data_transferred = 0
+        self._standard_deviation = 0
         self._error_journeys = defaultdict(int)
 
     def _pct(self, percentile):
@@ -81,7 +85,7 @@ class GenericStatsOutput:
         a = self._resp_time_recent[index]
         b = self._resp_time_recent[index + 1]
         interpolated_amount = (b - a) * fractional_index
-        return f"{a + interpolated_amount}:.6f"
+        return f"{a + interpolated_amount:.6f}"
 
     @property
     def error_total(self):
@@ -119,19 +123,20 @@ class GenericStatsOutput:
         if self._start_t + self._period < t:
 
             if self._resp_time_recent:
+                self._resp_time_store.extend(self._resp_time_recent)
                 if self._resp_time_min == 0:
-                    self._resp_time_min = self.min_resp_time
+                    self._resp_time_min = self.min_resp_time_recent
                 else:
-                    self._resp_time_min = min(self.min_resp_time, self._resp_time_min)
+                    self._resp_time_min = min(
+                        self.min_resp_time_recent, self._resp_time_min
+                    )
 
                 self._resp_time_max = max(self.max_resp_time_recent, self._resp_time_max)
 
-                self._resp_time_mean_store.append(
-                    sum(self._resp_time_recent) / len(self._resp_time_recent)
-                )
-
             if self._req_recent:
                 req_sec = self._req_recent / (t - self._start_t)
+                if self._report:
+                    self._req_sec_store.append(req_sec)
                 if self._req_sec_min == 0:
                     self._req_sec_min = req_sec
                 else:
@@ -154,9 +159,9 @@ class GenericStatsOutput:
 
     @property
     def mean_resp_time(self):
-        if not self._resp_time_mean_store:
+        if not self._resp_time_store:
             return 0
-        return sum(self._resp_time_mean_store) / len(self._resp_time_mean_store)
+        return statistics.fmean(self._resp_time_store)
 
     @property
     def max_resp_time_recent(self):
@@ -165,14 +170,56 @@ class GenericStatsOutput:
         return max(self._resp_time_recent)
 
     @property
-    def min_resp_time(self):
+    def min_resp_time_recent(self):
         if not self._resp_time_recent:
             return 0
         return min(self._resp_time_recent)
 
     @property
     def req_sec_mean(self):
-        return self._req_total / (self._scenarios_completed_time - self._init_time)
+        if self._req_total == 0:
+            return 0
+        return statistics.fmean(self._req_sec_store)
+
+    @property
+    def resp_time_standard_deviation(self):
+        if not self._resp_time_store:
+            return 0
+        return statistics.stdev(self._resp_time_store)
+
+    @property
+    def req_sec_standard_deviation(self):
+        if self._req_total == 0:
+            return 0
+        return statistics.stdev(self._req_sec_store)
+
+    # Calculating percentage of resp times that lie within deviation limits (Mean +/- Standard deviation)
+    @property
+    def resp_time_within_standard_deviation(self):
+        if not self._resp_time_store:
+            return 0
+        return (
+            sum(
+                abs(x - self.mean_resp_time) < self.resp_time_standard_deviation
+                for x in self._resp_time_store
+            )
+            / len(self._resp_time_store)
+            * 100
+        )
+
+    # Calculating percentage of req/sec that lie within deviation limits (Mean +/- Standard deviation)
+    @property
+    def req_sec_within_standard_deviation(self):
+        if self._req_total == 0:
+            return 0
+        return (
+            sum(
+                abs(x - self.req_sec_mean) < self.req_sec_standard_deviation
+                for x in self._req_sec_store
+            )
+            / len(self._req_sec_store)
+            * 100
+        )
 
 
 class HttpStatsOutput(GenericStatsOutput):

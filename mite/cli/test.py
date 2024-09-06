@@ -5,6 +5,8 @@ import sys
 import time
 import tracemalloc
 
+from prettytable import PrettyTable
+
 from mite.datapools import SingleRunDataPoolWrapper
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
 
@@ -166,14 +168,29 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         if max_response_time > int(opts["--max-response-time-threshold"]):
             has_error = True
             logging.error("Max response time exceeded: %sms", max_response_time)
+
     if opts.get("--mean-response-time-threshold") != "0":
         mean_response_time = http_stats_output.mean_resp_time * 1000
         if mean_response_time > int(opts["--mean-response-time-threshold"]):
             has_error = True
             logging.error("Mean response time exceeded: %sms", mean_response_time)
 
+    if opts.get("--standard-deviation-response-time-threshold") != "0":
+        resp_time_stddev = http_stats_output.resp_time_standard_deviation * 1000
+        if resp_time_stddev > int(opts["--standard-deviation-response-time-threshold"]):
+            has_error = True
+            logging.error(
+                "Response time standard deviation exceeded: %sms", resp_time_stddev
+            )
+
+    if opts.get("--standard-deviation-req-sec-threshold") != "0":
+        req_sec_stddev = http_stats_output.req_sec_standard_deviation
+        if req_sec_stddev > int(opts["--standard-deviation-req-sec-threshold"]):
+            has_error = True
+            logging.error("Request per second exceeded: %s", req_sec_stddev)
+
     if opts.get("--report"):
-        benchmark_report(opts, http_stats_output)
+        benchmark_report(http_stats_output)
 
     # Ensure any open files get closed
     del receiver._raw_listeners
@@ -190,32 +207,40 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
-def benchmark_report(opts, http_stats_output):
-    report_output = """
+def benchmark_report(http_stats_output):
+    table = PrettyTable()
+    table.field_names = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+    number_format = (
+        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+    )
 
-\t\tAvg\t\tMin\t\tMax
-Latency\t\t{mean_resp_time:.2f}ms\t\t{min_resp_time:.2f}ms\t\t{max_resp_time:.2f}ms
-Req/Sec\t\t{req_per_sec_mean:.2f}\t\t{min_req_per_sec:.2f}\t\t{max_req_per_sec:.2f}
+    table.add_row(
+        [
+            "Latency",
+            f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
+            f"{http_stats_output._resp_time_min * 1000:.2f}ms",
+            f"{http_stats_output._resp_time_max * 1000:.2f}ms",
+            f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
+            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
+        ]
+    )
 
-{total_reqs} requests in {total_time:.2f}s, {data_transfer:.2f}{data_unit} data transfered
-"""
+    table.add_row(
+        [
+            "Req/Sec",
+            number_format(http_stats_output.req_sec_mean),
+            number_format(http_stats_output._req_sec_min),
+            number_format(http_stats_output._req_sec_max),
+            number_format(http_stats_output.req_sec_standard_deviation),
+            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
+        ]
+    )
 
+    table.align["Metric"] = "l"
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
-
+    print(table)
     print(
-        report_output.format(
-            mean_resp_time=http_stats_output.mean_resp_time * 1000,
-            min_resp_time=http_stats_output._resp_time_min * 1000,
-            max_resp_time=http_stats_output._resp_time_max * 1000,
-            req_per_sec_mean=http_stats_output.req_sec_mean,
-            min_req_per_sec=http_stats_output._req_sec_min,
-            max_req_per_sec=http_stats_output._req_sec_max,
-            total_reqs=http_stats_output._req_total,
-            total_time=http_stats_output._scenarios_completed_time
-            - http_stats_output._init_time,
-            data_transfer=data_transfer,
-            data_unit=data_unit,
-        )
+        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred"
     )
 
 
