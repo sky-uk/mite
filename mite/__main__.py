@@ -108,7 +108,6 @@ from urllib.request import urlopen
 
 import docopt
 import ujson
-import uvloop
 
 from .cli import receiver, stats
 from .cli.cat import cat, uncat
@@ -127,6 +126,8 @@ from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module
 from .web import app, prometheus_metrics
+
+# import uvloop
 
 
 def _recorder_receiver(opts):
@@ -328,7 +329,7 @@ def har_converter(opts):
 
 def main():
     if os.environ.get("MITE_PROFILE", "0") != "1":
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
     opts = docopt.docopt(__doc__)
     setup_logging(opts)
     configure_python_path(opts)
