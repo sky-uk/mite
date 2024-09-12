@@ -31,7 +31,7 @@ To push a new version of the docs
 pip install sphinx
 # somewhere on your machine
 MITE_DOCS_PATH=`pwd`
-git clone git@github.com:sky-uk/mite.git mite-docs
+git clone git@github.com-nbcudtc:NBCUDTC/mite.git mite-docs
 cd mite-docs
 git checkout gh-pages
 # cd back to the mite checkout
