@@ -63,6 +63,7 @@ class GenericStatsOutput:
         self._req_sec_min = 0
         self._req_sec_max = 0
         self._scenarios_completed_time = 0
+        self._opts = opts
         self._data_transferred = 0
         self._standard_deviation = 0
         self._error_journeys = defaultdict(int)
@@ -115,7 +116,7 @@ class GenericStatsOutput:
         self._req_recent = 0
         self._error_recent = 0
 
-    def process_message(self, message, opts):
+    def process_message(self, message):
         if "type" not in message:
             return
         msg_type = message["type"]
@@ -157,12 +158,14 @@ class GenericStatsOutput:
             if self._journey_logging:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
-        if opts.get("--max-errors-threshold") != "0":
-            if self._error_total > int(opts["--max-errors-threshold"]):
+        if self._opts.get("--max-errors-threshold") != "0":
+            if self._error_total > int(self._opts["--max-errors-threshold"]):
                 logging.error("Max error exceeded: %s", self._error_total)
                 raise StopVolumeModel
-        if opts.get("--max-response-time-threshold") != "0":
-            if self._resp_time_max * 1000 > int(opts["--max-response-time-threshold"]):
+        if self._opts.get("--max-response-time-threshold") != "0":
+            if self._resp_time_max * 1000 > int(
+                self._opts["--max-response-time-threshold"]
+            ):
                 # has_error = True
                 logging.error("Max response time exceeded: %sms", self._resp_time_max)
                 raise StopVolumeModel
