@@ -4,7 +4,7 @@ import statistics
 import time
 from collections import defaultdict
 
-from scenario import StopVolumeModel
+from .scenario import StopVolumeModel
 
 
 class MsgOutput:
