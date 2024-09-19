@@ -4,6 +4,8 @@ import statistics
 import time
 from collections import defaultdict
 
+from scenario import StopVolumeModel
+
 
 class MsgOutput:
     def __init__(self, opts):
@@ -113,7 +115,7 @@ class GenericStatsOutput:
         self._req_recent = 0
         self._error_recent = 0
 
-    def process_message(self, message):
+    def process_message(self, message, opts):
         if "type" not in message:
             return
         msg_type = message["type"]
@@ -143,7 +145,6 @@ class GenericStatsOutput:
                     self._req_sec_min = min(req_sec, self._req_sec_min)
 
                 self._req_sec_max = max(req_sec, self._req_sec_max)
-
             self.print_output(t)
         if msg_type in self.message_types:
             self._resp_time_recent.append(message["total_time"])
@@ -156,6 +157,15 @@ class GenericStatsOutput:
             if self._journey_logging:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
+        if opts.get("--max-errors-threshold") != "0":
+            if self._error_total > int(opts["--max-errors-threshold"]):
+                logging.error("Max error exceeded: %s", self._error_total)
+                raise StopVolumeModel
+        if opts.get("--max-response-time-threshold") != "0":
+            if self._resp_time_max * 1000 > int(opts["--max-response-time-threshold"]):
+                # has_error = True
+                logging.error("Max response time exceeded: %sms", self._resp_time_max)
+                raise StopVolumeModel
 
     @property
     def mean_resp_time(self):

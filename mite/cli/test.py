@@ -159,15 +159,15 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     # Run one last report before exiting
     controller.report(receiver.recieve)
-    has_error = http_stats_output is not None and http_stats_output.error_total > int(
-        opts.get("--max-errors-threshold")
-    )
+    # has_error = http_stats_output is not None and http_stats_output.error_total > int(
+    #     opts.get("--max-errors-threshold")
+    # )
 
-    if opts.get("--max-response-time-threshold") != "0":
-        max_response_time = http_stats_output._resp_time_max * 1000
-        if max_response_time > int(opts["--max-response-time-threshold"]):
-            has_error = True
-            logging.error("Max response time exceeded: %sms", max_response_time)
+    # if opts.get("--max-response-time-threshold") != "0":
+    #     max_response_time = http_stats_output._resp_time_max * 1000
+    #     if max_response_time > int(opts["--max-response-time-threshold"]):
+    #         has_error = True
+    #         logging.error("Max response time exceeded: %sms", max_response_time)
 
     if opts.get("--mean-response-time-threshold") != "0":
         mean_response_time = http_stats_output.mean_resp_time * 1000
