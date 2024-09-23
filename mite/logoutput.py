@@ -1,10 +1,12 @@
+import asyncio
 import logging
 import math
 import statistics
+import sys
 import time
 from collections import defaultdict
 
-from .scenario import StopVolumeModel
+# from .scenario import ThresholdExceeded
 
 
 class MsgOutput:
@@ -94,6 +96,10 @@ class GenericStatsOutput:
     def error_total(self):
         return self._error_total
 
+    async def cancel_task(self):
+        for task in asyncio.all_tasks():
+            task.cancel()
+
     def print_output(self, t):
         dt = t - self._start_t
         self._resp_time_recent.sort()
@@ -161,14 +167,67 @@ class GenericStatsOutput:
         if self._opts.get("--max-errors-threshold") != "0":
             if self._error_total > int(self._opts["--max-errors-threshold"]):
                 logging.error("Max error exceeded: %s", self._error_total)
-                raise StopVolumeModel
+                logging.info("Failing the test")
+                sys.exit(1)
+                # try:
+                #     logging.error("Max error exceeded: %s", self._error_total)
+                #     raise ThresholdExceeded
+                # except ThresholdExceeded:
+                #     try:
+                #         logging.info("Failing the test")
+                #         sys.exit(1)
+                #     finally:
+                #         try:
+                #             sys.stdout.close()
+                #         except:
+                #             pass
+                #         try:
+                #             sys.stderr.close()
+                #         except:
+                #             pass
+                # logging.info("ThresholdExceeded raised. Stopping tasks...")
+                # try:
+                #     asyncio.get_running_loop()
+                #     asyncio.run(self.cancel_task())
+                # except RuntimeError:
+                #     logging.error("No running event loop. Cannot cancel tasks")
+                # except Exception as e:
+                #     logging.error(f"Unexpected error : {e}")
         if self._opts.get("--max-response-time-threshold") != "0":
             if self._resp_time_max * 1000 > int(
                 self._opts["--max-response-time-threshold"]
             ):
+                logging.error(
+                    "Max response time exceeded: %sms", self._resp_time_max * 1000
+                )
+                logging.info("Failing the test")
+                sys.exit(1)
                 # has_error = True
-                logging.error("Max response time exceeded: %sms", self._resp_time_max)
-                raise StopVolumeModel
+                # try:
+                #     logging.error("Max response time exceeded: %sms", self._resp_time_max * 1000)
+
+                #     raise ThresholdExceeded
+                # except ThresholdExceeded:
+                #     try:
+                #         logging.info("Failing the test")
+                #         sys.exit(1)
+                #     finally:
+                #         try:
+                #             sys.stdout.close()
+                #         except:
+                #             pass
+                #         try:
+                #             sys.stderr.close()
+                #         except:
+                #             pass
+                # logging.info("ThresholdExceeded raised. Stopping tasks...")
+                # try:
+                #     asyncio.get_running_loop()
+                #     asyncio.run(self.cancel_task())
+                # except RuntimeError:
+                #     logging.error("No running event loop. Cannot cancel tasks")
+                # except Exception as e:
+                #     logging.error(f"Unexpected error : {e}")
 
     @property
     def mean_resp_time(self):
