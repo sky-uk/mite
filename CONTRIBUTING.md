@@ -38,9 +38,10 @@ standard.
 ## Core Maintainers
 
   * [Jordan Brennan](https://github.com/jb098) (Senior Performance Engineer - Sky Identity)
-  * [Aaron Ecay](https://github.com/aecay) (Performance Engineer - Sky Identity)
-  * [Davide Annunziata](https://github.com/DavAnnunz) (Performance Engineer - Sky Identity)
-  * [Arron Canham](https://github.com/arroncanhamskyuk) (Performance Engineer - Sky Identity)
+  * [Aaron Ecay](https://github.com/aecay) ()
+  * [Davide Annunziata](https://github.com/DavAnnunz) (Senior Performance Engineer - Sky Identity)
+  * [Ryan Linnit ](https://github.com/ryanlinnit-sky) (Senior Performance Engineer - Sky Identity)
+
 
 The Mite Maintainers Team are here to help facilitate the process of contributing
 and offer guidance. If you have any questions or concerns please [talk to us via slack](https://sky.slack.com/messages/mite)
