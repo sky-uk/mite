@@ -1,7 +1,8 @@
 import logging
 
-from mite.scenario import StopVolumeModel
 from mite_kafka import KafkaError, mite_kafka
+
+from mite.scenario import StopVolumeModel
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

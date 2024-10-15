@@ -1,7 +1,8 @@
 import os
 
-from mite.scenario import StopVolumeModel
 from mite_http import mite_http
+
+from mite.scenario import StopVolumeModel
 
 
 def volume_model_factory(n):

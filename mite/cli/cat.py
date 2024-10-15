@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 
 import msgpack
+
 from mite.utils import pack_msg
 
 

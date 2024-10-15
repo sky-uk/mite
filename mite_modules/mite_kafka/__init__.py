@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
 from mite.exceptions import MiteError
 
 logger = logging.getLogger(__name__)

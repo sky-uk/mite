@@ -5,9 +5,10 @@ import sys
 import time
 import tracemalloc
 
+from prettytable import PrettyTable
+
 from mite.datapools import SingleRunDataPoolWrapper
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
-from prettytable import PrettyTable
 
 from ..collector import Collector
 from ..controller import Controller

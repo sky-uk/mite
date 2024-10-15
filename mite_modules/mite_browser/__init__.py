@@ -4,10 +4,10 @@ from functools import wraps
 from urllib.parse import urlencode, urljoin
 
 from bs4 import BeautifulSoup
-from mite.exceptions import MiteError
 from mite_http import mite_http
 
 from mite import ensure_fixed_separation
+from mite.exceptions import MiteError
 
 EMBEDDED_URL_REGEX = re.compile(
     r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE

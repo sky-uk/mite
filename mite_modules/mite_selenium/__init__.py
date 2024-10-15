@@ -6,13 +6,14 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
 
-from mite.exceptions import MiteError
-from mite.utils import spec_import
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import Remote as SeleniumRemote
 from selenium.webdriver.remote.remote_connection import RemoteConnection
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from mite.exceptions import MiteError
+from mite.utils import spec_import
 
 logger = logging.getLogger(__name__)
 
