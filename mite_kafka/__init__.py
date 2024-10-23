@@ -22,11 +22,11 @@ class KafkaProducer:
         self._loop = asyncio.get_event_loop()
         self._producer = None
 
-    def install(self, context):
-        context.kafka_producer = self
+    def install(self, ctx):
+        ctx.kafka_producer = self
 
-    def uninstall(self, context):
-        del context.kafka_producer
+    def uninstall(self, ctx):
+        del ctx.kafka_producer
 
     async def start(self, *args, **kwargs):
         self._producer = AIOKafkaProducer(*args, **kwargs)
@@ -44,11 +44,11 @@ class KafkaConsumer:
         self._loop = asyncio.get_event_loop()
         self._consumer = None
 
-    def install(self, context):
-        context.kafka_consumer = self
+    def install(self, ctx):
+        ctx.kafka_consumer = self
 
-    def uninstall(self, context):
-        del context.kafka_consumer
+    def uninstall(self, ctx):
+        del ctx.kafka_consumer
 
     async def start(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
@@ -67,26 +67,24 @@ class KafkaConsumer:
 
 
 @asynccontextmanager
-async def _kafka_context_manager(context):
-    kp = KafkaProducer()
-    kp.install(context)
-    kc = KafkaConsumer()
-    kc.install(context)
+async def _kafka_context_manager(ctx):
+    ctx.kafka_producer = KafkaProducer()
+    ctx.kafka_producer.install(ctx)
+    ctx.kafka_consumer = KafkaConsumer()
+    ctx.kafka_consumer.install(ctx)
     try:
         yield
     except Exception as e:
         print(e)
         raise KafkaError(e)
     finally:
-        kp.uninstall(context)
-        kc.uninstall(context)
+        ctx.kafka_producer.uninstall(ctx)
+        ctx.kafka_consumer.uninstall(ctx)
 
 
 def mite_kafka(func):
     async def wrapper(ctx, *args, **kwargs):
         async with _kafka_context_manager(ctx):
-            ctx.kafka_producer = KafkaProducer()
-            ctx.kafka_consumer = KafkaConsumer()
             return await func(ctx, *args, **kwargs)
 
     return wrapper
