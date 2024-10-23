@@ -22,11 +22,11 @@ class KafkaProducer:
     def _remove_producer(self, ctx):
         del ctx.kafka_producer
 
-    async def start(self, *args, **kwargs):
+    async def create(self, *args, **kwargs):
         self._producer = AIOKafkaProducer(*args, **kwargs)
-        await self._producer.start()
 
     async def send_and_wait(self, topic, key=None, value=None, **kwargs):
+        await self._producer.start()
         await self._producer.send_and_wait(topic, key=key, value=value, **kwargs)
 
     async def stop(self):
@@ -42,7 +42,7 @@ class KafkaConsumer:
     def _remove_consumer(self, ctx):
         del ctx.kafka_consumer
 
-    async def start(self, *args, **kwargs):
+    async def create(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
         self._topics = args
 
