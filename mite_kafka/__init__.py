@@ -52,15 +52,14 @@ class KafkaConsumer:
 
     async def start(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
-        await self._consumer.start()
         return self._consumer
 
     async def get_msg(self):
         return self._consumer
 
-    async def get_message(self, consumer, *topics, **kwargs):
-        breakpoint()
-        async for msg in consumer:
+    async def get_messages(self):
+        await self._consumer.start()
+        async for msg in self._consumer:
             return msg
 
     async def stop(self):
