@@ -22,7 +22,7 @@ class KafkaProducer:
         self._loop = asyncio.get_event_loop()
         self._producer = None
 
-    def _uninstall(self, ctx):
+    def _remove_producer(self, ctx):
         del ctx.kafka_producer
 
     async def start(self, *args, **kwargs):
@@ -41,7 +41,7 @@ class KafkaConsumer:
         self._loop = asyncio.get_event_loop()
         self._consumer = None
 
-    def _uninstall(self, ctx):
+    def _remove_consumer(self, ctx):
         del ctx.kafka_consumer
 
     async def start(self, *args, **kwargs):
@@ -70,8 +70,8 @@ async def _kafka_context_manager(ctx):
         print(e)
         raise KafkaError(e)
     finally:
-        ctx.kafka_producer._uninstall(ctx)
-        ctx.kafka_consumer._uninstall(ctx)
+        ctx.kafka_producer._remove_producer(ctx)
+        ctx.kafka_consumer._remove_consumer(ctx)
 
 
 def mite_kafka(func):
