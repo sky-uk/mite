@@ -18,7 +18,7 @@ class KafkaContext:
 
 
 class KafkaProducer:
-    def __init__(self):
+    def __init__(self, ctx):
         self._loop = asyncio.get_event_loop()
         self._producer = None
 
@@ -37,19 +37,17 @@ class KafkaProducer:
 
 
 class KafkaConsumer:
-    def __init__(self):
+    def __init__(self, ctx):
         self._loop = asyncio.get_event_loop()
         self._consumer = None
+        self._topics = None
 
     def _remove_consumer(self, ctx):
         del ctx.kafka_consumer
 
     async def start(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
-        return self._consumer
-
-    async def get_msg(self):
-        return self._consumer
+        self._topics = args
 
     async def get_messages(self):
         await self._consumer.start()
@@ -62,8 +60,8 @@ class KafkaConsumer:
 
 @asynccontextmanager
 async def _kafka_context_manager(ctx):
-    ctx.kafka_producer = KafkaProducer()
-    ctx.kafka_consumer = KafkaConsumer()
+    ctx.kafka_producer = KafkaProducer(ctx)
+    ctx.kafka_consumer = KafkaConsumer(ctx)
     try:
         yield
     except Exception as e:
