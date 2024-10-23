@@ -2,65 +2,92 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
 from mite.exceptions import MiteError
 
 logger = logging.getLogger(__name__)
 
+
 class KafkaError(MiteError):
     pass
+
 
 class KafkaContext:
     pass
 
-class _KafkaWrapper:
+
+class KafkaProducer:
     def __init__(self):
         self._loop = asyncio.get_event_loop()
+        self._producer = None
 
     def install(self, context):
-        context.kafka = self
+        context.kafka_producer = self
 
     def uninstall(self, context):
-        del context.kafka
+        del context.kafka_producer
 
-    async def create_producer(self, *args, **kwargs):
-        return AIOKafkaProducer(*args, **kwargs)
+    async def start(self, *args, **kwargs):
+        self._producer = AIOKafkaProducer(*args, **kwargs)
+        await self._producer.start()
 
-    async def create_consumer(self, *args, **kwargs):
-        return AIOKafkaConsumer(*args, **kwargs)
+    async def send_and_wait(self, topic, key=None, value=None, **kwargs):
+        await self._producer.send_and_wait(topic, key=key, value=value, **kwargs)
 
-    async def send_and_wait(self, producer, topic, key=None, value=None, **kwargs):
-        try:
-            await producer.start()
-            await producer.send_and_wait(topic, key=key, value=value, **kwargs)
-        finally:
-            await producer.stop()
+    async def stop(self):
+        await self._producer.stop()
+
+
+class KafkaConsumer:
+    def __init__(self):
+        self._loop = asyncio.get_event_loop()
+        self._consumer = None
+
+    def install(self, context):
+        context.kafka_consumer = self
+
+    def uninstall(self, context):
+        del context.kafka_consumer
+
+    async def start(self, *args, **kwargs):
+        self._consumer = AIOKafkaConsumer(*args, **kwargs)
+        await self._consumer.start()
+        return self._consumer
+
+    async def get_msg(self):
+        return self._consumer
 
     async def get_message(self, consumer, *topics, **kwargs):
-        try:
-            await consumer.start()
-            async for msg in consumer:
-                return msg
-        finally:
-            await consumer.stop()
+        breakpoint()
+        async for msg in consumer:
+            return msg
 
-    async def create_message(self, value, **kwargs):
-        return value
+    async def stop(self):
+        await self._consumer.stop()
+
 
 @asynccontextmanager
 async def _kafka_context_manager(context):
-    kw = _KafkaWrapper()
-    kw.install(context)
+    kp = KafkaProducer()
+    kp.install(context)
+    kc = KafkaConsumer()
+    kc.install(context)
     try:
         yield
     except Exception as e:
-        raise KafkaError(f"Received an error from Kafka:\n{e}") from e
+        print(e)
+        raise KafkaError(e)
     finally:
-        kw.uninstall(context)
+        kp.uninstall(context)
+        kc.uninstall(context)
+
 
 def mite_kafka(func):
     async def wrapper(ctx, *args, **kwargs):
         async with _kafka_context_manager(ctx):
+            ctx.kafka_producer = KafkaProducer()
+            ctx.kafka_consumer = KafkaConsumer()
             return await func(ctx, *args, **kwargs)
 
     return wrapper
