@@ -3,19 +3,9 @@ from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
-from mite.exceptions import MiteError
-
-
-class KafkaError(MiteError):
-    pass
-
-
-class KafkaContext:
-    pass
-
 
 class KafkaProducer:
-    def __init__(self, ctx):
+    def __init__(self):
         self._loop = asyncio.get_event_loop()
         self._producer = None
 
@@ -34,13 +24,13 @@ class KafkaProducer:
 
 
 class KafkaConsumer:
-    def __init__(self, ctx):
+    def __init__(self):
         self._loop = asyncio.get_event_loop()
         self._consumer = None
         self._topics = None
 
     def _remove_consumer(self, ctx):
-        del ctx.kafka_consumer
+        del self._consumer
 
     async def create(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
@@ -48,8 +38,8 @@ class KafkaConsumer:
 
     async def get_messages(self):
         await self._consumer.start()
-        async for msg in self._consumer:
-            return msg
+        async for message in self._consumer:
+            yield message
 
     async def stop(self):
         await self._consumer.stop()
@@ -57,13 +47,10 @@ class KafkaConsumer:
 
 @asynccontextmanager
 async def _kafka_context_manager(ctx):
-    ctx.kafka_producer = KafkaProducer(ctx)
-    ctx.kafka_consumer = KafkaConsumer(ctx)
+    ctx.kafka_producer = KafkaProducer()
+    ctx.kafka_consumer = KafkaConsumer()
     try:
         yield
-    except Exception as e:
-        print(e)
-        raise KafkaError(e)
     finally:
         ctx.kafka_producer._remove_producer(ctx)
         ctx.kafka_consumer._remove_consumer(ctx)
