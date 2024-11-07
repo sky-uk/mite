@@ -198,11 +198,10 @@ class GenericStatsOutput:
     def resp_time_within_standard_deviation(self):
         if not self._resp_time_store:
             return 0
+        mean = self.mean_resp_time
+        stdev = self.resp_time_standard_deviation
         return (
-            sum(
-                abs(x - self.mean_resp_time) < self.resp_time_standard_deviation
-                for x in self._resp_time_store
-            )
+            sum(abs(x - mean) < stdev for x in self._resp_time_store)
             / len(self._resp_time_store)
             * 100
         )
@@ -212,11 +211,10 @@ class GenericStatsOutput:
     def req_sec_within_standard_deviation(self):
         if self._req_total == 0:
             return 0
+        mean = self.req_sec_mean
+        stdev = self.req_sec_standard_deviation
         return (
-            sum(
-                abs(x - self.req_sec_mean) < self.req_sec_standard_deviation
-                for x in self._req_sec_store
-            )
+            sum(abs(x - mean) < stdev for x in self._req_sec_store)
             / len(self._req_sec_store)
             * 100
         )
