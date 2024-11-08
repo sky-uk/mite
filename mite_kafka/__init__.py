@@ -30,7 +30,7 @@ class KafkaConsumer:
         self._topics = None
 
     def _remove_consumer(self, ctx):
-        del self._consumer
+        del ctx.kafka_consumer
 
     async def create(self, *args, **kwargs):
         self._consumer = AIOKafkaConsumer(*args, **kwargs)
