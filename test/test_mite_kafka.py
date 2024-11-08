@@ -35,12 +35,11 @@ async def test_mite_kafka_decorator_uninstall():
 async def test_create_producer():
     # Create a mock for AIOKafkaProducer
     producer_mock = MagicMock()
-    context = MockContext()
 
     # Patch AIOKafkaProducer to return the mock
     with patch("aiokafka.producer.AIOKafkaProducer", new_callable=producer_mock):
         # Create an instance of _KafkaWrapper
-        kafka_wrapper = KafkaProducer(context)
+        kafka_wrapper = KafkaProducer()
         # Call the create_producer method
         await kafka_wrapper.create(bootstrap_servers="broker_url")
         # Pass the broker URL as a keyword argument
@@ -52,12 +51,11 @@ async def test_create_producer():
 async def test_create_consumer():
     # Create a mock for AIOKafkaConsumer
     consumer_mock = MagicMock()
-    context = MockContext()
 
     # Patch AIOKafkaConsumer to return the mock
     with patch("aiokafka.consumer.AIOKafkaConsumer", new_callable=consumer_mock):
         # Create an instance of _KafkaWrapper
-        kafka_wrapper = KafkaConsumer(context)
+        kafka_wrapper = KafkaConsumer()
         # Call the create_consumer method
         await kafka_wrapper.create(
             bootstrap_servers="broker_url"
