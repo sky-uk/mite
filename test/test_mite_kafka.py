@@ -38,14 +38,14 @@ async def test_create_producer():
     producer_mock = MagicMock()
 
     # Patch AIOKafkaProducer to return the mock
-    with patch("aiokafka.producer.AIOKafkaProducer", new_callable=lambda: producer_mock):
+    with patch("aiokafka.producer.AIOKafkaProducer", new_callable=producer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = KafkaProducer()
         # Call the create_producer method
         await kafka_wrapper.create(bootstrap_servers="broker_url")
         # Pass the broker URL as a keyword argument
         # Assert that the AIOKafkaProducer class was called with the expected arguments
-        producer_mock.return_value.assert_called_once_with()
+        producer_mock.assert_called_once_with()
 
 
 @pytest.mark.asyncio
@@ -54,10 +54,10 @@ async def test_create_consumer():
     consumer_mock = MagicMock()
 
     # Patch AIOKafkaConsumer to return the mock
-    with patch("aiokafka.consumer.AIOKafkaConsumer", new_callable=lambda: consumer_mock):
+    with patch("aiokafka.consumer.AIOKafkaConsumer", new_callable=consumer_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = KafkaConsumer()
         # Call the create_consumer method
         await kafka_wrapper.create(bootstrap_servers="broker_url")
         # Assert that the AIOKafkaConsumer class was called with the expected arguments
-        consumer_mock.return_value.assert_called_once_with()
+        consumer_mock.assert_called_once_with()
