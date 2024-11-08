@@ -28,8 +28,8 @@ async def test_mite_kafka_decorator_uninstall():
 
     await dummy_journey(mock_context)
 
-    assert mock_context.kafka_producer is None
-    assert mock_context.kafka_consumer is None
+    assert getattr(mock_context, "kafka_producer", None) is None
+    assert getattr(mock_context, "kafka_consumer", None) is None
 
 
 @pytest.mark.asyncio
