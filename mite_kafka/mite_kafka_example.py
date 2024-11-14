@@ -30,18 +30,10 @@ async def produce_to_kafka(ctx):
     producer = ctx.kafka_producer
     await producer.create(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
-    sent_ids = 0
     message = "Hello Kafka!"
 
     try:
         await producer.send_and_wait(producer, KAFKA_TOPIC, value=message.encode("utf-8"))
-        sent_ids += 1
-        ctx.send(
-            "kafka_producer_stats",
-            message=message,
-            topic_name=KAFKA_TOPIC,
-            total_sent=sent_ids,
-        )
         logger.info(f"Message sent to Kafka: {message} to the topic {KAFKA_TOPIC}")
     finally:
         await producer.stop()
@@ -53,16 +45,8 @@ async def consume_from_kafka(ctx):
     consumer = ctx.kafka_consumer
     await consumer.create(KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
-    receive_ids = 0
     try:
         async for message in consumer.get_messages():
-            receive_ids += 1
-            ctx.send(
-                "kafka_consumer_stats",
-                message=message,
-                topic_name=KAFKA_TOPIC,
-                total_received=receive_ids,
-            )
             logger.info(
                 f"Received message from Kafka: {KAFKA_TOPIC} - {message.value.decode('utf-8')}"
             )
