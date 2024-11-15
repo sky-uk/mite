@@ -28,7 +28,7 @@ def volume_model_factory(n):
 @mite_kafka
 async def produce_to_kafka(ctx):
     producer = ctx.kafka_producer
-    await producer.create(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+    await producer.create_and_start(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
     message = "Hello Kafka!"
 
@@ -43,7 +43,9 @@ async def produce_to_kafka(ctx):
 @mite_kafka
 async def consume_from_kafka(ctx):
     consumer = ctx.kafka_consumer
-    await consumer.create(KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+    await consumer.create_and_start(
+        KAFKA_TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
+    )
 
     try:
         async for message in consumer.get_messages():
