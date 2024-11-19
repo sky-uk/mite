@@ -15,7 +15,6 @@ class KafkaProducer:
         await self._producer.start()
 
     async def send_and_wait(self, topic, key=None, value=None, **kwargs):
-        # add time metrics
         await self._producer.send_and_wait(topic, key=key, value=value, **kwargs)
         self._context.send(
             "kafka_producer_stats",
