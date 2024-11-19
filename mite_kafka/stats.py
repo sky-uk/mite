@@ -1,16 +1,16 @@
-from mite.stats import Accumulator,extractor,matcher_by_type
+from mite.stats import Counter, extractor, matcher_by_type
 
 # Kafka
 
 _KAFKA_STATS = [
-    Accumulator(
-        "mite_kafka_producer_stats",
+    Counter(
+        "mite_kafka_producer_stats_counter",
         matcher_by_type("kafka_producer_stats"),
-        extractor(["topic_name"], "total_sent"),
+        extractor(["topic", "key"]),
     ),
-    Accumulator(
-        "mite_kafka_consumer_stats",
+    Counter(
+        "mite_kafka_consumer_stats_counter",
         matcher_by_type("kafka_consumer_stats"),
-        extractor(["topic_name"], "total_received"),
+        extractor(["topic", "partition"]),
     ),
 ]
