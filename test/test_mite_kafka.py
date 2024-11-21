@@ -41,7 +41,7 @@ async def test_create_producer():
     mock_context = MockContext()
 
     # Patch AIOKafkaProducer to return the mock
-    with patch("aiokafka.AIOKafkaProducer.start", new_callable=producer_start_mock):
+    with patch("aiokafka.AIOKafkaProducer.start", side_effect=producer_start_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = KafkaProducer(mock_context)
         # Call the create_producer method
@@ -61,7 +61,7 @@ async def test_create_consumer():
 
     # Patch AIOKafkaConsumer to return the mock
 
-    with patch("aiokafka.AIOKafkaConsumer.start", new_callable=consumer_start_mock):
+    with patch("aiokafka.AIOKafkaConsumer.start", side_effect=consumer_start_mock):
         # Create an instance of _KafkaWrapper
         kafka_wrapper = KafkaConsumer(mock_context)
         # Call the create_consumer method
