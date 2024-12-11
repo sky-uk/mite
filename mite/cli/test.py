@@ -209,10 +209,11 @@ def human_readable_bytes(size):
 
 def benchmark_report(http_stats_output):
     table = PrettyTable()
-    table.field_names = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
-    number_format = (
-        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
-    )
+    percentiles_list, _ = http_stats_output._percentiles_with_thresholds()
+    percentiles_headers = [f"{int(p)} %tile" for p in percentiles_list]
+    standard_headers = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+
+    table.field_names = standard_headers + percentiles_headers
 
     table.add_row(
         [
@@ -222,19 +223,26 @@ def benchmark_report(http_stats_output):
             f"{http_stats_output._resp_time_max * 1000:.2f}ms",
             f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
             f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
+            *[
+                f"{x * 1000:.2f}ms"
+                for x in http_stats_output.percentiles_list_resp_time_store
+            ],
         ]
     )
 
-    table.add_row(
-        [
-            "Req/Sec",
-            number_format(http_stats_output.req_sec_mean),
-            number_format(http_stats_output._req_sec_min),
-            number_format(http_stats_output._req_sec_max),
-            number_format(http_stats_output.req_sec_standard_deviation),
-            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
-        ]
-    )
+    # number_format = (
+    #     lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+    # )
+    # table.add_row(
+    #     [
+    #         "Req/Sec",
+    #         number_format(http_stats_output.req_sec_mean),
+    #         number_format(http_stats_output._req_sec_min),
+    #         number_format(http_stats_output._req_sec_max),
+    #         number_format(http_stats_output.req_sec_standard_deviation),
+    #         f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
+    #     ]
+    # )
 
     table.align["Metric"] = "l"
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
