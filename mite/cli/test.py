@@ -128,6 +128,10 @@ async def controller_report(controller, receiver):
         controller.report(receiver.recieve)
 
 
+def time_unit_format(number):
+    return f"{number * 1000:.2f}ms" if number < 1 else f"{number:.3f}s"
+
+
 def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
@@ -199,7 +203,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             if threshold != 0 and result * 1000 >= threshold:
                 has_error = True
                 logging.error(
-                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {result * 1000:.2f}ms"
+                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
                 )
 
     # Ensure any open files get closed
@@ -215,10 +219,6 @@ def human_readable_bytes(size):
             return size, unit
         size /= 1024.0
     return size, "PB"
-
-
-def time_unit_format(number):
-    return f"{number * 1000:.2f}ms" if number < 1 else f"{number:.3f}s"
 
 
 def colorise_result(result, threshold):
