@@ -218,7 +218,7 @@ def human_readable_bytes(size):
 
 
 def time_unit_format(number):
-    return f"{number * 1000:.2f}ms" if number >= 0.001 else f"{number:.2f}s"
+    return f"{number * 1000:.2f}ms" if number < 1 else f"{number:.3f}s"
 
 
 def colorise_result(result, threshold):
