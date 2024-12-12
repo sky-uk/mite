@@ -217,6 +217,16 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
+def colorise_result(result, threshold):
+    result_ms = result * 1000
+    if threshold != 0:
+        if result_ms >= threshold:
+            return f"\033[91m{result_ms:.2f}ms\033[0m"  # red
+        else:
+            return f"\033[92m{result_ms:.2f}ms\033[0m"  # green
+    return f"{result_ms:.2f}ms"
+
+
 def benchmark_report(http_stats_output, has_error=False):
     perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
 
@@ -227,6 +237,7 @@ def benchmark_report(http_stats_output, has_error=False):
 
     latency_table = PrettyTable()
     latency_table.field_names = standard_headers + percentiles_headers
+
     latency_table.add_row(
         [
             "Latency",
@@ -236,11 +247,7 @@ def benchmark_report(http_stats_output, has_error=False):
             f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
             f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
             *[
-                f"\033[91m{result * 1000:.2f}ms\033[0m"
-                if threshold != 0 and result * 1000 >= threshold
-                else f"\033[92m{result * 1000:.2f}ms\033[0m"
-                if threshold != 0
-                else f"{result * 1000:.2f}ms"
+                colorise_result(result, threshold)
                 for _, threshold, result in perctile_thresh_results_list
             ],
         ],
