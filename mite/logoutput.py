@@ -64,12 +64,7 @@ class GenericStatsOutput:
         self._data_transferred = 0
         self._standard_deviation = 0
         self._error_journeys = defaultdict(int)
-        self._benchmark_percentiles = (
-            opts.get("--benchmark-percentiles") or "53:50,90:300,99:500"
-        )
-        self._benchmark_percentiles_bucket_size = (
-            opts.get("--benchmark-percentiles-bucket-size") or 100
-        )
+        self._benchmark_percentiles = opts.get("--benchmark-percentiles")
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -176,10 +171,7 @@ class GenericStatsOutput:
         if not self._resp_time_store:
             return 0
         return [
-            statistics.quantiles(
-                self._resp_time_store, n=int(self._benchmark_percentiles_bucket_size)
-            )[p - 1]
-            for p in percentiles
+            statistics.quantiles(self._resp_time_store, n=100)[p - 1] for p in percentiles
         ]
 
     @property
