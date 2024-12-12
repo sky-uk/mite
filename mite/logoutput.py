@@ -160,19 +160,15 @@ class GenericStatsOutput:
 
     def _percentiles_with_thresholds(self):
         percentiles = self._benchmark_percentiles.split(",")
-        percentile_values = [int(p.split(":")[0]) for p in percentiles]
-        percentile_thresholds = [int(p.split(":")[1]) for p in percentiles]
-        return percentile_values, percentile_thresholds
+        return [(int(p.split(":")[0]), int(p.split(":")[1])) for p in percentiles]
 
     @property
     def percentiles_list_resp_time_store(self):
-        percentiles, _ = self._percentiles_with_thresholds()
-        logging.info(f"Percentiles: {percentiles}")
+        percentiles_thresholds_list = self._percentiles_with_thresholds()
         if not self._resp_time_store:
-            return 0
-        return [
-            statistics.quantiles(self._resp_time_store, n=100)[p - 1] for p in percentiles
-        ]
+            return []
+        quantiles = statistics.quantiles(self._resp_time_store, n=100)
+        return [(p[0], p[1], quantiles[p[0] - 1]) for p in percentiles_thresholds_list]
 
     @property
     def mean_resp_time(self):
