@@ -46,10 +46,10 @@ def default_config_loader():
     for name, value in os.environ.items():
         if name.startswith("MITE_CONF_"):
             key_name = name[10:]
-            logger.info(f'Setting config "{key_name}" from environment variable')
+            logger.debug(f'Setting config "{key_name}" from environment variable')
             result[key_name] = value
         if name.startswith("MITE_EVAL_CONF_"):
             key_name = name[15:]
-            logger.info(f'Setting config "{key_name}" by eval\'ing environment variable')
+            logger.debug(f'Setting config "{key_name}" by eval\'ing environment variable')
             result[key_name] = eval(value)
     return result

@@ -128,6 +128,10 @@ async def controller_report(controller, receiver):
         controller.report(receiver.recieve)
 
 
+def time_unit_format(number):
+    return f"{number * 1000:.2f}ms" if number < 1 else f"{number:.3f}s"
+
+
 def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
     for journey_spec, datapool, volumemodel in scenarios:
@@ -191,6 +195,16 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     if opts.get("--report"):
         benchmark_report(http_stats_output)
+        for (
+            percentile,
+            threshold,
+            result,
+        ) in http_stats_output.percentiles_list_resp_time_store:
+            if threshold != 0 and result * 1000 >= threshold:
+                has_error = True
+                logging.error(
+                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
+                )
 
     # Ensure any open files get closed
     del receiver._raw_listeners
@@ -207,25 +221,62 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
+def colorise_result(result, threshold):
+    formatted_result = time_unit_format(result)
+    if threshold != 0:
+        result_ms = result * 1000
+        if result_ms >= threshold:
+            return f"\033[91m{formatted_result}\033[0m"  # red
+        else:
+            return f"\033[92m{formatted_result}\033[0m"  # green
+    return formatted_result
+
+
 def benchmark_report(http_stats_output):
-    table = PrettyTable()
-    table.field_names = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+
+    percentiles_headers = [
+        f"{int(percentile[0])} %tile" for percentile in perctile_thresh_results_list
+    ]
+    standard_headers = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+
+    latency_table = PrettyTable()
+    latency_table.field_names = standard_headers + percentiles_headers
+
+    latency_table.add_row(
+        [
+            "Latency",
+            time_unit_format(http_stats_output.mean_resp_time),
+            time_unit_format(http_stats_output._resp_time_min),
+            time_unit_format(http_stats_output._resp_time_max),
+            time_unit_format(http_stats_output.resp_time_standard_deviation),
+            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
+            *[
+                colorise_result(result, threshold)
+                for _, threshold, result in perctile_thresh_results_list
+            ],
+        ],
+        divider=True,
+    )
+
+    if any(threshold[1] != 0 for threshold in perctile_thresh_results_list):
+        latency_table.add_row(
+            [
+                "Test Thresholds",
+                *["-" for _ in range(len(standard_headers) - 1)],
+                *[
+                    f"{threshold[1]}ms" if threshold[1] != 0 else "-"
+                    for threshold in perctile_thresh_results_list
+                ],
+            ],
+        )
+
+    requests_table = PrettyTable()
+    requests_table.field_names = standard_headers
     number_format = (
         lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
     )
-
-    table.add_row(
-        [
-            "Latency",
-            f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
-            f"{http_stats_output._resp_time_min * 1000:.2f}ms",
-            f"{http_stats_output._resp_time_max * 1000:.2f}ms",
-            f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
-            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
-        ]
-    )
-
-    table.add_row(
+    requests_table.add_row(
         [
             "Req/Sec",
             number_format(http_stats_output.req_sec_mean),
@@ -236,11 +287,14 @@ def benchmark_report(http_stats_output):
         ]
     )
 
-    table.align["Metric"] = "l"
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
-    print(table)
+    print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20, end="\n\n")
+    print(latency_table, end="\n\n")
+    print(requests_table, end="\n\n")
+    print("=" * 27 + " Summary " + "=" * 27)
     print(
-        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred"
+        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred",
+        end="\n\n",
     )
 
 

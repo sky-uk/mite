@@ -64,6 +64,7 @@ class GenericStatsOutput:
         self._data_transferred = 0
         self._standard_deviation = 0
         self._error_journeys = defaultdict(int)
+        self._benchmark_percentiles = opts.get("--benchmark-percentiles")
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -158,6 +159,17 @@ class GenericStatsOutput:
                 self._error_journeys[journey_name] += 1
 
     @property
+    def percentiles_list_resp_time_store(self):
+        percentiles = self._benchmark_percentiles.split(",")
+        percentiles_thresholds_list = [
+            (int(p.split(":")[0]), int(p.split(":")[1])) for p in percentiles
+        ]
+        if not self._resp_time_store:
+            return []
+        quantiles = statistics.quantiles(self._resp_time_store, n=100)
+        return [(p[0], p[1], quantiles[p[0] - 1]) for p in percentiles_thresholds_list]
+
+    @property
     def mean_resp_time(self):
         if not self._resp_time_store:
             return 0
@@ -165,15 +177,15 @@ class GenericStatsOutput:
 
     @property
     def max_resp_time_recent(self):
-        if not self._resp_time_recent:
+        if not self._resp_time_store:
             return 0
-        return max(self._resp_time_recent)
+        return max(self._resp_time_store)
 
     @property
     def min_resp_time_recent(self):
-        if not self._resp_time_recent:
+        if not self._resp_time_store:
             return 0
-        return min(self._resp_time_recent)
+        return min(self._resp_time_store)
 
     @property
     def req_sec_mean(self):
