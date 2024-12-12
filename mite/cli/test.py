@@ -208,14 +208,13 @@ def human_readable_bytes(size):
 
 
 def benchmark_report(http_stats_output):
-    table = PrettyTable()
+    latency_table = PrettyTable()
     percentiles_list, _ = http_stats_output._percentiles_with_thresholds()
     percentiles_headers = [f"{int(p)} %tile" for p in percentiles_list]
-    standard_headers = ["Metric", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+    standard_headers = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
 
-    table.field_names = standard_headers + percentiles_headers
-
-    table.add_row(
+    latency_table.field_names = standard_headers + percentiles_headers
+    latency_table.add_row(
         [
             "Latency",
             f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
@@ -230,25 +229,30 @@ def benchmark_report(http_stats_output):
         ]
     )
 
-    # number_format = (
-    #     lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
-    # )
-    # table.add_row(
-    #     [
-    #         "Req/Sec",
-    #         number_format(http_stats_output.req_sec_mean),
-    #         number_format(http_stats_output._req_sec_min),
-    #         number_format(http_stats_output._req_sec_max),
-    #         number_format(http_stats_output.req_sec_standard_deviation),
-    #         f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
-    #     ]
-    # )
+    requests_table = PrettyTable()
+    requests_table.field_names = standard_headers
+    number_format = (
+        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+    )
+    requests_table.add_row(
+        [
+            "Req/Sec",
+            number_format(http_stats_output.req_sec_mean),
+            number_format(http_stats_output._req_sec_min),
+            number_format(http_stats_output._req_sec_max),
+            number_format(http_stats_output.req_sec_standard_deviation),
+            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
+        ]
+    )
 
-    table.align["Metric"] = "l"
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
-    print(table)
+    print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20)
+    print(latency_table, end="\n")
+    # print(requests_table, end="\n")
+    print("\n" + "=" * 27 + " Summary " + "=" * 27)
     print(
-        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred"
+        f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred",
+        end="\n\n",
     )
 
 
