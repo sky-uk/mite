@@ -191,6 +191,16 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     if opts.get("--report"):
         benchmark_report(http_stats_output)
+        for (
+            percentile,
+            threshold,
+            result,
+        ) in http_stats_output.percentiles_list_resp_time_store:
+            if threshold != 0 and result * 1000 >= threshold:
+                has_error = True
+                logging.error(
+                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {result * 1000:.2f}ms"
+                )
 
     # Ensure any open files get closed
     del receiver._raw_listeners
@@ -207,12 +217,15 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
-def benchmark_report(http_stats_output):
-    latency_table = PrettyTable()
-    percentiles_list, _ = http_stats_output._percentiles_with_thresholds()
-    percentiles_headers = [f"{int(p)} %tile" for p in percentiles_list]
+def benchmark_report(http_stats_output, has_error=False):
+    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+
+    percentiles_headers = [
+        f"{int(percentile[0])} %tile" for percentile in perctile_thresh_results_list
+    ]
     standard_headers = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
 
+    latency_table = PrettyTable()
     latency_table.field_names = standard_headers + percentiles_headers
     latency_table.add_row(
         [
@@ -223,11 +236,28 @@ def benchmark_report(http_stats_output):
             f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
             f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
             *[
-                f"{x * 1000:.2f}ms"
-                for x in http_stats_output.percentiles_list_resp_time_store
+                f"\033[91m{result * 1000:.2f}ms\033[0m"
+                if threshold != 0 and result * 1000 >= threshold
+                else f"\033[92m{result * 1000:.2f}ms\033[0m"
+                if threshold != 0
+                else f"{result * 1000:.2f}ms"
+                for _, threshold, result in perctile_thresh_results_list
             ],
-        ]
+        ],
+        divider=True,
     )
+
+    if any(threshold[1] != 0 for threshold in perctile_thresh_results_list):
+        latency_table.add_row(
+            [
+                "Test Thresholds",
+                *["-" for _ in range(len(standard_headers) - 1)],
+                *[
+                    f"{threshold[1]}ms" if threshold[1] != 0 else "-"
+                    for threshold in perctile_thresh_results_list
+                ],
+            ],
+        )
 
     requests_table = PrettyTable()
     requests_table.field_names = standard_headers
@@ -246,10 +276,10 @@ def benchmark_report(http_stats_output):
     )
 
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
-    print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20)
-    print(latency_table, end="\n")
-    # print(requests_table, end="\n")
-    print("\n" + "=" * 27 + " Summary " + "=" * 27)
+    print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20, end="\n\n")
+    print(latency_table, end="\n\n")
+    print(requests_table, end="\n\n")
+    print("=" * 27 + " Summary " + "=" * 27)
     print(
         f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred",
         end="\n\n",
