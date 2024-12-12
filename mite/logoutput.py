@@ -158,13 +158,12 @@ class GenericStatsOutput:
                 journey_name = message.get("journey")
                 self._error_journeys[journey_name] += 1
 
-    def _percentiles_with_thresholds(self):
-        percentiles = self._benchmark_percentiles.split(",")
-        return [(int(p.split(":")[0]), int(p.split(":")[1])) for p in percentiles]
-
     @property
     def percentiles_list_resp_time_store(self):
-        percentiles_thresholds_list = self._percentiles_with_thresholds()
+        percentiles = self._benchmark_percentiles.split(",")
+        percentiles_thresholds_list = [
+            (int(p.split(":")[0]), int(p.split(":")[1])) for p in percentiles
+        ]
         if not self._resp_time_store:
             return []
         quantiles = statistics.quantiles(self._resp_time_store, n=100)
