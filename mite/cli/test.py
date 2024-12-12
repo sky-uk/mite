@@ -217,17 +217,22 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
+def time_unit_format(number):
+    return f"{number * 1000:.2f}ms" if number >= 0.001 else f"{number:.2f}s"
+
+
 def colorise_result(result, threshold):
-    result_ms = result * 1000
+    formatted_result = time_unit_format(result)
     if threshold != 0:
+        result_ms = result * 1000
         if result_ms >= threshold:
-            return f"\033[91m{result_ms:.2f}ms\033[0m"  # red
+            return f"\033[91m{formatted_result}\033[0m"  # red
         else:
-            return f"\033[92m{result_ms:.2f}ms\033[0m"  # green
-    return f"{result_ms:.2f}ms"
+            return f"\033[92m{formatted_result}\033[0m"  # green
+    return formatted_result
 
 
-def benchmark_report(http_stats_output, has_error=False):
+def benchmark_report(http_stats_output):
     perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
 
     percentiles_headers = [
@@ -241,10 +246,10 @@ def benchmark_report(http_stats_output, has_error=False):
     latency_table.add_row(
         [
             "Latency",
-            f"{http_stats_output.mean_resp_time * 1000:.2f}ms",
-            f"{http_stats_output._resp_time_min * 1000:.2f}ms",
-            f"{http_stats_output._resp_time_max * 1000:.2f}ms",
-            f"{http_stats_output.resp_time_standard_deviation * 1000:.2f}ms",
+            time_unit_format(http_stats_output.mean_resp_time),
+            time_unit_format(http_stats_output._resp_time_min),
+            time_unit_format(http_stats_output._resp_time_max),
+            time_unit_format(http_stats_output.resp_time_standard_deviation),
             f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
             *[
                 colorise_result(result, threshold)
