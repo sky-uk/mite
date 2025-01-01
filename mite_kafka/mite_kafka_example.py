@@ -2,16 +2,17 @@ import logging
 
 from mite.scenario import StopVolumeModel
 from mite_kafka import mite_kafka
+import asyncio
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Kafka broker address
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+KAFKA_BOOTSTRAP_SERVERS = "localhost:29092"
 
 # Define your Kafka topic
-KAFKA_TOPIC = "test_topic3"
+KAFKA_TOPIC = "my-topic"
 
 
 def volume_model_factory(n):
@@ -30,13 +31,14 @@ async def produce_to_kafka(ctx):
     producer = ctx.kafka_producer
     await producer.create_and_start(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
-    message = "Hello Kafka!"
+    message = "Hello Kafka3!"
 
     try:
-        await producer.send_and_wait(producer, KAFKA_TOPIC, value=message.encode("utf-8"))
+        await producer.send_and_wait("my-topic", value=message.encode("utf-8"))
         logger.info(f"Message sent to Kafka: {message} to the topic {KAFKA_TOPIC}")
     finally:
         await producer.stop()
+        await asyncio.sleep(10)
 
 
 # Example function to consume messages from Kafka
@@ -59,9 +61,9 @@ async def consume_from_kafka(ctx):
 def scenario():
     return [
         [
-            "mite_kafka.kafka_test_scenario:produce_to_kafka",
+            "mite_kafka.mite_kafka_example:produce_to_kafka",
             None,
-            volume_model_factory(2),
+            lambda start, end: 1
         ],
-        ["mite_kafka.kafka_test_stats:consume_from_kafka", None, volume_model_factory(2)],
+        # ["mite_kafka.kafka_test_stats:consume_from_kafka", None, volume_model_factory(2)],
     ]
