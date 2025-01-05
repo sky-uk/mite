@@ -6,18 +6,11 @@ from functools import wraps
 
 
 class KafkaProducer:
-    # _instance = None
+
     def __init__(self, ctx):
         self._loop = asyncio.get_event_loop()
         self._producer = None
         self._context = ctx
-    
-    # @classmethod
-    # async def get_instance(cls, *args, **kwargs):
-    #     if cls._instance is None:
-    #         cls._instance = cls()
-    #         cls._instance.create_and_start(*args, **kwargs)
-    #     return cls._instance
 
     async def create_and_start(self, *args, **kwargs):
         self._producer = AIOKafkaProducer(*args, **kwargs)
@@ -73,24 +66,26 @@ class KafkaProducerSingleton(KafkaProducer):
         return cls._instance
 
 @asynccontextmanager
-async def _kafka_context_manager(ctx, singleton, *args, **kwargs):
-    if singleton:
+async def _kafka_context_manager(ctx):
+    ctx.kafka_producer = KafkaProducer(ctx)
+    ctx.kafka_consumer = KafkaConsumer(ctx)
+    try:
+        yield
+    finally:
+        del ctx.kafka_producer
+        del ctx.kafka_consumer
+
+
+@asynccontextmanager
+async def _kafka_singleton_context_manager(ctx, producer, consumer, *args, **kwargs):
+    if producer:
         ctx.kafka_producer = await KafkaProducerSingleton.get_instance(ctx, *args, **kwargs)
-        try:
-            yield
-        finally:
-            pass
-    else:
-        ctx.kafka_producer = KafkaProducer(ctx)
-        ctx.kafka_consumer = KafkaConsumer(ctx)
-        try:
-            yield
-        finally:
-            del ctx.kafka_producer
-            del ctx.kafka_consumer
+    if consumer:
+        # TODO: Implement
+        raise NotImplementedError
+    yield
 
-
-def mite_kafka(*args, singleton=False, bootstrap_servers=None, security_protocol=None, ssl_context=None, value_serializer=None):
+def mite_kafka(*args, singleton=False, producer=False, consumer=False, bootstrap_servers=None, security_protocol=None, ssl_context=None, value_serializer=None):
     def wrapper_factory(func):
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
@@ -103,8 +98,13 @@ def mite_kafka(*args, singleton=False, bootstrap_servers=None, security_protocol
                 kafka_args['ssl_context'] = ssl_context
             if value_serializer:
                 kafka_args['value_serializer'] = value_serializer
-            async with _kafka_context_manager(ctx, singleton=singleton, **kafka_args):
-                return await func(ctx, *args, **kwargs)
+
+            if singleton:    
+                async with _kafka_singleton_context_manager(ctx, producer=producer, consumer=consumer, **kafka_args):
+                    return await func(ctx, *args, **kwargs)
+            else:
+                async with _kafka_context_manager(ctx):
+                    return await func(ctx, *args, **kwargs)
 
         return wrapper
     
@@ -112,6 +112,7 @@ def mite_kafka(*args, singleton=False, bootstrap_servers=None, security_protocol
         # invoked as @mite_kafka(singleton=...) def foo(...)
         return wrapper_factory
     elif len(args) > 1:
+        breakpoint()
         raise Exception("Anomalous invocation of mite_kafka decorator")
     else:
         # len(args) == 1; invoked as @mite_kafka def foo(...)
