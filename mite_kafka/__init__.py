@@ -56,14 +56,20 @@ class KafkaConsumer:
 
 class KafkaProducerSingleton(KafkaProducer):
 
-    _instance = None
+    _instances = {}
+
+    def __init__(self, context, producer_id=None):
+        super().__init__(context)
+        self._id = producer_id
 
     @classmethod
-    async def get_instance(cls, context, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = cls(context)
-            await cls._instance.create_and_start(*args, **kwargs)
-        return cls._instance
+    async def get_instance(cls, context, singleton_id, *args, **kwargs):
+        if singleton_id is None:
+            singleton_id = "DEFAULT"
+        if cls._instances.get(singleton_id, None) is None:
+            cls._instances[f"{singleton_id}"] = cls(context, singleton_id)
+            await cls._instances.get(singleton_id).create_and_start(*args, **kwargs)
+        return cls._instances.get(singleton_id)
 
 @asynccontextmanager
 async def _kafka_context_manager(ctx):
@@ -77,15 +83,15 @@ async def _kafka_context_manager(ctx):
 
 
 @asynccontextmanager
-async def _kafka_singleton_context_manager(ctx, producer, consumer, *args, **kwargs):
+async def _kafka_singleton_context_manager(ctx, singleton_id, producer, consumer, *args, **kwargs):
     if producer:
-        ctx.kafka_producer = await KafkaProducerSingleton.get_instance(ctx, *args, **kwargs)
+        ctx.kafka_producer = await KafkaProducerSingleton.get_instance(ctx, singleton_id, *args, **kwargs)
     if consumer:
         # TODO: Implement
         raise NotImplementedError
     yield
 
-def mite_kafka(*args, singleton=False, producer=False, consumer=False, bootstrap_servers=None, security_protocol=None, ssl_context=None, value_serializer=None):
+def mite_kafka(*args, singleton=False, singleton_id=None, producer=False, consumer=False, bootstrap_servers=None, security_protocol=None, ssl_context=None, value_serializer=None):
     def wrapper_factory(func):
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
@@ -100,7 +106,7 @@ def mite_kafka(*args, singleton=False, producer=False, consumer=False, bootstrap
                 kafka_args['value_serializer'] = value_serializer
 
             if singleton:    
-                async with _kafka_singleton_context_manager(ctx, producer=producer, consumer=consumer, **kafka_args):
+                async with _kafka_singleton_context_manager(ctx, singleton_id=singleton_id, producer=producer, consumer=consumer, **kafka_args):
                     return await func(ctx, *args, **kwargs)
             else:
                 async with _kafka_context_manager(ctx):
