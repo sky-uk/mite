@@ -95,6 +95,7 @@ def mite_kafka(*args, singleton=False, singleton_id=None, producer=False, consum
     def wrapper_factory(func):
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
+            
             kafka_args = {}
             if bootstrap_servers:
                 kafka_args['bootstrap_servers'] = bootstrap_servers
