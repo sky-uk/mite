@@ -145,7 +145,7 @@ def oneshot_vm(when=-1, stop_scenario=False):
         if s > when and not has_run:
             has_run = True
             return 1
-        if stop_scenario:
+        if stop_scenario or has_run:
             raise StopVolumeModel
         return 0
 
