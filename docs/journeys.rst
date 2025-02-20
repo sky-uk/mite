@@ -26,7 +26,7 @@ accomplished by **data creation scenarios**.
 Firstly, when running a data creation scenario, we need to activate
 miteʼs :ref:`recorder component <recorder-component>`.  This will
 write the data as it is created to a series of `msgpack`_-format files
-in a directory called ``recorder-data``.  These files will become the
+in a directory called ``recorder_data``.  These files will become the
 input for a datapool for the load test journeys (see below).
 
 .. _msgpack: https://msgpack.org/index.html
@@ -40,7 +40,7 @@ HTTP APIs to create data.  An example might be as follows:
    from mite_http import mite_http
 
    @mite_http
-   async def create_user(context):
+   async def create_user(ctx):
        username = uuid.uuid4().hex
        async with ctx.transaction("Create user"):
            await ctx.http.post(ctx.config.get("app_url") + "/users/create",
@@ -54,7 +54,7 @@ We then send a message with the type ``data_created`` and the name
 ``users``.  This will be read by the recorder process, which listens
 to messages with type ``data_created``.  It will read the ``name`` of
 all such messages.  For each message, the ``data`` is written as a
-msgpack dictionary into the file ``recorder-data/{name}.msgpack``.
+msgpack dictionary into the file ``recorder_data/{name}.msgpack``.
 
 We create a scenario that runs this journey for a specific amount of
 time at a specific rate, which will generate our test users.  If we have
@@ -80,11 +80,11 @@ The next step is to create a data pool for the usernames:
    from mite.datapools import RecyclableIterableDataPool
 
    usernames = []
-   with open("recorder-data", "rb") as handle:
+   with open("recorder_data/users.msgpack", "rb") as handle:
        for msg in iter(Unpacker(handle, raw=False, use_list=False)):
            usernames.append((msg["username"],))
 
-   username_datapool = RecyclableIterableDataPool(usernames)
+   usernames_datapool = RecyclableIterableDataPool(usernames)
 
 .. note::
 
