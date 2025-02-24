@@ -1,7 +1,7 @@
-twine~=1.13.0  # latest version 6.1.0 Jan 21 2025, but suggests to use 6.0.1 from Dec 1 2024
-# keyring~=19.0.2  # not used in repo
-tox~=3.14.2  # latest version 4.24.1 Jan 21 2025, but suggests to use 4.22.0 from Oct 15 2024
-pre-commit~=2.20.0  # latest version 4.1.0 Jan 20 2025, but suggests to use 4.0.1 from Oct 8 2024
-flake8~=3.7.8  # latest version 7.1.2 Feb 16 2025, but suggests to use 7.1.1 from Aug 4 2024
-black~=22.4.2  # latest version 25.1.0 Jan 29 2025, but suggests to use 24.10.0 from Oct 7 2024
-coverage~=5.1  # latest version 7.6.12 Feb 11 2025, but suggests to use 7.6.10 from Dec 26 2024
+twine~=6.1.0
+keyring~=19.0.2
+tox~=3.14.2
+pre-commit~=2.20.0
+flake8~=3.7.8
+black~=24.3.0
+coverage~=5.1
