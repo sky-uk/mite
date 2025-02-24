@@ -14,4 +14,4 @@ pytest-httpbin
 pytest-httpserver
 sanic
 werkzeug==3.1.3
-uvloop==0.21.0
+uvloop
