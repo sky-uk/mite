@@ -1,3 +1,4 @@
+import boto3
 import logging
 from collections import deque, namedtuple
 
@@ -93,3 +94,51 @@ class SingleRunDataPoolWrapper:
             self.has_ran = True
             return await self.data_pool.checkout(config)
         raise DataPoolExhausted()
+
+
+class S3IterableDataPool:
+    def __init__(
+        self, bucket_name, prefix="", access_key_id=None, secret_access_key=None
+    ):
+        self.s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+        )
+        self.bucket_name = bucket_name
+        self.prefix = prefix
+        self.list_obj_kwargs = {"Bucket": self.bucket_name, "Prefix": self.prefix}
+        self.item_index = 0
+
+        self.populating = False
+        self.exhausted = False
+        self._data = []
+
+    def populate(self):
+        response = self.s3_client.list_objects_v2(**self.list_obj_kwargs)
+
+        if response.get("IsTruncated"):
+            self.list_obj_kwargs.update(
+                {"ContinuationToken": response["NextContinuationToken"]}
+            )
+        else:
+            self.exhausted = True
+
+        for obj in response["Contents"]:
+            self.item_index += 1
+            self._data.append((self.item_index, obj["Key"]))
+
+    async def checkout(self, config):
+        if len(self._data) < 1000 and not self.exhausted and not self.populating:
+            self.populating = True
+            self.populate()
+            self.populating = False
+
+        try:
+            item_id, data = self._data.pop(0)
+        except StopIteration as e:
+            raise DataPoolExhausted() from e
+        return DataPoolItem(item_id, data)
+
+    async def checkin(self, item_id):
+        pass
