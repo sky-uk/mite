@@ -1,5 +1,7 @@
+import asyncio
 import boto3
 import logging
+import time
 from collections import deque, namedtuple
 
 logger = logging.getLogger(__name__)
@@ -108,35 +110,36 @@ class S3IterableDataPool:
         self.bucket_name = bucket_name
         self.prefix = prefix
         self.list_obj_kwargs = {"Bucket": self.bucket_name, "Prefix": self.prefix}
-        self.item_index = 0
-
-        self.populating = False
-        self.exhausted = False
         self._data = []
+        self.item_index = 0
+        self.exhausted = False
+
+        self.populate()
 
     def populate(self):
-        response = self.s3_client.list_objects_v2(**self.list_obj_kwargs)
+        while not self.exhausted:
+            # print(f"{time.time()} calling list_objects_v2. len of data {len(self._data)}")
+            response = self.s3_client.list_objects_v2(**self.list_obj_kwargs)
 
-        if response.get("IsTruncated"):
-            self.list_obj_kwargs.update(
-                {"ContinuationToken": response["NextContinuationToken"]}
-            )
-        else:
-            self.exhausted = True
+            if response.get("IsTruncated"):
+                self.list_obj_kwargs.update(
+                    {"ContinuationToken": response["NextContinuationToken"]}
+                )
+            else:
+                self.exhausted = True
 
-        for obj in response["Contents"]:
-            self.item_index += 1
-            self._data.append((self.item_index, obj["Key"]))
+            for obj in response["Contents"]:
+                self.item_index += 1
+                self._data.append((self.item_index, obj["Key"]))
 
     async def checkout(self, config):
-        if len(self._data) < 1000 and not self.exhausted and not self.populating:
-            self.populating = True
-            self.populate()
-            self.populating = False
-
         try:
-            item_id, data = self._data.pop(0)
-        except StopIteration as e:
+            item_id, file_key = self._data.pop(0)
+            file_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=file_key)
+            file_content = file_obj["Body"].read().decode("utf-8")
+            data = (file_key, file_content)
+
+        except IndexError as e:
             raise DataPoolExhausted() from e
         return DataPoolItem(item_id, data)
 
