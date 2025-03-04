@@ -1,6 +1,7 @@
-import boto3
 import logging
 from collections import deque, namedtuple
+
+import boto3
 
 logger = logging.getLogger(__name__)
 

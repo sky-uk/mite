@@ -1,6 +1,7 @@
 aio-pika
 aiokafka
 altair 
+boto3
 Cython
 h2
 hypothesis
