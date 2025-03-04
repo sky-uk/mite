@@ -1,7 +1,5 @@
-import asyncio
 import boto3
 import logging
-import time
 from collections import deque, namedtuple
 
 logger = logging.getLogger(__name__)
