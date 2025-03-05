@@ -1,8 +1,9 @@
 import logging
-from mite.datapools import DataPoolExhausted, DataPoolItem
 from collections import deque
 
 import boto3
+
+from mite.datapools import DataPoolExhausted, DataPoolItem
 
 logger = logging.getLogger(__name__)
 
