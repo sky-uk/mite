@@ -12,6 +12,10 @@ class DataPoolExhausted(BaseException):
 
 
 class RecyclableIterableDataPool:
+    """
+    Create a Recyclable Iterable datapool
+    """
+
     def __init__(self, iterable):
         self._data = iterable
         self._initialized = False
