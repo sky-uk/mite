@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="assets/logo.svg" alt="Sky-UK Mite" width="210" height="210" /><br>
+    <img src="docs_new/docs/source/_static/mite.png/" alt="Sky-UK Mite" width="210" height="210" /><br>
   </picture>
   <br>
   Mite is a load testing framework with distributed components written in Python.
