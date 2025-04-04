@@ -2,18 +2,17 @@
   <picture>
     <img src="docs_new/docs/source/_static/mite.png/" alt="Sky-UK Mite" width="210" height="210" /><br>
   </picture>
-</p>
-<h3 align="center">
-  Mite is a load testing framework with distributed components written in Python.
-  Requests are executed asynchronously, allowing large throughput from relatively small infrastructure.
-</h3>
-<p align="center">
+  <br>
   <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
   <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python 3.11"></a>
   <a href="https://github.com/sky-uk/mite/blob/master/LICENSE/"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT license"></a>
   <a href="https://github.com/ambv/black/"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black"></a>
   <a href="https://sky-uk.github.io/mite/"><img src="https://img.shields.io/badge/docs-read-blue" alt="Docs"></a>
 </p>
+
+## What is Mite?
+Mite is a load testing framework with distributed components written in Python.
+Requests are executed asynchronously, allowing large throughput from relatively small infrastructure.
 
 ## Installation and usage
 
