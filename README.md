@@ -16,23 +16,14 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 
 ## Installation and usage
 
+You can simply install mite using pip
+
 ```bash
 pip install mite
 ```
+For more information regarding requirements and how to use it just check 
+the [installation](https://sky-uk.github.io/mite/installation.html) page in the documentation.
 
-This requires that you have libcurl installed on your system (including C header files for development, which are often distributed separately from the shared libraries).  On Ubuntu, this can be accomplished with the command:
-
-```
-sudo apt install libcurl4 libcurl4-openssl-dev
-```
-
-You can also use the dockerfile included in this repository to run
-mite.  In order to get a shell in a container with mite installed, run
-these commands (assuming you have docker installed on your machine):
-```
-docker build -t mite .
-docker run --rm -it mite sh
-```
 
 ## Script example
 
@@ -55,13 +46,13 @@ def scenario():
         ['mite.example:journey', datapool, volumemodel],
     ]
 ```
-You can find more information about the example above in the [documentation](https://sky-uk.github.io/mite/design-deployment.html).
+You can find more information about the example above in the
+ [design](https://sky-uk.github.io/mite/design-deployment.html) info documentation page.
 
 
 ## Documentation
 
-You can find the documentation [here](https://sky-uk.github.io/mite/index.html).
-In the documentation you can find:
+In the [documentation](https://sky-uk.github.io/mite/index.html). you can find:
 - How to set up Mite
 - A quick start guide
 - Information regarding the design and deployment of mite
