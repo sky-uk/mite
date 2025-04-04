@@ -5,8 +5,12 @@
   <br>
   Mite is a load testing framework with distributed components written in Python.
   Requests are executed asynchronously, allowing large throughput from relatively small infrastructure.
-
-  [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
+  <br>
+  <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
+  <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python 3.11"></a>
+  <a href="https://github.com/sky-uk/mite/blob/master/LICENSE/"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT license"></a>
+  <a href="https://github.com/ambv/black/"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black"></a>
+  <a href="https://sky-uk.github.io/mite/"><img src="https://img.shields.io/badge/docs-read-blue" alt="Docs"></a>
 </p>
 
 ## Load Testing Framework
