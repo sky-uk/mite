@@ -2,8 +2,8 @@
 Set up Mite
 ===========
 
-We use and test mite on Mac machine and previously on linux machines. 
-At the current time everything runs from terminal 
+We use and test mite on MacOs machines and we previously did on Linux VMs. 
+At the current time everything runs from the terminal.
 
 Installation
 ============
@@ -20,13 +20,14 @@ This requires that you have libcurl installed on your system (including C header
     sudo apt install libcurl4 libcurl4-openssl-dev
 
 
-.. admonition:: info
+.. admonition:: openssl VS gnutls
     :class: note 
     
-    we recommend using a version of libcurl linked against openssl rather than gnutls, since the latter has memory leak problems)
+    We personally use a version of *libcurl* linked against *openssl* rather than *gnutls*. Mostly because in the past the latter had an issues with high memory usage.
+    Now that the issue has been resolved, even if we still prefer to use *openssl*, feel free to use which-ever you prefer. 
 
 
-You can also use the dockerfile included in this repository to run mite. In order to get a shell in a container with mite installed, run these commands (assuming you have docker installed on your machine):
+To run mite, you can also use the dockerfile included in this repository to run mite. In order to get a shell in a container with mite installed, run these commands (assuming you have docker installed on your machine):
 
 .. code-block:: sh
 
@@ -34,5 +35,5 @@ You can also use the dockerfile included in this repository to run mite. In orde
     docker run --rm -it mite sh
 
 
-Run mite --help for a full list of commands
+Run the ``mite --help`` command for a full list of commands.
 

@@ -5,7 +5,6 @@ Quick start
 Writing the first test
 ======================
 
-
 Few words regarding mite what we are
 going to try to do and some ideas on how to use it .
 
@@ -15,8 +14,9 @@ Before you start
 In order to start writing your first test you'll need:
 
 - A basic understanding of Python
-- Install mite (LINK TO PREVIOUS SECTION) on your machine or environment
+- :doc:`Install Mite <../installation>` on your machine or environment
 - A code editor to write the script and access to a terminal to start the test
+
 
 Basic structure of a test
 -------------------------
@@ -42,14 +42,14 @@ This journey just sends a log message to be collected by the framework and waits
 This journey takes 3 arguments, a context and two numbers (which will be supplied by the datapool, see below).
 
 
-.. admonition:: Context
+.. admonition:: About the Context
     :class: important
 
     The context is important for every journey. It provides a number of useful methods for timing/naming of transactions,
     sending messages and defaults to including http functionality from acurl. Functionality can be included in the journey by attaching it to the context.
-    In the above example we see an example of naming a transaction async with ctx.transaction('test1'):. This will capture timing for the indented block.
-    We also see that the config is attached to the context with ctx.config.get('test_msg', 'Not set') and in this case, 
-    the value of that config value is sent to the log collector with ctx.send('test_message', content=ctx.config.get('test_msg', 'Not set'))
+    In the above example we see an example of naming a transaction *async with ctx.transaction('test1'):*. This will capture timing for the indented block.
+    We also see that the config is attached to the context with *ctx.config.get('test_msg', 'Not set')* and in this case, 
+    the value of that config value is sent to the log collector with *ctx.send('test_message', content=ctx.config.get('test_msg', 'Not set'))*
 
 
 Add a datapool
@@ -59,7 +59,7 @@ To feed data into your test journey, you'll need a datapool. Several of these ar
 To specify a custom datapool implementation, you simply need a class that implements a checkin method which adds data to the pool and a checkout method which 
 removes data from the pool to be used by journeys.
 
-For the above journey, which expects two arguments, we will show an example of the RecyclableIterableDataPool.
+For the above journey, which expects two arguments, we will show an example of the *RecyclableIterableDataPool*.
 
 .. code-block:: python
 
@@ -75,13 +75,17 @@ In this case it cycles through a list of tuples which each contain two integers.
 Test the journey
 ^^^^^^^^^^^^^^^^
 
-Before running the scenario, we should test the journey in isolation as a scenario can be made up of multiple journeys. This can be done with the mite journey test command. We just need to pass the name of the journey and the datapool it requires:
+Before going ahead and create and run the scenario, we should test the journey in isolation as a scenario can be made up of multiple journeys. 
+This can be done with the mite journey test command. We just need to pass the name of the journey and the datapool it requires:
 
 .. code-block:: sh
 
-    MITE_CONF_test_msg="Hello from mite" mite journey test mite.example:journey mite.example:datapool
+    MITE_CONF_test_msg="Hello from mite" \
+    mite journey test mite.example:journey mite.example:datapool
 
-If something goes wrong, adding the --debugging flag to this command will drop excution into a debug session. The choice of debugger used can be managed by setting the PYTHONBREAKPOINT environment variable before running mite. Python's built-in pdb) debugger is invoked by default, but this can be changed to use, say, the ipdb debugger:
+If something goes wrong, adding the ``--debugging`` flag to this command will drop excution into a debug session. 
+The choice of debugger used can be managed by setting the PYTHONBREAKPOINT environment variable before running mite. 
+Python's built-in (*pdb*) debugger is invoked by default, but this can be changed to use, say, the *ipdb* debugger:
 
 .. code-block:: sh
 
@@ -89,7 +93,10 @@ If something goes wrong, adding the --debugging flag to this command will drop e
     export PYTHONBREAKPOINT=ipdb.set_trace
     export PYTHONPOSTMORTEM=ipdb.post_mortem
 
-PYTHONPOSTMORTEM is a mite-specific extension to PEP 553 which defines the PYTHONBREAKPOINT functionality.
+**PYTHONPOSTMORTEM** is a mite-specific extension to PEP 553 which defines the **PYTHONBREAKPOINT** functionality.
+
+
+
 
 
 Write a Scenario
@@ -140,8 +147,6 @@ In order to run the finished scenario locally, which will include all the necess
 Distributed deployments
 -----------------------
 
-In order to scale up miteʼs capability to inject load, you will need to run it as a distributed suite of components. 
-You can learn more about how to accomplish this in the documentation. [LINK]
-
-
+In order to scale up mite capability to inject load, you will need to run it as a distributed suite of components. 
+You can learn more about how to accomplish this in the :ref:`useful topologies <useful-topologies>` section of this documentation.
 

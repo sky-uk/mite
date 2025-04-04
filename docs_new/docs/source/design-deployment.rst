@@ -174,11 +174,7 @@ dispatch incoming messages to them.
 Prometheus Exporter
 -------------------
 
-The prometheus exporter provides a http metrics endpoint for the
-
-.. :ref:`prometheus <prometheus-doc>` 
-
-time series database to scrape,
+The prometheus exporter provides a http metrics endpoint for the time series database to scrape,
 pulling metrics from the stats components.  In our case, the stats
 components will output on its default socket and the exporter is
 configured to read from there by default.
@@ -187,8 +183,7 @@ configured to read from there by default.
 
    mite prometheus_exporter
 
-
- `_prometheus <https://prometheus.io/>`
+There is more about data visualization in the next page (:doc:`Data visualization<../data-visualization>`).
 
 Runners
 -------
@@ -222,6 +217,8 @@ and a name in that module (separated by a colon).
     mite controller mite.example:scenario
 
 
+
+.. _useful-topologies:
 
 Useful topologies
 =================
@@ -270,8 +267,6 @@ configuration-level view of setting up a mite pipeline, the reader is
 referred to the files in that directory.  In the sections that follow,
 we will discuss a few more abstract considerations for deploying mite in
 different kinds of environments.
-
-.. _vm-deployment:
 
 Virtual machines
 ----------------

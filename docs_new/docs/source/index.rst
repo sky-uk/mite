@@ -6,17 +6,21 @@
 Mite documentation
 ==================
 
-Mite is a performance testing framework created by the performance
-testing in Sky UKʼs Identity group.  The philosophy driving the effort
-was simple:
+Mite is an open source performance testing framework created by the performance
+testing in Sky UK's Identity group.
 
-1. **Scalability**:  The apps that we test are scalable, distributed systems;
-   our performance testing framework should be as well.
-2. **Maintainability**:  As software engineers, we have a full arsenal of
-   information organization and reuse techniques.  We should treat our
-   performance tests as code, and bring these same techniques to bear.
-3. **Snakiness**:  Python is the best language for us to accomplish our
-   goals for the project.
+We use mite for:
+
+* Apps Performance testing (soak, peak and scalability tests).
+* Test our internal Kafka consumers and producers.
+* Inject data direclty in our data base to test the DB itself or to generate our datapools.
+
+.. admonition:: Modules currently supported
+   :class: caution
+
+   We currently fully support *Kafka* and *HTTP* modules.
+   The other modules should still work but we are not activetely supporting them so please be mindful when using them and 
+   please be patient if you need our support with any of those.
 
 
 .. toctree::
@@ -27,6 +31,7 @@ was simple:
    installation
    quick-start
    design-deployment
+   data-visualization
    test-examples
    api-references
    contributing-guidelines
