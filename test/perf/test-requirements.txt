@@ -1,5 +1,0 @@
-aiohttp
-sanic
-psutil
-pandas
-altair
