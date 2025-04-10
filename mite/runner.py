@@ -199,13 +199,11 @@ class Runner:
         )
         journey = spec_import_cached(journey_spec)
         if getattr(journey, "_fixture", False):
-            if journey._fixture_label in self._fixture_registry:
-                context.fixture_obj = self._fixture_registry[journey._fixture_label]
-            else:
+            if journey._fixture_label not in self._fixture_registry:
                 self._fixture_registry[journey._fixture_label] = (
                     await journey._fixture_func()
                 )
-                context.fixture_obj = self._fixture_registry[journey._fixture_label]
+            context.fixture_obj = self._fixture_registry[journey._fixture_label]
 
         try:
             async with context.transaction("__root__"):
