@@ -71,6 +71,7 @@ class Runner:
         if loop is None:
             loop = asyncio.get_event_loop()
         self._loop = loop
+        self._fixture_registry = {}
         self._debug = debug
 
     def _inc_work(self, id):
@@ -197,6 +198,15 @@ class Runner:
             args,
         )
         journey = spec_import_cached(journey_spec)
+        if getattr(journey, "_fixture", False):
+            if journey._fixture_label in self._fixture_registry:
+                context.fixture_obj = self._fixture_registry[journey._fixture_label]
+            else:
+                self._fixture_registry[journey._fixture_label] = (
+                    await journey._fixture_func()
+                )
+                context.fixture_obj = self._fixture_registry[journey._fixture_label]
+
         try:
             async with context.transaction("__root__"):
                 if args is None:
