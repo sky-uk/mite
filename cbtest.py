@@ -37,8 +37,9 @@ def mite_couchbase(label=None):
         fn._fixture_label = label or fn.__name__
         # _fixture_func will be the function that creates the fixture
         fn._fixture_func = get_couchbase
-        # _fixture_obj will be the object that is created by the fixture
-        fn._fixture_obj = None
+        # _fixture_variable will be the variable name that will be used to
+        # store the fixture in the context
+        fn._fixture_variable = "couchbase"
 
         return fn
 
@@ -48,7 +49,7 @@ def mite_couchbase(label=None):
 @mite_couchbase(label="journey")
 async def journey(ctx, key):
     print("inside journey")
-    await ctx.fixture_obj.upsert(key, {"test": "test_value"})
+    await ctx.couchbase.upsert(key, {"test": "test_value"})
 
 
 def scenario():

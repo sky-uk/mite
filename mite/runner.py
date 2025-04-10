@@ -203,7 +203,11 @@ class Runner:
                 self._fixture_registry[journey._fixture_label] = (
                     await journey._fixture_func()
                 )
-            context.fixture_obj = self._fixture_registry[journey._fixture_label]
+            setattr(
+                context,
+                journey._fixture_variable,
+                self._fixture_registry[journey._fixture_label],
+            )
 
         try:
             async with context.transaction("__root__"):
