@@ -200,9 +200,9 @@ class Runner:
         journey = spec_import_cached(journey_spec)
         if getattr(journey, "_fixture", False):
             if journey._fixture_label not in self._fixture_registry:
-                self._fixture_registry[journey._fixture_label] = (
-                    await journey._fixture_func()
-                )
+                self._fixture_registry[
+                    journey._fixture_label
+                ] = await journey._fixture_func(context)
             setattr(
                 context,
                 journey._fixture_variable,
