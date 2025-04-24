@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="docs_new/docs/source/_static/mite.png/" alt="Sky-UK Mite" width="210" height="210" /><br>
+    <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="210" height="210" /><br>
   </picture>
   <br>
   <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
