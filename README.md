@@ -2,8 +2,12 @@
   <picture>
     <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="100" height="100" /><br>
   </picture>
-  <br>
-  Mite - open-source load testing framework with distributed components written in Python
+</p>
+<h3 align="center">
+  Mite
+</h3>
+<p align="center">
+  Open-source load testing framework with distributed components written in Python
   <br>
   <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
   <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python 3.11"></a>
