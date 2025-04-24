@@ -1,7 +1,10 @@
-<h3 align="center">
+
+<p align="center">
   <picture>
     <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="75" height="75" /><br>
   </picture>
+</p>
+<h3 align="center">
   Mite
 </h3>
 <p align="center">
