@@ -1,7 +1,10 @@
 <p align="center">
   <picture>
-    <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="210" height="210" /><br>
+    <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="150" height="150" /><br>
   </picture>
+</p>
+<h1>Mite</h1>
+<p align="center">
   <br>
   <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
   <a href="https://www.python.org/downloads/release/python-3110/"><img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python 3.11"></a>
