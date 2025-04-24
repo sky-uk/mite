@@ -52,12 +52,18 @@ You can find more information about the example above in the
 
 ## Documentation
 
-In the [documentation](https://sky-uk.github.io/mite/index.html). you can find:
-- How to set up Mite
-- A quick start guide
-- Information regarding the design and deployment of mite
-- How to visualise the results with Prometheus and Grafana
-- Some advance examples using mite modules
+> [!IMPORTANT]  
+> As we have some issues using the GitHub actions the Wiki github pages documentation is not updated. 
+> Below you can find the link to the specific pages and the link to the rst files.
+
+In the ~~[documentation](https://sky-uk.github.io/mite/index.html)~~ (Link currently out of date) you can find:
+- [Introduction](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/introduction.rst)
+- [Installation](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/installation.rst)
+- [Quick Start](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/quick-start.rst)
+- [Design and Deployment](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/design-deployment.rst)
+- [Prometheus/Grafana and Mite](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/data-visualization.rst)
+- [Test Examples](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/test-examples.rst)
+- [Contributing Guidelines](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/contributing-guidelines.rst)
 
 ## Maintainers
 
