@@ -1,11 +1,9 @@
-<p align="center">
+<h2 align="center">
   <picture>
     <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="100" height="100" /><br>
   </picture>
-</p>
-<h3 align="center">
   Mite
-</h3>
+</h2>
 <p align="center">
   Open-source load testing framework with distributed components written in Python
   <br>
