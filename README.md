@@ -55,6 +55,7 @@ You can find more information about the example above in the
 > [!IMPORTANT]  
 > As we have some issues using the GitHub actions the Wiki github pages documentation is not updated. 
 > Below you can find the link to the specific pages and the link to the rst files.
+> There will be some extra lines designed to be handled by Sphinx and git hub pages (e.g. hide-toc:) but the pages and the concepts are still available.
 
 In the ~~[documentation](https://sky-uk.github.io/mite/index.html)~~ (Link currently out of date) you can find:
 - [Introduction](https://github.com/sky-uk/mite/blob/new-documentation/docs/source/introduction.rst)
