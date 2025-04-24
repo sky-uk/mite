@@ -1,9 +1,11 @@
+<h1 align="center">Mite</h1>
 <p align="center">
   <picture>
-    <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="150" height="150" /><br>
+    <img src="docs/source/_static/mite.png/" alt="Sky-UK Mite" width="100" height="100" /><br>
   </picture>
+Mite
 </p>
-<h1>Mite</h1>
+
 <p align="center">
   <br>
   <a href="https://www.python.org/downloads/release/python-3100/"><img src="https://img.shields.io/badge/python-3.10-blue.svg" alt="Python 3.10"></a>
