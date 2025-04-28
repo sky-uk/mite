@@ -209,10 +209,10 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
                 )
 
     # Ensure any open files get closed
-    del receiver._raw_listeners
-    del receiver._listeners
+    # del receiver._raw_listeners
+    # del receiver._listeners
 
-    sys.exit(int(has_error))
+    # sys.exit(int(has_error))
 
 
 def human_readable_bytes(size):
@@ -348,3 +348,52 @@ def journey_cmd(opts):
         journey_test_cmd(opts)
     elif opts["run"]:
         journey_run_cmd(opts)
+
+# ========== pickle command
+from urllib.parse import urlparse, quote_from_bytes
+from base64 import b64encode
+from json import dumps
+from mite.volume_model import Constant
+import atexit
+import requests
+import os
+def generate_proxy_url(proxy_addr, **data):
+    encoded_data = quote_from_bytes(b64encode(dumps(data).encode()))
+    url = urlparse(proxy_addr if "://" in proxy_addr else "http://" + proxy_addr)
+    url = url._replace(
+        scheme="http",
+        path="/journeyproxy/" + encoded_data
+    )
+    return url.geturl()
+
+
+def journeyproxy(opts):
+    app = opts["--app"]
+    env = opts["--env"]
+    proxy = opts["--proxy"]
+    app_base_url_secret = f"{app}_base_url"
+    config_manager = _create_config_manager(opts)
+    sender = _create_sender(opts)
+    scenarios = _get_scenario_with_kwargs(opts["SCENARIO_SPEC"], config_manager, sender)
+
+    atexit.register(requests.get, os.path.join(proxy, "journeyproxyexit"))
+    for journey_spec, datapool, volumemodel in scenarios:
+        _config_manager = _create_config_manager(opts)
+
+        proxy_base_url = generate_proxy_url(
+            proxy_addr=proxy,
+            env=env,
+            app=app,
+            journey_spec=journey_spec,
+            base_url=_config_manager.get(app_base_url_secret)
+        )
+
+        _config_manager.set(app_base_url_secret, proxy_base_url)
+        vm = Constant(duration=5, tps=5)
+        test_scenarios(
+        journey_spec,
+        opts,
+        [(journey_spec, datapool, vm)],
+        _config_manager,
+    )  
+
