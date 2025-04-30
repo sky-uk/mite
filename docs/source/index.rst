@@ -33,8 +33,9 @@ We use mite for:
    design-deployment
    data-visualization
    test-examples
-   api-references
-   contributing-guidelines
+.. contributing-guidelines
+.. api-references - it's not worth to show it if not completed.
+
 
 ..
    Indices and tables
