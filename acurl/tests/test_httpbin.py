@@ -22,12 +22,14 @@ async def test_get(httpbin):
 
 
 @pytest.mark.asyncio
+@pytest.fixture
 async def test_cookies(httpbin, acurl_session):
     r = await acurl_session.get(f"{httpbin.url}/cookies/set?name=value")
     assert r.cookies == {"name": "value"}
 
 
 @pytest.mark.asyncio
+@pytest.fixture
 async def test_session_cookies(httpbin, acurl_session):
     await acurl_session.get(f"{httpbin.url}/cookies/set?name=value")
     cookies = acurl_session.cookies()
@@ -51,14 +53,18 @@ async def test_session_cookies_sent_on_subsequent_request(httpbin):
 async def test_set_cookies(httpbin):
     s = await session()
     await s.get(f"{httpbin.url}/cookies/set?name=value")
-    r = await s.get(f"{httpbin.url}/cookies/set?name2=value", cookies={"name3": "value"})
+    r = await s.get(
+        f"{httpbin.url}/cookies/set?name2=value", cookies={"name3": "value"}
+    )
     assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
 
 
 @pytest.mark.asyncio
 async def test_basic_auth(httpbin):
     s = await session()
-    r = await s.get(f"{httpbin.url}/basic-auth/user/password", auth=("user", "password"))
+    r = await s.get(
+        f"{httpbin.url}/basic-auth/user/password", auth=("user", "password")
+    )
     assert r.status_code == 200
 
 

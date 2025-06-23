@@ -34,6 +34,7 @@ def test_request_cookies():
 
 
 @pytest.mark.asyncio
+@pytest.fixture
 async def test_request_e2e(httpbin, acurl_session):
     r = await acurl_session.get(
         f"{httpbin.url}/get", headers={"Foo": "bar"}, cookies={"baz": "quux"}
@@ -43,6 +44,7 @@ async def test_request_e2e(httpbin, acurl_session):
 
 
 @pytest.mark.asyncio
+@pytest.fixture
 async def test_request_cookies_from_previous(httpbin, acurl_session):
     await acurl_session.get(f"{httpbin.url}/cookies/set?name=value")
     r = await acurl_session.get(f"{httpbin.url}/get", cookies={"foo": "bar"})
@@ -51,6 +53,7 @@ async def test_request_cookies_from_previous(httpbin, acurl_session):
 
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.fixture
 async def test_request_cookies_from_previous_excludes_other_domains(
     httpbin, acurl_session
 ):
