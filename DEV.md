@@ -56,8 +56,8 @@ cd /path/to/mite
 tox
 ```
 
-This requires that you have python 3.9, 3.10, and 3.11 installed locally (on
-ubuntu `sudo apt install python3.9 python3.10 python3.11` after adding the
+This requires that you have python 3.10 and 3.11 installed locally (on
+ubuntu `sudo apt install python3.10 python3.11` after adding the
 [deadsnakes
 PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)).  You will
 also need tox installed globally (or in the virtualenv you use for
