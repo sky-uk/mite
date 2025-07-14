@@ -27,7 +27,7 @@ standard.
 
 ### Requirements
 
-  * All exisiting unit tests have been run and they either:
+  * All existing unit tests have been run and they either:
     - [] All pass and no new additions are needed
     - [] They all pass and new passing tests have been created for new functionality
     - [] Some failed but this was expected and changes have been made to them to account for new features
@@ -44,7 +44,7 @@ standard.
 
 The Mite Maintainers Team are here to help facilitate the process of contributing
 and offer guidance. If you have any questions or concerns please [talk to us via slack](https://sky.slack.com/messages/mite)
-if you're a sky colleague or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributers.
+if you're a sky colleague or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributors.
 
 ## Creating Issues
 
@@ -65,15 +65,15 @@ very closely.
 **N.B.** If you fail to adhere to the agreed workflow, there is a risk that your
 Pull Requests may not be accepted until any issues are rectified.
 
-The Mite project operates under a feature branch worflow, which is hopefully
+The Mite project operates under a feature branch workflow, which is hopefully
 a pretty simple workflow to follow:
 
  * All features are developed on a sensibly named branch
    - Either a descriptive name
-   - A link to an existing github issue
-   - Or a JIRA ticket (internal)
+   - A link to an existing GitHub issue
+   - Or a Jira ticket (internal)
  * When a feature is complete, it should be submitted back to master as pull request
- * All PRs will be reviwed by at least one core maintainer
+ * All PRs will be reviewed by at least one core maintainer
  * Upon acceptance, all commits will be auto-squashed into a single commit
 
 ## Discussion
@@ -81,7 +81,7 @@ a pretty simple workflow to follow:
 For discussion of issues and general project talk, head over to
 [#mite](http://sky.slack.com/messages/mite) on Slack if you're a Sky colleague.
 
-We still love to hear from you if you're an external contributer, the best way
+We still love to hear from you if you're an external contributor, the best way
 to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk).
 
 ## Responsibilities
