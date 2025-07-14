@@ -103,3 +103,6 @@ coverage_html_report/
 /pip-wheel-metadata/
 
 .DS_Store
+
+# Mise version manager
+mise.toml
