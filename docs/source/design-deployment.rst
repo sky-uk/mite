@@ -328,10 +328,10 @@ Controller    1         2       500MB
 Duplicator    1         2       100MB
 Exporter      1         0.25    100MB
 Runner        50        1       500MB
-Stats         20        1       50MB
+Stats         25        1       50MB
 ==========    ========  ====    ======
 
-For injecting loads of up to 22k tps, we have found 50 runners and 20
+For injecting loads of up to 50k tps, we have found 50 runners and 25
 stats to be more than sufficient.  (We have noted that the abstract
 “CPU” is more performant in this environment than in the VMs in the
 previous section.)  As before, the network bandwidth used by mite in
