@@ -103,6 +103,7 @@ class Runner:
             (sleep1, sleep2, run), return_when=asyncio.FIRST_COMPLETED
         )
 
+        # Interrupt sleeps as we are done waiting
         sleep1.cancel()
         sleep2.cancel()
 
@@ -110,6 +111,7 @@ class Runner:
             logger.error(
                 "Runner.run finished waiting on tasks, but the run loop wasn't complete!"
             )
+        # if run is in done, check if it is because of an exception
         elif run.exception():
             ex = run.exception()
             tb = ex.__traceback__
