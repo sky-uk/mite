@@ -111,7 +111,9 @@ class Runner:
                 "Runner.run finished waiting on tasks, but the run loop wasn't complete!"
             )
         elif run.exception():
-            raise run.exception()
+            ex = run.exception()
+            tb = ex.__traceback__
+            raise ex.with_traceback(tb)
 
     async def _run(self):
         context_id_gen = count(1)

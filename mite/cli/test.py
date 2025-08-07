@@ -163,13 +163,11 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     del receiver._raw_listeners
     del receiver._listeners
 
-    exceptions = []
     for task in tasks:
         if task.done() and task.exception():
-            exceptions.append(task.exception())
-
-    if exceptions:
-        raise Exception(exceptions)
+            ex = task.exception()
+            tb = ex.__traceback__
+            raise ex.with_traceback(tb)
     
     http_stats_output._scenarios_completed_time = time.time()
 
@@ -220,7 +218,8 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
                     f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
                 )
 
-    sys.exit(int(has_error))
+    if has_error:
+        raise Exception("Mite test failed")
 
 
 def human_readable_bytes(size):
