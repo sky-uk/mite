@@ -158,6 +158,8 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
+    # Run one last report before exiting
+    controller.report(receiver.recieve)
     # Close any open file handles and release resources after exiting the event loop
     del receiver._raw_listeners
     del receiver._listeners
@@ -169,8 +171,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             tb = ex.__traceback__
             raise ex.with_traceback(tb)
 
-    # Run one last report before exiting
-    controller.report(receiver.recieve)
     http_stats_output._scenarios_completed_time = time.time()
     has_error = False
 
