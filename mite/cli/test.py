@@ -159,6 +159,18 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
+    # Ensure any open files get closed
+    del receiver._raw_listeners
+    del receiver._listeners
+
+    exceptions = []
+    for task in tasks:
+        if task.done() and task.exception():
+            exceptions.append(task.exception())
+
+    if exceptions:
+        raise Exception(exceptions)
+    
     http_stats_output._scenarios_completed_time = time.time()
 
     # Run one last report before exiting
@@ -207,10 +219,6 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
                 logging.error(
                     f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
                 )
-
-    # Ensure any open files get closed
-    del receiver._raw_listeners
-    del receiver._listeners
 
     sys.exit(int(has_error))
 
