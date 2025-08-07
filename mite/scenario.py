@@ -55,6 +55,7 @@ class ScenarioManager:
 
     def _update_required_and_period(self, start_of_period, end_of_period):
         required = {}
+        breakpoint()
         for scenario_id, scenario in list(self._scenarios.items()):
             try:
                 # Fix for IDENTITY-47211: Use proper rounding instead of truncation to prevent
