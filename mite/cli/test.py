@@ -1,7 +1,6 @@
 import asyncio
 import gc
 import logging
-import sys
 import time
 import tracemalloc
 
@@ -168,7 +167,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             ex = task.exception()
             tb = ex.__traceback__
             raise ex.with_traceback(tb)
-    
+
     http_stats_output._scenarios_completed_time = time.time()
 
     # Run one last report before exiting

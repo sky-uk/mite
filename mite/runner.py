@@ -102,7 +102,7 @@ class Runner:
         done, pending = await asyncio.wait(
             (sleep1, sleep2, run), return_when=asyncio.FIRST_COMPLETED
         )
-       
+
         sleep1.cancel()
         sleep2.cancel()
 
