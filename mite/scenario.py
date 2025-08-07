@@ -55,13 +55,28 @@ class ScenarioManager:
 
     def _update_required_and_period(self, start_of_period, end_of_period):
         required = {}
-        breakpoint()
         for scenario_id, scenario in list(self._scenarios.items()):
             try:
-                # Fix for IDENTITY-47211: Use proper rounding instead of truncation to prevent
-                # non-linear scaling issues with small scale values in scalability tests
+                # Fix for IDENTITY-47211: Enhanced handling for small scale values in scalability tests
                 volume_result = scenario.volumemodel(start_of_period, end_of_period)
-                number = round(volume_result)  # Use round() instead of int() for consistent rounding
+                
+                # For very small values, accumulate fractional parts to ensure fairness over time
+                if not hasattr(self, '_fractional_carry'):
+                    self._fractional_carry = {}
+                
+                if scenario_id not in self._fractional_carry:
+                    self._fractional_carry[scenario_id] = 0.0
+                
+                # Add current result to accumulated fractional part
+                total_with_carry = volume_result + self._fractional_carry[scenario_id]
+                number = int(total_with_carry)  # Take integer part
+                self._fractional_carry[scenario_id] = total_with_carry - number  # Keep fractional remainder
+                
+                # Ensure minimum journey allocation for very small scales to prevent starvation
+                if volume_result > 0 and number == 0 and self._fractional_carry[scenario_id] >= 0.5:
+                    number = 1
+                    self._fractional_carry[scenario_id] = 0.0
+                    
             except StopVolumeModel:
                 logger.info(
                     "Removed scenario %d because volume model raised StopVolumeModel",
