@@ -57,7 +57,10 @@ class ScenarioManager:
         required = {}
         for scenario_id, scenario in list(self._scenarios.items()):
             try:
-                number = int(scenario.volumemodel(start_of_period, end_of_period))
+                # Fix for IDENTITY-47211: Use proper rounding instead of truncation to prevent
+                # non-linear scaling issues with small scale values in scalability tests
+                volume_result = scenario.volumemodel(start_of_period, end_of_period)
+                number = round(volume_result)  # Use round() instead of int() for consistent rounding
             except StopVolumeModel:
                 logger.info(
                     "Removed scenario %d because volume model raised StopVolumeModel",
@@ -103,10 +106,10 @@ class ScenarioManager:
         if self._spawn_rate is not None and hit_rate > 1:
             spawn_limit = self._spawn_rate / hit_rate
             limit = min(limit, spawn_limit)
-        if limit % 1:
-            if limit % 1 > random.random():
-                limit += 1
-        limit = int(limit)
+        
+        # Fix for IDENTITY-47211: Use consistent rounding instead of random rounding
+        # to ensure predictable scaling behavior across pod counts
+        limit = round(limit)  # Use round() for consistent, deterministic rounding
 
         def _yield(diff):
             for k, v in diff.items():
