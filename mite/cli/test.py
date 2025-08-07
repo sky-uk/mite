@@ -158,20 +158,20 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
-    # Ensure any open files get closed
+    # Close any open file handles and release resources after exiting the event loop
     del receiver._raw_listeners
     del receiver._listeners
 
+    # Check for exceptions inside the tasks
     for task in tasks:
         if task.done() and task.exception():
             ex = task.exception()
             tb = ex.__traceback__
             raise ex.with_traceback(tb)
 
-    http_stats_output._scenarios_completed_time = time.time()
-
     # Run one last report before exiting
     controller.report(receiver.recieve)
+    http_stats_output._scenarios_completed_time = time.time()
     has_error = False
 
     if int(opts.get("--max-errors-threshold")) < http_stats_output.error_total:
