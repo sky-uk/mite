@@ -102,12 +102,20 @@ class Runner:
         done, pending = await asyncio.wait(
             (sleep1, sleep2, run), return_when=asyncio.FIRST_COMPLETED
         )
+
+        # Interrupt sleeps as we are done waiting
+        sleep1.cancel()
+        sleep2.cancel()
+
         if run not in done:
             logger.error(
                 "Runner.run finished waiting on tasks, but the run loop wasn't complete!"
             )
-        sleep1.cancel()
-        sleep2.cancel()
+        # if run is in done, check if it is because of an exception
+        elif run.exception():
+            ex = run.exception()
+            tb = ex.__traceback__
+            raise ex.with_traceback(tb)
 
     async def _run(self):
         context_id_gen = count(1)
