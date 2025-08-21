@@ -42,10 +42,10 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
             wrapper.timer_handle.cancel()
             wrapper.timer_handle = None
     elif timeout_ms == 0:
-        wrapper.loop.call_soon(wrapper.timeout_expired, wrapper)
+        wrapper.loop.call_soon(lambda: wrapper.timeout_expired())
     else:
         secs = timeout_ms / 1000
-        wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
+        wrapper.timer_handle = wrapper.loop.call_later(secs, lambda: wrapper.timeout_expired())
 
 cdef class CurlWrapper:
     cdef CURLM* multi
