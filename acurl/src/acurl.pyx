@@ -21,7 +21,7 @@ class AcurlError(Exception):
 # with the python asyncio library we need to call back into python.  So these
 # functions do take the GIL, as indicated by `with gil` in their signatures.
 # The performance impact of this is yet tbd.
-cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
+cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) noexcept with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
         wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
@@ -33,7 +33,7 @@ cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, 
     if action != CURL_POLL_IN and action != CURL_POLL_OUT and action != CURL_POLL_INOUT and action != CURL_POLL_REMOVE:
         raise Exception("oops")
 
-cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
+cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) noexcept with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     cdef int _running
     cdef double secs
