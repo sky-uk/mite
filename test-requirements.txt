@@ -1,3 +1,5 @@
+# Needed for pytest -n (serial/parallel test execution)
+pytest-xdist
 aio-pika
 aiokafka
 altair 
