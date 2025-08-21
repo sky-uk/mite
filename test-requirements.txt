@@ -1,4 +1,3 @@
-# Cython and uvloop are specified in acurl's build/install requirements.
 aio-pika
 aiokafka
 altair 
@@ -15,3 +14,4 @@ pytest-httpserver
 sanic
 werkzeug==3.1.3
 setuptools>=78.1.1 # not directly required, pinned by Snyk to avoid a vulnerability
+Cython>=3.1.3,<4.0.0
