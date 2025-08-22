@@ -19,8 +19,6 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-echo "##### Memory usage after tests #####"
-echo "##### Memory usage after tests #####"
 echo "##### Run acurl/tests/test_httpbin.py only (py311 via tox) #####"
 echo "##### Memory usage before tests #####"
 free -m || vm_stat
