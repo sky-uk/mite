@@ -20,8 +20,15 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
 fi
 
 echo "##### Run tests with tox #####"
+echo "##### Memory usage before tests #####"
+free -m || vm_stat
+ps aux --sort=-%mem | head -20
 tox; TOX_EXIT_CODE=$?
 [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+
+echo "##### Memory usage after tests #####"
+free -m || vm_stat
+ps aux --sort=-%mem | head -20
 
 if isOnMaster ; then
     echo "##### Job running on MASTER. Proceeding with the Tag and Release script. ######"
