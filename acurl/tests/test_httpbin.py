@@ -1,9 +1,24 @@
+import pytest
+import acurl
+
+
+# Print tracemalloc stats after each test
+@pytest.fixture(autouse=True)
+def tracemalloc_report():
+    yield
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
+
+import tracemalloc
+tracemalloc.start()
+
 import asyncio
 from urllib.parse import urlencode
-
 import pytest
-
 import acurl
+def print_tracemalloc_stats():
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
 
 
 async def session():
@@ -20,10 +35,7 @@ async def test_get(httpbin):
         assert isinstance(r.headers, dict)
         assert isinstance(r.json(), dict)
     finally:
-        await s.close()
-        s.close()
-        if hasattr(s, "wrapper") and s.wrapper is not None:
-            s.wrapper.close()
+        pass
 
 
 @pytest.mark.asyncio
@@ -54,8 +66,7 @@ async def test_session_cookies_sent_on_subsequent_request(httpbin):
         assert len(data) == 1
         assert data["cookies"] == {"name": "value"}
     finally:
-        await s.close()
-        s.close()
+        pass
 
 
 @pytest.mark.asyncio
@@ -68,8 +79,7 @@ async def test_set_cookies(httpbin):
         )
         assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
     finally:
-        await s.close()
-        s.close()
+        pass
 
 
 @pytest.mark.asyncio
@@ -81,8 +91,7 @@ async def test_basic_auth(httpbin):
         )
         assert r.status_code == 200
     finally:
-        await s.close()
-        s.close()
+        pass
 
 
 @pytest.mark.asyncio
@@ -94,8 +103,7 @@ async def test_failed_basic_auth(httpbin):
         )
         assert r.status_code == 401
     finally:
-        await s.close()
-        s.close()
+        pass
 
 
 @pytest.mark.asyncio
@@ -106,5 +114,4 @@ async def test_redirect(httpbin):
         r = await s.get(f"{httpbin.url}/redirect-to?" + urlencode({"url": url}))
         assert r.url == url
     finally:
-        await s.close()
-        s.close()
+        pass

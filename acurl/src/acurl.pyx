@@ -48,13 +48,6 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) noexcept with
         wrapper.timer_handle = wrapper.loop.call_later(secs, lambda: wrapper.timeout_expired())
 
 cdef class CurlWrapper:
-    def close(self):
-        """Explicitly release libcurl multi resources and break references."""
-        if self.multi is not NULL:
-            curl_multi_cleanup(self.multi)
-            self.multi = NULL
-        self.loop = None
-        self.timer_handle = None
     cdef CURLM* multi
     cdef object timer_handle
     cdef object loop

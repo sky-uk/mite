@@ -78,13 +78,6 @@ cdef void cleanup_share(object share_capsule):
 # other Sessions) -- tp_clear will be called on some other object in the cycle.
 @cython.no_gc_clear
 cdef class Session:
-    def close(self):
-        """Explicitly release libcurl shared resources and break references."""
-        if self.shared is not NULL:
-            curl_share_cleanup(self.shared)
-            self.shared = NULL
-        self.wrapper = None
-        self.response_callback = None
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
     cdef public object response_callback
