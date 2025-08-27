@@ -48,6 +48,13 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) noexcept with
         wrapper.timer_handle = wrapper.loop.call_later(secs, lambda: wrapper.timeout_expired())
 
 cdef class CurlWrapper:
+    def close(self):
+        """Explicitly release libcurl multi resources and break references."""
+        if self.multi is not NULL:
+            curl_multi_cleanup(self.multi)
+            self.multi = NULL
+        self.loop = None
+        self.timer_handle = None
     cdef CURLM* multi
     cdef object timer_handle
     cdef object loop
@@ -110,9 +117,5 @@ cdef class CurlWrapper:
         return Session.__new__(Session, self)
 
     def __dealloc__(self):
-        # FIXME: I (AWE) can't convince myself that this definitely doesn't
-        # leak memory, because we might be tearing down the event loop before
-        # we've called all the queued schedule_cleanup_curl_pointer events.
-        # But this should be a rare case, so I'm not going to try to fix it
-        # for now.
-        curl_multi_cleanup(self.multi)
+        # Ensure explicit cleanup if not already called
+        self.close()

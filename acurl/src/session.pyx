@@ -78,6 +78,13 @@ cdef void cleanup_share(object share_capsule):
 # other Sessions) -- tp_clear will be called on some other object in the cycle.
 @cython.no_gc_clear
 cdef class Session:
+    def close(self):
+        """Explicitly release libcurl shared resources and break references."""
+        if self.shared is not NULL:
+            curl_share_cleanup(self.shared)
+            self.shared = NULL
+        self.wrapper = None
+        self.response_callback = None
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
     cdef public object response_callback
@@ -91,15 +98,8 @@ cdef class Session:
         self.response_callback = None
 
     def __dealloc__(self):
-        if self.wrapper.loop is None or self.wrapper.loop.is_closed():
-            # FIXME: the event loop being closed only happens during testing,
-            # so it kind of sucks to pay the price of checking for it all the
-            # time.  I'm not even sure what the circumstances are under which
-            # self.wrapper.loop becomes None -- I suspect it has to do with
-            # the cycle collector.
-            curl_share_cleanup(self.shared)
-        else:
-            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+        # Ensure explicit cleanup if not already called
+        self.close()
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
