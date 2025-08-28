@@ -36,7 +36,7 @@ async def test_get(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        r = await s.get(f"{httpbin.url}/ip", timeout=10)
+        r = await asyncio.wait_for(s.get(f"{httpbin.url}/ip"), timeout=10)
         print(f"[DEBUG] GET /ip status: {r.status_code}, headers: {r.headers}, body: {r.text if hasattr(r, 'text') else r.content}")
         assert r.status_code == 200
         assert isinstance(r.headers, dict)
@@ -76,9 +76,9 @@ async def test_session_cookies_sent_on_subsequent_request(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        set_resp = await s.get(f"{httpbin.url}/cookies/set?name=value", timeout=10)
+        set_resp = await asyncio.wait_for(s.get(f"{httpbin.url}/cookies/set?name=value"), timeout=10)
         print(f"[DEBUG] Set cookie response: {set_resp.status_code}, {set_resp.headers}")
-        resp = await s.get(f"{httpbin.url}/cookies", timeout=10)
+        resp = await asyncio.wait_for(s.get(f"{httpbin.url}/cookies"), timeout=10)
         print(f"[DEBUG] Cookies response: {resp.status_code}, {resp.headers}, {resp.text if hasattr(resp, 'text') else resp.content}")
         data = resp.json()
         assert len(data) == 1
@@ -98,10 +98,10 @@ async def test_set_cookies(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        resp1 = await s.get(f"{httpbin.url}/cookies/set?name=value", timeout=10)
+        resp1 = await asyncio.wait_for(s.get(f"{httpbin.url}/cookies/set?name=value"), timeout=10)
         print(f"[DEBUG] Set cookie1 response: {resp1.status_code}, {resp1.headers}")
-        r = await s.get(
-            f"{httpbin.url}/cookies/set?name2=value", cookies={"name3": "value"}, timeout=10
+        r = await asyncio.wait_for(
+            s.get(f"{httpbin.url}/cookies/set?name2=value", cookies={"name3": "value"}), timeout=10
         )
         print(f"[DEBUG] Set cookie2 response: {r.status_code}, {r.headers}, cookies: {r.cookies}")
         assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
@@ -120,8 +120,8 @@ async def test_basic_auth(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        r = await s.get(
-            f"{httpbin.url}/basic-auth/user/password", auth=("user", "password"), timeout=10
+        r = await asyncio.wait_for(
+            s.get(f"{httpbin.url}/basic-auth/user/password", auth=("user", "password")), timeout=10
         )
         print(f"[DEBUG] Basic auth response: {r.status_code}, {r.headers}")
         assert r.status_code == 200
@@ -140,8 +140,8 @@ async def test_failed_basic_auth(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        r = await s.get(
-            f"{httpbin.url}/basic-auth/user/password", auth=("notuser", "notpassword"), timeout=10
+        r = await asyncio.wait_for(
+            s.get(f"{httpbin.url}/basic-auth/user/password", auth=("notuser", "notpassword")), timeout=10
         )
         print(f"[DEBUG] Failed basic auth response: {r.status_code}, {r.headers}")
         assert r.status_code == 401
@@ -161,7 +161,7 @@ async def test_redirect(httpbin):
     s = await session()
     try:
         url = f"{httpbin.url}/ip"
-        r = await s.get(f"{httpbin.url}/redirect-to?" + urlencode({"url": url}), timeout=10)
+        r = await asyncio.wait_for(s.get(f"{httpbin.url}/redirect-to?" + urlencode({"url": url})), timeout=10)
         print(f"[DEBUG] Redirect response: {r.status_code}, {r.headers}, url: {r.url}")
         assert r.url == url
     except Exception as e:
