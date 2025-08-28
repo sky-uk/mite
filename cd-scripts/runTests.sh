@@ -11,6 +11,13 @@ function isOnMaster() {
 }
 
 
+echo "=== Environment Info ==="
+python --version
+cython --version || true
+pip show uvloop || true
+pip show acurl || true
+uname -a
+
 echo "##### Run pre-commit checks #####"
 /home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
