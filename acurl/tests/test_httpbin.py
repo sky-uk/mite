@@ -7,6 +7,7 @@ import inspect
 
 tracemalloc.start()
 
+
 # Print tracemalloc stats after each test
 @pytest.fixture(autouse=True)
 def tracemalloc_report():
