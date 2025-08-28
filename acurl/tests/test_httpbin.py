@@ -24,7 +24,7 @@ async def test_get(httpbin):
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        r = await s.get(f"{httpbin.url}/ip")
+        r = await s.get(f"{httpbin.url}/ip", timeout=10)
         print(f"[DEBUG] GET /ip status: {r.status_code}, headers: {r.headers}, body: {r.text if hasattr(r, 'text') else r.content}")
         assert r.status_code == 200
         assert isinstance(r.headers, dict)
