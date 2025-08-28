@@ -14,9 +14,17 @@ def tracemalloc_report():
     current, peak = tracemalloc.get_traced_memory()
     print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
 
-def print_tracemalloc_stats():
-    current, peak = tracemalloc.get_traced_memory()
-    print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
+# Print detailed tracemalloc snapshot comparison after each test
+@pytest.fixture(autouse=True)
+def tracemalloc_detailed_report():
+    snapshot_before = tracemalloc.take_snapshot()
+    yield
+    snapshot_after = tracemalloc.take_snapshot()
+    top_stats = snapshot_after.compare_to(snapshot_before, 'lineno')
+    print("[tracemalloc] Top 10 memory allocations since test start:")
+    for stat in top_stats[:10]:
+        print(stat)
+
 
 
 async def session():
