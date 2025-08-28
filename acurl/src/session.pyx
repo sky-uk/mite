@@ -79,12 +79,21 @@ cdef void cleanup_share(object share_capsule):
 @cython.no_gc_clear
 cdef class Session:
     def close(self):
-        """Explicitly release libcurl shared resources and break references."""
-        if self.shared is not NULL:
-            curl_share_cleanup(self.shared)
-            self.shared = NULL
-        self.wrapper = None
-        self.response_callback = None
+        """Explicitly release libcurl shared resources and break references. Safe at shutdown."""
+        try:
+            if self.shared is not NULL:
+                curl_share_cleanup(self.shared)
+                self.shared = NULL
+        except Exception:
+            pass
+        try:
+            self.wrapper = None
+        except Exception:
+            pass
+        try:
+            self.response_callback = None
+        except Exception:
+            pass
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
     cdef public object response_callback
@@ -98,8 +107,11 @@ cdef class Session:
         self.response_callback = None
 
     def __dealloc__(self):
-        # Ensure explicit cleanup if not already called
-        self.close()
+        # Ensure explicit cleanup if not already called, suppress errors at shutdown
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
