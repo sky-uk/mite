@@ -1,30 +1,12 @@
 import pytest
 import acurl
-import tracemalloc
 import asyncio
 from urllib.parse import urlencode
 import inspect
 
-tracemalloc.start()
 
 
-# Print tracemalloc stats after each test
-@pytest.fixture(autouse=True)
-def tracemalloc_report():
-    yield
-    current, peak = tracemalloc.get_traced_memory()
-    print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
 
-# Print detailed tracemalloc snapshot comparison after each test
-@pytest.fixture(autouse=True)
-def tracemalloc_detailed_report():
-    snapshot_before = tracemalloc.take_snapshot()
-    yield
-    snapshot_after = tracemalloc.take_snapshot()
-    top_stats = snapshot_after.compare_to(snapshot_before, 'lineno')
-    print("[tracemalloc] Top 10 memory allocations since test start:")
-    for stat in top_stats[:10]:
-        print(stat)
 
 
 
@@ -35,12 +17,17 @@ async def session():
 
 @pytest.mark.asyncio
 async def test_get(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
         r = await s.get(f"{httpbin.url}/ip")
+        print(f"[DEBUG] GET /ip status: {r.status_code}, headers: {r.headers}, body: {r.text if hasattr(r, 'text') else r.content}")
         assert r.status_code == 200
         assert isinstance(r.headers, dict)
         assert isinstance(r.json(), dict)
+    except Exception as e:
+        print(f"[ERROR] Exception in test_get: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
@@ -66,13 +53,19 @@ async def test_session_cookies(httpbin, acurl_session):
 
 @pytest.mark.asyncio
 async def test_session_cookies_sent_on_subsequent_request(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        await s.get(f"{httpbin.url}/cookies/set?name=value")
+        set_resp = await s.get(f"{httpbin.url}/cookies/set?name=value")
+        print(f"[DEBUG] Set cookie response: {set_resp.status_code}, {set_resp.headers}")
         resp = await s.get(f"{httpbin.url}/cookies")
+        print(f"[DEBUG] Cookies response: {resp.status_code}, {resp.headers}, {resp.text if hasattr(resp, 'text') else resp.content}")
         data = resp.json()
         assert len(data) == 1
         assert data["cookies"] == {"name": "value"}
+    except Exception as e:
+        print(f"[ERROR] Exception in test_session_cookies_sent_on_subsequent_request: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
@@ -80,13 +73,19 @@ async def test_session_cookies_sent_on_subsequent_request(httpbin):
 
 @pytest.mark.asyncio
 async def test_set_cookies(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
-        await s.get(f"{httpbin.url}/cookies/set?name=value")
+        resp1 = await s.get(f"{httpbin.url}/cookies/set?name=value")
+        print(f"[DEBUG] Set cookie1 response: {resp1.status_code}, {resp1.headers}")
         r = await s.get(
             f"{httpbin.url}/cookies/set?name2=value", cookies={"name3": "value"}
         )
+        print(f"[DEBUG] Set cookie2 response: {r.status_code}, {r.headers}, cookies: {r.cookies}")
         assert r.cookies == {"name": "value", "name2": "value", "name3": "value"}
+    except Exception as e:
+        print(f"[ERROR] Exception in test_set_cookies: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
@@ -94,12 +93,17 @@ async def test_set_cookies(httpbin):
 
 @pytest.mark.asyncio
 async def test_basic_auth(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
         r = await s.get(
             f"{httpbin.url}/basic-auth/user/password", auth=("user", "password")
         )
+        print(f"[DEBUG] Basic auth response: {r.status_code}, {r.headers}")
         assert r.status_code == 200
+    except Exception as e:
+        print(f"[ERROR] Exception in test_basic_auth: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
@@ -107,12 +111,17 @@ async def test_basic_auth(httpbin):
 
 @pytest.mark.asyncio
 async def test_failed_basic_auth(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
         r = await s.get(
             f"{httpbin.url}/basic-auth/user/password", auth=("notuser", "notpassword")
         )
+        print(f"[DEBUG] Failed basic auth response: {r.status_code}, {r.headers}")
         assert r.status_code == 401
+    except Exception as e:
+        print(f"[ERROR] Exception in test_failed_basic_auth: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
@@ -120,11 +129,16 @@ async def test_failed_basic_auth(httpbin):
 
 @pytest.mark.asyncio
 async def test_redirect(httpbin):
+    print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
         url = f"{httpbin.url}/ip"
         r = await s.get(f"{httpbin.url}/redirect-to?" + urlencode({"url": url}))
+        print(f"[DEBUG] Redirect response: {r.status_code}, {r.headers}, url: {r.url}")
         assert r.url == url
+    except Exception as e:
+        print(f"[ERROR] Exception in test_redirect: {e}")
+        raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())

@@ -2,7 +2,7 @@ import asyncio
 import gc
 import logging
 import time
-import tracemalloc
+## import tracemalloc (removed)
 
 from prettytable import PrettyTable
 
@@ -97,7 +97,7 @@ def print_diff(snapshot1, snapshot2):
     for stat in top_stats:
         if any(
             x in stat.traceback._frames[0][0]
-            for x in ("linecache.py", "traceback.py", "tracemalloc.py")
+            for x in ("linecache.py", "traceback.py")
         ):
             continue
         print(stat)
@@ -113,7 +113,7 @@ async def mem_snapshot(initial_snapshot, interval=60):
         await asyncio.sleep(interval)
         last_snapshot = snapshot
         gc.collect()
-        snapshot = tracemalloc.take_snapshot()
+    # snapshot = tracemalloc.take_snapshot()  # tracemalloc removed
         print("Differences from initial:")
         print_diff(initial_snapshot, snapshot)
         if last_snapshot is not None:
@@ -152,9 +152,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     ]
 
     if opts["--memory-tracing"]:
-        tracemalloc.start()
-        initial_snapshot = tracemalloc.take_snapshot()
-        tasks.append(loop.create_task(mem_snapshot(initial_snapshot)))
+        pass  # tracemalloc removed
 
     loop.run_until_complete(asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED))
 
