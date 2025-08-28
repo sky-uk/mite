@@ -12,8 +12,9 @@ function isOnMaster() {
 
 
 echo "=== Environment Info ==="
+export UVLOOP_DISABLED=1
 python --version
-cython --version || true
+(cython --version || python -m cython --version || python -c "import Cython; print('Cython', Cython.__version__)") 2>/dev/null || echo "Cython not found"
 pip show uvloop || true
 pip show acurl || true
 uname -a
