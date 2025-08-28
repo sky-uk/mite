@@ -12,6 +12,10 @@ function isOnMaster() {
 
 
 echo "=== Environment Info ==="
+export PYTHONMALLOC=debug
+export PYTHONASYNCIODEBUG=1
+echo "libcurl version:"
+curl --version || echo "curl not found"
 export UVLOOP_DISABLED=1
 python --version
 (cython --version || python -m cython --version || python -c "import Cython; print('Cython', Cython.__version__)") 2>/dev/null || echo "Cython not found"
