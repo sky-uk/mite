@@ -1,6 +1,11 @@
 import pytest
 import acurl
+import tracemalloc
+import asyncio
+from urllib.parse import urlencode
+import inspect
 
+tracemalloc.start()
 
 # Print tracemalloc stats after each test
 @pytest.fixture(autouse=True)
@@ -9,13 +14,6 @@ def tracemalloc_report():
     current, peak = tracemalloc.get_traced_memory()
     print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
 
-import tracemalloc
-tracemalloc.start()
-
-import asyncio
-from urllib.parse import urlencode
-import pytest
-import acurl
 def print_tracemalloc_stats():
     current, peak = tracemalloc.get_traced_memory()
     print(f"[tracemalloc] Current memory usage: {current / 1024:.1f} KiB; Peak: {peak / 1024:.1f} KiB")
@@ -121,7 +119,7 @@ async def test_redirect(httpbin):
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
-import inspect
+
 async def maybe_await(obj):
     if inspect.isawaitable(obj):
         return await obj
