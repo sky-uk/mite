@@ -3,6 +3,8 @@ import acurl
 import asyncio
 from urllib.parse import urlencode
 import inspect
+import psutil
+import os
 
 
 
@@ -17,6 +19,8 @@ async def session():
 
 @pytest.mark.asyncio
 async def test_get(httpbin):
+    process = psutil.Process(os.getpid())
+    print(f"[DEBUG] Memory usage before test_get: {process.memory_info().rss / 1024 ** 2:.2f} MB")
     print(f"[DEBUG] httpbin.url = {httpbin.url}")
     s = await session()
     try:
@@ -25,12 +29,14 @@ async def test_get(httpbin):
         assert r.status_code == 200
         assert isinstance(r.headers, dict)
         assert isinstance(r.json(), dict)
+        print(f"[DEBUG] Memory usage after GET /ip: {process.memory_info().rss / 1024 ** 2:.2f} MB")
     except Exception as e:
         print(f"[ERROR] Exception in test_get: {e}")
         raise
     finally:
         if hasattr(s, "close"):
             await maybe_await(s.close())
+    print(f"[DEBUG] Memory usage after test_get: {process.memory_info().rss / 1024 ** 2:.2f} MB")
 
 
 @pytest.mark.asyncio
