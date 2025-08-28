@@ -2,7 +2,7 @@ pytest-timeout
 aio-pika
 aiokafka
 altair
-cython>=3.1.3,<4.0.0
+cython>=0.29,<3.0
 h2
 hypothesis
 pandas
