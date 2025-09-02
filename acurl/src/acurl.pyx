@@ -24,9 +24,9 @@ class AcurlError(Exception):
 cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) noexcept with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
-        wrapper.loop.add_reader(sock, lambda fd: wrapper.curl_perform_read(fd))
+        wrapper.loop.add_reader(sock, lambda *args: wrapper.curl_perform_read(sock))
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
-        wrapper.loop.add_writer(sock, lambda fd: wrapper.curl_perform_write(fd))
+        wrapper.loop.add_writer(sock, lambda *args: wrapper.curl_perform_write(sock))
     if action == CURL_POLL_REMOVE:
         wrapper.loop.remove_reader(sock)
         wrapper.loop.remove_writer(sock)
