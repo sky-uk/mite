@@ -20,7 +20,6 @@ setup(
         extensions,
         gdb_debug=True,
         compiler_directives={
-            "language_level": 3,
             "warn.undeclared": True,
             "warn.unreachable": True,
             "warn.maybe_uninitialized": True,

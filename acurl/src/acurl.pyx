@@ -21,19 +21,19 @@ class AcurlError(Exception):
 # with the python asyncio library we need to call back into python.  So these
 # functions do take the GIL, as indicated by `with gil` in their signatures.
 # The performance impact of this is yet tbd.
-cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) noexcept with gil:
+cdef int handle_socket(CURL *easy, curl_socket_t sock, int action, void *userp, void *socketp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     if action == CURL_POLL_IN or action == CURL_POLL_INOUT:
-        wrapper.loop.add_reader(sock, lambda *args: wrapper.curl_perform_read(sock))
+        wrapper.loop.add_reader(sock, wrapper.curl_perform_read, wrapper, sock)
     if action == CURL_POLL_OUT or action == CURL_POLL_INOUT:
-        wrapper.loop.add_writer(sock, lambda *args: wrapper.curl_perform_write(sock))
+        wrapper.loop.add_writer(sock, wrapper.curl_perform_write, wrapper, sock)
     if action == CURL_POLL_REMOVE:
         wrapper.loop.remove_reader(sock)
         wrapper.loop.remove_writer(sock)
     if action != CURL_POLL_IN and action != CURL_POLL_OUT and action != CURL_POLL_INOUT and action != CURL_POLL_REMOVE:
         raise Exception("oops")
 
-cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) noexcept with gil:
+cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) with gil:
     cdef CurlWrapper wrapper = <CurlWrapper>userp
     cdef int _running
     cdef double secs
@@ -42,10 +42,10 @@ cdef int start_timeout(CURLM *multi, long timeout_ms, void *userp) noexcept with
             wrapper.timer_handle.cancel()
             wrapper.timer_handle = None
     elif timeout_ms == 0:
-        wrapper.loop.call_soon(lambda: wrapper.timeout_expired())
+        wrapper.loop.call_soon(wrapper.timeout_expired, wrapper)
     else:
         secs = timeout_ms / 1000
-        wrapper.timer_handle = wrapper.loop.call_later(secs, lambda: wrapper.timeout_expired())
+        wrapper.timer_handle = wrapper.loop.call_later(secs, wrapper.timeout_expired, wrapper)
 
 cdef class CurlWrapper:
     cdef CURLM* multi
