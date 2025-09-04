@@ -32,7 +32,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     node.next = NULL
     return node
 
-cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
+cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
@@ -42,7 +42,7 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     response.header_buffer_tail = node
     return node.len
 
-cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
+cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
@@ -99,7 +99,7 @@ cdef class Session:
             # the cycle collector.
             curl_share_cleanup(self.shared)
         else:
-            self.wrapper.loop.call_soon(lambda: cleanup_share(PyCapsule_New(self.shared, NULL, NULL)))
+            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()
