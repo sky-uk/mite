@@ -37,7 +37,7 @@ class DBIterableDataPool:
                 self.exhausted = True
                 return
             for row in rows:
-                self._data.append((self.item_index, row))
+                self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
             self.exhausted = True  # Only one batch for now; adjust for pagination if needed
 
