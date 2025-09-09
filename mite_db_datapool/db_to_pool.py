@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 class DBIterableDataPool:
     def __init__(
         self,
-        DB_engine,
+        db_engine,
         query,
         preload_minimum=None,
     ):
-        self.DB_engine = DB_engine
+        self.db_engine = db_engine
         self.query = query
         self._data = []
         self.item_index = 0
@@ -30,7 +30,7 @@ class DBIterableDataPool:
                 self.populate()
 
     def populate(self):
-        with self.DB_engine.connect() as conn:
+        with self.db_engine.connect() as conn:
             result = conn.execute(text(self.query))
             rows = result.fetchall()
             if not rows:
