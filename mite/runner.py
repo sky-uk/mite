@@ -210,13 +210,44 @@ class Runner:
             )
 
         try:
+            # Root journey span (separate from nested transaction spans)
+            span = None
+            try:
+                from . import telemetry
+
+                if telemetry.is_enabled():
+                    tracer = telemetry.get_tracer()
+                    span = tracer.start_span(
+                        journey.__name__,
+                        attributes={
+                            "mite.test": context._id_data.get("test"),
+                            "mite.journey_spec": journey_spec,
+                            "mite.scenario_id": scenario_id,
+                            "mite.scenario_data_id": scenario_data_id,
+                        },
+                    )
+            except Exception:  # pragma: no cover
+                span = None
             async with context.transaction("__root__"):
                 if args is None:
                     await journey(context)
                 else:
                     await journey(context, *args)
         except Exception as e:
+            if span is not None:
+                try:
+                    from . import telemetry
+
+                    telemetry.record_exception(span, e)
+                except Exception:
+                    pass
             if self._debug and not getattr(e, "handled", False):
                 breakpoint()
                 raise
+        finally:
+            if span is not None:
+                try:
+                    span.end()
+                except Exception:  # pragma: no cover
+                    pass
         return scenario_id, scenario_data_id

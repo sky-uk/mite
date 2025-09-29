@@ -201,6 +201,33 @@ docker-compose -f docker_compose.yml up
 
 For more information on distributed mite usage, [info](/local/README.md)
 
+### OpenTelemetry (Experimental)
+
+Mite can emit OpenTelemetry traces (and optionally metrics) to help debug and observe load tests.
+
+Enable tracing with environment variables:
+
+```
+export MITE_CONF_OTEL_ENABLED=1
+# Optional tuning
+export MITE_CONF_OTEL_SAMPLER_RATIO=0.01   # sample 1% of root traces (default 0.01)
+export MITE_CONF_OTEL_SPAN_PROCESSOR=batch # or 'simple'
+export MITE_CONF_OTEL_SERVICE_NAME=mite    # logical service name
+```
+
+Current implementation:
+- Root span per journey execution (span name = journey function name)
+- Nested spans for each `ctx.transaction("name")`
+- HTTP client spans created for each response (child of active transaction/journey)
+- Exceptions mark span status as error and are recorded succinctly.
+
+Exporter: by default spans are printed to stdout via the ConsoleSpanExporter. You can pipe output or later configure OTLP (future work).
+
+Performance guidance:
+- Keep the sampler ratio low in large tests to reduce overhead.
+- Avoid very high-cardinality attributes; scenario/test identifiers are already included.
+- Disable tracing by unsetting `MITE_CONF_OTEL_ENABLED` or setting it to `0`.
+
 ## Maintainers
 
 If you run into any trouble or need support getting to grips with Mite,

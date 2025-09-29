@@ -66,6 +66,26 @@ class SessionPool:
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
+            # OpenTelemetry HTTP client span (if enabled and parent sampled)
+            span = None
+            try:
+                from mite import telemetry  # local import style for packaged module
+
+                if telemetry.is_enabled():
+                    tracer = telemetry.get_tracer()
+                    # We don't create an explicit span context manager to avoid async complexity; just start/end
+                    span = tracer.start_span(
+                        name=r.request.method,
+                        attributes={
+                            "http.method": r.request.method,
+                            "http.url": r.url,
+                            "http.status_code": r.status_code,
+                            "net.peer.ip": r.primary_ip,
+                            "mite.transaction": context._active_transaction[0],
+                        },
+                    )
+            except Exception:
+                span = None
             if session_wrapper._response_callback is not None:
                 session_wrapper._response_callback(r, session_wrapper.additional_metrics)
 
@@ -85,6 +105,11 @@ class SessionPool:
                 download_size=r.download_size,
                 **session_wrapper.additional_metrics,
             )
+            if span is not None:
+                try:
+                    span.end()
+                except Exception:
+                    pass
 
         session.set_response_callback(response_callback)
         return session_wrapper

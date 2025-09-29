@@ -81,20 +81,43 @@ class Context:
         token = self._extend_transaction(name)
         start_time = time.time()
         error = False
+        span = None
+        # Lazy import to avoid hard dependency
+        try:
+            from . import telemetry  # local import
+
+            if telemetry.is_enabled():
+                tracer = telemetry.get_tracer()
+                span = tracer.start_span(
+                    name,
+                    attributes={
+                        "mite.test": self._id_data.get("test"),
+                        "mite.journey_spec": self._id_data.get("journey"),
+                        "mite.transaction_id": self._active_transaction[1],
+                        "mite.scenario_id": self._id_data.get("scenario_id"),
+                    },
+                )
+        except Exception:  # pragma: no cover
+            span = None
         try:
             yield None
         except Exception as e:
             error = True
+            if span is not None:
+                try:
+                    from . import telemetry
+
+                    telemetry.record_exception(span, e)
+                except Exception:
+                    pass
             if hasattr(e, "handled"):
                 raise
-
             if isinstance(e, MiteError):
                 self._send_exception("error", e, include_fields=True)
             else:
                 self._send_exception("exception", e, include_stacktrace=True)
             if self._debug:  # pragma: no cover
                 postmortem = os.environ.get("PYTHONPOSTMORTEM", "pdb.post_mortem")
-                # Implementation borrowed from PEP 553
                 modname, dot, funcname = postmortem.rpartition(".")
                 if dot == "":
                     modname = "builtins"
@@ -117,6 +140,11 @@ class Context:
                 end_time=time.time(),
                 had_error=error,
             )
+            if span is not None:
+                try:
+                    span.end()
+                except Exception:  # pragma: no cover
+                    pass
             active_transaction.reset(token)
 
     def _send_exception(
