@@ -21,7 +21,6 @@ db_datapool = DBIterableDataPool(engine, "SELECT * FROM test_table", preload_min
 
 
 async def db_journey(ctx, item_id, row):
-    breakpoint()
     async with ensure_average_separation(1):
         print("running journey", item_id, row)
 
