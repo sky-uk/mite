@@ -1,11 +1,12 @@
 import logging
 from collections import deque
 
-
-from mite.datapools import DataPoolExhausted, DataPoolItem
 from sqlalchemy import text
 
+from mite.datapools import DataPoolExhausted, DataPoolItem
+
 logger = logging.getLogger(__name__)
+
 
 class DBIterableDataPool:
     def __init__(
@@ -39,7 +40,9 @@ class DBIterableDataPool:
             for row in rows:
                 self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
-            self.exhausted = True  # Only one batch for now; adjust for pagination if needed
+            self.exhausted = (
+                True  # Only one batch for now; adjust for pagination if needed
+            )
 
     async def checkout(self, config):
         if not self.exhausted and not self.populating:
@@ -87,7 +90,3 @@ class DBRecyclableIterableDataPool(DBIterableDataPool):
             )
             return
         self._available.append(item_id)
-        
-
-
-

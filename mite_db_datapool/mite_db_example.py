@@ -1,9 +1,9 @@
 import sqlite3
 
-from mite_db_datapool.db_to_pool import DBIterableDataPool
 from sqlalchemy import create_engine
 
 from mite import ensure_average_separation
+from mite_db_datapool.db_to_pool import DBIterableDataPool
 
 # Step 1: Create a test SQLite database and table
 conn = sqlite3.connect("/Users/mae312/sky-id-mite-nft/mite_id/mite_id/db_folder/test.db")
