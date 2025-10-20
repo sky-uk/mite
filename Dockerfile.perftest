@@ -4,7 +4,7 @@ COPY ./test/perf/test-requirements.txt /test-requirements.txt
 
 RUN pip install -r test-requirements.txt
 
-RUN pip install bs4 docopt flask msgpack-python nanomsg pyzmq uvloop
+RUN pip install bs4 docopt flask msgpack-python nanomsg pyzmq uvloop==0.21.0
 
 COPY . /package
 
