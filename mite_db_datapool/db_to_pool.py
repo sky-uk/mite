@@ -42,7 +42,7 @@ class DBIterableDataPool:
         if self.max_size == 0:
             self.exhausted = True
             return
-        
+
         # Stop if at max_size
         if self.max_size and len(self._data) >= self.max_size:
             return
@@ -50,18 +50,18 @@ class DBIterableDataPool:
         with self.db_engine.connect() as conn:
             result = conn.execute(text(self.query))
             rows = result.fetchall()
-            
+
             if not rows:
                 self.exhausted = True
                 return
-            
+
             # Add rows up to max_size
             for row in rows:
                 if self.max_size and len(self._data) >= self.max_size:
                     break
                 self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
-                
+
             self.exhausted = True
 
     async def checkout(self, config):
