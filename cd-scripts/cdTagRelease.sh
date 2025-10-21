@@ -4,7 +4,7 @@ function tagBuild() {
     git config user.email "mite@noreply.github.com"
     git config user.name "Jenkins-CI"
     pip3 install docopt GitPython packaging requests
-    python3 cd-scripts/cdRelease.py
+    python3 cd-scripts/cdRelease.py --patch
     if (( $? == 1)); then
         VERSION_INCREMENT=false
     fi
