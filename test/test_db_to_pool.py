@@ -27,6 +27,7 @@ def setup_test_db():
 
     # Cleanup
     import os
+
     if os.path.exists("testdb.sqlite"):
         os.remove("testdb.sqlite")
 
@@ -39,9 +40,9 @@ def setup_large_test_db():
         "CREATE TABLE IF NOT EXISTS large_table (id INTEGER PRIMARY KEY, value TEXT)"
     )
     conn.execute("DELETE FROM large_table")
-    
+
     # Insert 100 rows for testing max_size functionality
-    values = [(f'item_{i}',) for i in range(100)]
+    values = [(f"item_{i}",) for i in range(100)]
     conn.executemany("INSERT INTO large_table (value) VALUES (?)", values)
     conn.commit()
     conn.close()
@@ -51,6 +52,7 @@ def setup_large_test_db():
 
     # Cleanup
     import os
+
     if os.path.exists("testdb_large.sqlite"):
         os.remove("testdb_large.sqlite")
 
@@ -102,26 +104,22 @@ async def test_db_recyclable_iterable_datapool(setup_test_db):
 def test_max_size_limits_data_loading(setup_large_test_db):
     """Test that max_size prevents OOM with large datasets"""
     engine = setup_large_test_db
-    
+
     pool = DBIterableDataPool(
-        engine, 
-        "SELECT * FROM large_table", 
-        max_size=10  # Limit to 10 items even though 100 are available
+        engine,
+        "SELECT * FROM large_table",
+        max_size=10,  # Limit to 10 items even though 100 are available
     )
-    
+
     assert len(pool._data) == 10
 
 
 def test_max_size_zero_fixed(setup_test_db):
     """Test that max_size=0 doesn't hang (critical fix)"""
     engine = setup_test_db
-    
-    pool = DBIterableDataPool(
-        engine,
-        "SELECT * FROM test_table",
-        max_size=0
-    )
-    
+
+    pool = DBIterableDataPool(engine, "SELECT * FROM test_table", max_size=0)
+
     assert len(pool._data) == 0
     assert pool.exhausted is True
 
@@ -129,20 +127,20 @@ def test_max_size_zero_fixed(setup_test_db):
 def test_infinite_loop_prevention(setup_large_test_db):
     """Test that preload_minimum > max_size doesn't cause infinite loop (critical fix)"""
     import time
-    
+
     start_time = time.time()
-    
+
     pool = DBIterableDataPool(
         setup_large_test_db,
         "SELECT * FROM large_table",
         preload_minimum=50,  # Want 50
-        max_size=10          # Limited to 10
+        max_size=10,  # Limited to 10
     )
-    
+
     end_time = time.time()
-    
+
     assert end_time - start_time < 1.0  # Should complete quickly
-    assert pool.preload_minimum == 10   # Auto-adjusted
+    assert pool.preload_minimum == 10  # Auto-adjusted
     assert len(pool._data) == 10
 
 
@@ -150,19 +148,17 @@ def test_infinite_loop_prevention(setup_large_test_db):
 async def test_recyclable_with_max_size(setup_large_test_db):
     """Test recyclable pool respects max_size"""
     engine = setup_large_test_db
-    
+
     recycle_pool = DBRecyclableIterableDataPool(
-        engine,
-        "SELECT * FROM large_table",
-        max_size=15
+        engine, "SELECT * FROM large_table", max_size=15
     )
-    
+
     assert len(recycle_pool._data) == 15
     assert len(recycle_pool._available) == 15
-    
+
     # Test checkout/checkin cycle
     item = await recycle_pool.checkout(config={})
     assert len(recycle_pool._available) == 14
-    
+
     await recycle_pool.checkin(item.id)
     assert len(recycle_pool._available) == 15
