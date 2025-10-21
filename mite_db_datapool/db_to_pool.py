@@ -14,48 +14,62 @@ class DBIterableDataPool:
         db_engine,
         query,
         preload_minimum=None,
+        max_size=None,
     ):
         self.db_engine = db_engine
         self.query = query
+        self.max_size = max_size
         self._data = []
         self.item_index = 0
         self.populating = False
         self.exhausted = False
         self.preload_minimum = preload_minimum
 
+        # Adjust preload_minimum if needed
+        if max_size and preload_minimum and preload_minimum > max_size:
+            self.preload_minimum = max_size
+
+        # Load initial data
         if preload_minimum:
-            while len(self._data) < preload_minimum and not self.exhausted:
+            while len(self._data) < self.preload_minimum and not self.exhausted:
                 self.populate()
         else:
             while not self.exhausted:
                 self.populate()
 
     def populate(self):
+        # Handle max_size=0
+        if self.max_size == 0:
+            self.exhausted = True
+            return
+        
+        # Stop if at max_size
+        if self.max_size and len(self._data) >= self.max_size:
+            return
+
         with self.db_engine.connect() as conn:
             result = conn.execute(text(self.query))
             rows = result.fetchall()
+            
             if not rows:
                 self.exhausted = True
                 return
+            
+            # Add rows up to max_size
             for row in rows:
+                if self.max_size and len(self._data) >= self.max_size:
+                    break
                 self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
-            self.exhausted = (
-                True  # Only one batch for now; adjust for pagination if needed
-            )
+                
+            self.exhausted = True
 
     async def checkout(self, config):
-        if not self.exhausted and not self.populating:
-            self.populating = True
-            self.populate()
-            self.populating = False
-
         try:
             item_id, row = self._data.pop(0)
-            data = row
+            return DataPoolItem(item_id, row)
         except IndexError as e:
             raise DataPoolExhausted() from e
-        return DataPoolItem(item_id, data)
 
     async def checkin(self, item_id):
         pass
@@ -65,28 +79,18 @@ class DBRecyclableIterableDataPool(DBIterableDataPool):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._available = deque(range(len(self._data)))
+        self._checked_out = set()
 
     async def checkout(self, config):
-        if not self.exhausted and not self.populating:
-            self.populating = True
-            starting_id = self.item_index
-            self.populate()
-            self._available.extend(range(starting_id, self.item_index))
-            self.populating = False
-
         if self._available:
             item_id = self._available.popleft()
+            self._checked_out.add(item_id)
             row = self._data[item_id][1]
-            data = row
-            return DataPoolItem(item_id, data)
+            return DataPoolItem(item_id, row)
         else:
-            raise Exception("Recyclable iterable datapool was emptied!")
+            raise DataPoolExhausted("Recyclable iterable datapool was emptied!")
 
     async def checkin(self, item_id):
-        if self._available is None:
-            logger.error(
-                f"{repr(self)}: checkin called for {item_id} before the datapool "
-                "was initialized!  Maybe a stale runner is hanging around"
-            )
-            return
-        self._available.append(item_id)
+        if item_id in self._checked_out:
+            self._checked_out.remove(item_id)
+            self._available.append(item_id)
