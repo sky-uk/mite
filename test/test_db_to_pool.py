@@ -1,4 +1,3 @@
-import asyncio
 import sqlite3
 
 import pytest
@@ -124,7 +123,7 @@ def test_max_size_zero_fixed(setup_test_db):
     )
     
     assert len(pool._data) == 0
-    assert pool.exhausted == True
+    assert pool.exhausted is True
 
 
 def test_infinite_loop_prevention(setup_large_test_db):
