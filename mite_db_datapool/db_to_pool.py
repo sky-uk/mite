@@ -21,6 +21,7 @@ class DBIterableDataPool:
         self.max_size = max_size
         self._data = []
         self.item_index = 0
+        self.populating = False
         self.exhausted = False
         self.preload_minimum = preload_minimum
 
