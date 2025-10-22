@@ -1,9 +1,9 @@
 import sqlite3
 
+from db_to_pool import DBIterableDataPool
 from sqlalchemy import create_engine
 
 from mite import ensure_average_separation
-from db_to_pool import DBIterableDataPool
 
 # Step 1: Create a test SQLite database and table (local file)
 DB_PATH = "example_test.db"
@@ -18,7 +18,9 @@ conn.close()
 engine = create_engine(f"sqlite:///{DB_PATH}")
 
 # Step 3: Test DBIterableDataPool
-db_datapool = DBIterableDataPool(engine, "SELECT * FROM test_table", preload_minimum=3, max_size=1)
+db_datapool = DBIterableDataPool(
+    engine, "SELECT * FROM test_table", preload_minimum=3, max_size=1
+)
 
 
 async def db_journey(ctx, item_id, row):
