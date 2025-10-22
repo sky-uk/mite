@@ -19,7 +19,7 @@ engine = create_engine(f"sqlite:///{DB_PATH}")
 
 # Step 3: Test DBIterableDataPool
 db_datapool = DBIterableDataPool(
-    engine, "SELECT * FROM test_table", preload_minimum=3, max_size=1
+    engine, "SELECT * FROM test_table", preload_minimum=3, max_size=2
 )
 
 

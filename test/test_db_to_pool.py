@@ -108,10 +108,11 @@ def test_max_size_limits_data_loading(setup_large_test_db):
     pool = DBIterableDataPool(
         engine,
         "SELECT * FROM large_table",
-        max_size=10,  # Limit to 10 items even though 100 are available
+        preload_minimum=3,  # Wants to load 3 items
+        max_size=2,  # Limit to 2 items even though 100 are available
     )
 
-    assert len(pool._data) == 10
+    assert len(pool._data) == 2
 
 
 def test_max_size_zero_fixed(setup_test_db):
@@ -150,15 +151,15 @@ async def test_recyclable_with_max_size(setup_large_test_db):
     engine = setup_large_test_db
 
     recycle_pool = DBRecyclableIterableDataPool(
-        engine, "SELECT * FROM large_table", max_size=15
+        engine, "SELECT * FROM large_table", preload_minimum=3, max_size=2
     )
 
-    assert len(recycle_pool._data) == 15
-    assert len(recycle_pool._available) == 15
+    assert len(recycle_pool._data) == 2
+    assert len(recycle_pool._available) == 2
 
     # Test checkout/checkin cycle
     item = await recycle_pool.checkout(config={})
-    assert len(recycle_pool._available) == 14
+    assert len(recycle_pool._available) == 1
 
     await recycle_pool.checkin(item.id)
-    assert len(recycle_pool._available) == 15
+    assert len(recycle_pool._available) == 2
