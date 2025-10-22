@@ -21,7 +21,6 @@ class DBIterableDataPool:
         self.max_size = max_size
         self._data = []
         self.item_index = 0
-        self.populating = False
         self.exhausted = False
         self.preload_minimum = preload_minimum
 
@@ -43,19 +42,19 @@ class DBIterableDataPool:
             self.exhausted = True
             return
 
-        # Stop if at max_size
+        # Don't load more if already at limit
         if self.max_size and len(self._data) >= self.max_size:
             return
 
         with self.db_engine.connect() as conn:
             result = conn.execute(text(self.query))
-            rows = result.fetchall()
+            rows = result.fetchall() # Gets ALL rows from query
 
             if not rows:
                 self.exhausted = True
                 return
 
-            # Add rows up to max_size
+            # Add rows up to max_size limit
             for row in rows:
                 if self.max_size and len(self._data) >= self.max_size:
                     break
