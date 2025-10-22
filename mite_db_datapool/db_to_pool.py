@@ -55,18 +55,16 @@ class DBIterableDataPool:
                 return
 
             # Add rows up to max_size
-            rows_added = 0
             for row in rows:
                 if self.max_size and len(self._data) >= self.max_size:
                     break
                 self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
-                rows_added += 1
 
             # Only mark as exhausted if we processed all available rows
             # If we only processed some rows due to max_size limit, don't mark as exhausted
-            if rows_added == len(rows):
-                self.exhausted = True
+
+            self.exhausted = True
 
     async def checkout(self, config):
         try:
