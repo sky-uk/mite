@@ -1,14 +1,7 @@
 #!/bin/bash
 
-function isOnMaster() {
-    current_revision=$(git rev-parse HEAD)
-    branch=$(git branch -r --contains $current_revision)
-    set +e
-    echo "$branch" | grep -q "origin/master$"
-    result=$?
-    set -e
-    return ${result}
-}
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
 
 
 echo "##### Run pre-commit checks #####"

@@ -30,3 +30,18 @@ modules:
         directory: coverage_html_report
         files: ["index.html"]
     # TODO: slack notifications, for PRs
+
+
+  manual-release-mite:
+    pipelineShape: simple
+    directory: "/"
+    defaultTaskExecution: "./cd-scripts/cdManualRelease.sh"
+    phaseLocks:
+      cdBuild:
+        defaultLockEnabled: false
+    parameters:
+      main:
+        - name: VERSION_INCREMENT_TYPE
+          type: choice
+          description: The version segment that you want increment fpr the release
+          options: [major, minor, patch]
