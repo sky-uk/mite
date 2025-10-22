@@ -43,5 +43,5 @@ modules:
       main:
         - name: VERSION_INCREMENT_TYPE
           type: choice
-          description: The version segment that you want increment fpr the release
-          options: [major, minor, patch]
+          description: The version segment that you want increment for the release
+          options: [patch, minor, major]
