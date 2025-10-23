@@ -1,10 +1,25 @@
 #!/bin/bash
 
+function isOnMaster() {
+	current_revision=$(git rev-parse HEAD)
+	branch=$(git branch -r --contains $current_revision)
+	set +e
+	echo "$branch" | grep -q "origin/master$"
+	result=$?
+	set -e
+	return ${result}
+}
+
 function tagBuild() {   
+    if [ -z "$1" ]; then
+        VERSION_INCREMENT_TYPE=""
+    else
+        VERSION_INCREMENT_TYPE="--${1}"
+    fi
     git config user.email "mite@noreply.github.com"
     git config user.name "Jenkins-CI"
     pip3 install docopt GitPython packaging requests
-    python3 cd-scripts/cdRelease.py
+    python3 cd-scripts/cdTagRelease.py ${VERSION_INCREMENT_TYPE}
     if (( $? == 1)); then
         VERSION_INCREMENT=false
     fi
@@ -50,24 +65,3 @@ function initPypirc() {
     echo -e "username = __token__" >> ~/.pypirc
     echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
 }
-
-###### MAIN SECTION ######
-
-echo "##### Starting tag process and check for version increment #####"
-tagBuild
-
-echo "##### Look for Acurl changes #####"
-checkAcurl
-
-echo "##### Build Linux-Wheels #####"
-buildLinuxWheels
-
-if [ "$VERSION_INCREMENT" = false ]; then
-        echo "Mite version not incremented, nothing to upload"
-else
-    echo "##### Init .pypirc #####"
-    initPypirc
-
-    echo "##### Upload package #####"
-    python3 -m twine upload wheelhouse/*
-fi

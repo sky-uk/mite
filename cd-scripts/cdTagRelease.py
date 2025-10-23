@@ -83,6 +83,12 @@ def create_and_push_tag(repo, tag):
 
 def parse_pr(pr_number):
     resp = requests.get(f"https://api.github.com/repos/sky-uk/mite/pulls/{pr_number}")
+    if resp.status_code != 200:
+        logger.error(
+            f"Request to GitHub not successfull: {resp.status_code} - {resp.text}"
+        )
+        sys.exit(1)
+
     pr_message = resp.json()["body"]
 
     matches = re.findall(
