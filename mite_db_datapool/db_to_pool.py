@@ -21,7 +21,7 @@ class DBIterableDataPool:
         self.max_size = max_size
         self._data = []
         self.item_index = 0
-        self.exhausted = False
+        self.db_exhausted = False
         self.preload_minimum = preload_minimum
 
         # Adjust preload_minimum if needed
@@ -30,10 +30,10 @@ class DBIterableDataPool:
 
         # Load initial data
         if preload_minimum:
-            while len(self._data) < self.preload_minimum and not self.exhausted:
+            while len(self._data) < self.preload_minimum and not self.db_exhausted:
                 self.populate()
         else:
-            while not self.exhausted:
+            while not self.db_exhausted:
                 self.populate()
 
     def populate(self):
@@ -46,7 +46,7 @@ class DBIterableDataPool:
             rows = result.fetchall()
 
             if not rows:
-                self.exhausted = True
+                self.db_exhausted = True
                 return
 
             # Add rows up to max_size
@@ -61,7 +61,7 @@ class DBIterableDataPool:
             # Only mark as exhausted if we processed all available rows
             # If we only processed some rows due to max_size limit, don't mark as exhausted
             if rows_added == len(rows):
-                self.exhausted = True
+                self.db_exhausted = True
 
     async def checkout(self, config):
         try:
