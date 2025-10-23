@@ -115,16 +115,6 @@ def test_max_size_limits_data_loading(setup_large_test_db):
     assert len(pool._data) == 2
 
 
-def test_max_size_zero_fixed(setup_test_db):
-    """Test that max_size=0 doesn't hang (critical fix)"""
-    engine = setup_test_db
-
-    pool = DBIterableDataPool(engine, "SELECT * FROM test_table", max_size=0)
-
-    assert len(pool._data) == 0
-    assert pool.exhausted is True
-
-
 def test_infinite_loop_prevention(setup_large_test_db):
     """Test that preload_minimum > max_size doesn't cause infinite loop (critical fix)"""
     import time

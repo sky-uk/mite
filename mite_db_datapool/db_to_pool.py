@@ -37,9 +37,8 @@ class DBIterableDataPool:
                 self.populate()
 
     def populate(self):
-
         # Stop if at max_size
-        if self.max_size and len(self._data) >= self.max_size:
+        if self.max_size is not None and len(self._data) >= self.max_size:
             return
 
         with self.db_engine.connect() as conn:
@@ -53,7 +52,7 @@ class DBIterableDataPool:
             # Add rows up to max_size
             rows_added = 0
             for row in rows:
-                if self.max_size and len(self._data) >= self.max_size:
+                if self.max_size is not None and len(self._data) >= self.max_size:
                     break
                 self._data.append((self.item_index, dict(row._mapping)))
                 self.item_index += 1
