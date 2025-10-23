@@ -2,7 +2,7 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-VERSION_INCREMENT_TYPE=$1
+VERSION_INCREMENT_TYPE=${1}
 
 
 ###### MAIN SECTION ######

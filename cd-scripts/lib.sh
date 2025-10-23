@@ -19,7 +19,7 @@ function tagBuild() {
     git config user.email "mite@noreply.github.com"
     git config user.name "Jenkins-CI"
     pip3 install docopt GitPython packaging requests
-    python3 cd-scripts/cdRelease.py ${VERSION_INCREMENT_TYPE}
+    python3 cd-scripts/cdTagRelease.py ${VERSION_INCREMENT_TYPE}
     if (( $? == 1)); then
         VERSION_INCREMENT=false
     fi

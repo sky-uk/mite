@@ -15,10 +15,4 @@ fi
 echo "##### Run tests with tox #####"
 tox; TOX_EXIT_CODE=$?
 [ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
-
-if isOnMaster ; then
-    echo "##### Job running on MASTER. Proceeding with the Tag and Release script. ######"
-    ./cd-scripts/cdTagRelease.sh
-else
-    echo "###### Job running on a Branch. Stopping here. ######"
-fi
+echo "##### Pre-commit and Tests passed #####"

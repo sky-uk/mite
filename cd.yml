@@ -20,7 +20,6 @@ modules:
   mite-ci:
     pipelineShape: simple
     directory: "/"
-    defaultTaskExecution: "./cd-scripts/runTests.sh"
     # TODO not sure which of the following two is better
     # archiveArtifacts:
     #   includes: ["coverage_html_report/*"]
@@ -32,7 +31,7 @@ modules:
     # TODO: slack notifications, for PRs
 
 
-  manual-release-mite:
+  mite-manual-release:
     pipelineShape: simple
     directory: "/"
     defaultTaskExecution: "./cd-scripts/cdManualRelease.sh"
@@ -45,3 +44,12 @@ modules:
           type: choice
           description: The version segment that you want increment for the release
           options: [patch, minor, major]
+
+
+  mite-ci-and-release:
+    pipelineShape: build-release
+    directory: "/"
+    htmlReports:
+      - name: Coverage Report
+        directory: coverage_html_report
+        files: ["index.html"]
