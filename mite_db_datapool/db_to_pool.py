@@ -37,10 +37,6 @@ class DBIterableDataPool:
                 self.populate()
 
     def populate(self):
-        # Handle max_size=0
-        if self.max_size == 0:
-            self.exhausted = True
-            return
 
         # Stop if at max_size
         if self.max_size and len(self._data) >= self.max_size:
