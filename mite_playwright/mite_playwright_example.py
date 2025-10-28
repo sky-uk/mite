@@ -9,41 +9,21 @@ import sys
 import os
 import logging
 
-# Add the parent directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import the Playwright adapter components at module level
-try:
-    from mite_playwright_new import PlaywrightMiteRunner, PlaywrightStats
-    from mite_playwright_new.utils import PlaywrightPageHelper, safe_click
-    IMPORTS_AVAILABLE = True
-except ImportError as e:
-    print(f"❌ Import error: {e}")
-    print("Make sure Playwright is installed: pip install playwright")
-    IMPORTS_AVAILABLE = False
+
+from mite_playwright import PlaywrightMiteRunner, PlaywrightStats
+from mite_playwright.utils import PlaywrightPageHelper, safe_click
+
 
 
 async def test_playwright_adapter():
     """Test the complete Playwright adapter functionality"""
-    
-    print(" Testing Mite Playwright Adapter")
-    print("=" * 50)
-    
-    if not IMPORTS_AVAILABLE:
-        print("❌ Cannot run tests - imports failed")
-        return False
-    
+        
     try:
-        # Test imports
-        print("1. Testing imports...")
-        print(" All imports successful")
-        
-        # Test basic functionality
-        print("\n2. Testing basic functionality...")
-        
         config = {
             'browser': 'chromium',
             'headless': False,  # Set to False to see the browser
@@ -84,12 +64,12 @@ async def test_playwright_adapter():
         await asyncio.sleep(0.1)
         print("Browser stopped successfully")
         
-        print("\n🎉 All tests passed! Playwright adapter is working correctly.")
+        print("\nAll tests passed! Playwright adapter is working correctly.")
         
         return True
         
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f" Test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -97,12 +77,7 @@ async def test_playwright_adapter():
 
 async def test_performance_comparison_journey():
     """Compare performance with different browsers"""
-    print("\n🏁 Performance Comparison Test")
-    print("=" * 50)
-    
-    if not IMPORTS_AVAILABLE:
-        print("❌ Cannot run performance test - imports failed")
-        return
+    print("\nPerformance Comparison Test")
     
     browsers = ['chromium', 'firefox', 'webkit']
     results = {}
@@ -113,7 +88,7 @@ async def test_performance_comparison_journey():
             
             config = {
                 'browser': browser,
-                'headless': False  # Set to False to see each browser
+                'headless': False  
             }
             
             runner = PlaywrightMiteRunner(config)
@@ -131,7 +106,7 @@ async def test_performance_comparison_journey():
             await asyncio.sleep(0.1)
             
         except Exception as e:
-            print(f"❌ {browser} failed: {e}")
+            print(f" {browser} failed: {e}")
             results[browser] = None
             # Ensure cleanup even on error
             try:
@@ -167,11 +142,11 @@ if __name__ == "__main__":
         
         print("\n" + "=" * 50)
         if success:
-            print("🎊 All tests completed successfully!")
+            print("All tests completed successfully!")
         else:
-            print("⚠️  Some tests failed. Check the error messages above.")
+            print("Some tests failed. Check the error messages above.")
             
     except KeyboardInterrupt:
-        print("\n⏹️  Tests interrupted by user")
+        print("\nTests interrupted by user")
     except Exception as e:
-        print(f"\n💥 Unexpected error: {e}")
+        print(f"\nUnexpected error: {e}")

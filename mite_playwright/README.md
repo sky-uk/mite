@@ -21,43 +21,6 @@ pip install playwright
 # Install browser binaries
 playwright install
 
-# The adapter uses the same mite framework dependencies
-```
-
-## Quick Start
-
-```python
-import asyncio
-from mite_playwright import PlaywrightMiteRunner
-
-async def simple_test():
-    # Configure browser
-    config = {
-        'browser': 'chromium',
-        'headless': True
-    }
-    
-    # Create runner
-    runner = PlaywrightMiteRunner(config)
-    
-    try:
-        # Start browser
-        await runner.start()
-        
-        # Create page and navigate
-        page = await runner.new_page()
-        metrics = await runner.goto(page, 'https://example.com')
-        
-        # Get performance stats
-        stats = runner.get_stats()
-        print(f"Load time: {metrics['load_time']:.2f}ms")
-        
-    finally:
-        await runner.stop()
-
-# Run the test
-asyncio.run(simple_test())
-```
 
 ## Architecture
 
@@ -127,24 +90,6 @@ config = {
 }
 ```
 
-### Performance Optimization
-
-```python
-# For high-performance testing
-config = {
-    'browser': 'chromium',
-    'headless': True,
-    'launch_options': {
-        'args': [
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor'
-        ]
-    }
-}
-```
 
 ## Usage Examples
 
@@ -168,156 +113,6 @@ async def web_test():
     # Get performance metrics
     stats = runner.get_stats()
     await runner.stop()
-```
-
-### Form Testing with Helper
-
-```python
-from mite_playwright.utils import PlaywrightPageHelper
-
-async def form_test():
-    runner = PlaywrightMiteRunner(config)
-    await runner.start()
-    page = await runner.new_page()
-    
-    helper = PlaywrightPageHelper(page)
-    
-    # Fill form with timing
-    form_data = {
-        '#username': 'testuser',
-        '#password': 'password123',
-        '#email': 'test@example.com'
-    }
-    
-    metrics = await helper.fill_form(form_data, '#submit-btn')
-    await runner.stop()
-```
-
-### Performance Benchmarking
-
-```python
-async def benchmark_test():
-    urls = [
-        'https://example.com',
-        'https://httpbin.org/get',
-        'https://httpbin.org/delay/1'
-    ]
-    
-    runner = PlaywrightMiteRunner(config)
-    await runner.start()
-    
-    for url in urls:
-        page = await runner.new_page()
-        metrics = await runner.goto(page, url)
-        print(f"{url}: {metrics['load_time']:.2f}ms")
-        await page.close()
-    
-    # Get comprehensive stats
-    final_stats = runner.get_stats()
-    await runner.stop()
-```
-
-## Integration with Mite Framework
-
-### Scenario Pattern
-
-```python
-class PlaywrightWebScenario:
-    def __init__(self):
-        self.runner = PlaywrightMiteRunner({
-            'browser': 'chromium',
-            'headless': True
-        })
-    
-    async def setup(self):
-        await self.runner.start()
-    
-    async def run(self):
-        page = await self.runner.new_page()
-        await self.runner.goto(page, 'https://your-app.com')
-        
-        # Perform test actions
-        await self.runner.click(page, '#login-button')
-        await self.runner.fill(page, '#username', 'testuser')
-        
-        # Return metrics for mite
-        return self.runner.get_stats()
-    
-    async def teardown(self):
-        await self.runner.stop()
-```
-
-### Using with Mite Controller
-
-```python
-from mite import Controller
-
-async def run_mite_test():
-    controller = Controller()
-    controller.add_scenario(PlaywrightWebScenario, weight=1)
-    
-    # Run performance test
-    await controller.run()
-```
-
-## Performance Metrics
-
-The adapter collects comprehensive performance metrics:
-
-### Navigation Metrics
-- Page load times
-- Navigation timing
-- Network request timing
-- Response status codes
-
-### Action Metrics  
-- Click response times
-- Form fill timing
-- Element wait times
-- Scroll performance
-
-### Error Tracking
-- Navigation failures
-- Element interaction errors
-- Timeout occurrences
-- Network errors
-
-### Example Stats Output
-
-```python
-{
-    'navigation': {
-        'count': 5,
-        'avg_time': 1250.5,
-        'min_time': 890.2,
-        'max_time': 1580.8
-    },
-    'actions': {
-        'clicks': {'count': 10, 'avg_time': 45.2},
-        'fills': {'count': 5, 'avg_time': 32.1}
-    },
-    'network': {
-        'requests': 25,
-        'avg_time': 285.7
-    },
-    'errors': {'count': 0}
-}
-```
-
-## Advanced Features
-
-### Concurrent Testing
-
-```python
-async def concurrent_test():
-    tasks = []
-    
-    for url in test_urls:
-        task = test_single_url(url)
-        tasks.append(task)
-    
-    results = await asyncio.gather(*tasks)
-    return results
 ```
 
 ### Browser Pool Management
@@ -381,17 +176,3 @@ config = {
     }
 }
 ```
-
-## Contributing
-
-This adapter follows the same patterns as mite_selenium. When contributing:
-
-1. Maintain async/await patterns
-2. Include comprehensive error handling
-3. Add performance metrics for new features
-4. Update tests and documentation
-5. Follow the existing code style
-
-## License
-
-Same license as the mite framework.
