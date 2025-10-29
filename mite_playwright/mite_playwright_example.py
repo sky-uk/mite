@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Test script for the Playwright adapter
-Validates that all components work correctly
 """
 
 import asyncio

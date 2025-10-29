@@ -46,7 +46,6 @@ class PlaywrightMiteRunner:
         self.context: Optional[BrowserContext] = None
         self.pages: List[Page] = []
         self.stats_collector = PlaywrightStatsCollector()
-        self._loop = None
         self._started = False
         
     async def start(self):
