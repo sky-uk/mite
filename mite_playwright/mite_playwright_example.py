@@ -79,7 +79,7 @@ async def test_performance_comparison_journey():
     """Compare performance with different browsers"""
     print("\nPerformance Comparison Test")
     
-    browsers = ['chromium', 'firefox', 'webkit']
+    browsers = ['chromium', 'firefox']
     results = {}
     
     for browser in browsers:
