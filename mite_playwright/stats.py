@@ -313,31 +313,3 @@ Errors: {self.stats.error_count}
                 writer.writeheader()
                 writer.writerows(self.stats.navigation_history)
                 
-    def get_percentiles(self, percentiles: List[float] = [50, 90, 95, 99]) -> Dict[str, Dict[str, float]]:
-        """
-        Calculate percentiles for timing metrics.
-        
-        Args:
-            percentiles: List of percentiles to calculate
-            
-        Returns:
-            Dictionary with percentile data
-        """
-        import statistics
-        
-        result = {}
-        
-        if self._navigation_times:
-            sorted_nav = sorted(self._navigation_times)
-            result['navigation'] = {}
-            for p in percentiles:
-                result['navigation'][f'p{p}'] = statistics.quantiles(sorted_nav, n=100)[p-1]
-                
-        for action_type, times in self._action_times.items():
-            if times:
-                sorted_times = sorted(times)
-                result[action_type] = {}
-                for p in percentiles:
-                    result[action_type][f'p{p}'] = statistics.quantiles(sorted_times, n=100)[p-1]
-                    
-        return result

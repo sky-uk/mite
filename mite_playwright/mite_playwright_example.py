@@ -124,7 +124,7 @@ async def test_performance_comparison_journey():
 
 
 def scenario():
-    return [["db_folder:test_performance_comparison_journey", None, lambda s, e: 1]]
+    return [["mite_playwright.mite_playwright_example:test_performance_comparison_journey", None, lambda s, e: 1]]
 
 
 
