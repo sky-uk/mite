@@ -1,14 +1,234 @@
-[tool.black]
-include ='\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.tox
-  | build
-  | dist
-  | __pycache__
-  | .eggs
-)/
-'''
-target-version = ['py311']
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mite"
+dynamic = ["version"]
+description = "A Python Performance Testing Framework"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Sky UK", email = "mite@sky.uk"},
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: POSIX :: Linux",
+]
+# Core dependencies for the base mite framework (runner, controller, messaging, CLI)
+dependencies = [
+    "docopt",
+    "flask",
+    "msgpack",
+    "nanomsg",
+    "prettytable",
+    "pyzmq",
+]
+
+[project.optional-dependencies]
+# HTTP/REST testing support
+http = ["acurl"]
+# AMQP/RabbitMQ testing support
+amqp = ["aio_pika"]
+# Kafka testing support
+kafka = ["aiokafka"]
+# Thrift/Finagle protocol support
+finagle = ["thrift"]
+# S3-based data pools
+s3datapools = ["boto3"]
+# Selenium browser automation (v3.x for compatibility)
+# TODO - Update (or remove) the Selenium version when migrating to v4. The version is explicitly defined
+#        as less than 4 as there are backward compatibility issues with Rust from version 4 on
+selenium = ["selenium<4"]
+# Selenium with wire protocol inspection
+selenium_wire = ["selenium-wire==4.6.5"]
+# WebSocket testing support
+websocket = ["websockets"]
+# Browser HTML parsing support
+browser = ["bs4"]
+# HAR file conversion utility
+har = ["jinja2"]
+# Complete installation with all modules
+all = [
+    "acurl",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
+    "jinja2",
+    "selenium<4",
+    "selenium-wire==4.6.5",
+    "thrift",
+    "websockets",
+]
+# Development dependencies
+dev = [
+    "acurl",
+    "thrift",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sky-uk/mite/"
+Documentation = "https://sky-uk.github.io/mite/"
+Repository = "https://github.com/sky-uk/mite/"
+Issues = "https://github.com/sky-uk/mite/issues"
+
+[project.scripts]
+mite = "mite.__main__:main"
+
+[project.entry-points.mite_stats]
+mite = "mite.stats:_MITE_STATS"
+mite_finagle = "mite_finagle.stats:STATS"
+mite_http = "mite_http.stats:STATS"
+mite_selenium = "mite_selenium.stats:STATS"
+mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "mite/_version.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/.tox",
+    "/acurl",
+    "/docs",
+    "/test",
+    "/coverage_html_report",
+    "*.pyc",
+    "__pycache__",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "mite",
+    "mite_amqp",
+    "mite_browser",
+    "mite_db_datapool",
+    "mite_finagle",
+    "mite_http",
+    "mite_kafka",
+    "mite_selenium",
+    "mite_websocket",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+features = ["http", "finagle"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:test/}"
+test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
+cov-report = "python -m webbrowser coverage_html_report/index.html"
+
+[tool.hatch.envs.all]
+features = ["all", "dev"]
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+    "ruff>=0.1.0",
+]
+
+[tool.hatch.envs.lint.scripts]
+check = [
+    "ruff check .",
+    "ruff format --check .",
+]
+format = [
+    "ruff check --fix .",
+    "ruff format .",
+]
+
+[tool.ruff]
+# Same line length as black was using
 line-length = 90
+target-version = "py39"
+
+# Enable pycodestyle (E), Pyflakes (F), isort (I), and more
+select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+
+# Ignore specific rules that were ignored in flake8/black
+ignore = [
+    "E501",  # Line too long (ruff formatter handles this)
+    "W503",  # Line break before binary operator (ruff handles this)
+    "E731",  # Lambda assignment
+    "E741",  # Ambiguous variable names
+]
+
+# Exclude directories (from old flake8 config)
+exclude = [
+    ".git",
+    ".tox",
+    "build",
+    "dist",
+    "__pycache__",
+    ".eggs",
+    "*.egg-info",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.format]
+# Use double quotes for strings (black default)
+quote-style = "double"
+# Indent with spaces
+indent-style = "space"
+# Use \n line endings
+line-ending = "auto"
+
+[tool.ruff.isort]
+known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["mite"]
+omit = [
+    "*/test/*",
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
