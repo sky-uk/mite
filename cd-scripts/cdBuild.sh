@@ -3,16 +3,19 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 
+# Because of the settings of the environment where the pipeline runs, cdBuild.sh is used for both CI testing and manual releases as we can change the default scripts used.
+# In a normal situation, we would have two separate scripts, one for CI and one for manual releases.
+# Here we check the JOB_NAME variable to determine which kind of run it is and call the appropriate script.
 
-echo "##### Run pre-commit checks #####"
-/home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
-PRE_COMMIT_STATUS=$?
+# manual-release job will run the release script directly
+# any other job (like miteci-release) will run the test script. Then the pipeline shape will take care of calling the release script if the tests pass for the CI job.
 
-if [ $PRE_COMMIT_STATUS -ne 0 ]; then
-    git diff
+
+if [[ "$JOB_NAME" == "manual-release" ]]; then
+    echo "##### Job running as MANUAL RELEASE. Proceeding with the Tag and Release script. ######"
+    ./cdRelease.sh ${VERSION_INCREMENT_TYPE}
+
+else
+    echo "##### Job running as CI. Proceeding with the Test script. ######"
+    ./runTests.sh
 fi
-
-echo "##### Run tests with tox #####"
-tox; TOX_EXIT_CODE=$?
-[ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
-echo "##### Pre-commit and Tests passed #####"
