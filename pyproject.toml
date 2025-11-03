@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "A Python Performance Testing Framework"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
@@ -16,7 +16,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Operating System :: POSIX :: Linux",
@@ -73,8 +72,6 @@ all = [
 ]
 # Development dependencies
 dev = [
-    "acurl",
-    "thrift",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
@@ -87,15 +84,9 @@ Documentation = "https://sky-uk.github.io/mite/"
 Repository = "https://github.com/sky-uk/mite/"
 Issues = "https://github.com/sky-uk/mite/issues"
 
-[project.scripts]
-mite = "mite.__main__:main"
 
-[project.entry-points.mite_stats]
-mite = "mite.stats:_MITE_STATS"
-mite_finagle = "mite_finagle.stats:STATS"
-mite_http = "mite_http.stats:STATS"
-mite_selenium = "mite_selenium.stats:STATS"
-mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
+
+# Hatch configuration ##############################################
 
 [tool.hatch.version]
 source = "vcs"
@@ -133,16 +124,14 @@ dependencies = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
+    "ruff>=0.1.0",
 ]
-features = ["http", "finagle"]
+features = ["all", "dev"]
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:test/}"
 test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
-
-[tool.hatch.envs.all]
-features = ["all", "dev"]
 
 [tool.hatch.envs.test]
 dependencies = [
@@ -190,6 +179,8 @@ format = [
     "ruff check --fix .",
     "ruff format .",
 ]
+
+# ruff configuration ##############################################
 
 [tool.ruff]
 # Same line length as black was using
@@ -242,6 +233,8 @@ known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selen
 force-single-line = false
 lines-after-imports = 2
 
+# Pytest configuration ##############################################
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["test"]
@@ -289,4 +282,3 @@ ignore_errors = true
 
 [tool.coverage.html]
 directory = "coverage_html_report"
-
