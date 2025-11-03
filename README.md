@@ -201,6 +201,17 @@ docker-compose -f docker_compose.yml up
 
 For more information on distributed mite usage, [info](/local/README.md)
 
+## OpenTelemetry Integration
+
+Mite supports optional OpenTelemetry tracing for observing journey execution and HTTP requests:
+
+```bash
+pip install mite[otel]
+MITE_CONF_OTEL_ENABLED=true mite scenario test demo:scenario
+```
+
+See [OpenTelemetry Documentation](docs/OpenTelemetry.md) for full details.
+
 ## Maintainers
 
 If you run into any trouble or need support getting to grips with Mite,

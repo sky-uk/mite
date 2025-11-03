@@ -1,16 +1,29 @@
-# OpenTelemetry Integration (Experimental)
+# OpenTelemetry Integration# OpenTelemetry Integration (Experimental)
 
-## Overview
 
-Mite supports optional OpenTelemetry tracing for observing journey execution, transactions, and HTTP calls made via acurl. This integration provides comprehensive distributed tracing capabilities with minimal code changes.
 
-## Features
+**This document has been consolidated.**## Overview
 
-- **Automatic instrumentation** - Zero code changes required for existing journeys
-- **Distributed tracing** - Context propagation across HTTP requests
-- **Journey spans** - Root spans for each `@mite_http` decorated function
-- **Transaction spans** - Nested spans for each `ctx.transaction()` call
-- **HTTP spans** - Detailed spans for each `ctx.http.*()` request
+
+
+Please see the unified documentation: **[OpenTelemetry.md](OpenTelemetry.md)**Mite supports optional OpenTelemetry tracing for observing journey execution, transactions, and HTTP calls made via acurl. This integration provides comprehensive distributed tracing capabilities with minimal code changes.
+
+
+
+## Quick Links## Features
+
+
+
+- [Installation](OpenTelemetry.md#installation)- **Automatic instrumentation** - Zero code changes required for existing journeys
+
+- [Quick Start](OpenTelemetry.md#quick-start)- **Distributed tracing** - Context propagation across HTTP requests
+
+- [Configuration](OpenTelemetry.md#configuration)- **Journey spans** - Root spans for each `@mite_http` decorated function
+
+- [Usage Examples](OpenTelemetry.md#usage-examples)- **Transaction spans** - Nested spans for each `ctx.transaction()` call
+
+- [Troubleshooting](OpenTelemetry.md#troubleshooting)- **HTTP spans** - Detailed spans for each `ctx.http.*()` request
+
 - **Metrics integration** - Export existing mite stats as OpenTelemetry metrics
 - **Multiple exporters** - Console, OTLP HTTP, OTLP gRPC support
 - **Configurable sampling** - Control trace volume with sampling ratios
