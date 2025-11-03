@@ -144,6 +144,19 @@ cov-report = "python -m webbrowser coverage_html_report/index.html"
 [tool.hatch.envs.all]
 features = ["all", "dev"]
 
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+features = ["http", "finagle"]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:test/}"
+test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
+cov-report = "python -m webbrowser coverage_html_report/index.html"
+
 [tool.hatch.envs.lint]
 detached = true
 dependencies = [
@@ -181,7 +194,6 @@ select = [
 # Ignore specific rules that were ignored in flake8/black
 ignore = [
     "E501",  # Line too long (ruff formatter handles this)
-    "W503",  # Line break before binary operator (ruff handles this)
     "E731",  # Lambda assignment
     "E741",  # Ambiguous variable names
 ]
