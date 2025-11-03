@@ -29,6 +29,8 @@ dependencies = [
     "nanomsg",
     "prettytable",
     "pyzmq",
+    "ujson",
+    "uvloop",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +67,8 @@ all = [
     "selenium<4",
     "selenium-wire==4.6.5",
     "thrift",
+    "ujson",
+    "uvloop",
     "websockets",
 ]
 # Development dependencies
