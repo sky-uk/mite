@@ -34,7 +34,6 @@ modules:
   mite-manual-release:
     pipelineShape: simple
     directory: "/"
-    defaultTaskExecution: "./cd-scripts/cdManualRelease.sh"
     phaseLocks:
       cdBuild:
         defaultLockEnabled: false
