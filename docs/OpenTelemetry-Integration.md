@@ -51,7 +51,9 @@ async def demo_req(ctx):
 ### 3. Run Your Test
 
 ```bash
-python -m mite scenario local.demo:scenario
+mite scenario test local.demo:scenario
+
+# mite scenario test demo_otel:scenario
 ```
 
 You'll see trace output in the console:
@@ -164,15 +166,15 @@ python -m mite scenario local.demo:scenario
 The automatic instrumentation creates a hierarchical trace structure:
 
 ```
-journey.my_journey (10.2s)
-  └── transaction.Login (8.1s) 
-      ├── HTTP POST (2.1s)
+journey.my_journey (512ms)
+  └── transaction.Login (420ms) 
+      ├── HTTP POST (297ms)
       │   ├── http.method: POST
       │   ├── http.url: https://api.example.com/login
       │   ├── http.status_code: 200
       │   └── http.response.header.content-length: 1024
-      └── transaction.Get_Profile (5.8s)
-          └── HTTP GET (5.7s)
+      └── transaction.Get_Profile (124ms)
+          └── HTTP GET (123ms)
               ├── http.method: GET
               ├── http.url: https://api.example.com/profile
               ├── http.status_code: 200
@@ -254,17 +256,6 @@ Check that:
 3. `import mite.otel` is called before journey execution
 4. Sampling ratio > 0: `MITE_CONF_OTEL_SAMPLER_RATIO=1.0`
 
-### OTLP Export Errors
-
-```bash
-# Test with console output first
-export MITE_CONF_OTEL_SPAN_PROCESSOR=console
-
-# Check collector connectivity
-curl -X POST http://jaeger:4318/v1/traces \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
 
 ### High Memory Usage
 
@@ -345,260 +336,3 @@ This journey will produce a rich trace showing:
 - HTTP spans: `HTTP POST`, `HTTP PUT` with full request/response details
 - Custom attributes: `user_id`, `mite.transaction.*` attributes
 - Distributed tracing headers in all HTTP requests
-
-## Security Considerations
-
-- Trace data may contain sensitive information from HTTP requests/responses
-- Consider sampling and filtering strategies for production
-- Secure your OTLP endpoints with authentication
-- Be aware that traces traverse network boundaries
-
-## Testing with OpenTelemetry
-
-### Local Testing with Docker
-
-The easiest way to test the OpenTelemetry integration is using Docker containers for the observability backend.
-
-#### Option 1: Jaeger All-in-One (Recommended for Development)
-
-Jaeger provides an all-in-one Docker image with collector, storage, and UI:
-
-```bash
-# Start Jaeger
-docker run -d --name jaeger \
-  -e COLLECTOR_OTLP_ENABLED=true \
-  -p 16686:16686 \
-  -p 4317:4317 \
-  -p 4318:4318 \
-  jaegertracing/all-in-one:latest
-
-# Configure mite to send traces to Jaeger
-export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SERVICE_NAME=mite-test
-export MITE_CONF_OTEL_SPAN_PROCESSOR=otlp
-export MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:4318/v1/traces
-export MITE_CONF_OTEL_OTLP_PROTOCOL=http/protobuf
-
-# Run your mite tests
-python -m mite scenario local.demo:scenario
-
-# View traces in Jaeger UI
-open http://localhost:16686
-```
-
-**Jaeger UI Features:**
-- Search traces by service, operation, tags
-- Visualize trace timelines and spans
-- Compare traces for performance analysis
-- View span attributes and logs
-
-#### Option 2: OpenTelemetry Collector + Jaeger
-
-For more control, use the OpenTelemetry Collector with Jaeger backend:
-
-**docker-compose.yml:**
-```yaml
-version: '3'
-services:
-  # Jaeger backend
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    ports:
-      - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # Jaeger gRPC
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-
-  # OpenTelemetry Collector
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8888:8888"   # Prometheus metrics
-      - "13133:13133" # Health check
-    depends_on:
-      - jaeger
-```
-
-**otel-collector-config.yaml:**
-```yaml
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-
-processors:
-  batch:
-    timeout: 10s
-    send_batch_size: 1024
-  
-  memory_limiter:
-    check_interval: 1s
-    limit_mib: 512
-
-exporters:
-  jaeger:
-    endpoint: jaeger:14250
-    tls:
-      insecure: true
-  
-  logging:
-    loglevel: debug
-
-service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [jaeger, logging]
-```
-
-**Usage:**
-```bash
-# Start the stack
-docker-compose up -d
-
-# Configure mite
-export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SERVICE_NAME=mite-test
-export MITE_CONF_OTEL_SPAN_PROCESSOR=otlp
-export MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:4318/v1/traces
-
-# Run tests
-python demo_otel.py
-
-# View traces
-open http://localhost:16686
-
-# Check collector health
-curl http://localhost:13133/
-
-# Stop the stack
-docker-compose down
-```
-
-#### Option 3: Zipkin (Lightweight Alternative)
-
-Zipkin is a simpler alternative to Jaeger:
-
-```bash
-# Start Zipkin
-docker run -d --name zipkin \
-  -p 9411:9411 \
-  openzipkin/zipkin:latest
-
-# Configure mite for Zipkin
-export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SERVICE_NAME=mite-test
-export MITE_CONF_OTEL_SPAN_PROCESSOR=otlp
-export MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:9411/api/v2/spans
-export MITE_CONF_OTEL_OTLP_PROTOCOL=http/protobuf
-
-# Run tests
-python -m mite scenario local.demo:scenario
-
-# View traces
-open http://localhost:9411
-```
-
-### Running the Demo
-
-The repository includes a working demo that shows OpenTelemetry tracing:
-
-```bash
-# Ensure OpenTelemetry is installed
-pip install mite[otel]
-
-# Run the demo (outputs traces to console)
-python demo_otel.py
-
-# Or with Jaeger
-docker run -d --name jaeger \
-  -e COLLECTOR_OTLP_ENABLED=true \
-  -p 16686:16686 -p 4318:4318 \
-  jaegertracing/all-in-one:latest
-
-export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SPAN_PROCESSOR=otlp
-export MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:4318/v1/traces
-
-python demo_otel.py
-
-# View in Jaeger UI
-open http://localhost:16686
-```
-
-### Running Tests
-
-```bash
-# Install test dependencies
-pip install mite[otel]
-
-# Run basic tests (no OpenTelemetry required)
-python test/test_otel_basic.py
-
-# Run comprehensive tests (requires OpenTelemetry)
-pytest test/test_otel.py -v
-
-# Run with coverage
-pytest test/test_otel.py --cov=mite.otel --cov-report=html
-```
-
-### Verifying the Integration
-
-1. **Console Output**: Set `MITE_CONF_OTEL_SPAN_PROCESSOR=console` to see traces in stdout
-2. **Check Spans**: Verify span names follow the pattern:
-   - `journey.<function_name>` for journey spans
-   - `transaction.<name>` for transaction spans
-   - `HTTP <METHOD>` for HTTP request spans
-3. **Verify Attributes**: Check spans contain:
-   - `mite.journey.name`
-   - `mite.transaction.name`
-   - `http.method`, `http.url`, `http.status_code`
-4. **Test Context Propagation**: Verify `traceparent` headers in outgoing requests
-5. **Check Hierarchy**: Parent-child relationships should be correct
-
-### Production Deployment Tips
-
-When deploying with OpenTelemetry in production:
-
-1. **Use the OpenTelemetry Collector** as a sidecar or daemonset
-2. **Configure sampling** to reduce trace volume (0.01 = 1% sampling)
-3. **Set up batching** to reduce network overhead
-4. **Use authentication** for OTLP endpoints in production
-5. **Monitor collector health** and resource usage
-6. **Configure retry logic** for transient network failures
-
-Example production configuration:
-```bash
-export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SERVICE_NAME=mite-prod-loadtest
-export MITE_CONF_OTEL_SPAN_PROCESSOR=otlp
-export MITE_CONF_OTEL_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
-export MITE_CONF_OTEL_SAMPLER_RATIO=0.01  # 1% sampling
-export MITE_CONF_OTEL_MAX_EXPORT_BATCH_SIZE=2048
-export MITE_CONF_OTEL_EXPORT_TIMEOUT=60
-export MITE_CONF_OTEL_OTLP_HEADERS="Authorization=Bearer ${API_TOKEN}"
-```
-
-## Limitations
-
-- Cython-based acurl integration uses response callbacks (slight delay in span completion)
-- Automatic patching may conflict with other instrumentation libraries
-- Some advanced OpenTelemetry features (baggage, links) not yet supported
-- Metrics integration is basic and experimental
-
-## Future Enhancements
-
-- Baggage propagation for request-scoped data
-- More granular HTTP span attributes (request/response sizes, etc.)
-- Integration with mite's volume model for load-aware sampling
-- Custom span processors for mite-specific needs
-- Support for OpenTelemetry logging integration
