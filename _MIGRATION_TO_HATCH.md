@@ -12,9 +12,9 @@ The pre-commit hook is now also updated to use hatch. There are currently 145 er
 
 ### How to set up Hatch
 
-First, install hatch and initialize the mite project following its documentation:
-- Installation: https://hatch.pypa.io/latest/install/
-- Existing project init: https://hatch.pypa.io/latest/intro/#existing-project
+First, install hatch and initialize the mite project following its documentation: https://hatch.pypa.io/latest/install/
+Then you should be able to just run the shell command and it will create the env: https://hatch.pypa.io/latest/environment/#entering-environments
+You don't really have to use the hatch default env for developer work but you still need to install it to run the lint and test scripts.
 
 ### Envs
 There are currently 3 environments configured in hatch (more info: https://hatch.pypa.io/latest/environment/):
