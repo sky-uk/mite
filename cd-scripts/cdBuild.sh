@@ -11,11 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo $JOB_NAME
 
-if [[ "$JOB_NAME" =~ "mite-manual-release" ]]; then
-    echo "##### Job running as MANUAL RELEASE. Proceeding with the Tag and Release script. ######"
-    ./cd-scripts/cdRelease.sh ${VERSION_INCREMENT_TYPE}
-
-else
+if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Job running as CI. Proceeding with the Test script. ######"
     ./cd-scripts/runTests.sh
 fi
