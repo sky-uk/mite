@@ -6,6 +6,7 @@ import functools
 from contextlib import asynccontextmanager
 from .tracing import get_tracer
 
+
 def _get_span_kind_internal():
     """Get SpanKind.INTERNAL if available"""
     try:
@@ -14,74 +15,69 @@ def _get_span_kind_internal():
     except ImportError:
         return None
 
+
+def _start_span(tracer, name, span_kind):
+    """Start a span with optional span kind"""
+    if span_kind is not None:
+        return tracer.start_as_current_span(name, kind=span_kind)
+    return tracer.start_as_current_span(name)
+
+
+def _handle_span_error(span, exc):
+    """Record exception and set error status on span"""
+    if not span:
+        return
+    
+    span.record_exception(exc)
+    try:
+        from opentelemetry.trace import Status, StatusCode
+        span.set_status(Status(StatusCode.ERROR))
+    except ImportError:
+        pass
+
+
 def trace_journey(journey_name: str):
     """Decorator for journey functions to create root spans"""
     def decorator(journey_func):
+        tracer = get_tracer()
+        span_kind = _get_span_kind_internal()
+        span_name = f"journey.{journey_name}"
+        
         if asyncio.iscoroutinefunction(journey_func):
             @functools.wraps(journey_func)
             async def async_wrapper(*args, **kwargs):
-                tracer = get_tracer()
-                span_kind = _get_span_kind_internal()
-                # Use context manager so the SDK captures the active span
-                if span_kind is not None:
-                    ctx = tracer.start_as_current_span(f"journey.{journey_name}", kind=span_kind)
-                else:
-                    ctx = tracer.start_as_current_span(f"journey.{journey_name}")
-                    
-                with ctx as span:
+                with _start_span(tracer, span_name, span_kind) as span:
                     if span:
                         span.set_attribute("mite.journey.name", journey_name)
                     try:
                         return await journey_func(*args, **kwargs)
                     except Exception as exc:
-                        if span:
-                            span.record_exception(exc)
-                            try:
-                                from opentelemetry.trace import Status, StatusCode
-                                span.set_status(Status(StatusCode.ERROR))
-                            except ImportError:
-                                pass
+                        _handle_span_error(span, exc)
                         raise
             return async_wrapper
         else:
             @functools.wraps(journey_func)
             def sync_wrapper(*args, **kwargs):
-                tracer = get_tracer()
-                span_kind = _get_span_kind_internal()
-                if span_kind is not None:
-                    ctx = tracer.start_as_current_span(f"journey.{journey_name}", kind=span_kind)
-                else:
-                    ctx = tracer.start_as_current_span(f"journey.{journey_name}")
-                    
-                with ctx as span:
+                with _start_span(tracer, span_name, span_kind) as span:
                     if span:
                         span.set_attribute("mite.journey.name", journey_name)
                     try:
                         return journey_func(*args, **kwargs)
                     except Exception as exc:
-                        if span:
-                            span.record_exception(exc)
-                            try:
-                                from opentelemetry.trace import Status, StatusCode
-                                span.set_status(Status(StatusCode.ERROR))
-                            except ImportError:
-                                pass
+                        _handle_span_error(span, exc)
                         raise
             return sync_wrapper
     return decorator
+
 
 @asynccontextmanager
 async def trace_transaction(transaction_name: str, **attributes):
     """Context manager for transaction spans (nested under journey)"""
     tracer = get_tracer()
     span_kind = _get_span_kind_internal()
+    span_name = f"transaction.{transaction_name}"
     
-    if span_kind is not None:
-        ctx = tracer.start_as_current_span(f"transaction.{transaction_name}", kind=span_kind)
-    else:
-        ctx = tracer.start_as_current_span(f"transaction.{transaction_name}")
-        
-    with ctx as span:
+    with _start_span(tracer, span_name, span_kind) as span:
         if span:
             span.set_attribute("mite.transaction.name", transaction_name)
             for key, value in attributes.items():
@@ -89,11 +85,5 @@ async def trace_transaction(transaction_name: str, **attributes):
         try:
             yield span
         except Exception as exc:
-            if span:
-                span.record_exception(exc)
-                try:
-                    from opentelemetry.trace import Status, StatusCode
-                    span.set_status(Status(StatusCode.ERROR))
-                except ImportError:
-                    pass
+            _handle_span_error(span, exc)
             raise
