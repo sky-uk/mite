@@ -1,6 +1,3 @@
-"""
-Initialize OpenTelemetry tracer/meter conditionally. Safe no-op if opentelemetry is not installed.
-"""
 from .config import get_otel_config
 
 OTEL_AVAILABLE = True

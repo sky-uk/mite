@@ -1,9 +1,3 @@
-"""
-OpenTelemetry integration for mite - automatic initialization
-"""
-# Package entrypoint for optional OpenTelemetry support.
-
-# Export manual API for advanced usage
 try:
     from .instrumentation import trace_journey, trace_transaction
     from .context import inject_headers, extract_context

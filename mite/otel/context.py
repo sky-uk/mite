@@ -1,6 +1,3 @@
-"""
-Context propagation for distributed tracing
-"""
 from typing import Dict, Optional
 
 try:

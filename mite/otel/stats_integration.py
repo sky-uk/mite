@@ -1,6 +1,3 @@
-"""
-Automatic integration with mite's existing stats system
-"""
 from .tracing import get_meter
 from .config import get_otel_config
 

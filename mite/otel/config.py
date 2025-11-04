@@ -1,6 +1,3 @@
-"""
-Configuration for OpenTelemetry integration
-"""
 import os
 from typing import Dict, Any
 

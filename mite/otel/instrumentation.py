@@ -1,6 +1,3 @@
-"""
-Manual instrumentation API for advanced usage
-"""
 import asyncio
 import functools
 from contextlib import asynccontextmanager

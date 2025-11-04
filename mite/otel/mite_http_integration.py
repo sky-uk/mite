@@ -1,6 +1,3 @@
-"""
-Integration with @mite_http decorator
-"""
 import functools
 from .tracing import get_tracer, is_tracing_enabled
 

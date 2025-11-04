@@ -1,6 +1,3 @@
-"""
-Integration with mite context transaction method
-"""
 from contextlib import asynccontextmanager
 from .tracing import get_tracer, is_tracing_enabled
 

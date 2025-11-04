@@ -1,7 +1,3 @@
-"""
-Integration with acurl HTTP client via mite_http callback mechanism
-"""
-
 import asyncio
 import logging
 from urllib.parse import urlparse
