@@ -1,4 +1,3 @@
-import asyncio
 import functools
 from contextlib import asynccontextmanager
 from .tracing import get_tracer
@@ -40,30 +39,17 @@ def trace_journey(journey_name: str):
         span_kind = _get_span_kind_internal()
         span_name = f"journey.{journey_name}"
         
-        if asyncio.iscoroutinefunction(journey_func):
-            @functools.wraps(journey_func)
-            async def async_wrapper(*args, **kwargs):
-                with _start_span(tracer, span_name, span_kind) as span:
-                    if span:
-                        span.set_attribute("mite.journey.name", journey_name)
-                    try:
-                        return await journey_func(*args, **kwargs)
-                    except Exception as exc:
-                        _handle_span_error(span, exc)
-                        raise
-            return async_wrapper
-        else:
-            @functools.wraps(journey_func)
-            def sync_wrapper(*args, **kwargs):
-                with _start_span(tracer, span_name, span_kind) as span:
-                    if span:
-                        span.set_attribute("mite.journey.name", journey_name)
-                    try:
-                        return journey_func(*args, **kwargs)
-                    except Exception as exc:
-                        _handle_span_error(span, exc)
-                        raise
-            return sync_wrapper
+        @functools.wraps(journey_func)
+        async def async_wrapper(*args, **kwargs):
+            with _start_span(tracer, span_name, span_kind) as span:
+                if span:
+                    span.set_attribute("mite.journey.name", journey_name)
+                try:
+                    return await journey_func(*args, **kwargs)
+                except Exception as exc:
+                    _handle_span_error(span, exc)
+                    raise
+        return async_wrapper
     return decorator
 
 
