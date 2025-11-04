@@ -19,20 +19,39 @@ pip install mite[otel]
 
 ## Quick Start
 
+
+First, create a simple scenario in `demo_otel.py`:
+
+```python
+from mite_http import mite_http
+from mite import ensure_average_separation
+
+import mite.otel
+
+@mite_http
+async def demo_req(ctx):
+    async with ensure_average_separation(1):
+        async with ctx.transaction("Get request"):
+            await ctx.http.get("https://example.com/")
+
+scenario = lambda: [("demo_otel:demo_req", None, lambda s, e: 2)]
+```
+
 ### 1. Enable Tracing
 
 ```bash
 export MITE_CONF_OTEL_ENABLED=true
-export MITE_CONF_OTEL_SERVICE_NAME=my-load-test
 ```
+
+Add the `import mite.otel` line to your scenario file to enable tracing.
 
 ### 2. Run Your Test
 
 ```bash
-mite scenario test demo_otel:scenario
+mite scenario test demo_otel:scenario --hide-constant-logs
 ```
 
-Your existing journeys are automatically instrumented. No code changes needed!
+Existing journeys are automatically instrumented. No code changes needed, other than importing `mite.otel`.
 
 ### 3. View Traces
 
@@ -61,7 +80,7 @@ All settings are controlled via environment variables:
 ```bash
 MITE_CONF_OTEL_ENABLED=true \
 MITE_CONF_OTEL_SPAN_PROCESSOR=console \
-mite scenario test demo_otel:scenario
+mite scenario test demo_otel:scenario --hide-constant-logs
 ```
 
 ### Jaeger
@@ -71,7 +90,7 @@ mite scenario test demo_otel:scenario
 MITE_CONF_OTEL_ENABLED=true \
 MITE_CONF_OTEL_SPAN_PROCESSOR=otlp \
 MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:4318/v1/traces \
-mite scenario test demo_otel:scenario
+mite scenario test demo_otel:scenario --hide-constant-logs
 # View: http://localhost:16686
 ```
 
@@ -82,7 +101,7 @@ mite scenario test demo_otel:scenario
 MITE_CONF_OTEL_ENABLED=true \
 MITE_CONF_OTEL_SPAN_PROCESSOR=zipkin \
 MITE_CONF_OTEL_OTLP_ENDPOINT=http://localhost:9411/api/v2/spans \
-mite scenario test demo_otel:scenario
+mite scenario test demo_otel:scenario --hide-constant-logs
 # View: http://localhost:9411
 ```
 
@@ -94,7 +113,7 @@ MITE_CONF_OTEL_SAMPLER_RATIO=0.01 \
 MITE_CONF_OTEL_SPAN_PROCESSOR=otlp \
 MITE_CONF_OTEL_OTLP_ENDPOINT=https://collector.company.com:4318/v1/traces \
 MITE_CONF_OTEL_OTLP_HEADERS="Authorization=Bearer ${API_KEY}" \
-mite scenario test production:scenario
+mite scenario test production:scenario --hide-constant-logs
 ```
 
 ## Trace Structure
