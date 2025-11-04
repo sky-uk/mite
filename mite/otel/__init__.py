@@ -1,13 +1,12 @@
 try:
     from .instrumentation import trace_journey, trace_transaction
-    from .context import inject_headers, extract_context
+    from .context import inject_headers
     from .config import is_tracing_enabled
     
     __all__ = [
         "trace_journey",
         "trace_transaction", 
         "inject_headers",
-        "extract_context",
         "enable_tracing"
     ]
     
@@ -27,13 +26,11 @@ try:
         from .mite_http_integration import patch_mite_http_decorator
         from .context_integration import patch_context_transaction
         from .acurl_integration import patch_acurl_session
-        from .stats_integration import init_stats_mapping
         
         init_tracing()
         patch_mite_http_decorator()
         patch_context_transaction()
         patch_acurl_session()
-        init_stats_mapping()
     
     # Auto-initialize if enabled via environment variable
     # Tests can disable this by setting MITE_CONF_OTEL_ENABLED=false before import

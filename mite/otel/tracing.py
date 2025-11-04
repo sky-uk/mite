@@ -78,7 +78,7 @@ def _configure_exporter(provider, cfg):
     proc = cfg["span_processor"]
     endpoint = cfg["otlp_endpoint"]
     
-    # Console exporters
+    # Console exporters (simple or batched)
     if proc in ("console", "batch"):
         exporter = ConsoleSpanExporter()
         processor = BatchSpanProcessor if proc == "batch" else SimpleSpanProcessor
@@ -86,18 +86,28 @@ def _configure_exporter(provider, cfg):
         return
     
     # Zipkin exporter
-    if proc == "zipkin" and endpoint:
+    if proc == "zipkin":
+        if not endpoint:
+            # Fall back to console if no endpoint provided
+            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+            return
         try:
             from opentelemetry.exporter.zipkin.json import ZipkinExporter
             exporter = ZipkinExporter(endpoint=endpoint, timeout=cfg["export_timeout"])
             provider.add_span_processor(BatchSpanProcessor(
                 exporter, max_export_batch_size=cfg["max_export_batch_size"]))
             return
-        except Exception:
-            pass  # Fall through to console
+        except ImportError:
+            # Fall back to console if exporter not installed
+            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+            return
     
     # OTLP exporter
-    if proc == "otlp" and endpoint:
+    if proc == "otlp":
+        if not endpoint:
+            # Fall back to console if no endpoint provided
+            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+            return
         try:
             if cfg["otlp_protocol"] == "grpc":
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -117,9 +127,11 @@ def _configure_exporter(provider, cfg):
                 exporter, max_export_batch_size=cfg["max_export_batch_size"]))
             return
         except ImportError:
-            pass  # Fall through to console
+            # Fall back to console if exporter not installed
+            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+            return
     
-    # Default fallback to console
+    # Unknown processor type - default to console
     provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
 
@@ -200,8 +212,3 @@ def get_meter():
 
     init_tracing()
     return metrics.get_meter(__name__)
-
-
-def is_tracing_enabled():
-    """Check if tracing is actually enabled and available"""
-    return OTEL_AVAILABLE and get_otel_config()["enabled"]

@@ -1,8 +1,7 @@
 import functools
-from .tracing import get_tracer, is_tracing_enabled
+from .tracing import get_tracer
+from .config import is_tracing_enabled
 
-# Expose a module-level reference so tests can patch `mite_http` easily.
-mite_http = None
 
 def patch_mite_http_decorator():
     """
@@ -12,12 +11,8 @@ def patch_mite_http_decorator():
         return
         
     try:
-        # Prefer module-level placeholder if tests have patched it
-        try:
-            original_decorator = mite_http.mite_http
-        except Exception:
-            import mite_http
-            from mite_http import mite_http as original_decorator
+        import mite_http
+        from mite_http import mite_http as original_decorator
 
         def tracing_mite_http(func):
             """Enhanced mite_http decorator with automatic tracing"""
@@ -52,17 +47,8 @@ def patch_mite_http_decorator():
             
             return tracing_wrapper
         
-        # Replace the decorator on the module-level reference so tests can
-        # patch and observe the change regardless of import mechanism.
-        try:
-            mite_http.mite_http = tracing_mite_http
-        except Exception:
-            try:
-                import mite_http as _mh
-                _mh.mite_http = tracing_mite_http
-            except Exception:
-                pass
+        # Replace the decorator
+        mite_http.mite_http = tracing_mite_http
         
     except ImportError:
-        # mite_http not available
-        pass
+        pass  # mite_http not available

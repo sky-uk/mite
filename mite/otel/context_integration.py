@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
-from .tracing import get_tracer, is_tracing_enabled
+from .tracing import get_tracer
+from .config import is_tracing_enabled
 
-# Expose a module-level placeholder so tests can patch Context
-Context = None
 
 def patch_context_transaction():
     """
@@ -12,13 +11,8 @@ def patch_context_transaction():
         return
         
     try:
-        # Prefer module-level placeholder if tests have patched it
-        try:
-            original_transaction = Context.transaction
-            TargetContext = Context
-        except Exception:
-            from mite.context import Context as TargetContext
-            original_transaction = TargetContext.transaction
+        from mite.context import Context
+        original_transaction = Context.transaction
         
         @asynccontextmanager
         async def traced_transaction(self, name: str, **kwargs):
@@ -50,12 +44,8 @@ def patch_context_transaction():
                             pass
                     raise
         
-        # Replace the method on whichever target was resolved
-        try:
-            TargetContext.transaction = traced_transaction
-        except Exception:
-            pass
+        # Replace the method
+        Context.transaction = traced_transaction
         
     except ImportError:
-        # Context class not found or different structure
-        pass
+        pass  # Context class not found
