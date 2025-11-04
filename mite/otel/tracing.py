@@ -15,51 +15,45 @@ try:
 except ImportError:
     OTEL_AVAILABLE = False
 
-_tracer = None
-_meter = None
-_noop_tracer = None
-_noop_meter = None
+
+class NoopSpan:
+    """No-op span that does nothing"""
+    def __enter__(self): return None
+    def __exit__(self, *args): return False
+    def end(self): pass
+    def set_attribute(self, k, v): pass
+    def record_exception(self, e): pass
+    def set_status(self, s): pass
 
 
-def _get_noop_tracer():
-    """Get or create a singleton no-op tracer"""
-    global _noop_tracer
-    if _noop_tracer:
-        return _noop_tracer
-    
-    class NoopSpan:
-        def __enter__(self): return None
-        def __exit__(self, *args): return False
-        def end(self): pass
-        def set_attribute(self, k, v): pass
-        def record_exception(self, e): pass
-        def set_status(self, s): pass
-    
-    class NoopTracer:
-        def start_as_current_span(self, *args, **kwargs): return NoopSpan()
-        def start_span(self, name, **kwargs): return NoopSpan()
-    
-    _noop_tracer = NoopTracer()
-    return _noop_tracer
+class NoopTracer:
+    """No-op tracer that returns no-op spans"""
+    def start_as_current_span(self, *args, **kwargs): return NoopSpan()
+    def start_span(self, name, **kwargs): return NoopSpan()
 
 
-def _get_noop_meter():
-    """Get or create a singleton no-op meter"""
-    global _noop_meter
-    if _noop_meter:
-        return _noop_meter
-    
-    class NoopMetric:
-        def add(self, amount, attributes=None): pass
-        def record(self, amount, attributes=None): pass
-    
-    class NoopMeter:
-        def create_counter(self, name, **kwargs): return NoopMetric()
-        def create_histogram(self, name, **kwargs): return NoopMetric()
-        def create_up_down_counter(self, name, **kwargs): return NoopMetric()
-    
-    _noop_meter = NoopMeter()
-    return _noop_meter
+class NoopMetric:
+    """No-op metric that does nothing"""
+    def add(self, amount, attributes=None): pass
+    def record(self, amount, attributes=None): pass
+
+
+class NoopMeter:
+    """No-op meter that returns no-op metrics"""
+    def create_counter(self, name, **kwargs): return NoopMetric()
+    def create_histogram(self, name, **kwargs): return NoopMetric()
+    def create_up_down_counter(self, name, **kwargs): return NoopMetric()
+
+
+class _TracingState:
+    def __init__(self):
+        self.tracer = None
+        self.meter = None
+        self.noop_tracer = NoopTracer()
+        self.noop_meter = NoopMeter()
+
+
+_state = _TracingState()
 
 
 def _is_sdk_provider_configured():
@@ -138,8 +132,6 @@ def _configure_exporter(provider, cfg):
 
 def init_tracing():
     """Initialize OpenTelemetry SDK with configuration from environment"""
-    global _tracer, _meter
-    
     if not OTEL_AVAILABLE:
         return
     
@@ -149,44 +141,41 @@ def init_tracing():
     
     # If a TracerProvider is already set (e.g., by tests), respect it
     if _is_sdk_provider_configured():
-        _tracer = trace.get_tracer(__name__)
+        _state.tracer = trace.get_tracer(__name__)
         try:
-            _meter = metrics.get_meter(__name__)
+            _state.meter = metrics.get_meter(__name__)
         except Exception:
-            _meter = None
+            _state.meter = None
         return
 
     # Create provider with resource and sampler
     resource = Resource.create({"service.name": cfg["service_name"]})
     sampler = TraceIdRatioBased(cfg["sampler_ratio"])
     provider = TracerProvider(resource=resource, sampler=sampler)
-    
+
     # Configure exporter
     _configure_exporter(provider, cfg)
-    
-    # Set global providers
+
     trace.set_tracer_provider(provider)
-    _tracer = trace.get_tracer(__name__)
-    
+    _state.tracer = trace.get_tracer(__name__)
+
     meter_provider = MeterProvider(resource=resource)
     metrics.set_meter_provider(meter_provider)
-    _meter = metrics.get_meter(__name__)
+    _state.meter = metrics.get_meter(__name__)
 
 
 def get_tracer():
     """Get the configured tracer or a no-op tracer if OTel unavailable"""
-    global _tracer
-    
-    if _tracer:
-        return _tracer
+    if _state.tracer:
+        return _state.tracer
 
     cfg = get_otel_config()
     if not OTEL_AVAILABLE or not cfg.get("enabled", False):
-        return _get_noop_tracer()
+        return _state.noop_tracer
 
     if _is_sdk_provider_configured():
-        _tracer = trace.get_tracer(__name__)
-        return _tracer
+        _state.tracer = trace.get_tracer(__name__)
+        return _state.tracer
 
     init_tracing()
     return trace.get_tracer(__name__)
@@ -194,21 +183,19 @@ def get_tracer():
 
 def get_meter():
     """Get the configured meter or a no-op meter if OTel unavailable"""
-    global _meter
-    
-    if _meter:
-        return _meter
+    if _state.meter:
+        return _state.meter
 
     cfg = get_otel_config()
     if not OTEL_AVAILABLE or not cfg.get("enabled", False):
-        return _get_noop_meter()
+        return _state.noop_meter
 
     if _is_sdk_provider_configured():
         try:
-            _meter = metrics.get_meter(__name__)
-            return _meter
+            _state.meter = metrics.get_meter(__name__)
+            return _state.meter
         except Exception:
-            return _get_noop_meter()
+            return _state.noop_meter
 
     init_tracing()
     return metrics.get_meter(__name__)
