@@ -16,67 +16,12 @@ except ImportError:
     OTEL_AVAILABLE = False
 
 
-class NoopSpan:
-    """No-op span that does nothing"""
-
-    def __enter__(self):
-        return None
-
-    def __exit__(self, *args):
-        return False
-
-    def end(self):
-        pass
-
-    def set_attribute(self, k, v):
-        pass
-
-    def record_exception(self, e):
-        pass
-
-    def set_status(self, s):
-        pass
-
-
-class NoopTracer:
-    """No-op tracer that returns no-op spans"""
-
-    def start_as_current_span(self, *args, **kwargs):
-        return NoopSpan()
-
-    def start_span(self, name, **kwargs):
-        return NoopSpan()
-
-
-class NoopMetric:
-    """No-op metric that does nothing"""
-
-    def add(self, amount, attributes=None):
-        pass
-
-    def record(self, amount, attributes=None):
-        pass
-
-
-class NoopMeter:
-    """No-op meter that returns no-op metrics"""
-
-    def create_counter(self, name, **kwargs):
-        return NoopMetric()
-
-    def create_histogram(self, name, **kwargs):
-        return NoopMetric()
-
-    def create_up_down_counter(self, name, **kwargs):
-        return NoopMetric()
-
-
 class _TracingState:
+    """Holds tracing state"""
+
     def __init__(self):
         self.tracer = None
         self.meter = None
-        self.noop_tracer = NoopTracer()
-        self.noop_meter = NoopMeter()
 
 
 _state = _TracingState()
@@ -203,13 +148,16 @@ def init_tracing():
 
 
 def get_tracer():
-    """Get the configured tracer or a no-op tracer if OTel unavailable"""
+    """Get the configured tracer"""
     if _state.tracer:
         return _state.tracer
 
+    if not OTEL_AVAILABLE:
+        raise RuntimeError("OpenTelemetry is not installed. Install with: pip install mite[otel]")
+
     cfg = get_otel_config()
-    if not OTEL_AVAILABLE or not cfg.get("enabled", False):
-        return _state.noop_tracer
+    if not cfg.get("enabled", False):
+        raise RuntimeError("OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing")
 
     if _is_sdk_provider_configured():
         _state.tracer = trace.get_tracer(__name__)
@@ -220,20 +168,24 @@ def get_tracer():
 
 
 def get_meter():
-    """Get the configured meter or a no-op meter if OTel unavailable"""
+    """Get the configured meter"""
     if _state.meter:
         return _state.meter
 
+    if not OTEL_AVAILABLE:
+        raise RuntimeError("OpenTelemetry is not installed. Install with: pip install mite[otel]")
+
     cfg = get_otel_config()
-    if not OTEL_AVAILABLE or not cfg.get("enabled", False):
-        return _state.noop_meter
+    if not cfg.get("enabled", False):
+        raise RuntimeError("OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing")
 
     if _is_sdk_provider_configured():
         try:
             _state.meter = metrics.get_meter(__name__)
             return _state.meter
         except Exception:
-            return _state.noop_meter
+            _state.meter = metrics.get_meter(__name__)
+            return _state.meter
 
     init_tracing()
     return metrics.get_meter(__name__)
