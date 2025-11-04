@@ -18,31 +18,57 @@ except ImportError:
 
 class NoopSpan:
     """No-op span that does nothing"""
-    def __enter__(self): return None
-    def __exit__(self, *args): return False
-    def end(self): pass
-    def set_attribute(self, k, v): pass
-    def record_exception(self, e): pass
-    def set_status(self, s): pass
+
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *args):
+        return False
+
+    def end(self):
+        pass
+
+    def set_attribute(self, k, v):
+        pass
+
+    def record_exception(self, e):
+        pass
+
+    def set_status(self, s):
+        pass
 
 
 class NoopTracer:
     """No-op tracer that returns no-op spans"""
-    def start_as_current_span(self, *args, **kwargs): return NoopSpan()
-    def start_span(self, name, **kwargs): return NoopSpan()
+
+    def start_as_current_span(self, *args, **kwargs):
+        return NoopSpan()
+
+    def start_span(self, name, **kwargs):
+        return NoopSpan()
 
 
 class NoopMetric:
     """No-op metric that does nothing"""
-    def add(self, amount, attributes=None): pass
-    def record(self, amount, attributes=None): pass
+
+    def add(self, amount, attributes=None):
+        pass
+
+    def record(self, amount, attributes=None):
+        pass
 
 
 class NoopMeter:
     """No-op meter that returns no-op metrics"""
-    def create_counter(self, name, **kwargs): return NoopMetric()
-    def create_histogram(self, name, **kwargs): return NoopMetric()
-    def create_up_down_counter(self, name, **kwargs): return NoopMetric()
+
+    def create_counter(self, name, **kwargs):
+        return NoopMetric()
+
+    def create_histogram(self, name, **kwargs):
+        return NoopMetric()
+
+    def create_up_down_counter(self, name, **kwargs):
+        return NoopMetric()
 
 
 class _TracingState:
@@ -62,6 +88,7 @@ def _is_sdk_provider_configured():
         return False
     try:
         from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+
         return isinstance(trace.get_tracer_provider(), SDKTracerProvider)
     except Exception:
         return False
@@ -71,14 +98,14 @@ def _configure_exporter(provider, cfg):
     """Configure span exporter based on config"""
     proc = cfg["span_processor"]
     endpoint = cfg["otlp_endpoint"]
-    
+
     # Console exporters (simple or batched)
     if proc in ("console", "batch"):
         exporter = ConsoleSpanExporter()
         processor = BatchSpanProcessor if proc == "batch" else SimpleSpanProcessor
         provider.add_span_processor(processor(exporter))
         return
-    
+
     # Zipkin exporter
     if proc == "zipkin":
         if not endpoint:
@@ -87,15 +114,19 @@ def _configure_exporter(provider, cfg):
             return
         try:
             from opentelemetry.exporter.zipkin.json import ZipkinExporter
+
             exporter = ZipkinExporter(endpoint=endpoint, timeout=cfg["export_timeout"])
-            provider.add_span_processor(BatchSpanProcessor(
-                exporter, max_export_batch_size=cfg["max_export_batch_size"]))
+            provider.add_span_processor(
+                BatchSpanProcessor(
+                    exporter, max_export_batch_size=cfg["max_export_batch_size"]
+                )
+            )
             return
         except ImportError:
             # Fall back to console if exporter not installed
             provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
             return
-    
+
     # OTLP exporter
     if proc == "otlp":
         if not endpoint:
@@ -104,41 +135,48 @@ def _configure_exporter(provider, cfg):
             return
         try:
             if cfg["otlp_protocol"] == "grpc":
-                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+                    OTLPSpanExporter,
+                )
             else:
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-            
+                from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                    OTLPSpanExporter,
+                )
+
             headers = {}
             if cfg["otlp_headers"]:
                 for h in cfg["otlp_headers"].split(","):
                     if "=" in h:
                         k, v = h.split("=", 1)
                         headers[k.strip()] = v.strip()
-            
+
             exporter = OTLPSpanExporter(
-                endpoint=endpoint, headers=headers, timeout=cfg["export_timeout"])
-            provider.add_span_processor(BatchSpanProcessor(
-                exporter, max_export_batch_size=cfg["max_export_batch_size"]))
+                endpoint=endpoint, headers=headers, timeout=cfg["export_timeout"]
+            )
+            provider.add_span_processor(
+                BatchSpanProcessor(
+                    exporter, max_export_batch_size=cfg["max_export_batch_size"]
+                )
+            )
             return
         except ImportError:
             # Fall back to console if exporter not installed
             provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
             return
-    
+
     # Unknown processor type - default to console
     provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-
 
 
 def init_tracing():
     """Initialize OpenTelemetry SDK with configuration from environment"""
     if not OTEL_AVAILABLE:
         return
-    
+
     cfg = get_otel_config()
     if not cfg["enabled"]:
         return
-    
+
     # If a TracerProvider is already set (e.g., by tests), respect it
     if _is_sdk_provider_configured():
         _state.tracer = trace.get_tracer(__name__)

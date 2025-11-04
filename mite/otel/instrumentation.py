@@ -7,6 +7,7 @@ def _get_span_kind_internal():
     """Get SpanKind.INTERNAL if available"""
     try:
         from opentelemetry.trace import SpanKind
+
         return SpanKind.INTERNAL
     except ImportError:
         return None
@@ -23,10 +24,11 @@ def _handle_span_error(span, exc):
     """Record exception and set error status on span"""
     if not span:
         return
-    
+
     span.record_exception(exc)
     try:
         from opentelemetry.trace import Status, StatusCode
+
         span.set_status(Status(StatusCode.ERROR))
     except ImportError:
         pass
@@ -34,11 +36,12 @@ def _handle_span_error(span, exc):
 
 def trace_journey(journey_name: str):
     """Decorator for journey functions to create root spans"""
+
     def decorator(journey_func):
         tracer = get_tracer()
         span_kind = _get_span_kind_internal()
         span_name = f"journey.{journey_name}"
-        
+
         @functools.wraps(journey_func)
         async def async_wrapper(*args, **kwargs):
             with _start_span(tracer, span_name, span_kind) as span:
@@ -49,7 +52,9 @@ def trace_journey(journey_name: str):
                 except Exception as exc:
                     _handle_span_error(span, exc)
                     raise
+
         return async_wrapper
+
     return decorator
 
 
@@ -59,7 +64,7 @@ async def trace_transaction(transaction_name: str, **attributes):
     tracer = get_tracer()
     span_kind = _get_span_kind_internal()
     span_name = f"transaction.{transaction_name}"
-    
+
     with _start_span(tracer, span_name, span_kind) as span:
         if span:
             span.set_attribute("mite.transaction.name", transaction_name)
