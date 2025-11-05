@@ -11,6 +11,6 @@ fi
 
 
 echo "##### Run tests with tox #####"
-hatch run test:test ; TESTS_EXIT_CODE=$?
+hatch run test.py3.11:test ; TESTS_EXIT_CODE=$?
 [ "$TESTS_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
 echo "##### Pre-commit and Tests passed #####"
