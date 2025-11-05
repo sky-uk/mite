@@ -183,9 +183,8 @@ format = [
 # ruff configuration ##############################################
 
 [tool.ruff]
-# Same line length as black was using
-line-length = 90
-target-version = "py39"
+line-length = 79
+target-version = "py310"
 
 # Enable pycodestyle (E), Pyflakes (F), isort (I), and more
 lint.select = [
@@ -229,8 +228,10 @@ lint.ignore = [
     "B017",   # Do not assert blind exception
     "B026",   # Star-arg unpacking after a keyword argument
     "B904",   # Use raise from to distinguish errors in exception handling
+    "B905",   # zip() without an explicit strict= parameter
     "C418",   # Unnecessary dict literal passed to dict()
     # FIXME the below are fixable using hatchling's ruff format command
+    "UP045",  # Use `X | None` for type annotations
     "F401",  # Imported but unused
     "UP039",  # Unnecessary parentheses after class definition
     "UP015",  # Unnecessary mode argument
