@@ -9,7 +9,8 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
+
 echo "##### Run tests with tox #####"
-tox; TOX_EXIT_CODE=$?
-[ "$TOX_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
+hatch run test:test ; TESTS_EXIT_CODE=$?
+[ "$TESTS_EXIT_CODE" -eq 0 -a "$PRE_COMMIT_STATUS" -eq 0 ] || exit 1
 echo "##### Pre-commit and Tests passed #####"
