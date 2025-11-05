@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from .tracing import get_tracer
+from .tracing import get_tracer, handle_span_error
 from .config import is_tracing_enabled
 
 
@@ -36,14 +36,7 @@ def patch_context_transaction():
                     async with original_transaction(self, name, **kwargs) as tx:
                         yield tx
                 except Exception as exc:
-                    if span:
-                        span.record_exception(exc)
-                        try:
-                            from opentelemetry.trace import Status, StatusCode
-
-                            span.set_status(Status(StatusCode.ERROR, str(exc)))
-                        except ImportError:
-                            pass
+                    handle_span_error(span, exc)
                     raise
 
         # Replace the method

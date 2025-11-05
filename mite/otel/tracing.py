@@ -27,6 +27,20 @@ class _TracingState:
 _state = _TracingState()
 
 
+def handle_span_error(span, exc):
+    """Record exception and set error status on span"""
+    if not span:
+        return
+
+    span.record_exception(exc)
+    try:
+        from opentelemetry.trace import Status, StatusCode
+
+        span.set_status(Status(StatusCode.ERROR))
+    except ImportError:
+        pass
+
+
 def _is_sdk_provider_configured():
     """Check if an SDK TracerProvider is already configured"""
     if not OTEL_AVAILABLE:
@@ -52,11 +66,7 @@ def _configure_exporter(provider, cfg):
         return
 
     # Zipkin exporter
-    if proc == "zipkin":
-        if not endpoint:
-            # Fall back to console if no endpoint provided
-            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-            return
+    if proc == "zipkin" and endpoint:
         try:
             from opentelemetry.exporter.zipkin.json import ZipkinExporter
 
@@ -68,16 +78,10 @@ def _configure_exporter(provider, cfg):
             )
             return
         except ImportError:
-            # Fall back to console if exporter not installed
-            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-            return
+            pass  # Fall through to console fallback
 
     # OTLP exporter
-    if proc == "otlp":
-        if not endpoint:
-            # Fall back to console if no endpoint provided
-            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-            return
+    if proc == "otlp" and endpoint:
         try:
             if cfg["otlp_protocol"] == "grpc":
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
@@ -105,11 +109,9 @@ def _configure_exporter(provider, cfg):
             )
             return
         except ImportError:
-            # Fall back to console if exporter not installed
-            provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
-            return
+            pass  # Fall through to console fallback
 
-    # Unknown processor type - default to console
+    # Fallback to console for any other case (no endpoint, unknown processor, import failure)
     provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
 
@@ -120,15 +122,6 @@ def init_tracing():
 
     cfg = get_otel_config()
     if not cfg["enabled"]:
-        return
-
-    # If a TracerProvider is already set (e.g., by tests), respect it
-    if _is_sdk_provider_configured():
-        _state.tracer = trace.get_tracer(__name__)
-        try:
-            _state.meter = metrics.get_meter(__name__)
-        except Exception:
-            _state.meter = None
         return
 
     # Create provider with resource and sampler
@@ -180,12 +173,8 @@ def get_meter():
         raise RuntimeError("OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing")
 
     if _is_sdk_provider_configured():
-        try:
-            _state.meter = metrics.get_meter(__name__)
-            return _state.meter
-        except Exception:
-            _state.meter = metrics.get_meter(__name__)
-            return _state.meter
+        _state.meter = metrics.get_meter(__name__)
+        return _state.meter
 
     init_tracing()
     return metrics.get_meter(__name__)

@@ -1,6 +1,6 @@
 import functools
 from contextlib import asynccontextmanager
-from .tracing import get_tracer
+from .tracing import get_tracer, handle_span_error
 
 
 def _get_span_kind_internal():
@@ -20,20 +20,6 @@ def _start_span(tracer, name, span_kind):
     return tracer.start_as_current_span(name)
 
 
-def _handle_span_error(span, exc):
-    """Record exception and set error status on span"""
-    if not span:
-        return
-
-    span.record_exception(exc)
-    try:
-        from opentelemetry.trace import Status, StatusCode
-
-        span.set_status(Status(StatusCode.ERROR))
-    except ImportError:
-        pass
-
-
 def trace_journey(journey_name: str):
     """Decorator for journey functions to create root spans"""
 
@@ -50,7 +36,7 @@ def trace_journey(journey_name: str):
                 try:
                     return await journey_func(*args, **kwargs)
                 except Exception as exc:
-                    _handle_span_error(span, exc)
+                    handle_span_error(span, exc)
                     raise
 
         return async_wrapper
@@ -73,5 +59,5 @@ async def trace_transaction(transaction_name: str, **attributes):
         try:
             yield span
         except Exception as exc:
-            _handle_span_error(span, exc)
+            handle_span_error(span, exc)
             raise

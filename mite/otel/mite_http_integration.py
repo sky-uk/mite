@@ -1,5 +1,5 @@
 import functools
-from .tracing import get_tracer
+from .tracing import get_tracer, handle_span_error
 from .config import is_tracing_enabled
 
 
@@ -38,14 +38,7 @@ def patch_mite_http_decorator():
                     try:
                         return await wrapped_func(*args, **kwargs)
                     except Exception as exc:
-                        if span:
-                            span.record_exception(exc)
-                            try:
-                                from opentelemetry.trace import Status, StatusCode
-
-                                span.set_status(Status(StatusCode.ERROR, str(exc)))
-                            except ImportError:
-                                pass
+                        handle_span_error(span, exc)
                         raise
 
             return tracing_wrapper

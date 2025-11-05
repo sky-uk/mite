@@ -1,17 +1,15 @@
 from urllib.parse import urlparse
-from .tracing import get_tracer
+from .tracing import get_tracer, handle_span_error
 from .config import is_tracing_enabled
 from .context import inject_headers
 
 # Import OpenTelemetry types at module level with fallbacks
 try:
-    from opentelemetry.trace import SpanKind, Status, StatusCode
+    from opentelemetry.trace import SpanKind
 
     SPAN_KIND_CLIENT = SpanKind.CLIENT
-    STATUS_AVAILABLE = True
 except ImportError:
     SPAN_KIND_CLIENT = None
-    STATUS_AVAILABLE = False
 
 
 def _get_span_kind():
@@ -43,7 +41,6 @@ def _set_span_attributes(span, method, url, response=None):
     # Response attributes (if provided)
     if response:
         if hasattr(response, "status_code"):
-            span.set_attribute("http.status_code", response.status_code)
             span.set_attribute("http.response.status_code", response.status_code)
 
         # Timing metrics
@@ -78,14 +75,6 @@ def _prepare_headers(kwargs):
     inject_headers(headers)
     kwargs["headers"] = headers
     return kwargs
-
-
-def _record_error_metrics(span, exc):
-    """Record exception in span"""
-    if span:
-        span.record_exception(exc)
-        if STATUS_AVAILABLE:
-            span.set_status(Status(StatusCode.ERROR, str(exc)))
 
 
 def _create_http_method_wrapper(method_name):
@@ -124,7 +113,7 @@ def _create_http_method_wrapper(method_name):
                 return response
 
             except Exception as exc:
-                _record_error_metrics(span, exc)
+                handle_span_error(span, exc)
                 raise
 
     return traced_method
