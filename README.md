@@ -3,7 +3,7 @@
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/sky-uk/mite/docs/_static/mite.png" alt="Mite logo" width="500" role="img">
+<img src="https://raw.githubusercontent.com/sky-uk/mite/refs/heads/cleanup-setupfiles/docs/_static/mite.png" alt="Mite logo" width="500" role="img">
 
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
 
