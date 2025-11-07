@@ -1,3 +1,4 @@
+"""Setup script for acurl - build Cython extensions."""
 import os
 
 from Cython.Build import cythonize
@@ -15,6 +16,7 @@ else:
 
 extensions = [Extension("acurl", ["src/acurl.pyx"], libraries=["curl"], **kwargs)]
 
+# All metadata is now in pyproject.toml
 setup(
     ext_modules=cythonize(
         extensions,
@@ -28,5 +30,5 @@ setup(
             "warn.unused_result": True,
         },
     ),
-    setup_requires=["cython"],
 )
+

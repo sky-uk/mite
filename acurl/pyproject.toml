@@ -1,2 +1,76 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython<3.0"]
+requires = ["setuptools>=64", "setuptools_scm>=8", "wheel", "Cython<3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acurl"
+dynamic = ["version"]
+description = "An async Curl library."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10,<3.13"
+authors = [
+    {name = "Sky UK", email = "mite@sky.uk"},
+
+]
+maintainers = [
+    {name = "Sky Identity NFT team", email = "matthew.ellis@sky.uk"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "ujson>=4.1.0",
+    "uvloop==0.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "Cython<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sky-uk/mite/tree/master/acurl"
+Repository = "https://github.com/sky-uk/mite/"
+Issues = "https://github.com/sky-uk/mite/issues"
+
+# Setuptools configuration for building Cython extensions
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.pyx", "*.pxd", "*.c", "*.h"]
+
+[tool.setuptools_scm]
+root = ".."
+version_file = "src/_version.py"
+
+# Tool configuration ##############################################
+
+# Ruff configuration (replacing flake8)
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+lint.ignore = [
+    "E501",  # Line too long (ruff formatter handles this)
+    "W503",  # Line break before binary operator
+    "E731",  # Lambda assignment
+]
+
+exclude = [".git", "build", "dist", ".eggs", ".tox"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
