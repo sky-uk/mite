@@ -11,7 +11,6 @@ license = "MIT"
 requires-python = ">=3.10,<3.13"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
-
 ]
 maintainers = [
     {name = "Sky Identity NFT team", email = "matthew.ellis@sky.uk"},
@@ -32,6 +31,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
     "Cython<3.0",
 ]
 
@@ -59,8 +60,15 @@ version_file = "src/_version.py"
 
 # Ruff configuration (replacing flake8)
 [tool.ruff]
-line-length = 100
+line-length = 79
 target-version = "py310"
+
+lint.select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+]
 
 lint.ignore = [
     "E501",  # Line too long (ruff formatter handles this)
@@ -72,5 +80,6 @@ exclude = [".git", "build", "dist", ".eggs", ".tox"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]

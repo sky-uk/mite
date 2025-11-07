@@ -7,13 +7,12 @@ name = "mite"
 dynamic = ["version"]
 description = "A Python Performance Testing Framework"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
 classifiers = [
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
