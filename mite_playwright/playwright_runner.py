@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
 
-from playwright.async_api import async_playwright, Page
+from playwright.async_api import Page, async_playwright
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
@@ -17,24 +17,24 @@ class _PlaywrightWrapper:
     def __init__(self, context):
         """Constructor pulls capabilities and other browser config from the context"""
         self._context = context
-        
+
         # Browser configuration with defaults
         config_defaults = {
             "browser_name": "chromium",
-            "browser_headless": True, 
+            "browser_headless": True,
             "browser_viewport": {"width": 1280, "height": 720},
             "browser_timeout": 30000,
-            "browser_navigation_timeout": 30000
+            "browser_navigation_timeout": 30000,
         }
-        
+
         for key, default in config_defaults.items():
             setattr(self, f"_{key}", self._context.config.get(key, default))
-        
+
         # Advanced options via spec_import
         for option in ["browser_options", "context_options", "launch_options"]:
             value = self._context.config.get(option)
             setattr(self, f"_{option}", deepcopy(spec_import(value)) if value else None)
-        
+
         # Internal state
         self._playwright = self._browser = self._browser_context = None
         self._pages = []
@@ -44,21 +44,31 @@ class _PlaywrightWrapper:
         try:
             self._context.browser = self
             self._playwright = await async_playwright().start()
-            
+
             # Get browser type and launch
-            browser_type = getattr(self._playwright, self._browser_name, self._playwright.chromium)
-            launch_options = {"headless": self._browser_headless, 
-                            **(self._launch_options or {}), **(self._browser_options or {})}
+            browser_type = getattr(
+                self._playwright, self._browser_name, self._playwright.chromium
+            )
+            launch_options = {
+                "headless": self._browser_headless,
+                **(self._launch_options or {}),
+                **(self._browser_options or {}),
+            }
             self._browser = await browser_type.launch(**launch_options)
-            
+
             # Create context with timeouts
-            context_options = {"viewport": self._browser_viewport, **(self._context_options or {})}
+            context_options = {
+                "viewport": self._browser_viewport,
+                **(self._context_options or {}),
+            }
             self._browser_context = await self._browser.new_context(**context_options)
             self._browser_context.set_default_timeout(self._browser_timeout)
-            self._browser_context.set_default_navigation_timeout(self._browser_navigation_timeout)
-            
+            self._browser_context.set_default_navigation_timeout(
+                self._browser_navigation_timeout
+            )
+
             self._context.raw_webdriver = self._browser_context
-            
+
         except Exception as e:
             logger.error(f"Failed to start Playwright browser: {e}")
             await self._quit()
@@ -68,7 +78,7 @@ class _PlaywrightWrapper:
         """Safely close an object with error handling"""
         if obj:
             try:
-                await obj.close() if hasattr(obj, 'close') else await obj.stop()
+                await obj.close() if hasattr(obj, "close") else await obj.stop()
             except Exception as e:
                 logger.warning(f"Error closing {name}: {e}")
             if reset_attr:
@@ -81,12 +91,12 @@ class _PlaywrightWrapper:
             for page in self._pages[:]:
                 await self._safe_close(page, "page")
             self._pages.clear()
-            
+
             # Close context, browser, and stop Playwright
             await self._safe_close(self._browser_context, "context", "_browser_context")
             await self._safe_close(self._browser, "browser", "_browser")
             await self._safe_close(self._playwright, "playwright", "_playwright")
-                
+
         except Exception as e:
             logger.error(f"Error during Playwright cleanup: {e}")
 
@@ -105,36 +115,40 @@ class _PlaywrightWrapper:
     def _calculate_timings(self, timings):
         """Calculate TCP and TLS timing based on connection type"""
         is_tls = timings["name"].startswith("https")
-        
+
         if is_tls:
-            tcp_time = timings["secureConnectionStart"] - timings["connectStart"] 
+            tcp_time = timings["secureConnectionStart"] - timings["connectStart"]
             tls_time = timings["connectEnd"] - timings["secureConnectionStart"]
         else:
             tcp_time = timings["connectEnd"] - timings["connectStart"]
             tls_time = 0
             if tls_time == 0:
                 logger.info("Secure TLS connection not used, defaulting tls_time to 0")
-        
+
         return tcp_time, tls_time
 
     async def _send_page_load_metrics(self, page: Page):
         """Send page load metrics to mite context"""
         if not self._browser_has_timing_capabilities():
             return
-            
+
         try:
             # Get performance entries
-            performance_entries = await page.evaluate("""
+            performance_entries = await page.evaluate(
+                """
                 () => performance.getEntriesByType('navigation')
-            """)
+            """
+            )
 
-            paint_entries = await page.evaluate("""
+            paint_entries = await page.evaluate(
+                """
                 () => performance.getEntriesByType('paint')
-            """)
+            """
+            )
 
             _timings = self._extract_entries(performance_entries)
             timings = _timings[0] if _timings else None
-            
+
             if timings:
                 protocol = timings.get("nextHopProtocol")
                 if protocol and protocol != "http/1.1":
@@ -143,14 +157,18 @@ class _PlaywrightWrapper:
                     )
                 tcp_time, tls_time = self._calculate_timings(timings)
                 metrics = {
-                    "dns_lookup_time": timings["domainLookupEnd"] - timings["domainLookupStart"],
+                    "dns_lookup_time": timings["domainLookupEnd"]
+                    - timings["domainLookupStart"],
                     "dom_interactive": timings["domInteractive"],
-                    "js_onload_time": timings["domContentLoadedEventEnd"] - timings["domContentLoadedEventStart"],
+                    "js_onload_time": timings["domContentLoadedEventEnd"]
+                    - timings["domContentLoadedEventStart"],
                     "page_weight": timings.get("transferSize", 0),
                     "render_time": timings["domInteractive"] - timings["responseEnd"],
                     "tcp_time": tcp_time,
-                    "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
-                    "time_to_interactive": timings["domInteractive"] - timings["requestStart"],
+                    "time_to_first_byte": timings["responseStart"]
+                    - timings["connectEnd"],
+                    "time_to_interactive": timings["domInteractive"]
+                    - timings["requestStart"],
                     "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
                     "tls_time": tls_time,
                     "total_time": timings["duration"],
@@ -163,7 +181,9 @@ class _PlaywrightWrapper:
                 self._format_paint_timings(_paint_timings) if _paint_timings else None
             )
             if paint_timings:
-                metrics["first_contentful_paint"] = paint_timings.get("first-contentful-paint", 0)
+                metrics["first_contentful_paint"] = paint_timings.get(
+                    "first-contentful-paint", 0
+                )
                 metrics["first_paint"] = paint_timings.get("first-paint", 0)
 
             if metrics:
@@ -171,7 +191,7 @@ class _PlaywrightWrapper:
                     "playwright_page_load_metrics",
                     **self._extract_and_convert_metrics_to_seconds(metrics),
                 )
-                
+
         except Exception as e:
             logger.error(f"Failed to collect page load metrics: {e}")
 
@@ -201,9 +221,11 @@ class _PlaywrightWrapper:
 
     async def _retrieve_javascript_metrics(self, page: Page):
         try:
-            return await page.evaluate("""
+            return await page.evaluate(
+                """
                 () => performance.getEntriesByType('resource')
-            """)
+            """
+            )
         except Exception:
             logger.error("Failed to retrieve resource performance entries")
             return []
@@ -218,7 +240,7 @@ class _PlaywrightWrapper:
         """Create a new page and track it"""
         if not self._browser_context:
             raise MiteError("Browser context not initialized")
-            
+
         page = await self._browser_context.new_page()
         self._pages.append(page)
         return page
@@ -230,7 +252,7 @@ class _PlaywrightWrapper:
                 page = await self.new_page()
             else:
                 page = self._pages[0]
-                
+
         await page.goto(url)
         await self._send_page_load_metrics(page)
         return page
@@ -249,25 +271,31 @@ class _PlaywrightWrapper:
     async def wait_for_elements(self, locator, timeout=5000, page: Page = None):
         """Wait for elements to be present"""
         page = self._get_page(page)
-        
+
         try:
-            return await page.wait_for_selector(locator, timeout=timeout, state="attached")
+            return await page.wait_for_selector(
+                locator, timeout=timeout, state="attached"
+            )
         except Exception as e:
-            raise MiteError(f"Timed out trying to find elements '{locator}' in the dom") from e
+            raise MiteError(
+                f"Timed out trying to find elements '{locator}' in the dom"
+            ) from e
 
     async def wait_for_element(self, locator, timeout=5000, page: Page = None):
         """Wait for element to be present"""
         page = self._get_page(page)
-        
+
         try:
             return await page.wait_for_selector(locator, timeout=timeout)
         except Exception as e:
-            raise MiteError(f"Timed out trying to find element '{locator}' in the dom") from e
+            raise MiteError(
+                f"Timed out trying to find element '{locator}' in the dom"
+            ) from e
 
     async def wait_for_url(self, url_pattern, timeout=5000, page: Page = None):
         """Wait for URL to match pattern"""
         page = self._get_page(page)
-        
+
         try:
             await page.wait_for_url(url_pattern, timeout=timeout)
             return True
@@ -293,7 +321,7 @@ class _PlaywrightWrapper:
     async def click(self, locator, page: Page = None, **options):
         """Click element by locator (Selenium-style interface)"""
         page = self._get_page(page)
-        
+
         try:
             await page.click(locator, **options)
             # Send metrics after click in case it triggers navigation
@@ -304,39 +332,54 @@ class _PlaywrightWrapper:
     async def fill(self, locator, value, page: Page = None, **options):
         """Fill input element with value (Selenium-style interface)"""
         page = self._get_page(page)
-        
+
         try:
             await page.fill(locator, value, **options)
         except Exception as e:
-            raise MiteError(f"Failed to fill element '{locator}' with value '{value}'") from e
+            raise MiteError(
+                f"Failed to fill element '{locator}' with value '{value}'"
+            ) from e
 
-
-    async def login(self, login_url, username, password, 
-                   username_locator="username", password_locator="password", 
-                   submit_locator="button[type='submit']", page: Page = None,
-                   wait_for_redirect=True, success_url_pattern=None, **options):
+    async def login(
+        self,
+        login_url,
+        username,
+        password,
+        username_locator="username",
+        password_locator="password",
+        submit_locator="button[type='submit']",
+        page: Page = None,
+        wait_for_redirect=True,
+        success_url_pattern=None,
+        **options,
+    ):
         """Perform login with automatic form handling and metrics collection"""
         page = page or await self.new_page() if not self._pages else self._pages[0]
-        
+
         try:
             await self.get(login_url, page)
             await page.wait_for_selector(username_locator, timeout=self._browser_timeout)
             await page.fill(username_locator, username, **options)
             await page.fill(password_locator, password, **options)
             await page.click(submit_locator, **options)
-            
+
             if wait_for_redirect:
                 if success_url_pattern:
-                    await page.wait_for_url(success_url_pattern, timeout=self._browser_navigation_timeout)
+                    await page.wait_for_url(
+                        success_url_pattern, timeout=self._browser_navigation_timeout
+                    )
                 else:
-                    await page.wait_for_load_state('networkidle', timeout=self._browser_navigation_timeout)
+                    await page.wait_for_load_state(
+                        "networkidle", timeout=self._browser_navigation_timeout
+                    )
                 await self._send_page_load_metrics(page)
-            
-            return page
-            
-        except Exception as e:
-            raise MiteError(f"Failed to login at '{login_url}' with username '{username}'") from e
 
+            return page
+
+        except Exception as e:
+            raise MiteError(
+                f"Failed to login at '{login_url}' with username '{username}'"
+            ) from e
 
     @property
     def pages(self):
@@ -374,53 +417,55 @@ class JsMetricsContext:
 
 class _PlaywrightWireWrapper(_PlaywrightWrapper):
     """Wrapper that provides network interception capabilities similar to Selenium Wire"""
-    
+
     def __init__(self, context):
         super().__init__(context)
-        self._network_options = (
-            self._spec_import_if_not_none("network_options") or {}
-        )
+        self._network_options = self._spec_import_if_not_none("network_options") or {}
         self._requests = []
         self._request_interceptor = None
 
     async def _start(self):
         """Start with network interception enabled"""
         await super()._start()
-        
+
         # Enable network tracking
         if self._browser_context:
             # Track all requests
             self._browser_context.on("request", self._on_request)
             self._browser_context.on("response", self._on_response)
-            
+
             # Set up route interception if interceptor is provided
             if self._request_interceptor:
                 await self._browser_context.route("**/*", self._route_handler)
 
     def _on_request(self, request):
         """Track outgoing requests"""
-        self._requests.append({
-            "url": request.url,
-            "method": request.method,
-            "headers": request.headers,
-            "timestamp": time.time(),
-            "type": "request"
-        })
+        self._requests.append(
+            {
+                "url": request.url,
+                "method": request.method,
+                "headers": request.headers,
+                "timestamp": time.time(),
+                "type": "request",
+            }
+        )
 
     def _on_response(self, response):
         """Track incoming responses"""
-        self._requests.append({
-            "url": response.url,
-            "status": response.status,
-            "headers": response.headers,
-            "timestamp": time.time(),
-            "type": "response"
-        })
+        self._requests.append(
+            {
+                "url": response.url,
+                "status": response.status,
+                "headers": response.headers,
+                "timestamp": time.time(),
+                "type": "response",
+            }
+        )
 
     async def _route_handler(self, route):
         """Handle route interception"""
         request = route.request
-        
+
         if self._request_interceptor:
             # Call interceptor
             modified_request = self._request_interceptor(request)
@@ -435,13 +480,13 @@ class _PlaywrightWireWrapper(_PlaywrightWrapper):
     async def wait_for_request(self, url_pattern, timeout=5000):
         """Wait for a request matching URL pattern (Selenium Wire style)"""
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout / 1000:
             for req in self._requests:
                 if req["type"] == "request" and url_pattern in req["url"]:
                     return req
             await asyncio.sleep(0.1)
-            
+
         raise MiteError(f"Timeout waiting for request matching '{url_pattern}'")
 
     @property
@@ -474,6 +519,7 @@ def mite_playwright(*args, wire=False):
             page = await ctx.browser.new_page()
             await ctx.browser.get("https://example.com", page)
     """
+
     def wrapper_factory(func):
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):

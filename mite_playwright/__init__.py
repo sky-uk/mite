@@ -2,17 +2,14 @@
 
 __version__ = "1.0.0"
 
-from .playwright_runner import (
-    mite_playwright,
-    _PlaywrightWrapper as PlaywrightWrapper,
-    _PlaywrightWireWrapper as PlaywrightWireWrapper,
-    JsMetricsContext,
-)
+from .playwright_runner import JsMetricsContext
+from .playwright_runner import _PlaywrightWireWrapper as PlaywrightWireWrapper
+from .playwright_runner import _PlaywrightWrapper as PlaywrightWrapper
+from .playwright_runner import mite_playwright
 
 __all__ = [
     "mite_playwright",
     "PlaywrightWrapper",
-    "PlaywrightWireWrapper", 
+    "PlaywrightWireWrapper",
     "JsMetricsContext",
 ]
-
