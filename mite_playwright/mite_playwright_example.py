@@ -55,7 +55,7 @@ class MockContext:
             metrics_labels = {
                 'total_time': "Total Page Load Time",
                 'dns_lookup_time': "DNS Lookup", 
-                'time_to_first_byte': "⚡ Time to First Byte",
+                'time_to_first_byte': "Time to First Byte",
                 'dom_interactive': "DOM Interactive",
                 'first_contentful_paint':  "First Contentful Paint",
                 'first_paint': "First Paint",
