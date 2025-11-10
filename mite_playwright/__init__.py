@@ -1,32 +1,18 @@
-"""
-Mite Playwright Adapter
-
-A Playwright adapter for the mite performance testing framework, 
-designed to match the structure and functionality of mite_selenium.
-
-This adapter provides browser automation capabilities using Playwright
-for performance testing scenarios.
-"""
+"""Mite Playwright adapter for browser testing with performance metrics."""
 
 __version__ = "1.0.0"
 
-from .runner import PlaywrightMiteRunner
-from .stats import PlaywrightStats, PlaywrightStatsCollector
-from .utils import (
-    create_browser_config,
-    wait_for_page_load,
-    safe_click,
-    safe_fill,
-    element_exists
+from .playwright_runner import (
+    mite_playwright,
+    _PlaywrightWrapper as PlaywrightWrapper,
+    _PlaywrightWireWrapper as PlaywrightWireWrapper,
+    JsMetricsContext,
 )
 
 __all__ = [
-    'PlaywrightMiteRunner',
-    'PlaywrightStats',
-    'PlaywrightStatsCollector', 
-    'create_browser_config',
-    'wait_for_page_load',
-    'safe_click',
-    'safe_fill',
-    'element_exists'
+    "mite_playwright",
+    "PlaywrightWrapper",
+    "PlaywrightWireWrapper", 
+    "JsMetricsContext",
 ]
+

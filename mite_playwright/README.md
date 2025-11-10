@@ -1,178 +1,100 @@
 # Mite Playwright Adapter
 
-A comprehensive Playwright adapter for the mite performance testing framework, designed to match the structure and functionality of the existing mite_selenium adapter.
+A streamlined Playwright adapter for the mite performance testing framework, providing browser automation with comprehensive performance metrics.
 
-## Overview
+## Features
 
-This adapter provides modern browser automation capabilities using Playwright, offering:
-
-- **High Performance**: Faster and more reliable than Selenium
+- **Familiar API**: Intuitive methods (`get`, `click`, `fill`, `login`)
+- **Automatic Performance Metrics**: Core Web Vitals, timing data, resource loading
+- **Mite Framework Integration**: Seamless integration with existing mite workflows  
 - **Multi-Browser Support**: Chromium, Firefox, and WebKit
-- **Comprehensive Metrics**: Detailed performance statistics collection
-- **Mite Integration**: Seamless integration with mite testing framework
-- **Modern API**: Async/await support with clean, modern syntax
+- **Zero Configuration**: Works out of the box with sensible defaults
 
 ## Installation
 
 ```bash
-# Install Playwright
 pip install playwright
-
-# Install browser binaries
 playwright install
-
-
-## Architecture
-
-The adapter follows the same modular structure as mite_selenium:
-
-```
-mite_playwright/
-├── __init__.py          # Package initialization and exports
-├── runner.py            # Main PlaywrightMiteRunner class
-├── stats.py             # Performance statistics collection
-├── utils.py             # Helper functions and utilities
-├── examples.py          # Usage examples and patterns
-└── README.md           # This documentation
 ```
 
-### Core Components
-
-#### 1. PlaywrightMiteRunner (`runner.py`)
-Main runner class providing:
-- Browser lifecycle management (start/stop)
-- Page creation and navigation
-- Action execution with timing (click, fill, wait)
-- Screenshot capture
-- Performance metrics collection
-- Error handling and logging
-
-#### 2. PlaywrightStats (`stats.py`)
-Statistics collection system:
-- Navigation timing metrics
-- Action performance tracking
-- Network request monitoring
-- Error tracking and reporting
-- Rolling averages and percentiles
-- CSV export capabilities
-
-#### 3. Utilities (`utils.py`)
-Helper functions and classes:
-- Browser configuration management
-- Safe element interaction functions
-- Page helper for common operations
-- Timing measurement decorators
-- Error handling utilities
-
-## Configuration
-
-### Browser Configuration
+## Quick Start
 
 ```python
-config = {
-    'browser': 'chromium',              # 'chromium', 'firefox', 'webkit'
-    'headless': True,                   # Run in headless mode
-    'timeout': 30000,                   # Default timeout (ms)
-    'navigation_timeout': 30000,        # Navigation timeout (ms)
-    'launch_options': {
-        'headless': True,
-        'args': [
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu'
-        ]
-    },
-    'context_options': {
-        'viewport': {'width': 1280, 'height': 720},
-        'ignore_https_errors': True,
-        'user_agent': 'Custom User Agent'
-    }
-}
-```
+from mite_playwright import mite_playwright
 
+@mite_playwright
+async def test_example(ctx):
+    """Simple test with automatic metrics collection"""
+    await ctx.browser.get("https://example.com")
+    await ctx.browser.click("button")
+    await ctx.browser.fill("input[name='search']", "test query")
+```
 
 ## Usage Examples
 
-### Basic Navigation and Interaction
+### Basic Test with Login
 
 ```python
-async def web_test():
-    runner = PlaywrightMiteRunner(config)
-    
-    await runner.start()
-    page = await runner.new_page()
-    
-    # Navigate with timing
-    await runner.goto(page, 'https://example.com')
-    
-    # Interact with elements
-    await runner.click(page, '#button-id')
-    await runner.fill(page, '#input-field', 'test value')
-    await runner.wait_for_selector(page, '.result')
-    
-    # Get performance metrics
-    stats = runner.get_stats()
-    await runner.stop()
+from mite_playwright import mite_playwright
+
+@mite_playwright  
+async def login_test(ctx):
+    """Test login flow with built-in helper"""
+    await ctx.browser.get("https://app.example.com")
+    await ctx.browser.login("user@example.com", "password123")
+    await ctx.browser.wait_for_element(".dashboard")
 ```
 
-### Browser Pool Management
+### Direct Browser Usage
 
 ```python
-# Multiple browser instances for parallel testing
-runners = [
-    PlaywrightMiteRunner({'browser': 'chromium'}),
-    PlaywrightMiteRunner({'browser': 'firefox'}),
-    PlaywrightMiteRunner({'browser': 'webkit'})
-]
+from mite_playwright import PlaywrightWrapper
+
+async def standalone_test():
+    async with PlaywrightWrapper() as browser:
+        await browser.get("https://example.com")
+        await browser.click("nav a[href='/about']")
 ```
 
-### Statistics Export
+##  Performance Metrics
 
-```python
-# Export performance data
-stats_collector = runner.stats_collector
-stats_collector.export_to_csv('performance_data.csv')
+Automatically collected metrics include:
 
-# Get percentile analysis
-percentiles = stats_collector.get_percentiles([50, 90, 95, 99])
+- **Core Web Vitals**: FCP, LCP timing
+- **Navigation Timing**: DNS, TCP, DOM interactive, load complete
+- **Resource Loading**: JavaScript resources, network requests
+
+## API Reference
+
+### Core Components
+
+| Component | Purpose |
+|-----------|---------|
+| `mite_playwright` | Decorator for mite test functions |
+| `PlaywrightWrapper` | Direct browser automation |
+| `PlaywrightWireWrapper` | Network interception support |
+| `JsMetricsContext` | Performance metrics collection |
+
+### Browser Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `get(url)` | Navigate with metrics | `await browser.get("https://example.com")` |
+| `click(selector)` | Click element | `await browser.click("button.submit")` |
+| `fill(selector, text)` | Fill input | `await browser.fill("input[name='email']", "user@example.com")` |
+| `wait_for_element(selector)` | Wait for element | `await browser.wait_for_element(".results")` |
+| `login(username, password)` | Automated login | `await browser.login("user", "pass")` |
+
+##  Examples
+
+See example files for complete demonstrations:
+
+- **`mite_playwright_example.py`**: Comprehensive metrics collection demonstration
+
+### Running Examples
+
+```bash
+python mite_playwright_example.py
 ```
 
-## Comparison with Selenium Adapter
 
-| Feature | Selenium | Playwright |
-|---------|----------|------------|
-| Browser Support | Chrome, Firefox, Safari | Chromium, Firefox, WebKit |
-| Performance | Good | Excellent |
-| API Style | Synchronous | Async/Await |
-| Network Interception | Limited | Full Control |
-| Mobile Testing | WebDriver | Device Emulation |
-| Debugging | Standard | Rich Debugging |
-
-## Best Practices
-
-1. **Use Headless Mode**: For performance testing, always use headless browsers
-2. **Manage Resources**: Close pages when done to free memory
-3. **Handle Timeouts**: Set appropriate timeouts for your use case
-4. **Monitor Metrics**: Use the stats collector to track performance trends
-5. **Error Handling**: Implement proper error handling for flaky tests
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Browser Not Found**: Run `playwright install` to install browser binaries
-2. **Import Errors**: Ensure mite_playwright is in your Python path
-3. **Timeout Errors**: Increase timeout values for slow networks
-4. **Memory Issues**: Close unused pages and contexts
-
-### Debug Mode
-
-```python
-config = {
-    'browser': 'chromium',
-    'headless': False,  # Visible browser for debugging
-    'launch_options': {
-        'slowMo': 1000  # Slow down actions
-    }
-}
-```

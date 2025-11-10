@@ -1,151 +1,114 @@
-#!/usr/bin/env python3
 """
-Test script for the Playwright adapter
+Mite Playwright Example with Metrics Visualization
+
 """
 
 import asyncio
-import sys
-import os
-import logging
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import time
+from playwright_runner import mite_playwright
 
 
-from mite_playwright import PlaywrightMiteRunner, PlaywrightStats
-from mite_playwright.utils import PlaywrightPageHelper, safe_click
-
-
-
-async def test_playwright_adapter():
-    """Test the complete Playwright adapter functionality"""
-        
-    try:
-        config = {
-            'browser': 'chromium',
-            'headless': False,  # Set to False to see the browser
-            'timeout': 30000
+class MockContext:
+    def __init__(self):
+        self.config = {
+            "browser_name": "chromium", 
+            "browser_headless": False,  # Set to False to see browser actions
+            "browser_viewport": {"width": 1280, "height": 720},
+            "browser_timeout": 30000,
         }
+        self.browser = None
+        self.raw_webdriver = None
+        self.collected_metrics = []
         
-        runner = PlaywrightMiteRunner(config)
+    def send(self, metric_name, **kwargs):
+        """Enhanced send method to display metrics in real-time"""
+        print(f"\nMETRIC COLLECTED: {metric_name}")
+        print("=" * 50)
+        for key, value in kwargs.items():
+            if isinstance(value, float):
+                print(f"  {key}: {value:.4f}s")
+            else:
+                print(f"  {key}: {value}")
         
-        # Test browser startup
-        await runner.start()
-        print(" Browser started successfully")
+        # Store metrics for later analysis
+        self.collected_metrics.append({
+            "name": metric_name,
+            "data": kwargs,
+            "timestamp": time.time()
+        })
         
-        # Test page creation
-        page = await runner.new_page()
-        print("Page created successfully")
-        
-        # Test navigation
-        metrics = await runner.goto(page, 'https://playwright.dev/')
-        print(f"Navigation completed: {metrics['load_time']:.2f}ms")
-        
-        # Test page helper
-        helper = PlaywrightPageHelper(page)
-        page_info = await helper.get_page_info()
-        print(f"Page info retrieved: {page_info['title']}")
-        
-        # Test screenshot
-        await runner.screenshot(page, 'adapter_test.png')
-        print("Screenshot captured")
-        
-        # Test stats collection
-        stats = runner.get_stats()
-        print("Stats collected successfully")
-        
-        # Test browser cleanup
-        await runner.stop()
-        
-        # Give a moment for async cleanup to complete
-        await asyncio.sleep(0.1)
-        print("Browser stopped successfully")
-        
-        print("\nAll tests passed! Playwright adapter is working correctly.")
-        
-        return True
-        
-    except Exception as e:
-        print(f" Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-async def test_performance_comparison_journey():
-    """Compare performance with different browsers"""
-    print("\nPerformance Comparison Test")
-    
-    browsers = ['chromium', 'firefox']
-    results = {}
-    
-    for browser in browsers:
-        try:
-            print(f"Testing {browser}...")
+    def show_metrics_summary(self):
+        """Display a comprehensive summary of all collected metrics"""
+        if not self.collected_metrics:
+            print(" No metrics collected.")
+            return
             
-            config = {
-                'browser': browser,
-                'headless': False  
+        print("\n METRICS SUMMARY")
+        print("=" * 60)
+        
+        for i, metric in enumerate(self.collected_metrics, 1):
+            print(f"\nMetric #{i}: {metric['name']}")
+            print(f"Timestamp: {time.strftime('%H:%M:%S', time.localtime(metric['timestamp']))}")
+            
+            # Show key performance indicators
+            data = metric['data']
+            metrics_labels = {
+                'total_time': "Total Page Load Time",
+                'dns_lookup_time': "DNS Lookup", 
+                'time_to_first_byte': "⚡ Time to First Byte",
+                'dom_interactive': "DOM Interactive",
+                'first_contentful_paint':  "First Contentful Paint",
+                'first_paint': "First Paint",
+                'render_time': "Render Time", 
+                'tcp_time': "TCP Connect Time",
+                'tls_time': "TLS Handshake Time",
+                'page_weight': "Page Weight"
             }
             
-            runner = PlaywrightMiteRunner(config)
-            await runner.start()
-            
-            page = await runner.new_page()
-            metrics = await runner.goto(page, 'https://playwright.dev/')
-            
-            results[browser] = metrics['load_time']
-            print(f"{browser}: {metrics['load_time']:.2f}ms")
-            
-            await runner.stop()
-            
-            # Give time for cleanup
-            await asyncio.sleep(0.1)
-            
-        except Exception as e:
-            print(f" {browser} failed: {e}")
-            results[browser] = None
-            # Ensure cleanup even on error
-            try:
-                await runner.stop()
-                await asyncio.sleep(0.1)
-            except:
-                pass
+            for key, label in metrics_labels.items():
+                if key in data:
+                    if key == 'page_weight':
+                        print(f"{label}: {data[key]} bytes")
+                    else:
+                        print(f"{label}: {data[key]:.4f}s")
+                
+        print("\n" + "=" * 60)
+
+
+
+@mite_playwright(wire=True)
+async def metrics_demo_network_tracking(ctx):
+    """Demonstrate network request tracking with wire=True"""
+    print("\n Starting Network Tracking Demo...")
+    page = await ctx.browser.new_page()
+    # Navigate and automatically track network requests
+    await ctx.browser.get("https://httpbin.org/json", page)
     
-    print("\nPerformance Summary:")
-    for browser, time_ms in results.items():
-        if time_ms:
-            print(f"  {browser}: {time_ms:.2f}ms")
-        else:
-            print(f"  {browser}: Failed")
+    # Show tracked requests
+    requests = ctx.browser.requests
+    print(f"Total network requests tracked: {len(requests)}")
+    
+    if requests:
+        print("\n Network Requests:")
+        for i, req in enumerate(requests[:3], 1):  # Show first 3
+            print(f"  {i}. {req['method']} {req['url']}")
 
 
-def scenario():
-    return [["mite_playwright.mite_playwright_example:test_performance_comparison_journey", None, lambda s, e: 1]]
-
+async def main():
+    """Main function demonstrating metrics visualization"""
+    print("Mite Playwright Metrics Examples")
+    print("=" * 50)
+    
+    ctx = MockContext()
+    try:        
+        print("\nNetwork Tracking Test")
+        await metrics_demo_network_tracking(ctx)
+        
+    except Exception as e:
+        print(f" Error during execution: {e}")
+    
+    ctx.show_metrics_summary()
 
 
 if __name__ == "__main__":
-    """Main test execution"""
-    print("Starting Playwright adapter tests...\n")
-    
-    try:
-        # Run basic functionality test
-        success = asyncio.run(test_playwright_adapter())
-        
-        if success:
-            # Run performance comparison if basic test passed
-            asyncio.run(test_performance_comparison_journey())
-        
-        print("\n" + "=" * 50)
-        if success:
-            print("All tests completed successfully!")
-        else:
-            print("Some tests failed. Check the error messages above.")
-            
-    except KeyboardInterrupt:
-        print("\nTests interrupted by user")
-    except Exception as e:
-        print(f"\nUnexpected error: {e}")
+    asyncio.run(main())
