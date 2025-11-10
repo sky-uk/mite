@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
 
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
+from playwright.async_api import async_playwright, Page
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
