@@ -92,6 +92,7 @@ Issues = "https://github.com/sky-uk/mite/issues"
 
 [tool.hatch.version]
 source = "vcs"
+raw-options = { tag_regex = "^mite-v(?P<version>\\d+\\.\\d+\\.\\d+)$", git_describe_command = "git describe --dirty --tags --long --match 'mite-v*'" }
 
 [tool.hatch.build.hooks.vcs]
 version-file = "mite/_version.py"
