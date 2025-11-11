@@ -238,17 +238,21 @@ lint.ignore = [
     "I001",  # Import block is un-sorted or un-formatted
 ]
 
-# Exclude directories (from old flake8 config)
 exclude = [
     ".git",
-    ".tox",
-    "build",
-    "dist",
     "__pycache__",
     ".eggs",
     "*.egg-info",
+    "pyproject.toml",
+]
+
+extend-exclude = [
+    "acurl",
+    "docs",
     ".venv",
     "venv",
+    "build",
+    "dist",
 ]
 
 [tool.ruff.format]

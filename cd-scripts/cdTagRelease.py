@@ -65,7 +65,7 @@ def main():
 
     if not any([opts["--major"], opts["--minor"], opts["--patch"]]):
         logger.error(
-            f"The job requires on option between major, minor or patch to know how to increment the version. Aborting.'"
+            "The job requires on option between major, minor or patch to know how to increment the version. Aborting.'"
         )
         sys.exit(1)
 
