@@ -257,118 +257,43 @@ class _PlaywrightWrapper:
         page = self._get_page(page)
         return JsMetricsContext(self, page)
 
-    async def wait_for_elements(self, locator, timeout=5000, page: Page = None):
-        """Wait for elements to be present"""
-        page = self._get_page(page)
-
+    async def login(self, page: Page, login_url: str, username: str, password: str,
+                   username_selector: str = "input[name='username']",
+                   password_selector: str = "input[name='password']", 
+                   submit_selector: str = "button[type='submit']",
+                   success_url_pattern: str = None,
+                   timeout: int = 30000,
+                   **options):
+        """
+        Playwright-style login with automatic metrics collection
+        """
         try:
-            return await page.wait_for_selector(
-                locator, timeout=timeout, state="attached"
-            )
-        except Exception as e:
-            raise MiteError(
-                f"Timed out trying to find elements '{locator}' in the dom"
-            ) from e
-
-    async def wait_for_element(self, locator, timeout=5000, page: Page = None):
-        """Wait for element to be present"""
-        page = self._get_page(page)
-
-        try:
-            return await page.wait_for_selector(locator, timeout=timeout)
-        except Exception as e:
-            raise MiteError(
-                f"Timed out trying to find element '{locator}' in the dom"
-            ) from e
-
-    async def wait_for_url(self, url_pattern, timeout=5000, page: Page = None):
-        """Wait for URL to match pattern"""
-        page = self._get_page(page)
-
-        try:
-            await page.wait_for_url(url_pattern, timeout=timeout)
-            return True
-        except Exception as e:
-            raise MiteError(f"Timed out waiting for url to be '{url_pattern}'") from e
-
-    async def switch_to_default(self, page: Page = None):
-        page = self._get_page(page)
-        # In Playwright, we can access the main frame directly
-        return page.main_frame
-
-    async def switch_to_iframe(self, locator, page: Page = None):
-        page = self._get_page(page)
-        element = await page.wait_for_selector(locator)
-        frame = await element.content_frame()
-        return frame
-
-    def current_url(self, page: Page = None):
-        """Get current URL (Selenium-style interface)"""
-        page = self._get_page(page)
-        return page.url
-
-    async def click(self, locator, page: Page = None, **options):
-        """Click element by locator (Selenium-style interface)"""
-        page = self._get_page(page)
-
-        try:
-            await page.click(locator, **options)
-            # Send metrics after click in case it triggers navigation
+            # Navigate to login page with metrics
+            await self.goto(page, login_url)
+            
+            # Wait for login form to be ready
+            await page.wait_for_selector(username_selector, timeout=timeout)
+            
+            # Fill login credentials
+            await page.fill(username_selector, username, **options)
+            await page.fill(password_selector, password, **options)
+            
+            # Submit login form
+            await page.click(submit_selector, **options)
+            
+            # Wait for navigation/redirect after login
+            if success_url_pattern:
+                await page.wait_for_url(success_url_pattern, timeout=timeout)
+            else:
+                await page.wait_for_load_state('networkidle', timeout=timeout)
+            
+            # Collect metrics after successful login
             await self._send_page_load_metrics(page)
-        except Exception as e:
-            raise MiteError(f"Failed to click element '{locator}'") from e
-
-    async def fill(self, locator, value, page: Page = None, **options):
-        """Fill input element with value (Selenium-style interface)"""
-        page = self._get_page(page)
-
-        try:
-            await page.fill(locator, value, **options)
-        except Exception as e:
-            raise MiteError(
-                f"Failed to fill element '{locator}' with value '{value}'"
-            ) from e
-
-    async def login(
-        self,
-        login_url,
-        username,
-        password,
-        username_locator="username",
-        password_locator="password",
-        submit_locator="button[type='submit']",
-        page: Page = None,
-        wait_for_redirect=True,
-        success_url_pattern=None,
-        **options,
-    ):
-        """Perform login with automatic form handling and metrics collection"""
-        page = page or await self.new_page() if not self._pages else self._pages[0]
-
-        try:
-            await self.get(login_url, page)
-            await page.wait_for_selector(username_locator, timeout=self._browser_timeout)
-            await page.fill(username_locator, username, **options)
-            await page.fill(password_locator, password, **options)
-            await page.click(submit_locator, **options)
-
-            if wait_for_redirect:
-                if success_url_pattern:
-                    await page.wait_for_url(
-                        success_url_pattern, timeout=self._browser_navigation_timeout
-                    )
-                else:
-                    await page.wait_for_load_state(
-                        "networkidle", timeout=self._browser_navigation_timeout
-                    )
-                await self._send_page_load_metrics(page)
-
+            
             return page
-
+            
         except Exception as e:
-            raise MiteError(
-                f"Failed to login at '{login_url}' with username '{username}'"
-            ) from e
+            raise MiteError(f"Login failed for user '{username}' at '{login_url}': {str(e)}")
 
     @property
     def pages(self):
