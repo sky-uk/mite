@@ -86,6 +86,8 @@ Documentation = "https://sky-uk.github.io/mite/"
 Repository = "https://github.com/sky-uk/mite/"
 Issues = "https://github.com/sky-uk/mite/issues"
 
+[project.scripts]
+mite = "mite.__main__:main"
 
 
 # Hatch configuration ##############################################
@@ -145,13 +147,20 @@ python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.perf-test]
+features = ["all", "dev"]
 dependencies = [
-    "mite[all]",
-    "mite[dev]",
+    "aiohttp",
+    "sanic",
+    "psutil",
+    "pandas",
+    "altair",
 ]
 
+[tool.hatch.envs.perf-test.env-vars]
+MITE_PERFTEST_OUT = "output"
+
 [tool.hatch.envs.perf-test.scripts]
-perf-test = "test/perf/run-perftest.sh {args:}"
+perf-test = "python test/perf/perftest.py {args:}"
 
 [[tool.hatch.envs.perf-test.matrix]]
 python = ["3.11"] # Extend to 3.10 as we should support this.
