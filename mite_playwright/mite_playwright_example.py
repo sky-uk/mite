@@ -1,112 +1,52 @@
 """
-Mite Playwright Example with Metrics Visualization
-
+Simple Mite Playwright Example - Getting Metrics
 """
-
 import asyncio
-import time
 
 from playwright_runner import mite_playwright
 
 
+# Mock context for standalone testing
 class MockContext:
     def __init__(self):
         self.config = {
             "browser_name": "chromium",
-            "browser_headless": False,  # Set to False to see browser actions
-            "browser_viewport": {"width": 1280, "height": 720},
-            "browser_timeout": 30000,
+            "browser_headless": True,  # Set to False to see browser
         }
-        self.browser = None
-        self.raw_webdriver = None
-        self.collected_metrics = []
 
     def send(self, metric_name, **kwargs):
-        """Enhanced send method to display metrics in real-time"""
-        print(f"\nMETRIC COLLECTED: {metric_name}")
-        print("=" * 50)
+        print(f" METRIC: {metric_name}")
         for key, value in kwargs.items():
             if isinstance(value, float):
-                print(f"  {key}: {value:.4f}s")
+                print(f"   {key}: {value:.4f}")
             else:
-                print(f"  {key}: {value}")
-
-        # Store metrics for later analysis
-        self.collected_metrics.append(
-            {"name": metric_name, "data": kwargs, "timestamp": time.time()}
-        )
-
-    def show_metrics_summary(self):
-        """Display a comprehensive summary of all collected metrics"""
-        if not self.collected_metrics:
-            print(" No metrics collected.")
-            return
-
-        print("\n METRICS SUMMARY")
-        print("=" * 60)
-
-        for i, metric in enumerate(self.collected_metrics, 1):
-            print(f"\nMetric #{i}: {metric['name']}")
-            print(
-                f"Timestamp: {time.strftime('%H:%M:%S', time.localtime(metric['timestamp']))}"
-            )
-
-            # Show key performance indicators
-            data = metric["data"]
-            metrics_labels = {
-                "total_time": "Total Page Load Time",
-                "dns_lookup_time": "DNS Lookup",
-                "time_to_first_byte": "Time to First Byte",
-                "dom_interactive": "DOM Interactive",
-                "first_contentful_paint": "First Contentful Paint",
-                "first_paint": "First Paint",
-                "render_time": "Render Time",
-                "tcp_time": "TCP Connect Time",
-                "tls_time": "TLS Handshake Time",
-                "page_weight": "Page Weight",
-            }
-
-            for key, label in metrics_labels.items():
-                if key in data:
-                    if key == "page_weight":
-                        print(f"{label}: {data[key]} bytes")
-                    else:
-                        print(f"{label}: {data[key]:.4f}s")
-
-        print("\n" + "=" * 60)
+                print(f"   {key}: {value}")
 
 
 @mite_playwright
-async def basic_navigation_test(ctx):
-    """Basic navigation test using wrapper's goto() WITH automatic metrics"""
-    print("\n🚀 Starting Basic Navigation Demo...")
-    page = await ctx.browser.new_page()
-    
-    # Use wrapper's goto method - combines page.goto() + automatic metrics!
-    await ctx.browser.goto(page, "https://httpbin.org/json")
-    # # Get page title
-    # title = await page.title()
-    # print(f"✅ Page loaded successfully: {title}")
-    
-    await page.close()
+async def simple_page_test(ctx):
+    """Simple test that collects metrics automatically"""
 
-
-
-async def main():
-    """Main function demonstrating basic Playwright functionality"""
-    print("🎭 Mite Playwright Examples")
-    print("=" * 50)
-
-    ctx = MockContext()
     try:
-        print("\n🧪 Running Basic Navigation Test")
-        await basic_navigation_test(ctx)
+        # Create a new page
+        page = await ctx.browser.new_page()
+
+        # Navigate to a page - metrics are collected automatically
+        response = await ctx.browser.goto(page, "https://httpbin.org/get")
+
+        print(f"Status: {response.status}")
+        print(f"URL: {response.url}")
+
+        # Interact with the page
+        await page.wait_for_load_state("networkidle")
+
+        print("Test completed - metrics sent to mite automatically")
 
     except Exception as e:
-        print(f"❌ Error during execution: {e}")
-
-    ctx.show_metrics_summary()
+        print(f" Simple page test error: {e}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+
+    ctx = MockContext()
+    asyncio.run(simple_page_test(ctx))

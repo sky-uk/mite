@@ -1,100 +1,88 @@
 # Mite Playwright Adapter
 
-A streamlined Playwright adapter for the mite performance testing framework, providing browser automation with comprehensive performance metrics.
+A high-performance Playwright adapter for the mite load testing framework, optimized for native metrics collection and browser automation.
 
 ## Features
 
-- **Familiar API**: Intuitive methods (`get`, `click`, `fill`, `login`)
-- **Automatic Performance Metrics**: Core Web Vitals, timing data, resource loading
-- **Mite Framework Integration**: Seamless integration with existing mite workflows  
-- **Multi-Browser Support**: Chromium, Firefox, and WebKit
-- **Zero Configuration**: Works out of the box with sensible defaults
+- ** Native Playwright Integration**: Full async/await support with modern browser automation
+- ** Real Timing Metrics**: Collects actual network timing using correct Playwright APIs
+- ** Multi-Browser Support**: Chromium, Firefox, and WebKit
+- ** Advanced Configuration**: Comprehensive browser and context configuration options
+- ** Network Interception**: Built-in request/response interception capabilities
+- ** Automatic Login**: Pre-built login functionality with metrics collection
 
-## Installation
+## 📦 Installation
 
 ```bash
 pip install playwright
-playwright install
+pip install mite-playwright
 ```
 
-## Quick Start
+##  Quick Start
 
 ```python
-from mite_playwright import mite_playwright
+from _PlaywrightWireWrapper import mite_playwright
 
 @mite_playwright
-async def test_example(ctx):
-    """Simple test with automatic metrics collection"""
-    await ctx.browser.get("https://example.com")
-    await ctx.browser.click("button")
-    await ctx.browser.fill("input[name='search']", "test query")
+async def test_website_performance(ctx):
+    # Create a new page
+    page = await ctx.browser.new_page()
+    
+    # Navigate with automatic native metrics collection
+    await ctx.browser.goto(page, "https://example.com")
+        
 ```
 
-## Usage Examples
+##  Available Native Metrics
 
-### Basic Test with Login
+The adapter collects **real timing data** using Playwright's native timing APIs with correct property names:
 
-```python
-from mite_playwright import mite_playwright
+###  Network Timing Metrics
+- `dns_lookup_time` - DNS resolution duration (from `domainLookupStart/End`)
+- `tcp_time` - TCP connection establishment (from `connectStart/End`)
+- `tls_time` - TLS handshake duration (from `secureConnectionStart/connectEnd`)
+- `time_to_first_byte` - Network TTFB (from `requestStart/responseStart`)
+- `time_to_last_byte` - Complete response time (from `requestStart/responseEnd`)
+- `total_time` - Total request duration (from `requestStart/responseEnd`)
 
-@mite_playwright  
-async def login_test(ctx):
-    """Test login flow with built-in helper"""
-    await ctx.browser.get("https://app.example.com")
-    await ctx.browser.login("user@example.com", "password123")
-    await ctx.browser.wait_for_element(".dashboard")
+###  Request/Response Metrics  
+- `request_start_time` - Request initiation timestamp (from `requestStart`)
+- `response_start_time` - Response start timestamp (from `responseStart`)
+- `response_end_time` - Response completion timestamp (from `responseEnd`)
+- `response_size` - Response content size (from headers)
+- `status_code` - HTTP response status
+- `url` - Request URL
+
+### Execution Metrics
+- `execution_time` - Context execution duration
+
+##  Configuration
+
+### Basic Browser Configuration
+
+```
+config = {
+    "browser_name": "chromium",  # chromium, firefox, webkit
+    "browser_headless": True,
+    "browser_viewport": {"width": 1280, "height": 720},
+    "browser_timeout": 30000,
+    "browser_navigation_timeout": 30000,
+}
+
 ```
 
-### Direct Browser Usage
 
-```python
-from mite_playwright import PlaywrightWrapper
+##  Performance Benefits
 
-async def standalone_test():
-    async with PlaywrightWrapper() as browser:
-        await browser.get("https://example.com")
-        await browser.click("nav a[href='/about']")
-```
+### Fixed Native Timing Collection
 
-##  Performance Metrics
+This adapter now uses **correct Playwright timing property names**:
 
-Automatically collected metrics include:
-
-- **Core Web Vitals**: FCP, LCP timing
-- **Navigation Timing**: DNS, TCP, DOM interactive, load complete
-- **Resource Loading**: JavaScript resources, network requests
-
-## API Reference
-
-### Core Components
-
-| Component | Purpose |
-|-----------|---------|
-| `mite_playwright` | Decorator for mite test functions |
-| `PlaywrightWrapper` | Direct browser automation |
-| `PlaywrightWireWrapper` | Network interception support |
-| `JsMetricsContext` | Performance metrics collection |
-
-### Browser Methods
-
-| Method | Description | Example |
-|--------|-------------|---------|
-| `get(url)` | Navigate with metrics | `await browser.get("https://example.com")` |
-| `click(selector)` | Click element | `await browser.click("button.submit")` |
-| `fill(selector, text)` | Fill input | `await browser.fill("input[name='email']", "user@example.com")` |
-| `wait_for_element(selector)` | Wait for element | `await browser.wait_for_element(".results")` |
-| `login(username, password)` | Automated login | `await browser.login("user", "pass")` |
-
-##  Examples
-
-See example files for complete demonstrations:
-
-- **`mite_playwright_example.py`**: Comprehensive metrics collection demonstration
-
-### Running Examples
-
-```bash
-python mite_playwright_example.py
-```
-
+| Metric | Playwright Source | Description |
+|--------|------------------|-------------|
+| **DNS Lookup** | `domainLookupStart/End` | Real DNS resolution timing |
+| **TCP Connect** | `connectStart/End` | Actual TCP connection time |
+| **TLS Handshake** | `secureConnectionStart/connectEnd` | SSL/TLS negotiation |
+| **TTFB** | `requestStart/responseStart` | True time to first byte |
+| **Total Time** | `requestStart/responseEnd` | Complete request duration |
 

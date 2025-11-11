@@ -108,133 +108,66 @@ class _PlaywrightWrapper:
             raise MiteError("No page available")
         return page
 
-    def _browser_has_timing_capabilities(self):
-        """All modern browsers support performance timing"""
-        return True
-
-    def _calculate_timings(self, timings):
-        """Calculate TCP and TLS timing based on connection type"""
-        is_tls = timings["name"].startswith("https")
-
-        if is_tls:
-            tcp_time = timings["secureConnectionStart"] - timings["connectStart"]
-            tls_time = timings["connectEnd"] - timings["secureConnectionStart"]
-        else:
-            tcp_time = timings["connectEnd"] - timings["connectStart"]
-            tls_time = 0
-            if tls_time == 0:
-                logger.info("Secure TLS connection not used, defaulting tls_time to 0")
-
-        return tcp_time, tls_time
-
-    async def _send_page_load_metrics(self, page: Page):
-        """Send page load metrics to mite context"""
-        if not self._browser_has_timing_capabilities():
-            return
-
+    async def _send_page_load_metrics_native(self, page: Page, response=None):
+        """Send page load metrics using native Playwright APIs"""
         try:
-            # Get performance entries
-            performance_entries = await page.evaluate(
-                """
-                () => performance.getEntriesByType('navigation')
-            """
-            )
+            metrics = {}
 
-            paint_entries = await page.evaluate(
-                """
-                () => performance.getEntriesByType('paint')
-            """
-            )
+            if response and response.request.timing:
+                timing = response.request.timing
 
-            _timings = self._extract_entries(performance_entries)
-            timings = _timings[0] if _timings else None
+                # Playwright timing uses standard Performance API property names
+                dns_start = timing.get("domainLookupStart", 0)
+                dns_end = timing.get("domainLookupEnd", 0)
+                connect_start = timing.get("connectStart", 0)
+                connect_end = timing.get("connectEnd", 0)
+                secure_start = timing.get("secureConnectionStart", 0)
+                request_start = timing.get("requestStart", 0)
+                response_start = timing.get("responseStart", 0)
+                response_end = timing.get("responseEnd", 0)
 
-            if timings:
-                protocol = timings.get("nextHopProtocol")
-                if protocol and protocol != "http/1.1":
-                    logger.warning(
-                        f"Timings may be inaccurate as protocol is not http/1.1: {protocol}"
-                    )
-                tcp_time, tls_time = self._calculate_timings(timings)
-                metrics = {
-                    "dns_lookup_time": timings["domainLookupEnd"]
-                    - timings["domainLookupStart"],
-                    "dom_interactive": timings["domInteractive"],
-                    "js_onload_time": timings["domContentLoadedEventEnd"]
-                    - timings["domContentLoadedEventStart"],
-                    "page_weight": timings.get("transferSize", 0),
-                    "render_time": timings["domInteractive"] - timings["responseEnd"],
-                    "tcp_time": tcp_time,
-                    "time_to_first_byte": timings["responseStart"]
-                    - timings["connectEnd"],
-                    "time_to_interactive": timings["domInteractive"]
-                    - timings["requestStart"],
-                    "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
-                    "tls_time": tls_time,
-                    "total_time": timings["duration"],
-                }
-            else:
-                metrics = {}
+                # Calculate TLS timing
+                if secure_start > 0:
+                    tcp_time = (secure_start - connect_start) / 1000
+                    tls_time = (connect_end - secure_start) / 1000
+                else:
+                    tcp_time = (connect_end - connect_start) / 1000
+                    tls_time = 0
 
-            _paint_timings = self._extract_entries(paint_entries, expected=2)
-            paint_timings = (
-                self._format_paint_timings(_paint_timings) if _paint_timings else None
-            )
-            if paint_timings:
-                metrics["first_contentful_paint"] = paint_timings.get(
-                    "first-contentful-paint", 0
+                metrics.update(
+                    {
+                        # Network timing (native) - converted to seconds
+                        "dns_lookup_time": (dns_end - dns_start) / 1000,
+                        "tcp_time": tcp_time,
+                        "tls_time": tls_time,
+                        "time_to_first_byte": (response_start - request_start) / 1000,
+                        "time_to_last_byte": (response_end - request_start) / 1000,
+                        "total_time": (response_end - request_start) / 1000,
+                        # Request/Response timing (native) - converted to seconds
+                        "request_start_time": request_start / 1000,
+                        "response_start_time": response_start / 1000,
+                        "response_end_time": response_end / 1000,
+                    }
                 )
-                metrics["first_paint"] = paint_timings.get("first-paint", 0)
+
+            # Add response-level metrics (native)
+            if response:
+                content_length = response.headers.get("content-length", "0")
+                metrics.update(
+                    {
+                        "status_code": response.status,
+                        "url": response.url,
+                        "response_size": int(content_length)
+                        if content_length.isdigit()
+                        else 0,
+                    }
+                )
 
             if metrics:
-                self._context.send(
-                    "playwright_page_load_metrics",
-                    **self._extract_and_convert_metrics_to_seconds(metrics),
-                )
+                self._context.send("playwright_page_load_metrics", **metrics)
 
         except Exception as e:
-            logger.error(f"Failed to collect page load metrics: {e}")
-
-    def _extract_entries(self, entries, expected=1):
-        if len(entries) == expected:
-            return entries[:expected]
-        logger.error(
-            f"Performance entries did not return the expected count: expected {expected} - actual {len(entries)}"
-        )
-        return
-
-    def _format_paint_timings(self, entries):
-        return {metric["name"]: metric["startTime"] for metric in entries}
-
-    def _extract_and_convert_metrics_to_seconds(self, metrics):
-        converted_metrics = {}
-        non_time_based_metrics = ["page_weight", "resource_path"]
-        for k, v in metrics.items():
-            if k not in non_time_based_metrics:
-                converted_metrics[k] = self._convert_ms_to_seconds(v)
-            else:
-                converted_metrics[k] = v
-        return converted_metrics
-
-    def _convert_ms_to_seconds(self, value_ms):
-        return value_ms / 1000
-
-    async def _retrieve_javascript_metrics(self, page: Page):
-        try:
-            return await page.evaluate(
-                """
-                () => performance.getEntriesByType('resource')
-            """
-            )
-        except Exception:
-            logger.error("Failed to retrieve resource performance entries")
-            return []
-
-    async def _clear_resource_timings(self, page: Page):
-        try:
-            await page.evaluate("() => performance.clearResourceTimings()")
-        except Exception as e:
-            logger.error(f"Failed to clear resource timings: {e}")
+            logger.error(f"Failed to collect native page load metrics: {e}")
 
     async def new_page(self) -> Page:
         """Create a new page and track it"""
@@ -245,55 +178,58 @@ class _PlaywrightWrapper:
         self._pages.append(page)
         return page
 
-
     async def goto(self, page: Page, url: str, **options):
         """Navigate page to URL with options"""
         response = await page.goto(url, **options)
-        await self._send_page_load_metrics(page)
+        await self._send_page_load_metrics_native(page, response)
         return response
 
-    def get_js_metrics_context(self, page: Page = None):
-        """Get JavaScript metrics context"""
-        page = self._get_page(page)
-        return JsMetricsContext(self, page)
-
-    async def login(self, page: Page, login_url: str, username: str, password: str,
-                   username_selector: str = "input[name='username']",
-                   password_selector: str = "input[name='password']", 
-                   submit_selector: str = "button[type='submit']",
-                   success_url_pattern: str = None,
-                   timeout: int = 30000,
-                   **options):
+    async def login(
+        self,
+        page: Page,
+        login_url: str,
+        username: str,
+        password: str,
+        username_selector: str = "input[name='username']",
+        password_selector: str = "input[name='password']",
+        submit_selector: str = "button[type='submit']",
+        success_url_pattern: str = None,
+        timeout: int = 30000,
+        **options,
+    ):
         """
-        Playwright-style login with automatic metrics collection
+        Playwright login with automatic metrics collection
         """
         try:
             # Navigate to login page with metrics
             await self.goto(page, login_url)
-            
-            # Wait for login form to be ready
             await page.wait_for_selector(username_selector, timeout=timeout)
-            
+
             # Fill login credentials
             await page.fill(username_selector, username, **options)
             await page.fill(password_selector, password, **options)
-            
-            # Submit login form
             await page.click(submit_selector, **options)
-            
+
             # Wait for navigation/redirect after login
             if success_url_pattern:
                 await page.wait_for_url(success_url_pattern, timeout=timeout)
             else:
-                await page.wait_for_load_state('networkidle', timeout=timeout)
-            
+                await page.wait_for_load_state("networkidle", timeout=timeout)
+
             # Collect metrics after successful login
-            await self._send_page_load_metrics(page)
-            
+            await self._send_page_load_metrics_native(page)
+
             return page
-            
+
         except Exception as e:
-            raise MiteError(f"Login failed for user '{username}' at '{login_url}': {str(e)}")
+            raise MiteError(
+                f"Login failed for user '{username}' at '{login_url}': {str(e)}"
+            )
+
+    def get_playwright_metrics_context(self, page: Page = None):
+        """Get Playwright metrics context"""
+        page = self._get_page(page)
+        return PlaywrightMetricsContext(self, page)
 
     @property
     def pages(self):
@@ -311,26 +247,45 @@ class _PlaywrightWrapper:
         return self._browser
 
 
-class JsMetricsContext:
+class PlaywrightMetricsContext:
     def __init__(self, browser_wrapper, page: Page):
         self._browser = browser_wrapper
         self._page = page
-        self.results = None
+        self.responses = []
         self.start_time = None
         self.execution_time = None
+        self._response_handler = None
 
     async def __aenter__(self):
         self.start_time = time.time()
-        await self._browser._clear_resource_timings(self._page)
+
+        # Set up response listener for native metrics
+        def on_response(response):
+            self.responses.append(
+                {
+                    "url": response.url,
+                    "status": response.status,
+                    "timing": response.request.timing,
+                    "size": len(str(response.headers.get("content-length", "0"))),
+                }
+            )
+
+        # Store the handler so we can remove it later
+        self._response_handler = on_response
+        self._page.on("response", self._response_handler)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        self.results = await self._browser._retrieve_javascript_metrics(self._page)
         self.execution_time = time.time() - self.start_time
+        # Remove response listener
+        try:
+            self._page.remove_listener("response", self._response_handler)
+        except Exception as e:
+            logger.warning(f"Error removing response listener: {e}")
 
 
 class _PlaywrightWireWrapper(_PlaywrightWrapper):
-    """Wrapper that provides network interception capabilities similar to Selenium Wire"""
+    """Wrapper that provides network interception capabilities"""
 
     def __init__(self, context):
         super().__init__(context)
@@ -392,7 +347,6 @@ class _PlaywrightWireWrapper(_PlaywrightWrapper):
             await route.continue_()
 
     async def wait_for_request(self, url_pattern, timeout=5000):
-        """Wait for a request matching URL pattern (Selenium Wire style)"""
         start_time = time.time()
 
         while time.time() - start_time < timeout / 1000:
@@ -405,11 +359,9 @@ class _PlaywrightWireWrapper(_PlaywrightWrapper):
 
     @property
     def requests(self):
-        """Get all tracked requests (Selenium Wire style)"""
         return [req for req in self._requests if req["type"] == "request"]
 
     def add_request_interceptor(self, request_interceptor):
-        """Add request interceptor (Selenium Wire style)"""
         self._request_interceptor = request_interceptor
 
 
@@ -427,11 +379,6 @@ async def _playwright_context_manager(context, wire):
 def mite_playwright(*args, wire=False):
     """
     Decorator for Playwright-based mite test functions.
-    Usage:
-        @mite_playwright
-        async def test_function(ctx):
-            page = await ctx.browser.new_page()
-            await ctx.browser.get("https://example.com", page)
     """
 
     def wrapper_factory(func):
