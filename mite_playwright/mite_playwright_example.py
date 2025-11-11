@@ -76,36 +76,34 @@ class MockContext:
         print("\n" + "=" * 60)
 
 
-@mite_playwright(wire=True)
-async def metrics_demo_network_tracking(ctx):
-    """Demonstrate network request tracking with wire=True"""
-    print("\n Starting Network Tracking Demo...")
+@mite_playwright
+async def basic_navigation_test(ctx):
+    """Basic navigation test using wrapper's goto() WITH automatic metrics"""
+    print("\n🚀 Starting Basic Navigation Demo...")
     page = await ctx.browser.new_page()
-    # Navigate and automatically track network requests
-    await ctx.browser.get("https://httpbin.org/json", page)
+    
+    # Use wrapper's goto method - combines page.goto() + automatic metrics!
+    await ctx.browser.goto(page, "https://httpbin.org/json")
+    # # Get page title
+    # title = await page.title()
+    # print(f"✅ Page loaded successfully: {title}")
+    
+    await page.close()
 
-    # Show tracked requests
-    requests = ctx.browser.requests
-    print(f"Total network requests tracked: {len(requests)}")
-
-    if requests:
-        print("\n Network Requests:")
-        for i, req in enumerate(requests[:3], 1):  # Show first 3
-            print(f"  {i}. {req['method']} {req['url']}")
 
 
 async def main():
-    """Main function demonstrating metrics visualization"""
-    print("Mite Playwright Metrics Examples")
+    """Main function demonstrating basic Playwright functionality"""
+    print("🎭 Mite Playwright Examples")
     print("=" * 50)
 
     ctx = MockContext()
     try:
-        print("\nNetwork Tracking Test")
-        await metrics_demo_network_tracking(ctx)
+        print("\n🧪 Running Basic Navigation Test")
+        await basic_navigation_test(ctx)
 
     except Exception as e:
-        print(f" Error during execution: {e}")
+        print(f"❌ Error during execution: {e}")
 
     ctx.show_metrics_summary()
 

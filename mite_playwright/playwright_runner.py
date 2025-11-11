@@ -245,17 +245,6 @@ class _PlaywrightWrapper:
         self._pages.append(page)
         return page
 
-    async def get(self, url, page: Page = None):
-        """Navigate to URL and send metrics (Selenium-style interface)"""
-        if page is None:
-            if not self._pages:
-                page = await self.new_page()
-            else:
-                page = self._pages[0]
-
-        await page.goto(url)
-        await self._send_page_load_metrics(page)
-        return page
 
     async def goto(self, page: Page, url: str, **options):
         """Navigate page to URL with options"""
