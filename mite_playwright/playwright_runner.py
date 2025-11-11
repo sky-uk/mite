@@ -108,8 +108,8 @@ class _PlaywrightWrapper:
             raise MiteError("No page available")
         return page
 
-    async def _send_page_load_metrics_native(self, page: Page, response=None):
-        """Send page load metrics using native Playwright APIs"""
+    async def _send_page_load_metrics(self, page: Page, response=None):
+        """Send page load metrics using Playwright APIs"""
         try:
             metrics = {}
 
@@ -136,21 +136,21 @@ class _PlaywrightWrapper:
 
                 metrics.update(
                     {
-                        # Network timing (native) - converted to seconds
+                        # Network timing  - converted to seconds
                         "dns_lookup_time": (dns_end - dns_start) / 1000,
                         "tcp_time": tcp_time,
                         "tls_time": tls_time,
                         "time_to_first_byte": (response_start - request_start) / 1000,
                         "time_to_last_byte": (response_end - request_start) / 1000,
                         "total_time": (response_end - request_start) / 1000,
-                        # Request/Response timing (native) - converted to seconds
+                        # Request/Response timing  - converted to seconds
                         "request_start_time": request_start / 1000,
                         "response_start_time": response_start / 1000,
                         "response_end_time": response_end / 1000,
                     }
                 )
 
-            # Add response-level metrics (native)
+            # Add response-level metrics
             if response:
                 content_length = response.headers.get("content-length", "0")
                 metrics.update(
@@ -181,7 +181,7 @@ class _PlaywrightWrapper:
     async def goto(self, page: Page, url: str, **options):
         """Navigate page to URL with options"""
         response = await page.goto(url, **options)
-        await self._send_page_load_metrics_native(page, response)
+        await self._send_page_load_metrics(page, response)
         return response
 
     async def login(
@@ -217,7 +217,7 @@ class _PlaywrightWrapper:
                 await page.wait_for_load_state("networkidle", timeout=timeout)
 
             # Collect metrics after successful login
-            await self._send_page_load_metrics_native(page)
+            await self._send_page_load_metrics(page)
 
             return page
 
@@ -259,7 +259,7 @@ class PlaywrightMetricsContext:
     async def __aenter__(self):
         self.start_time = time.time()
 
-        # Set up response listener for native metrics
+        # Set up response listener for metrics
         def on_response(response):
             self.responses.append(
                 {
@@ -333,18 +333,14 @@ class _PlaywrightWireWrapper(_PlaywrightWrapper):
 
     async def _route_handler(self, route):
         """Handle route interception"""
-        request = route.request
-
-        if self._request_interceptor:
-            # Call interceptor
-            modified_request = self._request_interceptor(request)
-            if modified_request:
-                # Continue with modified request
-                await route.continue_(**modified_request)
-            else:
-                await route.continue_()
-        else:
-            await route.continue_()
+        modified_request = (
+            self._request_interceptor(route.request)
+            if self._request_interceptor
+            else None
+        )
+        await route.continue_(
+            **modified_request
+        ) if modified_request else await route.continue_()
 
     async def wait_for_request(self, url_pattern, timeout=5000):
         start_time = time.time()
