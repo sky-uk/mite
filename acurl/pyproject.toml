@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8", "wheel", "Cython<3.0"]
+requires = ["setuptools>=64", "wheel", "Cython<3.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "acurl"
-dynamic = ["version"]
+version = "1.0.7"
 description = "An async Curl library."
 readme = "README.md"
 license = "MIT"
@@ -13,7 +13,7 @@ authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
 maintainers = [
-    {name = "Sky Identity NFT team", email = "matthew.ellis@sky.uk"},
+    {name = "Sky Identity NFT team", email = "mite@sky.uk"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -51,12 +51,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "*" = ["*.pyx", "*.pxd", "*.c", "*.h"]
-
-[tool.setuptools_scm]
-root = ".."
-version_file = "src/_version.py"
-tag_regex = "^acurl-v(?P<version>\\d+\\.\\d+\\.\\d+)$"
-git_describe_command = "git describe --dirty --tags --long --match 'acurl-v*'"
 
 # Tool configuration ##############################################
 
