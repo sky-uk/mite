@@ -11,7 +11,7 @@ A high-performance Playwright adapter for the mite load testing framework, optim
 - ** Network Interception**: Built-in request/response interception capabilities
 - ** Automatic Login**: Pre-built login functionality with metrics collection
 
-## 📦 Installation
+## Installation
 
 ```bash
 pip install playwright
