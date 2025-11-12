@@ -46,34 +46,7 @@ async def simple_page_test(ctx):
         print(f" Simple page test error: {e}")
 
 
-# Added test_signup_page_title journey of id portal based on this test https://github.com/sky-uk/sky-id-portal-frontend/blob/main/tools/playwright/e2e/signup/signup.spec.ts#L10
-@mite_playwright
-async def test_signup_page_title(ctx):
-    """Verify Sky ID signup page title - all network metrics collected automatically"""
-    page = await ctx.browser.new_page()
-
-    try:
-        # Navigate and get title - metrics auto-collected
-        response = await ctx.browser.goto(page, "https://id.sky.com/signup")
-        title = await page.title()
-
-        # Verify title and send result
-        expected = "Create account - Sky.com"
-        ctx.send(
-            "title_verification",
-            success=(title == expected),
-            expected=expected,
-            actual=title,
-            status=response.status,
-        )
-
-    except Exception as e:
-        ctx.send("journey_error", error=str(e))
-    finally:
-        await page.close()
-
-
 if __name__ == "__main__":
 
     ctx = MockContext()
-    asyncio.run(test_signup_page_title(ctx))
+    asyncio.run(simple_page_test(ctx))
