@@ -52,9 +52,9 @@ cdef class CurlWrapper:
     cdef object timer_handle
     cdef object loop
 
-    def __cinit__(self, object loop):
+    def __cinit__(self, object loop, int max_connects=100):
         self.multi = curl_multi_init()
-        acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, 1000)  # FIXME: magic number
+        acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)
         acurl_multi_setopt_timercb(self.multi, CURLMOPT_TIMERFUNCTION, start_timeout)
