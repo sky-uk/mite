@@ -82,6 +82,7 @@ cdef extern from "<curl/curl.h>":
     cdef int CURL_LOCK_DATA_COOKIE
     cdef int CURL_LOCK_DATA_DNS
     cdef int CURL_LOCK_DATA_SSL_SESSION
+    cdef int CURL_LOCK_DATA_CONNECT
 
     CURLSH *curl_share_init()
     void curl_share_cleanup(CURLSH* share)

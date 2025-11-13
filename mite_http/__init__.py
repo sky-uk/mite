@@ -35,8 +35,13 @@ class SessionPool:
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
-    def __init__(self):
-        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+    def __init__(self, max_connects=None):
+        # Allow programmatic configuration of max connections
+        # If not provided, uses acurl's default (100)
+        if max_connects is not None:
+            self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop(), max_connects)
+        else:
+            self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
         self._pool = deque()
 
     @asynccontextmanager
@@ -47,19 +52,36 @@ class SessionPool:
         del context.http
 
     @classmethod
-    def decorator(cls, func):
-        @wraps(func)
-        async def wrapper(ctx, *args, **kwargs):
-            loop = asyncio.get_event_loop()
-            try:
-                instance = cls._session_pools[loop]
-            except KeyError:
-                instance = cls()
-                cls._session_pools[loop] = instance
-            async with instance.session_context(ctx):
-                return await func(ctx, *args, **kwargs)
+    def decorator(cls, func=None, max_connects=None):
+        """
+        Decorator to inject HTTP session into context.
+        
+        Can be used as:
+            @mite_http
+            def my_journey(ctx): ...
+            
+        Or with custom max_connects:
+            @mite_http(max_connects=50)
+            def my_journey(ctx): ...
+        """
+        def decorator_wrapper(f):
+            @wraps(f)
+            async def wrapper(ctx, *args, **kwargs):
+                loop = asyncio.get_event_loop()
+                try:
+                    instance = cls._session_pools[loop]
+                except KeyError:
+                    instance = cls(max_connects=max_connects)
+                    cls._session_pools[loop] = instance
+                async with instance.session_context(ctx):
+                    return await f(ctx, *args, **kwargs)
 
-        return wrapper
+            return wrapper
+        
+        # Support both @mite_http and @mite_http(max_connects=50)
+        if func is not None:
+            return decorator_wrapper(func)
+        return decorator_wrapper
 
     async def _checkout(self, context):
         session = self._wrapper.session()
@@ -93,8 +115,27 @@ class SessionPool:
         pass
 
 
-def mite_http(func):
-    return SessionPool.decorator(func)
+def mite_http(func=None, max_connects=None):
+    """
+    Decorator to inject HTTP session into mite context.
+    
+    Usage:
+        @mite_http
+        async def my_journey(ctx):
+            await ctx.http.get("https://example.com")
+    
+    Or with custom connection pool size for memory-constrained environments:
+        @mite_http(max_connects=50)
+        async def my_journey(ctx):
+            await ctx.http.get("https://example.com")
+    
+    Args:
+        func: The function to decorate (when used without parentheses)
+        max_connects: Maximum number of connections to keep in pool (default: 100)
+                     Lower values (25-50) for memory-constrained containers (512MB)
+                     Higher values (200+) for high-throughput scenarios
+    """
+    return SessionPool.decorator(func, max_connects=max_connects)
 
 
 def create_http_cookie(ctx, *args, **kwargs):
