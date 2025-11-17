@@ -2,10 +2,14 @@ from mite.stats import Counter, Histogram, extractor, matcher_by_type
 
 _PAGE_LOAD_METRICS = [
     ("dns_lookup_time", "seconds"),
+    ("js_onload_time", "seconds"),
+    ("page_weight", "seconds"),
+    ("render_time", "seconds"),
     ("tcp_time", "seconds"),
     ("tls_time", "seconds"),
     ("time_to_first_byte", "seconds"),
     ("time_to_last_byte", "seconds"),
+    ("time_to_interactive", "seconds"),
     ("total_time", "seconds"),
     ("request_start_time", "seconds"),
     ("response_start_time", "seconds"),
@@ -24,6 +28,9 @@ _NETWORK_RESOURCE_METRICS = [
     ("response_size", "bytes"),
     ("status_code", "number"),
 ]
+
+_PAINT_METRICS = [("first_contentful_paint", "seconds"), ("first_paint", "seconds")]
+
 
 _CUSTOM_METRICS = [
     ("execution_time", "seconds"),
@@ -62,5 +69,6 @@ STATS = (
         "playwright_network_resource",
         ["transaction", "resource_path"],
     ),
+    *build_metrics(_PAINT_METRICS, "playwright_paint", ["transaction"]),
     *build_metrics(_CUSTOM_METRICS, "playwright", ["transaction"]),
 )
