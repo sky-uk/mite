@@ -6,6 +6,7 @@ from copy import deepcopy
 from functools import wraps
 
 from playwright.async_api import Page, async_playwright
+from playwright.sync_api import sync_playwright, Playwright
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
