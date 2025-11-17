@@ -1,7 +1,6 @@
 """
 Mite Playwright - Simple async wrapper with automatic navigation metrics
 """
-
 import logging
 from functools import wraps
 
@@ -56,7 +55,7 @@ class PlaywrightWrapper:
 
 
 async def collect_metrics(response, context):
-    """Unified metrics collection function for both navigation and paint metrics"""
+    """Collect all metrics in one function"""
     try:
         # Navigation metrics
         metrics = {"url": response.url, "status": response.status}
@@ -65,42 +64,37 @@ async def collect_metrics(response, context):
         if response.request and response.request.timing:
             timing = response.request.timing
 
-            # Calculate TLS timing
-            secure_start = timing.get("secureConnectionStart", 0)
+            # Extract timing data
+            dns_start = timing.get("domainLookupStart", 0)
+            dns_end = timing.get("domainLookupEnd", 0)
             connect_start = timing.get("connectStart", 0)
             connect_end = timing.get("connectEnd", 0)
+            secure_start = timing.get("secureConnectionStart", 0)
+            request_start = timing.get("requestStart", 0)
+            response_start = timing.get("responseStart", 0)
+            response_end = timing.get("responseEnd", 0)
 
-            tcp_time = (
-                (secure_start - connect_start)
-                if secure_start > 0
-                else (connect_end - connect_start)
-            ) / 1000
-            tls_time = (connect_end - secure_start) / 1000 if secure_start > 0 else 0
+            # Calculate TLS timing
+            if secure_start > 0:
+                tcp_time = (secure_start - connect_start) / 1000
+                tls_time = (connect_end - secure_start) / 1000
+            else:
+                tcp_time = (connect_end - connect_start) / 1000
+                tls_time = 0
 
             metrics.update(
                 {
-                    "dns_lookup_time": (
-                        timing.get("domainLookupEnd", 0)
-                        - timing.get("domainLookupStart", 0)
-                    )
-                    / 1000,
+                    # Network timing - converted to seconds
+                    "dns_lookup_time": (dns_end - dns_start) / 1000,
                     "tcp_time": tcp_time,
                     "tls_time": tls_time,
-                    "time_to_first_byte": (
-                        timing.get("responseStart", 0) - timing.get("requestStart", 0)
-                    )
-                    / 1000,
-                    "time_to_last_byte": (
-                        timing.get("responseEnd", 0) - timing.get("requestStart", 0)
-                    )
-                    / 1000,
-                    "total_time": (
-                        timing.get("responseEnd", 0) - timing.get("requestStart", 0)
-                    )
-                    / 1000,
-                    "request_start_time": timing.get("requestStart", 0) / 1000,
-                    "response_start_time": timing.get("responseStart", 0) / 1000,
-                    "response_end_time": timing.get("responseEnd", 0) / 1000,
+                    "time_to_first_byte": (response_start - request_start) / 1000,
+                    "time_to_last_byte": (response_end - request_start) / 1000,
+                    "total_time": (response_end - request_start) / 1000,
+                    # Request/Response timing - converted to seconds
+                    "request_start_time": request_start / 1000,
+                    "response_start_time": response_start / 1000,
+                    "response_end_time": response_end / 1000,
                 }
             )
 
@@ -122,7 +116,6 @@ async def collect_metrics(response, context):
                 () => {
                     const result = {};
                     const nav = performance.getEntriesByType('navigation')[0];
-                    
                     // Paint metrics
                     performance.getEntriesByType('paint').forEach(entry => {
                         if (entry.name === 'first-paint') {
@@ -131,21 +124,18 @@ async def collect_metrics(response, context):
                             result.first_contentful_paint = entry.startTime / 1000;
                         }
                     });
-                    
                     // Advanced metrics from navigation timing
                     if (nav) {
                         result.js_onload_time = (nav.loadEventEnd - nav.navigationStart) / 1000;
                         result.render_time = (nav.loadEventEnd - nav.responseEnd) / 1000;
                         result.time_to_interactive = (nav.domInteractive - nav.navigationStart) / 1000;
-                        
                         // Page weight - sum of all resource transfer sizes
                         let totalSize = nav.transferSize || 0;
                         performance.getEntriesByType('resource').forEach(resource => {
                             totalSize += resource.transferSize || 0;
                         });
                         result.page_weight = totalSize;
-                    }
-                    
+                        }
                     return result;
                 }
             """
@@ -171,8 +161,3 @@ def mite_playwright(func):
             await playwright.stop()
 
     return wrapper
-
-
-# Package metadata
-__version__ = "1.0.0"
-__all__ = ["mite_playwright", "PlaywrightWrapper"]
