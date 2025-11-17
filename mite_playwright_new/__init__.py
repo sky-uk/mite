@@ -4,6 +4,7 @@ Mite Playwright - Simple async wrapper with automatic navigation metrics
 
 import logging
 from functools import wraps
+
 from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
@@ -11,40 +12,46 @@ logger = logging.getLogger(__name__)
 
 class PlaywrightWrapper:
     """Simple wrapper for Playwright objects"""
-    
+
     def __init__(self, wrapped_obj, context):
         self._wrapped = wrapped_obj
         self._context = context
-    
+
     def __getattr__(self, name):
         """Intercept all attribute access"""
         attr = getattr(self._wrapped, name)
-        
+
         # Wrap callables, wrap objects that have methods, return primitives as-is
-        return (self._wrap_method(attr) if callable(attr) else 
-                PlaywrightWrapper(attr, self._context) if hasattr(attr, '__dict__') else 
-                attr)
+        return (
+            self._wrap_method(attr)
+            if callable(attr)
+            else PlaywrightWrapper(attr, self._context)
+            if hasattr(attr, "__dict__")
+            else attr
+        )
 
     def _wrap_method(self, method):
         """Wrap a method with error handling and metrics"""
+
         @wraps(method)
         async def async_wrapper(*args, **kwargs):
             try:
                 result = await method(*args, **kwargs)
-                
+
                 # Send metrics for any method that returns a response object
-                if result and hasattr(result, 'request') and hasattr(result, 'status'):
+                if result and hasattr(result, "request") and hasattr(result, "status"):
                     await collect_metrics(result, self._context)
-                
+
                 # Wrap result if it has methods (likely a complex object)
-                if hasattr(result, '__dict__'):
+                if hasattr(result, "__dict__"):
                     return PlaywrightWrapper(result, self._context)
                 return result
             except Exception as e:
-                self._context.send("playwright_error", 
-                                 method=method.__name__, 
-                                 error=str(e))
+                self._context.send(
+                    "playwright_error", method=method.__name__, error=str(e)
+                )
                 raise
+
         return async_wrapper
 
 
@@ -53,45 +60,65 @@ async def collect_metrics(response, context):
     try:
         # Navigation metrics
         metrics = {"url": response.url, "status": response.status}
-        
+
         # Timing metrics if available
         if response.request and response.request.timing:
             timing = response.request.timing
-            
+
             # Calculate TLS timing
             secure_start = timing.get("secureConnectionStart", 0)
             connect_start = timing.get("connectStart", 0)
             connect_end = timing.get("connectEnd", 0)
-            
-            tcp_time = ((secure_start - connect_start) if secure_start > 0 else (connect_end - connect_start)) / 1000
+
+            tcp_time = (
+                (secure_start - connect_start)
+                if secure_start > 0
+                else (connect_end - connect_start)
+            ) / 1000
             tls_time = (connect_end - secure_start) / 1000 if secure_start > 0 else 0
-            
-            metrics.update({
-                "dns_lookup_time": (timing.get("domainLookupEnd", 0) - timing.get("domainLookupStart", 0)) / 1000,
-                "tcp_time": tcp_time,
-                "tls_time": tls_time,
-                "time_to_first_byte": (timing.get("responseStart", 0) - timing.get("requestStart", 0)) / 1000,
-                "time_to_last_byte": (timing.get("responseEnd", 0) - timing.get("requestStart", 0)) / 1000,
-                "total_time": (timing.get("responseEnd", 0) - timing.get("requestStart", 0)) / 1000,
-                "request_start_time": timing.get("requestStart", 0) / 1000,
-                "response_start_time": timing.get("responseStart", 0) / 1000,
-                "response_end_time": timing.get("responseEnd", 0) / 1000,
-            })
-        
+
+            metrics.update(
+                {
+                    "dns_lookup_time": (
+                        timing.get("domainLookupEnd", 0)
+                        - timing.get("domainLookupStart", 0)
+                    )
+                    / 1000,
+                    "tcp_time": tcp_time,
+                    "tls_time": tls_time,
+                    "time_to_first_byte": (
+                        timing.get("responseStart", 0) - timing.get("requestStart", 0)
+                    )
+                    / 1000,
+                    "time_to_last_byte": (
+                        timing.get("responseEnd", 0) - timing.get("requestStart", 0)
+                    )
+                    / 1000,
+                    "total_time": (
+                        timing.get("responseEnd", 0) - timing.get("requestStart", 0)
+                    )
+                    / 1000,
+                    "request_start_time": timing.get("requestStart", 0) / 1000,
+                    "response_start_time": timing.get("responseStart", 0) / 1000,
+                    "response_end_time": timing.get("responseEnd", 0) / 1000,
+                }
+            )
+
         # Add response size
         content_length = response.headers.get("content-length", "0")
         metrics["response_size"] = int(content_length) if content_length.isdigit() else 0
-        
+
         context.send("playwright_page_load_metrics", **metrics)
-        
+
         # Paint metrics if page available
-        if hasattr(response, 'frame') and hasattr(response.frame, 'page'):
+        if hasattr(response, "frame") and hasattr(response.frame, "page"):
             page = response.frame.page
-            
+
             # Wait for paint events to be available
             await page.wait_for_timeout(500)
-            
-            paint_data = await page.evaluate("""
+
+            paint_data = await page.evaluate(
+                """
                 () => {
                     const result = {};
                     const nav = performance.getEntriesByType('navigation')[0];
@@ -121,17 +148,19 @@ async def collect_metrics(response, context):
                     
                     return result;
                 }
-            """)
-            
+            """
+            )
+
             if paint_data:
                 context.send("playwright_paint_metrics", **paint_data)
-                
+
     except Exception as e:
         logger.warning(f"Metrics collection failed: {e}")
 
 
 def mite_playwright(func):
     """Decorator for async Playwright functions with mite integration"""
+
     @wraps(func)
     async def wrapper(ctx, *args, **kwargs):
         playwright = await async_playwright().start()
@@ -140,7 +169,7 @@ def mite_playwright(func):
             return await func(ctx, wrapped_playwright, *args, **kwargs)
         finally:
             await playwright.stop()
-    
+
     return wrapper
 
 
