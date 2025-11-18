@@ -75,6 +75,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
+    "pytest-httpbin",
     "pytest-httpserver",
     "ruff>=0.1.0",
     "hypothesis", # used in finagle/thrift tests
@@ -166,6 +167,20 @@ perf-test = "python test/perf/perftest.py {args:}"
 
 [[tool.hatch.envs.perf-test.matrix]]
 python = ["3.11"] # Extend to 3.10 as we should support this.
+
+[tool.hatch.envs.acurl-test]
+features = ["all", "dev"]
+dependencies = [
+    "acurl",
+]
+
+[tool.hatch.envs.acurl-test.scripts]
+test = "cd acurl && pytest tests {args:}"
+
+[[tool.hatch.envs.acurl-test.matrix]]
+python = ["3.11"] # Extend to 3.10 as we should support this.
+
+
 
 
 [tool.hatch.envs.lint]

@@ -33,6 +33,8 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
+    "pytest-httpbin",
+    "ruff>=0.1.0",
     "Cython<3.0",
 ]
 
@@ -68,8 +70,8 @@ lint.select = [
 
 lint.ignore = [
     "E501",  # Line too long (ruff formatter handles this)
-    "W503",  # Line break before binary operator
     "E731",  # Lambda assignment
+    "I001",  # isort import order
 ]
 
 exclude = [".git", "build", "dist", ".eggs", ".tox"]
