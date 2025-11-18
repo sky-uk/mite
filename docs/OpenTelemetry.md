@@ -4,12 +4,13 @@ Mite provides optional OpenTelemetry tracing for observing journey execution, tr
 
 ## Features
 
-- **Automatic instrumentation** - Zero code changes for existing journeys
+- **Explicit decorator** - Use `@mite_http_traced` for journeys you want to trace
 - **Distributed tracing** - Context propagation across HTTP requests  
 - **Hierarchical spans** - Journey → Transaction → HTTP request traces
 - **Multiple exporters** - Console, OTLP (HTTP/gRPC), Zipkin, Jaeger
 - **Configurable sampling** - Control trace volume in production
 - **Metrics export** - HTTP request counters and duration histograms
+- **Selective instrumentation** - Mix traced and untraced journeys in the same scenario
 
 ## Installation
 
@@ -23,12 +24,10 @@ pip install mite[otel]
 First, create a simple scenario in `demo_otel.py`:
 
 ```python
-from mite_http import mite_http
+from mite.otel import mite_http_traced
 from mite import ensure_average_separation
 
-import mite.otel
-
-@mite_http
+@mite_http_traced
 async def demo_req(ctx):
     async with ensure_average_separation(1):
         async with ctx.transaction("Get request"):
@@ -43,15 +42,13 @@ scenario = lambda: [("demo_otel:demo_req", None, lambda s, e: 2)]
 export MITE_CONF_OTEL_ENABLED=true
 ```
 
-Add the `import mite.otel` line to your scenario file to enable tracing.
-
 ### 2. Run Your Test
 
 ```bash
 mite scenario test demo_otel:scenario --hide-constant-logs
 ```
 
-Existing journeys are automatically instrumented. No code changes needed, other than importing `mite.otel`.
+Use `@mite_http_traced` instead of `@mite_http` for journeys you want to trace.
 
 ### 3. View Traces
 
@@ -137,7 +134,7 @@ journey.user_login (520ms)
 
 ### Span Types
 
-- **Journey spans** - Created for each `@mite_http` decorated function
+- **Journey spans** - Created for each `@mite_http_traced` decorated function
 - **Transaction spans** - Created for each `ctx.transaction()` call
 - **HTTP spans** - Created for each `ctx.http.*()` request
 
@@ -146,9 +143,9 @@ journey.user_login (520ms)
 HTTP requests automatically include W3C `traceparent` headers for distributed tracing:
 
 ```python
-from mite_http import mite_http
+from mite.otel import mite_http_traced
 
-@mite_http
+@mite_http_traced
 async def call_downstream_service(ctx):
     async with ctx.transaction("Call Service B"):
         # Automatically includes traceparent header
@@ -165,7 +162,6 @@ The downstream service can extract the trace context to continue the distributed
 For custom spans or advanced use cases:
 
 ```python
-import mite.otel
 from mite.otel import trace_journey, trace_transaction
 
 # Custom journey decorator
@@ -177,6 +173,33 @@ async def my_journey(ctx):
             span.set_attribute("query.rows", 150)
         # Your logic here
 ```
+
+## Selective Instrumentation
+
+You can mix traced and untraced journeys in the same scenario:
+
+```python
+from mite.otel import mite_http_traced
+from mite_http import mite_http
+
+# This journey will be traced
+@mite_http_traced
+async def critical_journey(ctx):
+    async with ctx.transaction("Critical Operation"):
+        await ctx.http.post("https://api.example.com/critical")
+
+# This journey will NOT be traced
+@mite_http
+async def background_journey(ctx):
+    await ctx.http.get("https://api.example.com/health")
+
+scenario = lambda: [
+    ("my_scenario:critical_journey", None, lambda s, e: 1),
+    ("my_scenario:background_journey", None, lambda s, e: 10),
+]
+```
+
+This allows you to reduce trace volume by only instrumenting the journeys that matter most.
 
 ## Performance Tuning
 
