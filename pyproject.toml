@@ -142,6 +142,7 @@ dependencies = [
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
+acurl-test = "pytest {args:acurl/tests/}"
 test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 
@@ -168,19 +169,6 @@ perf-test = "python test/perf/perftest.py {args:}"
 [[tool.hatch.envs.perf-test.matrix]]
 python = ["3.11"] # Extend to 3.10 as we should support this.
 
-[tool.hatch.envs.acurl-test]
-features = ["all", "dev"]
-dependencies = [
-    "acurl",
-]
-
-[tool.hatch.envs.acurl-test.scripts]
-test = "cd acurl && pytest tests {args:}"
-
-[[tool.hatch.envs.acurl-test.matrix]]
-python = ["3.11"] # Extend to 3.10 as we should support this.
-
-
 
 
 [tool.hatch.envs.lint]
@@ -194,11 +182,15 @@ dependencies = [
 # Once we are going to resolve all the ruff formatting issues, we can enable it again.
 check = [
     "ruff check .",
+    "cd acurl && ruff check .",
 ]
-
-format = [
+format-mite = [
     "ruff check --fix .",
     "ruff format .",
+]
+format-acurl = [
+    "cd acurl && ruff check --fix .",
+    "cd acurl && ruff format .",
 ]
 
 # ruff configuration ##############################################
@@ -273,7 +265,6 @@ exclude = [
 ]
 
 extend-exclude = [
-    "acurl",
     "docs",
     ".venv",
     "venv",
@@ -324,7 +315,6 @@ omit = [
     "*/test/*",
     "*/tests/*",
     "*/__pycache__/*",
-    "acurl/tests/*",
     "mite/example.py",
 ]
 plugins = ["Cython.Coverage"]
