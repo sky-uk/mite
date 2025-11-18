@@ -12,6 +12,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 echo $JOB_NAME
 
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
-    echo "##### Job running as CI. Proceeding with the Test script. ######"
-    ./cd-scripts/runTests.sh
+    echo "##### Job running as CI. Proceeding with the Test script for MITE. ######"
+    # ./cd-scripts/runMiteTests.sh
+    ./cd-scripts/runAcurlTests.sh
+else if [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
+    echo "##### Job running as CI. Proceeding with the Test script for ACURL. ######"
+    ./cd-scripts/runAcurlTests.sh
 fi
