@@ -15,7 +15,7 @@ if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Job running as CI. Proceeding with the Test script for MITE. ######"
     # ./cd-scripts/runMiteTests.sh
     ./cd-scripts/runAcurlTests.sh
-else if [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
+elif [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
     echo "##### Job running as CI. Proceeding with the Test script for ACURL. ######"
     ./cd-scripts/runAcurlTests.sh
 fi

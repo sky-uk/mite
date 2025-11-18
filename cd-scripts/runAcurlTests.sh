@@ -10,7 +10,6 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
-
 echo "##### Run tests with hatch #####"
 # Sort of an hack we are using hatch to run the unit tests here. 
 # For this reason we have to move back to the parent directory first.
