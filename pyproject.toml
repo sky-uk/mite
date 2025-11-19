@@ -182,13 +182,15 @@ dependencies = [
 # Once we are going to resolve all the ruff formatting issues, we can enable it again.
 check = [
     "ruff check .",
+]
+acurl-check = [
     "cd acurl && ruff check .",
 ]
 format-mite = [
     "ruff check --fix .",
     "ruff format .",
 ]
-format-acurl = [
+acurl-format = [
     "cd acurl && ruff check --fix .",
     "cd acurl && ruff format .",
 ]

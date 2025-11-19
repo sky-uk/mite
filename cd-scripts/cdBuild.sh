@@ -25,7 +25,6 @@ echo $JOB_NAME
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Running as MITE-CI. ######"
     ./cd-scripts/runMiteTests.sh
-    ./cd-scripts/runAcurlTests.sh
 elif [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
     echo "##### Running as ACURL-CI. ######"
     ./cd-scripts/runAcurlTests.sh
