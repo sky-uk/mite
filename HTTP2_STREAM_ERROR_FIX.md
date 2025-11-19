@@ -17,10 +17,13 @@ Intermittent `acurl.AcurlError: curl failed with code 92 Stream error in the HTT
 3. **Pattern Analysis** - Identified as race condition (intermittent, percentage-based occurrence)
 4. **Code Review** - Found missing `CURL_LOCK_DATA_CONNECT` in connection sharing configuration
 5. **First Fix** - Added connection sharing → HTTP/2 errors eliminated ✅
-6. **Performance Issue** - Observed slow journeys and high CPU at 600+ TPS after fix
+6. **Performance Issue #1** - Observed slow journeys and high CPU at 600+ TPS after fix
 7. **Profiling** - Identified mutex lock contention (1,200+ lock/unlock ops/sec)
-8. **Root Cause** - libcurl's share interface uses default mutex locks, unnecessary in single-threaded asyncio
-9. **Final Fix** - Implemented no-op lock callbacks → Performance restored ✅
+8. **Second Fix** - Implemented no-op lock callbacks → CPU reduced ✅
+9. **Performance Issue #2** - Still slow journeys at 600 TPS with max_connects=200
+10. **Deep Dive** - All requests to same host queue on ONE HTTP/2 connection
+11. **Root Cause** - Server HTTP/2 stream limit (~100-128) causing request queuing
+12. **Final Fix** - Set `CURLMOPT_MAX_HOST_CONNECTIONS=0` to allow multiple HTTP/2 connections per host → Performance restored ✅
 
 ---
 
@@ -43,20 +46,44 @@ Adding `CURL_LOCK_DATA_CONNECT` introduced mutex locks (libcurl default for shar
 - Unnecessary overhead in single-threaded asyncio
 - CPU cycles wasted on synchronization
 
+**HTTP/2 Stream Queuing**
+
+With connection sharing enabled, all requests to the same host multiplex over a single HTTP/2 connection:
+- HTTP/2 servers limit concurrent streams per connection (~100-128 typical)
+- At 600 TPS to same host = request queuing beyond stream limit
+- Waiting for stream slots = slow journey times
+- Default curl behavior: 1 connection per host
+
+### Why This Wasn't an Issue Before
+
+Without `CURL_LOCK_DATA_CONNECT` (original code):
+
+- Each curl handle maintained its own connection pool
+- Effectively unlimited connections (one per request if needed)
+- No single-connection bottleneck
+- But: HTTP/2 stream ID conflicts → Error 92
+
+With `CURL_LOCK_DATA_CONNECT` (initial fix):
+
+- Shared connection pool across all curl handles
+- Default `CURLMOPT_MAX_HOST_CONNECTIONS = 1` kicks in
+- All requests funnel through ONE HTTP/2 connection per host
+- Stream limit bottleneck exposed at high TPS
+
 ---
 
-# CURRENTLY IN TESTING
+## Solution
 
-## Solution -> TBC
-
-**Three Changes:**
+**Four Changes:**
 
 1. **Enable Connection Sharing** (`session.pyx`)
+
    ```python
    acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT)
    ```
 
 2. **Eliminate Lock Overhead** (`session.pyx`)
+
    ```python
    # No-op lock functions for single-threaded environment
    cdef void noop_lock(CURL *handle, int data, int access, void *userptr) nogil:
@@ -66,7 +93,16 @@ Adding `CURL_LOCK_DATA_CONNECT` introduced mutex locks (libcurl default for shar
    acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
    ```
 
-3. **Configurable Connection Pool** (`acurl.pyx`, `mite_http/__init__.py`)
+3. **Allow Multiple HTTP/2 Connections Per Host** (`acurl.pyx`) **← NEW FIX**
+
+   ```python
+   # Set to 0 = unlimited connections per host
+   # Prevents request queuing when exceeding HTTP/2 stream limits
+   acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
+   ```
+
+4. **Configurable Connection Pool** (`acurl.pyx`, `mite_http/__init__.py`)
+
    ```python
    @mite_http(max_connects=100)  # Default, tune as needed
    ```
