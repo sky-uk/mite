@@ -144,7 +144,8 @@ dependencies = [
 [tool.hatch.envs.test]
 dependencies = [
     "mite[all]",
-    "mite[dev]"
+    "mite[dev]",
+    "mite[otel]"
 ]
 
 [tool.hatch.envs.test.scripts]
