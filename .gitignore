@@ -108,7 +108,7 @@ ENV/
 *.swo
 *~
 
-# Mite-specific data directories
+# Jordan's add . moron protection
 recorder_data/
 collector_data/
 
