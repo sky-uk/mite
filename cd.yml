@@ -20,10 +20,11 @@ modules:
   mite-ci:
     pipelineShape: simple
     directory: "/"
-    htmlReports:
-      - name: Coverage Report
-        directory: coverage_html_report
-        files: ["index.html"]
+    reports:
+      html:
+        - name: Coverage Report
+          directory: coverage_html_report
+          files: ["index.html"]
 
 
   acurl-ci:
