@@ -58,6 +58,13 @@ cdef class CurlWrapper:
         # NOT a concurrency limit - controls how many idle connections to keep
         # Set to at least the number of unique hosts you access to avoid slowdowns
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
+        
+        # CRITICAL: Allow multiple connections per host for HTTP/2
+        # Without this, all requests to same host queue on ONE connection
+        # Servers typically limit ~100-128 concurrent streams per HTTP/2 connection
+        # Setting to 0 = unlimited connections per host (curl creates as needed)
+        acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
+        
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)
         acurl_multi_setopt_timercb(self.multi, CURLMOPT_TIMERFUNCTION, start_timeout)
