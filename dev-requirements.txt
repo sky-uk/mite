@@ -1,8 +1,0 @@
-twine~=6.1.0
-keyring~=19.0.2
-tox~=3.14.2
-pre-commit~=2.20.0
-flake8~=3.7.8
-black~=24.3.0
-coverage~=5.1
-sqlalchemy
