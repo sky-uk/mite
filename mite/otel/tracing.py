@@ -2,15 +2,15 @@ from .config import get_otel_config
 
 OTEL_AVAILABLE = True
 try:
-    from opentelemetry import trace, metrics
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import (
-        ConsoleSpanExporter,
-        SimpleSpanProcessor,
-        BatchSpanProcessor,
-    )
+    from opentelemetry import metrics, trace
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
+        SimpleSpanProcessor,
+    )
     from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 except ImportError:
     OTEL_AVAILABLE = False
@@ -146,11 +146,15 @@ def get_tracer():
         return _state.tracer
 
     if not OTEL_AVAILABLE:
-        raise RuntimeError("OpenTelemetry is not installed. Install with: pip install mite[otel]")
+        raise RuntimeError(
+            "OpenTelemetry is not installed. Install with: pip install mite[otel]"
+        )
 
     cfg = get_otel_config()
     if not cfg.get("enabled", False):
-        raise RuntimeError("OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing")
+        raise RuntimeError(
+            "OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing"
+        )
 
     if _is_sdk_provider_configured():
         _state.tracer = trace.get_tracer(__name__)
@@ -166,11 +170,15 @@ def get_meter():
         return _state.meter
 
     if not OTEL_AVAILABLE:
-        raise RuntimeError("OpenTelemetry is not installed. Install with: pip install mite[otel]")
+        raise RuntimeError(
+            "OpenTelemetry is not installed. Install with: pip install mite[otel]"
+        )
 
     cfg = get_otel_config()
     if not cfg.get("enabled", False):
-        raise RuntimeError("OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing")
+        raise RuntimeError(
+            "OpenTelemetry is disabled. Set MITE_CONF_OTEL_ENABLED=true to enable tracing"
+        )
 
     if _is_sdk_provider_configured():
         _state.meter = metrics.get_meter(__name__)

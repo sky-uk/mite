@@ -5,7 +5,7 @@ Covers the new @mite_http_traced decorator and related functionality.
 """
 import asyncio
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from mocks.mock_context import MockContext
@@ -30,7 +30,7 @@ class TestMiteHttpTraced:
             await ctx.http.get(httpserver.url_for("/test"))
 
         await test_journey(context)
-        
+
         # Verify HTTP request was made (SessionPool.decorator worked)
         assert len(httpserver.log) == 1
         assert len(context.messages) == 1
@@ -43,7 +43,7 @@ class TestMiteHttpTraced:
 
         httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
         context = MockContext()
-        
+
         tracer = get_tracer()
         mock_span = MagicMock()
         mock_span.__enter__ = Mock(return_value=mock_span)
@@ -53,15 +53,17 @@ class TestMiteHttpTraced:
         async def traced_journey(ctx):
             await ctx.http.get(httpserver.url_for("/test"))
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span) as mock_start:
+        with patch.object(
+            tracer, "start_as_current_span", return_value=mock_span
+        ) as mock_start:
             await traced_journey(context)
-            
+
             # Verify span was created with correct name
             # Note: Will be called multiple times due to acurl patching creating HTTP spans too
             assert mock_start.call_count >= 1
             call_args = mock_start.call_args_list[0]  # First call is the journey span
             assert "journey.traced_journey" in str(call_args)
-            
+
             # Verify span attributes were set
             assert mock_span.set_attribute.call_count >= 2
             mock_span.set_attribute.assert_any_call("mite.journey.name", "traced_journey")
@@ -83,25 +85,25 @@ class TestMiteHttpTraced:
         async def failing_journey(ctx):
             raise ValueError("Test error")
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             with pytest.raises(ValueError, match="Test error"):
                 await failing_journey(context)
-            
+
             # Verify exception was recorded on span
             mock_span.record_exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_mite_http_traced_with_context_attributes(self, httpserver):
         """Test that @mite_http_traced captures context attributes"""
+        from mite.context import Context
         from mite.otel import mite_http_traced
         from mite.otel.tracing import get_tracer
-        from mite.context import Context
 
         httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
-        
+
         send_fn = Mock()
         context = Context(send_fn, {})
-        
+
         tracer = get_tracer()
         mock_span = MagicMock()
         mock_span.__enter__ = Mock(return_value=mock_span)
@@ -111,9 +113,9 @@ class TestMiteHttpTraced:
         async def journey_with_context(ctx):
             await ctx.http.get(httpserver.url_for("/test"))
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             await journey_with_context(context)
-            
+
             # Verify context type attribute was set
             calls = [c for c in mock_span.set_attribute.call_args_list]
             attr_names = [c[0][0] for c in calls]
@@ -125,16 +127,18 @@ class TestMiteHttpTraced:
         # Temporarily disable tracing
         original_value = os.environ.get("MITE_CONF_OTEL_ENABLED")
         os.environ["MITE_CONF_OTEL_ENABLED"] = "false"
-        
+
         try:
             # Need to reload the module to pick up env change
             import importlib
+
             import mite.otel.config
             import mite.otel.instrumentation
+
             importlib.reload(mite.otel.config)
             importlib.reload(mite.otel.instrumentation)
             from mite.otel.instrumentation import mite_http_traced
-            
+
             httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
             context = MockContext()
 
@@ -144,11 +148,11 @@ class TestMiteHttpTraced:
 
             # Should work without creating spans
             await untraced_journey(context)
-            
+
             # Verify HTTP request still worked
             assert len(httpserver.log) == 1
             assert len(context.messages) == 1
-            
+
         finally:
             # Restore original value
             if original_value is not None:
@@ -172,11 +176,11 @@ class TestMiteHttpTraced:
     @pytest.mark.asyncio
     async def test_mite_http_traced_with_transaction(self, httpserver):
         """Test that @mite_http_traced works with ctx.transaction()"""
-        from mite.otel import mite_http_traced
         from mite.context import Context
+        from mite.otel import mite_http_traced
 
         httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
-        
+
         send_fn = Mock()
         context = Context(send_fn, {})
 
@@ -186,7 +190,7 @@ class TestMiteHttpTraced:
                 await ctx.http.get(httpserver.url_for("/test"))
 
         await journey_with_transaction(context)
-        
+
         # Verify both HTTP request and transaction were recorded
         assert len(httpserver.log) == 1
         assert send_fn.call_count >= 1  # Transaction message sent
@@ -198,7 +202,7 @@ class TestTraceJourney:
     @pytest.mark.asyncio
     async def test_trace_journey_creates_span(self):
         """Test that @trace_journey creates a journey span"""
-        from mite.otel import trace_journey
+        from mite.otel.instrumentation import trace_journey
         from mite.otel.tracing import get_tracer
 
         tracer = get_tracer()
@@ -210,16 +214,18 @@ class TestTraceJourney:
         async def my_journey(ctx):
             return "success"
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             result = await my_journey(MockContext())
-            
+
             assert result == "success"
-            mock_span.set_attribute.assert_called_with("mite.journey.name", "custom_journey")
+            mock_span.set_attribute.assert_called_with(
+                "mite.journey.name", "custom_journey"
+            )
 
     @pytest.mark.asyncio
     async def test_trace_journey_with_exception(self):
         """Test that @trace_journey handles exceptions"""
-        from mite.otel import trace_journey
+        from mite.otel.instrumentation import trace_journey
         from mite.otel.tracing import get_tracer
 
         tracer = get_tracer()
@@ -231,10 +237,10 @@ class TestTraceJourney:
         async def failing_journey(ctx):
             raise RuntimeError("Journey failed")
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             with pytest.raises(RuntimeError, match="Journey failed"):
                 await failing_journey(MockContext())
-            
+
             mock_span.record_exception.assert_called_once()
 
 
@@ -244,7 +250,7 @@ class TestTraceTransaction:
     @pytest.mark.asyncio
     async def test_trace_transaction_creates_span(self):
         """Test that trace_transaction creates a transaction span"""
-        from mite.otel import trace_transaction
+        from mite.otel.instrumentation import trace_transaction
         from mite.otel.tracing import get_tracer
 
         tracer = get_tracer()
@@ -252,16 +258,18 @@ class TestTraceTransaction:
         mock_span.__enter__ = Mock(return_value=mock_span)
         mock_span.__exit__ = Mock(return_value=False)
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             async with trace_transaction("my_transaction") as span:
                 assert span is mock_span
-            
-            mock_span.set_attribute.assert_called_with("mite.transaction.name", "my_transaction")
+
+            mock_span.set_attribute.assert_called_with(
+                "mite.transaction.name", "my_transaction"
+            )
 
     @pytest.mark.asyncio
     async def test_trace_transaction_with_attributes(self):
         """Test that trace_transaction accepts custom attributes"""
-        from mite.otel import trace_transaction
+        from mite.otel.instrumentation import trace_transaction
         from mite.otel.tracing import get_tracer
 
         tracer = get_tracer()
@@ -269,22 +277,24 @@ class TestTraceTransaction:
         mock_span.__enter__ = Mock(return_value=mock_span)
         mock_span.__exit__ = Mock(return_value=False)
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             async with trace_transaction("db_query", table="users", rows=150):
                 pass
-            
+
             # Verify custom attributes were set
             calls = mock_span.set_attribute.call_args_list
             attr_dict = {call[0][0]: call[0][1] for call in calls}
-            
-            assert attr_dict["mite.transaction.name"] == "my_transaction" or True  # Name is set
+
+            assert (
+                attr_dict["mite.transaction.name"] == "my_transaction" or True
+            )  # Name is set
             assert "mite.transaction.table" in attr_dict
             assert "mite.transaction.rows" in attr_dict
 
     @pytest.mark.asyncio
     async def test_trace_transaction_with_exception(self):
         """Test that trace_transaction handles exceptions"""
-        from mite.otel import trace_transaction
+        from mite.otel.instrumentation import trace_transaction
         from mite.otel.tracing import get_tracer
 
         tracer = get_tracer()
@@ -292,11 +302,11 @@ class TestTraceTransaction:
         mock_span.__enter__ = Mock(return_value=mock_span)
         mock_span.__exit__ = Mock(return_value=False)
 
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span):
+        with patch.object(tracer, "start_as_current_span", return_value=mock_span):
             with pytest.raises(ValueError, match="Transaction error"):
                 async with trace_transaction("failing_transaction"):
                     raise ValueError("Transaction error")
-            
+
             mock_span.record_exception.assert_called_once()
 
 
@@ -306,7 +316,7 @@ class TestConfigIntegration:
     def test_is_tracing_enabled_true(self):
         """Test that is_tracing_enabled returns True when enabled"""
         from mite.otel.config import is_tracing_enabled
-        
+
         os.environ["MITE_CONF_OTEL_ENABLED"] = "true"
         assert is_tracing_enabled() is True
 
@@ -314,13 +324,15 @@ class TestConfigIntegration:
         """Test that is_tracing_enabled returns False when disabled"""
         original = os.environ.get("MITE_CONF_OTEL_ENABLED")
         os.environ["MITE_CONF_OTEL_ENABLED"] = "false"
-        
+
         # Reload config to pick up change
         import importlib
+
         import mite.otel.config
+
         importlib.reload(mite.otel.config)
         from mite.otel.config import is_tracing_enabled as is_enabled_reloaded
-        
+
         try:
             assert is_enabled_reloaded() is False
         finally:
@@ -330,9 +342,9 @@ class TestConfigIntegration:
     def test_get_otel_config_defaults(self):
         """Test that get_otel_config returns sensible defaults"""
         from mite.otel.config import get_otel_config
-        
+
         config = get_otel_config()
-        
+
         assert "enabled" in config
         assert "service_name" in config
         assert config["service_name"] == "mite"  # Default service name
@@ -343,13 +355,15 @@ class TestConfigIntegration:
         """Test that get_otel_config respects environment variables"""
         os.environ["MITE_CONF_OTEL_SERVICE_NAME"] = "test-service"
         os.environ["MITE_CONF_OTEL_SAMPLER_RATIO"] = "0.5"
-        
+
         # Reload to pick up env changes
         import importlib
+
         import mite.otel.config
+
         importlib.reload(mite.otel.config)
         from mite.otel.config import get_otel_config as get_config_reloaded
-        
+
         try:
             config = get_config_reloaded()
             assert config["service_name"] == "test-service"
@@ -368,20 +382,24 @@ class TestEnableTracing:
     def test_enable_tracing_initializes_sdk(self):
         """Test that enable_tracing initializes OpenTelemetry SDK"""
         from mite.otel import enable_tracing
-        
-        with patch('mite.otel.tracing.init_tracing') as mock_init:
-            with patch('mite.otel.context_integration.patch_context_transaction'):
-                with patch('mite.otel.acurl_integration.patch_acurl_session'):
+
+        with patch("mite.otel.tracing.init_tracing") as mock_init:
+            with patch("mite.otel.context_integration.patch_context_transaction"):
+                with patch("mite.otel.acurl_integration.patch_acurl_session"):
                     enable_tracing()
                     mock_init.assert_called_once()
 
     def test_enable_tracing_patches_integrations(self):
         """Test that enable_tracing applies necessary patches"""
         from mite.otel import enable_tracing
-        
-        with patch('mite.otel.tracing.init_tracing'):
-            with patch('mite.otel.context_integration.patch_context_transaction') as mock_ctx:
-                with patch('mite.otel.acurl_integration.patch_acurl_session') as mock_acurl:
+
+        with patch("mite.otel.tracing.init_tracing"):
+            with patch(
+                "mite.otel.context_integration.patch_context_transaction"
+            ) as mock_ctx:
+                with patch(
+                    "mite.otel.acurl_integration.patch_acurl_session"
+                ) as mock_acurl:
                     enable_tracing()
                     mock_ctx.assert_called_once()
                     mock_acurl.assert_called_once()
@@ -393,21 +411,21 @@ class TestInjectHeaders:
     def test_inject_headers_adds_trace_context(self):
         """Test that inject_headers adds W3C trace context headers"""
         from mite.otel.context import inject_headers
-        
+
         headers = {"Content-Type": "application/json"}
-        
-        with patch('mite.otel.context.inject') as mock_inject:
-            with patch('mite.otel.context._is_enabled', return_value=True):
+
+        with patch("mite.otel.context.inject") as mock_inject:
+            with patch("mite.otel.context._is_enabled", return_value=True):
                 inject_headers(headers)
                 mock_inject.assert_called_once()
 
     def test_inject_headers_when_disabled(self):
         """Test that inject_headers is a no-op when disabled"""
         from mite.otel.context import inject_headers
-        
+
         headers = {"Content-Type": "application/json"}
-        
-        with patch('mite.otel.context._is_enabled', return_value=False):
+
+        with patch("mite.otel.context._is_enabled", return_value=False):
             result = inject_headers(headers)
             assert result == headers  # Unchanged
             assert "traceparent" not in result
@@ -420,12 +438,12 @@ class TestSelectiveInstrumentation:
     async def test_mixed_traced_and_untraced_journeys(self, httpserver):
         """Test that traced and untraced journeys can coexist"""
         from mite.otel import mite_http_traced
-        from mite_http import mite_http  # noqa: F401
         from mite.otel.tracing import get_tracer
+        from mite_http import mite_http  # noqa: F401
 
         httpserver.expect_request("/traced", "GET").respond_with_data("traced")
         httpserver.expect_request("/untraced", "GET").respond_with_data("untraced")
-        
+
         context = MockContext()
         tracer = get_tracer()
         mock_span = MagicMock()
@@ -441,12 +459,16 @@ class TestSelectiveInstrumentation:
             await ctx.http.get(httpserver.url_for("/untraced"))
 
         # Traced journey should create span
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span) as mock_start:
+        with patch.object(
+            tracer, "start_as_current_span", return_value=mock_span
+        ) as mock_start:
             await traced_journey(context)
             assert mock_start.call_count >= 1
 
         # Untraced journey should not create journey span
-        with patch.object(tracer, 'start_as_current_span', return_value=mock_span) as mock_start:
+        with patch.object(
+            tracer, "start_as_current_span", return_value=mock_span
+        ) as mock_start:
             await untraced_journey(context)
             # No journey span created (though HTTP span may still be created by acurl patching)
 
@@ -462,7 +484,7 @@ class TestImportOrderIndependence:
         """Test importing mite_http_traced before mite_http module"""
         # This should work regardless of import order
         from mite.otel import mite_http_traced
-        
+
         httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
         context = MockContext()
 
@@ -477,9 +499,9 @@ class TestImportOrderIndependence:
     async def test_import_mite_http_before_traced(self, httpserver):
         """Test importing mite_http before mite_http_traced"""
         # Already imported in this file, but test still works
-        from mite_http import mite_http  # noqa: F401
         from mite.otel import mite_http_traced
-        
+        from mite_http import mite_http  # noqa: F401
+
         httpserver.expect_oneshot_request("/test", "GET").respond_with_data("ok")
         context = MockContext()
 

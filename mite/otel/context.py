@@ -1,8 +1,8 @@
 from typing import Dict
 
 try:
-    from opentelemetry.propagate import inject
     from opentelemetry import context as otel_context
+    from opentelemetry.propagate import inject
 
     OTEL_AVAILABLE = True
 except ImportError:

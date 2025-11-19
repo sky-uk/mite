@@ -1,7 +1,8 @@
 from urllib.parse import urlparse
-from .tracing import get_tracer, handle_span_error
+
 from .config import is_tracing_enabled
 from .context import inject_headers
+from .tracing import get_tracer, handle_span_error
 
 # Import OpenTelemetry types at module level with fallbacks
 try:
@@ -62,9 +63,7 @@ def _set_span_attributes(span, method, url, response=None):
         if hasattr(response, "headers"):
             content_length = response.headers.get("content-length")
             if content_length:
-                span.set_attribute(
-                    "http.response.header.content-length", content_length
-                )
+                span.set_attribute("http.response.header.content-length", content_length)
 
 
 def _prepare_headers(kwargs):
@@ -102,9 +101,7 @@ def _create_http_method_wrapper(method_name):
             # Execute request with error handling
             try:
                 # Get the original method from the wrapped session
-                original_method = getattr(
-                    self._AcurlSessionWrapper__session, method_name
-                )
+                original_method = getattr(self._AcurlSessionWrapper__session, method_name)
                 response = await original_method(url, **kwargs)
 
                 # Set response attributes

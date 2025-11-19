@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def get_otel_config() -> Dict[str, Any]:

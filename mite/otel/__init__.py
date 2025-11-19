@@ -1,9 +1,6 @@
 try:
-    from .instrumentation import trace_journey, trace_transaction, mite_http_traced
-    from .context import inject_headers
     from .config import is_tracing_enabled
-
-    __all__ = ["trace_journey", "trace_transaction", "mite_http_traced", "inject_headers", "enable_tracing"]
+    from .instrumentation import mite_http_traced  # noqa: F401
 
     def enable_tracing():
         """
@@ -15,12 +12,12 @@ try:
 
         Call this explicitly if you need more control over when tracing is enabled.
         Otherwise, tracing is automatically enabled when MITE_CONF_OTEL_ENABLED=true.
-        
+
         Note: For HTTP journeys, use the @mite_http_traced decorator instead of @mite_http.
         """
-        from .tracing import init_tracing
-        from .context_integration import patch_context_transaction
         from .acurl_integration import patch_acurl_session
+        from .context_integration import patch_context_transaction
+        from .tracing import init_tracing
 
         init_tracing()
         patch_context_transaction()
@@ -37,4 +34,3 @@ except ImportError:
     def enable_tracing():
         """No-op when OpenTelemetry is not installed"""
         pass
-

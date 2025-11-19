@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
-from .tracing import get_tracer, handle_span_error
+
 from .config import is_tracing_enabled
+from .tracing import get_tracer, handle_span_error
 
 
 def patch_context_transaction():

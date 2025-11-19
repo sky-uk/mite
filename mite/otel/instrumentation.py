@@ -1,7 +1,8 @@
 import functools
 from contextlib import asynccontextmanager
-from .tracing import get_tracer, handle_span_error
+
 from .config import is_tracing_enabled
+from .tracing import get_tracer, handle_span_error
 
 
 def _get_span_kind_internal():
@@ -67,13 +68,13 @@ async def trace_transaction(transaction_name: str, **attributes):
 def mite_http_traced(func):
     """
     Decorator for mite HTTP journeys with OpenTelemetry tracing.
-    
+
     Combines @mite_http functionality with automatic journey span creation.
     Falls back to plain @mite_http behavior when tracing is disabled.
-    
+
     Usage:
         from mite.otel import mite_http_traced
-        
+
         @mite_http_traced
         async def my_journey(ctx):
             async with ctx.transaction("My Transaction"):
@@ -81,14 +82,14 @@ def mite_http_traced(func):
     """
     # Import mite_http's SessionPool here to avoid import order issues
     from mite_http import SessionPool
-    
+
     # If tracing is not enabled, just apply the standard mite_http decorator
     if not is_tracing_enabled():
         return SessionPool.decorator(func)
-    
+
     # Apply the mite_http decorator first
     wrapped_func = SessionPool.decorator(func)
-    
+
     @functools.wraps(func)
     async def tracing_wrapper(*args, **kwargs):
         tracer = get_tracer()
@@ -103,9 +104,7 @@ def mite_http_traced(func):
 
                 # Add any context info available
                 if args and hasattr(args[0], "__class__"):
-                    span.set_attribute(
-                        "mite.context.type", args[0].__class__.__name__
-                    )
+                    span.set_attribute("mite.context.type", args[0].__class__.__name__)
 
             try:
                 return await wrapped_func(*args, **kwargs)
@@ -114,4 +113,3 @@ def mite_http_traced(func):
                 raise
 
     return tracing_wrapper
-
