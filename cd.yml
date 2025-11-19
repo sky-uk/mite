@@ -43,12 +43,3 @@ modules:
           type: choice
           description: The version segment that you want increment for the release
           options: [patch, minor, major]
-
-  # TODO find a work around for the issue with combining build and release in one pipeline
-  # mite-ci-and-release:
-  #   pipelineShape: build-release
-  #   directory: "/"
-  #   htmlReports:
-  #     - name: Coverage Report
-  #       directory: coverage_html_report
-  #       files: ["index.html"]
