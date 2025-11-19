@@ -54,6 +54,9 @@ cdef class CurlWrapper:
 
     def __cinit__(self, object loop, int max_connects=100):
         self.multi = curl_multi_init()
+        # max_connects sets CURLMOPT_MAXCONNECTS: connection pool/cache size
+        # NOT a concurrency limit - controls how many idle connections to keep
+        # Set to at least the number of unique hosts you access to avoid slowdowns
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)

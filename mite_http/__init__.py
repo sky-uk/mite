@@ -124,16 +124,22 @@ def mite_http(func=None, max_connects=None):
         async def my_journey(ctx):
             await ctx.http.get("https://example.com")
     
-    Or with custom connection pool size for memory-constrained environments:
+    Or with custom connection pool size:
         @mite_http(max_connects=50)
         async def my_journey(ctx):
             await ctx.http.get("https://example.com")
     
     Args:
         func: The function to decorate (when used without parentheses)
-        max_connects: Maximum number of connections to keep in pool (default: 100)
-                     Lower values (25-50) for memory-constrained containers (512MB)
-                     Higher values (200+) for high-throughput scenarios
+        max_connects: Connection pool/cache size (default: 100)
+                     This is NOT a concurrency limit - it's how many idle
+                     connections curl keeps alive. Set to at least the number
+                     of unique hosts you access, or you'll see performance
+                     degradation from constant reconnections.
+                     
+                     - Few hosts (1-10): max_connects=25-50
+                     - Many hosts (10-100): max_connects=100 (default)
+                     - Very many hosts (100+): max_connects=200-500
     """
     return SessionPool.decorator(func, max_connects=max_connects)
 

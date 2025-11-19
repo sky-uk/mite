@@ -78,7 +78,13 @@ cdef extern from "<curl/curl.h>":
     ctypedef void CURLSH
     ctypedef int CURLSHcode
     ctypedef int CURLSHoption
+    ctypedef void (*curl_lock_function)(CURL *handle, int data, int access, void *userptr)
+    ctypedef void (*curl_unlock_function)(CURL *handle, int data, void *userptr)
+    
     cdef int CURLSHOPT_SHARE
+    cdef int CURLSHOPT_LOCKFUNC
+    cdef int CURLSHOPT_UNLOCKFUNC
+    cdef int CURLSHOPT_USERDATA
     cdef int CURL_LOCK_DATA_COOKIE
     cdef int CURL_LOCK_DATA_DNS
     cdef int CURL_LOCK_DATA_SSL_SESSION
@@ -143,6 +149,8 @@ cdef extern from "acurl_wrappers.h":
     CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void **data)
     # curl_share_setopt
     CURLSHcode acurl_share_setopt_int(CURLSH *share, CURLSHoption option, int data)
+    CURLSHcode acurl_share_setopt_lockfunc(CURLSH *share, CURLSHoption option, curl_lock_function data)
+    CURLSHcode acurl_share_setopt_unlockfunc(CURLSH *share, CURLSHoption option, curl_unlock_function data)
     # curl_easy_setopt
     CURLcode acurl_easy_setopt_voidptr(CURL *easy, CURLoption option, void *data)
     CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, const char *data)
