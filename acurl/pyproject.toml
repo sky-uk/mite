@@ -1,2 +1,83 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython<3.0"]
+requires = ["setuptools>=64", "wheel", "Cython<3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acurl"
+version = "1.0.8"
+description = "An async Curl library."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10,<3.13"
+authors = [
+    {name = "Sky UK", email = "mite@sky.uk"},
+]
+maintainers = [
+    {name = "Sky Identity NFT team", email = "mite@sky.uk"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "ujson>=4.1.0",
+    "uvloop==0.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-httpbin",
+    "ruff>=0.1.0",
+    "Cython<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sky-uk/mite/tree/master/acurl"
+Repository = "https://github.com/sky-uk/mite/"
+Issues = "https://github.com/sky-uk/mite/issues"
+
+# Setuptools configuration for building Cython extensions
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.pyx", "*.pxd", "*.c", "*.h"]
+
+# Tool configuration ##############################################
+
+# Ruff configuration (replacing flake8)
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+
+lint.select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+]
+
+lint.ignore = [
+    "E501",  # Line too long (ruff formatter handles this)
+    "E731",  # Lambda assignment
+    "I001",  # isort import order
+]
+
+exclude = [".git", "build", "dist", ".eggs", ".tox"]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]

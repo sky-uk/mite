@@ -117,7 +117,7 @@ class TestMiteHttpTraced:
             await journey_with_context(context)
 
             # Verify context type attribute was set
-            calls = [c for c in mock_span.set_attribute.call_args_list]
+            calls = list(mock_span.set_attribute.call_args_list)
             attr_names = [c[0][0] for c in calls]
             assert "mite.context.type" in attr_names
 

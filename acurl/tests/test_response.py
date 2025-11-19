@@ -4,7 +4,6 @@ from werkzeug.wrappers import Response
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_response_headers(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Foo", "bar")
@@ -31,7 +30,6 @@ async def connected_cb(body, reader, writer):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_response_headers_with_HTTP_100(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Foo", "bar")
@@ -47,7 +45,6 @@ async def test_response_headers_with_HTTP_100(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_response_cookies(httpserver, acurl_session):
     hdrs = Headers()
     hdrs.add("Set-Cookie", "foo=bar")

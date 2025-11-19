@@ -1,16 +1,34 @@
-# Git workflow
+# Development Setup
 
-To set up the pre-commit hooks for this project, run:
+## Prerequisites
 
+- Python 3.10 or 3.11
+- [Hatch](https://hatch.pypa.io/) for project management
+
+Install Hatch:
+```bash
+pip install hatch
 ```
-pip install -r dev-requirements.txt
-pre-commit install
+
+## Code Quality
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formatting. All style rules are configured in `pyproject.toml`.
+
+To check your code:
+```bash
+hatch run lint:check
 ```
 
-This will run a linter and formatter on the code before you check it in.
-It will deny any checkins that do not conform to the projectʼs style
-guidelines.  To run the checkers yourself, run `flake8` (linter) and
-`black` (formatter) in the project directory.
+To automatically fix and format code:
+```bash
+hatch run lint:format-mite
+```
+
+For the acurl subproject:
+```bash
+hatch run lint:acurl-check
+hatch run lint:acurl-format
+```
 
 # Releasing
 
@@ -20,7 +38,7 @@ Not yet authorized
 
 ## Internal
 
-See the documentation in `DEV.md` in the `id-mite-nft` repo.
+See the documentation in `DEV.md` in the `sky-id-mite-nft` repo.
 
 # Docs
 
@@ -48,88 +66,79 @@ git push
 
 ## Unit tests
 
-Run the unit tests on all supported python versions (currently 3.9,
-3.10, and 3.11), including a code-coverage report:
+Run the unit tests on all supported Python versions (currently 3.10 and 3.11):
 
-```
-cd /path/to/mite
-tox
+```bash
+hatch run test:test
 ```
 
-This requires that you have python 3.9, 3.10, and 3.11 installed locally (on
-ubuntu `sudo apt install python3.9 python3.10 python3.11` after adding the
-[deadsnakes
-PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)).  You will
-also need tox installed globally (or in the virtualenv you use for
-development).  You can view a hyperlinked version of the source
-annotated according to coverage with:
+Run tests with coverage report:
+```bash
+hatch run test:test-cov
+```
 
+View the HTML coverage report:
+```bash
+hatch run test:cov-report
 ```
-coverage html
-<web-browser> coverage_html_report/index.html
+
+Run acurl tests:
+```bash
+hatch run test:acurl-test
 ```
+
+The tests will automatically run on both Python 3.10 and 3.11 if you have them installed. Hatch will manage the virtual environments for you.
 
 ## Performance tests
 
-Requires docker:
+Run the performance tests using Hatch:
 
-```
-cd test/perf
-./run-perftest.sh
+```bash
+hatch run perf-test:perf-test
 ```
 
-The output will be in the `test/perf/output` directory, in a
-subdirectory named according to the current data, and another
-subdirectory named according to the time the test was run (GMT) and the
-branch name/current git commit.
+The output will be in the `output` directory (configured via `MITE_PERFTEST_OUT` environment variable).
 
 ### Results
 
-The performance test baseline (as of 2019-07-24) is as follows (when run
-on AWEʼs Macbook Pro 15 inch 2018, 2.2 GHz i7, 16GB RAM)
+The performance test results (as of 2025-11-19) running on macOS with Apple Silicon:
 
 #### Scenario 1
 
-Total requests (1 min): 50016
-
-| Process    | Mem   | CPU  |
-|------------|-------|------|
-| Controller | ~45MB | ~20% |
-| Duplicator | ~45MB | ~40% |
-| Runner     | ~45MB | ~60% |
-
-#### Scenario 10
-
-Total requests (1 min): 182992
+Total requests (1 min): 143,879
 
 | Process    | Mem   | CPU   |
 |------------|-------|-------|
-| Controller | ~45MB | ~20%  |
-| Duplicator | ~50MB | ~100% |
-| Runner     | ~45MB | ~150% |
+| Controller | ~37MB | ~16%  |
+| Duplicator | ~35MB | ~13%  |
+| Runner     | ~44MB | ~53%  |
 
-### Scenario 100
+#### Scenario 10
 
-Total requests (1 min): 254812
+Total requests (1 min): 543,132
 
-| Process    | Mem   | CPU       |
-|------------|-------|-----------|
-| Controller | ~45MB | ~1% !!!   |
-| Duplicator | ~55MB | ~115%     |
-| Runner     | ~50MB | ~150-175% |
+| Process    | Mem   | CPU   |
+|------------|-------|-------|
+| Controller | ~41MB | ~22%  |
+| Duplicator | ~40MB | ~35%  |
+| Runner     | ~47MB | ~123% |
 
-Duplicator memory usage spikes to ~90MB at 25 secs, but is stable
-before/after.
+#### Scenario 100
+
+Total requests (1 min): 785,389
+
+| Process    | Mem   | CPU   |
+|------------|-------|-------|
+| Controller | ~25MB | ~6%   |
+| Duplicator | ~25MB | ~27%  |
+| Runner     | ~54MB | ~120% |
 
 #### Scenario 1000
 
-Total requests (1 min): 264299
+Total requests (1 min): 681,760
 
-| Process    | Mem   | CPU     |
-|------------|-------|---------|
-| Controller | ~45MB | ~1% !!! |
-| Duplicator | ~55MB | ~115%   |
-| Runner     | ~90MB | ~180%   |
-
-Duplicator memory usage spikes to ~70MB at 20 secs, but is stable before
-and after.
+| Process    | Mem   | CPU   |
+|------------|-------|-------|
+| Controller | ~38MB | ~2%   |
+| Duplicator | ~39MB | ~22%  |
+| Runner     | ~104MB| ~114% |

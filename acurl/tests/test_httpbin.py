@@ -22,14 +22,12 @@ async def test_get(httpbin):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_cookies(httpbin, acurl_session):
     r = await acurl_session.get(f"{httpbin.url}/cookies/set?name=value")
     assert r.cookies == {"name": "value"}
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_session_cookies(httpbin, acurl_session):
     await acurl_session.get(f"{httpbin.url}/cookies/set?name=value")
     cookies = acurl_session.cookies()

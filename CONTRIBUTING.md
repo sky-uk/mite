@@ -4,12 +4,11 @@ We greatly appreciate and encourage people contributing back into Mite.
 
 ## Coding Style
 
-Mite code should adhere to the PEP8 standards for Python, with the following
-exceptions that have been agreed upon by the core maintainers:
+Mite code should adhere to the PEP8 standards for Python. We use [Hatch](https://hatch.pypa.io/) 
+for project management and [Ruff](https://docs.astral.sh/ruff/) for linting and formatting. 
 
- * Line too long (Max: 100 chars) - E501
- * Line break before binary operator - W503
- * Lambda assignment - E731
+All coding style rules are defined in the project's `pyproject.toml` configuration file. 
+Please ensure your code passes all linting checks before submitting a pull request.
 
 ## Quick Start
 
@@ -27,24 +26,23 @@ standard.
 
 ### Requirements
 
-  * All exisiting unit tests have been run and they either:
-    - [] All pass and no new additions are needed
-    - [] They all pass and new passing tests have been created for new functionality
-    - [] Some failed but this was expected and changes have been made to them to account for new features
-  * [] Submission meets coding standards outlined [above](##coding-style)
-  * [] Performance benchmarking has been run and observations included in the PR description
-  * [] Additional documentation added where poignant 
+  * All existing unit tests have been run and they either:
+    - [ ] All pass and no new additions are needed
+    - [ ] They all pass and new passing tests have been created for new functionality
+    - [ ] Some failed but this was expected and changes have been made to them to account for new features
+  * [ ] Submission meets coding standards outlined [above](#coding-style)
+  * [ ] Performance benchmarking has been run and observations included in the PR description
+  * [ ] Additional documentation added where pertinent
 
 ## Core Maintainers
 
-  * [Jordan Brennan](https://github.com/jb098) (Senior Performance Engineer - Sky Identity)
-  * [Aaron Ecay](https://github.com/aecay) (Performance Engineer - Sky Identity)
-  * [Davide Annunziata](https://github.com/DavAnnunz) (Performance Engineer - Sky Identity)
-  * [Arron Canham](https://github.com/arroncanhamskyuk) (Performance Engineer - Sky Identity)
+  * [Jordan Brennan](https://github.com/jb098)
+  * [Aaron Ecay](https://github.com/aecay)
+  * [Davide Annunziata](https://github.com/DavAnnunz)
 
 The Mite Maintainers Team are here to help facilitate the process of contributing
 and offer guidance. If you have any questions or concerns please [talk to us via slack](https://sky.slack.com/messages/mite)
-if you're a sky colleague or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributers.
+if you're a sky colleague or [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk) for external contributors.
 
 ## Creating Issues
 
@@ -65,7 +63,7 @@ very closely.
 **N.B.** If you fail to adhere to the agreed workflow, there is a risk that your
 Pull Requests may not be accepted until any issues are rectified.
 
-The Mite project operates under a feature branch worflow, which is hopefully
+The Mite project operates under a feature branch workflow, which is hopefully
 a pretty simple workflow to follow:
 
  * All features are developed on a sensibly named branch
@@ -73,7 +71,7 @@ a pretty simple workflow to follow:
    - A link to an existing github issue
    - Or a JIRA ticket (internal)
  * When a feature is complete, it should be submitted back to master as pull request
- * All PRs will be reviwed by at least one core maintainer
+ * All PRs will be reviewed by at least one core maintainer
  * Upon acceptance, all commits will be auto-squashed into a single commit
 
 ## Discussion
@@ -81,7 +79,7 @@ a pretty simple workflow to follow:
 For discussion of issues and general project talk, head over to
 [#mite](http://sky.slack.com/messages/mite) on Slack if you're a Sky colleague.
 
-We still love to hear from you if you're an external contributer, the best way
+We still love to hear from you if you're an external contributor, the best way
 to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-PerformanceEngineering@sky.uk).
 
 ## Responsibilities
@@ -91,4 +89,4 @@ to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-Performanc
 
 ## Releases
 
-* Release commits will be tagged by a core maintainer and will be available on [PyPi](link pending).
+* Release commits will be tagged by a core maintainer and will be available on [Mite-PyPI](https://pypi.org/project/mite/) and [Acurl-PyPI](https://pypi.org/project/acurl/).

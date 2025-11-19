@@ -5,14 +5,12 @@ import acurl
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_request_no_data_raises(acurl_session):
     with pytest.raises(ValueError):
         await acurl_session.get("http://foo.com", json={}, data="")
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_get(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")
     r = await acurl_session.get(httpserver.url_for("/test"))
@@ -24,7 +22,6 @@ async def test_get(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_get_headers(httpserver, acurl_session):
     httpserver.expect_oneshot_request(
         "/test", "GET", headers={"My-Header": "is-awesome"}
@@ -40,7 +37,6 @@ async def test_get_headers(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_post_json(httpserver, acurl_session):
     httpserver.expect_oneshot_request(
         "/test",
@@ -58,7 +54,6 @@ async def test_post_json(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_post_data(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "POST", data="foobar").respond_with_data(
         "hi"
@@ -73,7 +68,6 @@ async def test_post_data(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_response_callback(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_data("hi")
     called = False
@@ -92,7 +86,6 @@ async def test_response_callback(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_redirect(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_response(
         WZResponse(status=301, headers={"Location": "/test2"})
@@ -109,7 +102,6 @@ async def test_redirect(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_max_redirects_raises(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_response(
         WZResponse(status=301, headers={"Location": "/test2"})
@@ -120,7 +112,6 @@ async def test_max_redirects_raises(httpserver, acurl_session):
 
 
 @pytest.mark.asyncio
-@pytest.fixture
 async def test_disallow_redirects(httpserver, acurl_session):
     httpserver.expect_oneshot_request("/test", "GET").respond_with_response(
         WZResponse(status=301, headers={"Location": "/test2"})
