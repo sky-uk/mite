@@ -26,6 +26,11 @@ modules:
         files: ["index.html"]
 
 
+  acurl-ci:
+    pipelineShape: simple
+    directory: "/"
+
+
   mite-manual-release:
     pipelineShape: simple
     defaultTaskExecution: ./cd-scripts/manualRelease.sh

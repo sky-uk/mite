@@ -142,9 +142,10 @@ dependencies = [
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
-acurl-test = "pytest {args:acurl/tests/}"
 test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
+acurl-test = "pytest {args:acurl/tests/}"
+
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11"]
