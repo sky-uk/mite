@@ -24,7 +24,7 @@ if isOnMaster; then
         initPypirc
 
         echo "##### Upload package #####"
-        python3 -m twine upload wheelhouse/* --verbose
+        python3 -m twine upload wheelhouse/* 
     fi
 
 else
