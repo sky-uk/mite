@@ -149,6 +149,8 @@ cdef class Session:
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
         acurl_easy_setopt_cstr(curl, CURLOPT_CUSTOMREQUEST, method)
+        # Force HTTP/1.1 to test if HTTP/2 is causing stream errors
+        acurl_easy_setopt_int(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1)
         # curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1)  # DEBUG
         acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, b"")
         # FIXME: make this configurable?

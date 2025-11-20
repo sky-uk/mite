@@ -114,6 +114,11 @@ cdef extern from "<curl/curl.h>":
     cdef int CURLOPT_COOKIELIST
     cdef int CURLOPT_POSTFIELDSIZE
     cdef int CURLOPT_POSTFIELDS
+    cdef int CURLOPT_HTTP_VERSION
+
+    # HTTP version constants
+    cdef int CURL_HTTP_VERSION_1_1
+    cdef int CURL_HTTP_VERSION_2_0
 
     # Info
     ctypedef int CURLINFO
