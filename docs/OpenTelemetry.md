@@ -5,12 +5,14 @@ Mite provides optional OpenTelemetry tracing for observing journey execution, tr
 ## Features
 
 - **Explicit decorator** - Use `@mite_http_traced` for journeys you want to trace
+- **Zero overhead for non-traced journeys** - `@mite_http` journeys have no tracing overhead
 - **Distributed tracing** - Context propagation across HTTP requests  
 - **Hierarchical spans** - Journey → Transaction → HTTP request traces
 - **Multiple exporters** - Console, OTLP (HTTP/gRPC), Zipkin, Jaeger
 - **Configurable sampling** - Control trace volume in production
 - **Metrics export** - HTTP request counters and duration histograms
 - **Selective instrumentation** - Mix traced and untraced journeys in the same scenario
+- **Lazy patching** - Tracing infrastructure only activated when needed
 
 ## Installation
 
@@ -20,20 +22,30 @@ pip install mite[otel]
 
 ## Quick Start
 
-
 First, create a simple scenario in `demo_otel.py`:
 
 ```python
 from mite.otel import mite_http_traced
+from mite_http import mite_http
 from mite import ensure_average_separation
 
+# This journey will be traced
 @mite_http_traced
-async def demo_req(ctx):
+async def traced_journey(ctx):
     async with ensure_average_separation(1):
         async with ctx.transaction("Get request"):
             await ctx.http.get("https://example.com/")
 
-scenario = lambda: [("demo_otel:demo_req", None, lambda s, e: 2)]
+# This journey will NOT be traced (zero overhead)
+@mite_http
+async def untraced_journey(ctx):
+    async with ensure_average_separation(1):
+        await ctx.http.get("https://example.com/health")
+
+scenario = lambda: [
+    ("demo_otel:traced_journey", None, lambda s, e: 1),
+    ("demo_otel:untraced_journey", None, lambda s, e: 10),
+]
 ```
 
 ### 1. Enable Tracing
@@ -42,13 +54,15 @@ scenario = lambda: [("demo_otel:demo_req", None, lambda s, e: 2)]
 export MITE_CONF_OTEL_ENABLED=true
 ```
 
+This environment variable controls whether tracing is available. When `false`, even `@mite_http_traced` journeys will behave like regular `@mite_http` journeys with no tracing.
+
 ### 2. Run Your Test
 
 ```bash
 mite scenario test demo_otel:scenario --hide-constant-logs
 ```
 
-Use `@mite_http_traced` instead of `@mite_http` for journeys you want to trace.
+**Important:** Only `@mite_http_traced` journeys and their transactions/HTTP requests will be traced. Regular `@mite_http` journeys have zero tracing overhead.
 
 ### 3. View Traces
 
@@ -135,8 +149,10 @@ journey.user_login (520ms)
 ### Span Types
 
 - **Journey spans** - Created for each `@mite_http_traced` decorated function
-- **Transaction spans** - Created for each `ctx.transaction()` call
-- **HTTP spans** - Created for each `ctx.http.*()` request
+- **Transaction spans** - Created for each `ctx.transaction()` call **within traced journeys only**
+- **HTTP spans** - Created for each `ctx.http.*()` request **within traced journeys only**
+
+**Note:** Regular `@mite_http` journeys do not create any spans, even when `MITE_CONF_OTEL_ENABLED=true`. This ensures zero overhead for non-traced journeys.
 
 ## Distributed Tracing
 
@@ -176,22 +192,23 @@ async def my_journey(ctx):
 
 ## Selective Instrumentation
 
-You can mix traced and untraced journeys in the same scenario:
+You can mix traced and untraced journeys in the same scenario to optimize performance:
 
 ```python
 from mite.otel import mite_http_traced
 from mite_http import mite_http
 
-# This journey will be traced
+# This journey will be fully traced (journey, transactions, HTTP requests)
 @mite_http_traced
 async def critical_journey(ctx):
     async with ctx.transaction("Critical Operation"):
         await ctx.http.post("https://api.example.com/critical")
 
-# This journey will NOT be traced
+# This journey will NOT be traced at all (zero overhead)
 @mite_http
 async def background_journey(ctx):
-    await ctx.http.get("https://api.example.com/health")
+    async with ctx.transaction("Health Check"):  # No transaction span created
+        await ctx.http.get("https://api.example.com/health")  # No HTTP span created
 
 scenario = lambda: [
     ("my_scenario:critical_journey", None, lambda s, e: 1),
@@ -199,18 +216,63 @@ scenario = lambda: [
 ]
 ```
 
-This allows you to reduce trace volume by only instrumenting the journeys that matter most.
+This allows you to:
+- Reduce trace volume by only instrumenting critical journeys
+- Achieve zero tracing overhead for high-volume background operations
+- Control costs when using paid tracing services
+
+### How It Works
+
+When `MITE_CONF_OTEL_ENABLED=true`:
+- **`@mite_http_traced` journeys**: Full tracing (journey, transactions, HTTP requests)
+- **`@mite_http` journeys**: No tracing at all, zero overhead
+
+When `MITE_CONF_OTEL_ENABLED=false`:
+- Both decorators behave identically (no tracing)
+
+The tracing infrastructure uses lazy patching - it only activates when the first `@mite_http_traced` journey is encountered, ensuring minimal impact on startup performance.
 
 ## Performance Tuning
+
+### Selective Tracing
+
+The most effective way to reduce overhead is to only trace critical journeys:
+
+```python
+from mite.otel import mite_http_traced
+from mite_http import mite_http
+
+# Trace only 1 in 10 journeys
+@mite_http_traced
+async def important_journey(ctx):
+    # Full tracing
+    pass
+
+# No tracing overhead for these 9
+@mite_http
+async def regular_journey(ctx):
+    # Zero overhead
+    pass
+```
 
 ### Sampling
 
 Control trace volume in production:
 
 ```bash
-# Only trace 1% of requests
+# Only trace 1% of @mite_http_traced journeys
 export MITE_CONF_OTEL_SAMPLER_RATIO=0.01
 ```
+
+### Disabling Tracing
+
+To completely disable tracing (even for `@mite_http_traced` journeys):
+
+```bash
+export MITE_CONF_OTEL_ENABLED=false
+```
+
+This makes `@mite_http_traced` behave identically to `@mite_http`.
 
 ### Batch Size
 

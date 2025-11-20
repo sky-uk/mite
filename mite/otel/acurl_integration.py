@@ -4,6 +4,9 @@ from .config import is_tracing_enabled
 from .context import inject_headers
 from .tracing import get_tracer, handle_span_error
 
+# Track if patching has been applied
+_patched = False
+
 # Import OpenTelemetry types at module level with fallbacks
 try:
     from opentelemetry.trace import SpanKind
@@ -76,11 +79,19 @@ def _prepare_headers(kwargs):
     return kwargs
 
 
-def _create_http_method_wrapper(method_name):
-    """Create a wrapper for HTTP methods that creates spans"""
+def _create_http_method_wrapper(method_name, original_method):
+    """Create a wrapper for HTTP methods that conditionally creates spans"""
 
     async def traced_method(self, url, **kwargs):
-        """Wrapper that creates HTTP client spans with proper semantic conventions"""
+        """Wrapper that creates HTTP client spans only when in traced journey"""
+        # Import here to avoid circular dependency
+        from .instrumentation import is_in_traced_journey
+
+        # Only create spans if we're inside a traced journey
+        if not is_in_traced_journey():
+            # Call original method without tracing
+            return await original_method(self, url, **kwargs)
+
         tracer = get_tracer()
         method_upper = method_name.upper()
         span_name = f"HTTP {method_upper}"
@@ -100,9 +111,8 @@ def _create_http_method_wrapper(method_name):
 
             # Execute request with error handling
             try:
-                # Get the original method from the wrapped session
-                original_method = getattr(self._AcurlSessionWrapper__session, method_name)
-                response = await original_method(url, **kwargs)
+                # Call the original method
+                response = await original_method(self, url, **kwargs)
 
                 # Set response attributes
                 _set_span_attributes(span, method_upper, url, response)
@@ -118,9 +128,12 @@ def _create_http_method_wrapper(method_name):
 
 def patch_acurl_session():
     """
-    Patch mite_http's AcurlSessionWrapper to add HTTP client spans
+    Patch mite_http's AcurlSessionWrapper to add HTTP client spans.
+    Uses lazy patching - only patches once on first call.
     """
-    if not is_tracing_enabled():
+    global _patched
+
+    if not is_tracing_enabled() or _patched:
         return
 
     try:
@@ -130,8 +143,13 @@ def patch_acurl_session():
         http_methods = ["get", "post", "put", "patch", "delete", "head", "options"]
 
         for method_name in http_methods:
-            wrapped_method = _create_http_method_wrapper(method_name)
+            # Save reference to original method
+            original_method = getattr(AcurlSessionWrapper, method_name)
+            # Create wrapper that checks context variable
+            wrapped_method = _create_http_method_wrapper(method_name, original_method)
             setattr(AcurlSessionWrapper, method_name, wrapped_method)
+
+        _patched = True
 
     except (ImportError, AttributeError):
         pass  # Silently skip if patching fails

@@ -1,8 +1,16 @@
 import functools
+import threading
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 
 from .config import is_tracing_enabled
 from .tracing import get_tracer, handle_span_error
+
+# Context variable to track if we're inside a traced journey
+_in_traced_journey: ContextVar[bool] = ContextVar('in_traced_journey', default=False)
+
+# Lock for lazy patching to ensure it only happens once
+_patching_lock = threading.Lock()
 
 
 def _get_span_kind_internal():
@@ -87,6 +95,9 @@ def mite_http_traced(func):
     if not is_tracing_enabled():
         return SessionPool.decorator(func)
 
+    # Trigger lazy patching on first use
+    _ensure_patching_applied()
+
     # Apply the mite_http decorator first
     wrapped_func = SessionPool.decorator(func)
 
@@ -97,19 +108,41 @@ def mite_http_traced(func):
         span_kind = _get_span_kind_internal()
         span_name = f"journey.{journey_name}"
 
-        with _start_span(tracer, span_name, span_kind) as span:
-            if span:
-                span.set_attribute("mite.journey.name", journey_name)
-                span.set_attribute("mite.journey.type", "http")
+        # Set context variable to indicate we're in a traced journey
+        token = _in_traced_journey.set(True)
+        try:
+            with _start_span(tracer, span_name, span_kind) as span:
+                if span:
+                    span.set_attribute("mite.journey.name", journey_name)
+                    span.set_attribute("mite.journey.type", "http")
 
-                # Add any context info available
-                if args and hasattr(args[0], "__class__"):
-                    span.set_attribute("mite.context.type", args[0].__class__.__name__)
+                    # Add any context info available
+                    if args and hasattr(args[0], "__class__"):
+                        span.set_attribute("mite.context.type", args[0].__class__.__name__)
 
-            try:
-                return await wrapped_func(*args, **kwargs)
-            except Exception as exc:
-                handle_span_error(span, exc)
-                raise
+                try:
+                    return await wrapped_func(*args, **kwargs)
+                except Exception as exc:
+                    handle_span_error(span, exc)
+                    raise
+        finally:
+            # Reset context variable
+            _in_traced_journey.reset(token)
 
     return tracing_wrapper
+
+
+def _ensure_patching_applied():
+    """Ensure lazy patching has been applied (thread-safe, idempotent)"""
+    from .acurl_integration import patch_acurl_session
+    from .context_integration import patch_context_transaction
+
+    with _patching_lock:
+        # Patches check their own _patched flags internally
+        patch_acurl_session()
+        patch_context_transaction()
+
+
+def is_in_traced_journey() -> bool:
+    """Check if currently executing within a traced journey"""
+    return _in_traced_journey.get(False)
