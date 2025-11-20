@@ -32,10 +32,13 @@ function checkAcurl() {
         echo "Acurl has changed"
         ACURL_CHANGED=true
         LATEST_ACURL_VERSION=$(curl -s https://pypi.org/pypi/acurl/json | jq -r '.info .version')
-        if [[ -n $(grep "version = $LATEST_ACURL_VERSION$" acurl/setup.cfg) ]]; then
-        echo "Acurl has changed, but the version of acurl hasn't changed"
-        exit 1
+        CURRENT_ACURL_VERSION=$(grep '^version = ' acurl/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+        if [[ "$CURRENT_ACURL_VERSION" == "$LATEST_ACURL_VERSION" ]]; then
+            echo "Acurl has changed, but the version hasn't been updated in pyproject.toml"
+            echo "Current version: $CURRENT_ACURL_VERSION, PyPI version: $LATEST_ACURL_VERSION"
+            exit 1
         fi
+        echo "Acurl version will be updated from $LATEST_ACURL_VERSION to $CURRENT_ACURL_VERSION"
     fi
 }
 
@@ -51,11 +54,16 @@ function buildLinuxWheels() {
         pip3 install --user cibuildwheel==2.8.1 build twine
         python3 -m build --outdir ./wheelhouse
     fi
+    
     if [ "$ACURL_CHANGED" = true ]; then
         echo "##### Building Acurl #####"
         cd acurl
         pip3 install --user cibuildwheel==2.8.1 build Cython twine
         python3 -m build --sdist --outdir ../wheelhouse
+        CIBW_BUILD="cp310-* cp311-*" \
+        CIBW_BEFORE_ALL_LINUX="$CIBW_BEFORE_ALL_LINUX" \
+        CIBW_SKIP="$CIBW_SKIP" \
+        python3 -m cibuildwheel --output-dir ../wheelhouse
         cd ../
     fi
 }
