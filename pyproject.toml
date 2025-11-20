@@ -55,6 +55,13 @@ browser = ["bs4"]
 # HAR file conversion utility
 har = ["jinja2"]
 # Complete installation with all modules
+otel = [
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.20.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
+    "opentelemetry-exporter-zipkin>=1.20.0",
+]
 all = [
     "acurl",
     "aio_pika",
@@ -137,7 +144,8 @@ dependencies = [
 [tool.hatch.envs.test]
 dependencies = [
     "mite[all]",
-    "mite[dev]"
+    "mite[dev]",
+    "mite[otel]"
 ]
 
 [tool.hatch.envs.test.scripts]
