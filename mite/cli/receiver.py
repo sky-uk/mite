@@ -35,4 +35,4 @@ def generic_receiver(opts):
         if process_raw_message:
             receiver.add_listener(process_raw_message)
 
-    loop.run_until_complete(receiver.run())
+    asyncio.run(receiver.run())

@@ -258,7 +258,7 @@ def controller(opts):
             controller.report(sender.send)
 
     try:
-        loop.run_until_complete(
+        asyncio.run(
             asyncio.gather(
                 controller_report(), server.run(controller, controller.should_stop)
             )
@@ -277,7 +277,7 @@ def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(_create_runner(opts, transport, sender.send).run())
+    asyncio.run(_create_runner(opts, transport, sender.send).run())
     # Under rare conditions, we've seen a race condition on the runner's exit
     # that leads to an exception like:
     # RuntimeError: Event loop stopped before Future completed.
@@ -290,7 +290,7 @@ def runner(opts):
     # give the loop 5 seconds to complete any network ops that are outstanding
     # before calling the close method which will cancel any scheduled
     # callbacks and should ensure that the porgrma exits cleanly.
-    loop.run_until_complete(asyncio.sleep(5))
+    asyncio.run(asyncio.sleep(5))
     loop.close()
 
 
@@ -306,7 +306,7 @@ def prometheus_exporter(opts):
     receiver.add_listener(prometheus_metrics.process)
     _start_web_in_thread(opts)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(receiver.run())
+    asyncio.run(receiver.run())
 
 
 def setup_logging(opts):
