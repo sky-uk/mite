@@ -44,7 +44,7 @@ The stream error 92 and performance issues were both symptoms of HTTP/2 behavior
 
 **Make HTTP version configurable (default: auto for backward compatibility)**
 
-Added `http_version` parameter to control HTTP protocol version while preserving original behavior.
+Added `http_version` parameter to control HTTP protocol version while preserving original behavior. Also improved connection management and eliminated mutex lock overhead.
 
 ### Changes Made
 
@@ -56,7 +56,57 @@ cdef int CURL_HTTP_VERSION_1_1
 cdef int CURL_HTTP_VERSION_2_0
 ```
 
-**2. Session accepts http_version parameter** (`acurl/src/session.pyx`)
+**2. Configurable connection pool size** (`acurl/src/acurl.pyx`)
+
+```cython
+def __cinit__(self, object loop, int max_connects=100):
+    # max_connects: connection pool/cache size (default: 100)
+    # Controls how many idle connections curl keeps alive
+    # NOT a concurrency limit - just memory/cache tuning
+    acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
+```
+
+**Why we keep this:**
+- Useful for memory tuning in containerized environments (e.g., 512MB limit)
+- Works for both HTTP/1.1 and HTTP/2
+- Default of 100 is reasonable for most use cases
+- Can be configured via `@mite_http(max_connects=50)` if needed
+
+**3. Unlimited connections per host** (`acurl/src/acurl.pyx`)
+
+```cython
+# Allow multiple connections per host (important for HTTP/2 at high load)
+# Setting to 0 = unlimited connections per host
+acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
+```
+
+**Why we keep this:**
+- Essential for HTTP/2 at high load (prevents stream queuing bottleneck)
+- No negative impact on HTTP/1.1 (it naturally creates multiple connections anyway)
+- Since default is "auto" (may use HTTP/2), this prevents issues proactively
+
+**4. No-op lock callbacks for single-threaded asyncio** (`acurl/src/session.pyx`)
+
+```cython
+# No-op lock functions - eliminates mutex overhead in single-threaded asyncio
+cdef void noop_lock(CURL *handle, int data, int access, void *userptr) nogil:
+    pass
+
+cdef void noop_unlock(CURL *handle, int data, void *userptr) nogil:
+    pass
+
+# Apply to share interface
+acurl_share_setopt_lockfunc(self.shared, CURLSHOPT_LOCKFUNC, noop_lock)
+acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
+```
+
+**Why we keep this:**
+- We still share DNS cache and cookies (via `CURL_LOCK_DATA_DNS` and `CURL_LOCK_DATA_COOKIE`)
+- Libcurl's default mutex locks are pure overhead in single-threaded asyncio event loop
+- No actual concurrency, so locks provide zero safety benefit but cost CPU cycles
+- Minimal code, no downside to keeping them
+
+**5. Session accepts http_version parameter** (`acurl/src/session.pyx`)
 
 ```cython
 def __cinit__(self, wrapper, http_version="auto"):
@@ -73,7 +123,7 @@ def __cinit__(self, wrapper, http_version="auto"):
         raise ValueError(f"Invalid http_version: {http_version}")
 ```
 
-**3. Apply HTTP version in requests** (`acurl/src/session.pyx`)
+**6. Apply HTTP version in requests** (`acurl/src/session.pyx`)
 
 ```cython
 # In _inner_request method
@@ -81,7 +131,7 @@ if self.curl_http_version != 0:
     acurl_easy_setopt_int(curl, CURLOPT_HTTP_VERSION, self.curl_http_version)
 ```
 
-**4. Exposed in mite_http decorator** (`mite_http/__init__.py`)
+**7. Exposed in mite_http decorator** (`mite_http/__init__.py`)
 
 ```python
 @mite_http  # Uses "auto" (default, preserves original behavior)
@@ -92,7 +142,22 @@ async def my_journey(ctx):
 @mite_http(http_version="1.1")
 async def my_journey(ctx):
     await ctx.http.get("https://example.com")
+
+# Or configure connection pool size for memory tuning
+@mite_http(max_connects=50, http_version="1.1")
+async def my_journey(ctx):
+    await ctx.http.get("https://example.com")
 ```
+
+### What We Removed
+
+**Connection and SSL session sharing** - These caused the issues:
+- ❌ Removed: `CURL_LOCK_DATA_CONNECT` - Caused 70% CPU overhead and slow latencies
+- ❌ Removed: `CURL_LOCK_DATA_SSL_SESSION` - Caused HTTP/2 stream ID conflicts (error 92)
+- ✅ Kept: `CURL_LOCK_DATA_DNS` - DNS cache sharing (safe, no issues)
+- ✅ Kept: `CURL_LOCK_DATA_COOKIE` - Cookie sharing (safe, no issues)
+
+**Key insight:** Sharing connections was the root of performance problems. Each session now maintains independent connections, which is simpler and faster.
 
 ---
 
