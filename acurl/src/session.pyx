@@ -91,22 +91,31 @@ cdef class Session:
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
     cdef public object response_callback
+    cdef int curl_http_version
 
-    def __cinit__(self, wrapper):
+    def __cinit__(self, wrapper, http_version="auto"):
         self.shared = curl_share_init()
         # Set no-op lock functions to eliminate mutex overhead in single-threaded asyncio
         # This is safe because we run in a single event loop thread
         acurl_share_setopt_lockfunc(self.shared, CURLSHOPT_LOCKFUNC, noop_lock)
         acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
         # Share only cookies and DNS - NOT SSL sessions or connections
-        # Sharing SSL sessions without connection sharing causes HTTP/2 stream ID conflicts
-        # Sharing connections causes massive CPU overhead and slow percentile latencies
+        # HTTP/2 causes stream errors and high CPU with connection sharing
+        # HTTP/1.1 is the recommended default for stability and performance
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
-        # DO NOT share: CURL_LOCK_DATA_SSL_SESSION (causes stream error 92)
-        # DO NOT share: CURL_LOCK_DATA_CONNECT (causes 70% CPU and slow journeys)
         self.wrapper = wrapper
         self.response_callback = None
+        
+        # Configure HTTP version (default to auto for backward compatibility)
+        if http_version == "1.1":
+            self.curl_http_version = CURL_HTTP_VERSION_1_1
+        elif http_version == "2":
+            self.curl_http_version = CURL_HTTP_VERSION_2_0
+        elif http_version == "auto":
+            self.curl_http_version = 0  # CURL_HTTP_VERSION_NONE (let curl decide)
+        else:
+            raise ValueError(f"Invalid http_version: {http_version}. Must be '1.1', '2', or 'auto'")
 
     def __dealloc__(self):
         if self.wrapper.loop is None or self.wrapper.loop.is_closed():
@@ -149,8 +158,9 @@ cdef class Session:
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
         acurl_easy_setopt_cstr(curl, CURLOPT_CUSTOMREQUEST, method)
-        # Force HTTP/1.1 to test if HTTP/2 is causing stream errors
-        acurl_easy_setopt_int(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1)
+        # Set HTTP version as configured (default: auto - let curl negotiate)
+        if self.curl_http_version != 0:
+            acurl_easy_setopt_int(curl, CURLOPT_HTTP_VERSION, self.curl_http_version)
         # curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1)  # DEBUG
         acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, b"")
         # FIXME: make this configurable?

@@ -56,13 +56,14 @@ cdef class CurlWrapper:
         self.multi = curl_multi_init()
         # max_connects sets CURLMOPT_MAXCONNECTS: connection pool/cache size
         # NOT a concurrency limit - controls how many idle connections to keep
-        # Set to at least the number of unique hosts you access to avoid slowdowns
+        # Useful for memory tuning regardless of HTTP version (1.1 or 2)
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
         
-        # CRITICAL: Allow multiple connections per host for HTTP/2
-        # Without this, all requests to same host queue on ONE connection
-        # Servers typically limit ~100-128 concurrent streams per HTTP/2 connection
+        # Allow multiple connections per host (important for HTTP/2 at high load)
+        # Default libcurl behavior limits to 1 connection per host, which causes
+        # stream queuing when HTTP/2 server stream limits (~100-128) are exceeded
         # Setting to 0 = unlimited connections per host (curl creates as needed)
+        # Has no negative impact on HTTP/1.1 usage
         acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
         
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
@@ -116,8 +117,8 @@ cdef class CurlWrapper:
                 raise Exception("oops2")
             message = curl_multi_info_read(self.multi, &_pending)
 
-    def session(self):
-        return Session.__new__(Session, self)
+    def session(self, http_version="auto"):
+        return Session.__new__(Session, self, http_version)
 
     def __dealloc__(self):
         # FIXME: I (AWE) can't convince myself that this definitely doesn't
