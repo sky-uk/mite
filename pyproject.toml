@@ -1,14 +1,338 @@
-[tool.black]
-include ='\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.tox
-  | build
-  | dist
-  | __pycache__
-  | .eggs
-)/
-'''
-target-version = ['py311']
-line-length = 90
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mite"
+dynamic = ["version"]
+description = "A Python Performance Testing Framework"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    {name = "Sky UK", email = "mite@sky.uk"},
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: POSIX :: Linux",
+]
+# Core dependencies for the base mite framework (runner, controller, messaging, CLI)
+dependencies = [
+    "docopt",
+    "flask",
+    "msgpack",
+    "nanomsg",
+    "prettytable",
+    "pyzmq",
+    "ujson",
+    "uvloop",
+]
+
+[project.optional-dependencies]
+# HTTP/REST testing support
+http = ["acurl"]
+# AMQP/RabbitMQ testing support
+amqp = ["aio_pika"]
+# Kafka testing support
+kafka = ["aiokafka"]
+# Thrift/Finagle protocol support
+finagle = ["thrift"]
+# S3-based data pools
+s3datapools = ["boto3"]
+# Selenium browser automation (v3.x for compatibility)
+# TODO - Update (or remove) the Selenium version when migrating to v4. The version is explicitly defined
+#        as less than 4 as there are backward compatibility issues with Rust from version 4 on
+selenium = ["selenium<4"]
+# Selenium with wire protocol inspection
+selenium_wire = ["selenium-wire==4.6.5"]
+# WebSocket testing support
+websocket = ["websockets"]
+# Browser HTML parsing support
+browser = ["bs4"]
+# HAR file conversion utility
+har = ["jinja2"]
+# Complete installation with all modules
+all = [
+    "acurl",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
+    "jinja2",
+    "selenium<4",
+    "selenium-wire==4.6.5",
+    "sqlalchemy",
+    "thrift",
+    "ujson",
+    "uvloop==0.21.0",
+    "websockets",
+]
+# Development dependencies
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-httpbin",
+    "pytest-httpserver",
+    "ruff>=0.1.0",
+    "hypothesis", # used in finagle/thrift tests
+    "werkzeug==3.1.3",
+    "Cython<3.0", # required for coverage plugin and acurl
+]
+
+[project.urls]
+Homepage = "https://github.com/sky-uk/mite/"
+Documentation = "https://sky-uk.github.io/mite/"
+Repository = "https://github.com/sky-uk/mite/"
+Issues = "https://github.com/sky-uk/mite/issues"
+
+[project.scripts]
+mite = "mite.__main__:main"
+
+
+# Hatch configuration ##############################################
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { tag_regex = "^v(?P<version>\\d+\\.\\d+\\.\\d+)$", git_describe_command = "git describe --dirty --tags --long --match 'v*'" }
+
+[tool.hatch.build.hooks.vcs]
+version-file = "mite/_version.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/.tox",
+    "/acurl",
+    "/docs",
+    "/test",
+    "/coverage_html_report",
+    "*.pyc",
+    "__pycache__",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "mite",
+    "mite_amqp",
+    "mite_browser",
+    "mite_db_datapool",
+    "mite_finagle",
+    "mite_http",
+    "mite_kafka",
+    "mite_selenium",
+    "mite_websocket",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "mite[all]",
+    "mite[dev]"
+]
+
+
+[tool.hatch.envs.test]
+dependencies = [
+    "mite[all]",
+    "mite[dev]"
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:test/}"
+test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
+cov-report = "python -m webbrowser coverage_html_report/index.html"
+acurl-test = "pytest {args:acurl/tests/}"
+
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11"]
+
+
+[tool.hatch.envs.perf-test]
+features = ["all", "dev"]
+dependencies = [
+    "aiohttp",
+    "sanic",
+    "psutil",
+    "pandas",
+    "altair",
+]
+
+[tool.hatch.envs.perf-test.env-vars]
+MITE_PERFTEST_OUT = "output"
+
+[tool.hatch.envs.perf-test.scripts]
+perf-test = "python test/perf/perftest.py {args:}"
+
+[[tool.hatch.envs.perf-test.matrix]]
+python = ["3.11"] # Extend to 3.10 as we should support this.
+
+
+
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+    "ruff>=0.1.0",
+]
+
+[tool.hatch.envs.lint.scripts]
+# check should include `"ruff format --check ."`. IT is not included here as it will fail the pipeline.
+# Once we are going to resolve all the ruff formatting issues, we can enable it again.
+check = [
+    "ruff check .",
+]
+acurl-check = [
+    "cd acurl && ruff check .",
+]
+format-mite = [
+    "ruff check --fix .",
+    "ruff format .",
+]
+acurl-format = [
+    "cd acurl && ruff check --fix .",
+    "cd acurl && ruff format .",
+]
+
+# ruff configuration ##############################################
+
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+
+# Enable pycodestyle (E), Pyflakes (F), isort (I), and more
+lint.select = [
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+
+# Ignore specific rules that were ignored in flake8/black
+lint.ignore = [
+    "E501",  # Line too long (ruff formatter handles this)
+    "E731",  # Lambda assignment
+    "E741",  # Ambiguous variable names
+    # TODO - review the below and fix what possible
+    "F403",  # 'from module import *' used; unable to detect undefined names
+    "F405",  # May be undefined, or defined from star imports
+    "N801",  # Class name should use CapWords convention
+    "N802",  # Function name should be lowercase
+    "N803",  # Argument name should be lowercase
+    "N806",  # Variable in function should be lowercase
+    "N812",  # Lowercase imported as non-lowercase
+    "N818",  # Exception name should be named with an Error suffix
+    "N999",  # Invalid module name
+    "SIM102", # Use a single if statement instead of nested if statements
+    "SIM105", # Use contextlib.suppress instead of try-except-pass
+    "SIM108", # Use ternary operator instead of if-else-block
+    "SIM115", # Use a context manager for opening files
+    "SIM118", # Use key in dict instead of key in dict.keys()
+    "UP006",  # Use type instead of Type for type annotation
+    "UP031",  # Use format specifiers instead of percent format
+    "UP035",  # Use collections types instead of typing types
+    "B006",   # Do not use mutable data structures for argument defaults
+    "B007",   # Loop control variable not used within loop body
+    "B011",   # Do not assert False
+    "B017",   # Do not assert blind exception
+    "B026",   # Star-arg unpacking after a keyword argument
+    "B904",   # Use raise from to distinguish errors in exception handling
+    "B905",   # zip() without an explicit strict= parameter
+    "C418",   # Unnecessary dict literal passed to dict()
+    # FIXME the below are fixable using hatchling's ruff format command
+    "UP045",  # Use `X | None` for type annotations
+    "F401",  # Imported but unused
+    "UP039",  # Unnecessary parentheses after class definition
+    "UP015",  # Unnecessary mode argument
+    "UP004",  # Class inherits from object
+    "UP032",  # Use f-string instead of format call
+    "UP033",  # Use @functools.cache instead of @functools.lru_cache(maxsize=None)
+    "SIM905", # Consider using a list literal instead of str.split
+    "SIM117", # Use a single with statement with multiple contexts
+    "I001",  # Import block is un-sorted or un-formatted
+]
+
+exclude = [
+    ".git",
+    "__pycache__",
+    ".eggs",
+    "*.egg-info",
+    "pyproject.toml",
+]
+
+extend-exclude = [
+    "docs",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.format]
+# Use double quotes for strings (black default)
+quote-style = "double"
+# Indent with spaces
+indent-style = "space"
+# Use \n line endings
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket"]
+force-single-line = false
+lines-after-imports = 2
+
+# Pytest configuration ##############################################
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "acurl",
+    "mite",
+    "mite_http",
+    "mite_browser",
+    "mite_selenium",
+    "mite_amqp",
+    "mite_kafka",
+    "mite_websocket",
+    "mite_finagle",
+]
+omit = [
+    "*/test/*",
+    "*/tests/*",
+    "*/__pycache__/*",
+    "mite/example.py",
+]
+plugins = ["Cython.Coverage"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self\\.debug",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+]
+ignore_errors = true
+
+[tool.coverage.html]
+directory = "coverage_html_report"
