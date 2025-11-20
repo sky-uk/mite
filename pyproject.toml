@@ -75,6 +75,22 @@ all = [
     "uvloop==0.21.0",
     "websockets",
 ]
+# Testing dependencies (excludes packages with complex system dependencies like playwright)
+test = [
+    "acurl",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
+    "jinja2",
+    "selenium<4",
+    "selenium-wire==4.6.5",
+    "sqlalchemy",
+    "thrift",
+    "ujson",
+    "uvloop==0.21.0",
+    "websockets",
+]
 # Development dependencies
 dev = [
     "pytest",
@@ -139,7 +155,7 @@ features = ["all", "dev"]
 
 
 [tool.hatch.envs.test]
-features = ["all", "dev"]
+features = ["test", "dev"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
