@@ -376,33 +376,28 @@ class TestConfigIntegration:
                 del os.environ["MITE_CONF_OTEL_SAMPLER_RATIO"]
 
 
-class TestEnableTracing:
-    """Tests for enable_tracing function"""
+class TestInitTracing:
+    """Tests for init_tracing function and auto-initialization"""
 
-    def test_enable_tracing_initializes_sdk(self):
-        """Test that enable_tracing initializes OpenTelemetry SDK"""
-        from mite.otel import enable_tracing
+    def test_init_tracing_initializes_sdk(self):
+        """Test that init_tracing initializes OpenTelemetry SDK"""
+        from mite.otel.tracing import init_tracing
 
-        with patch("mite.otel.tracing.init_tracing") as mock_init:
-            with patch("mite.otel.context_integration.patch_context_transaction"):
-                with patch("mite.otel.acurl_integration.patch_acurl_session"):
-                    enable_tracing()
-                    mock_init.assert_called_once()
+        with patch("mite.otel.tracing.trace.set_tracer_provider") as mock_set_provider:
+            with patch("mite.otel.tracing.metrics.set_meter_provider"):
+                with patch("mite.otel.tracing.OTEL_AVAILABLE", True):
+                    init_tracing()
+                    # Should have set up tracer provider
+                    assert mock_set_provider.called
 
-    def test_enable_tracing_patches_integrations(self):
-        """Test that enable_tracing applies necessary patches"""
-        from mite.otel import enable_tracing
+    def test_module_auto_initializes_when_enabled(self):
+        """Test that mite.otel module auto-initializes when OTEL is enabled"""
+        # Module initialization happens on import when MITE_CONF_OTEL_ENABLED=true
+        # Since we set this at the top of the test file, tracing should be initialized
+        from mite.otel.tracing import _state
 
-        with patch("mite.otel.tracing.init_tracing"):
-            with patch(
-                "mite.otel.context_integration.patch_context_transaction"
-            ) as mock_ctx:
-                with patch(
-                    "mite.otel.acurl_integration.patch_acurl_session"
-                ) as mock_acurl:
-                    enable_tracing()
-                    mock_ctx.assert_called_once()
-                    mock_acurl.assert_called_once()
+        # After module import with OTEL enabled, tracer should be initialized
+        assert _state.tracer is not None
 
 
 class TestInjectHeaders:
