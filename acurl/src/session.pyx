@@ -98,11 +98,13 @@ cdef class Session:
         # This is safe because we run in a single event loop thread
         acurl_share_setopt_lockfunc(self.shared, CURLSHOPT_LOCKFUNC, noop_lock)
         acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
-        # Share connection data across curl handles
+        # Share only cookies and DNS - NOT SSL sessions or connections
+        # Sharing SSL sessions without connection sharing causes HTTP/2 stream ID conflicts
+        # Sharing connections causes massive CPU overhead and slow percentile latencies
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
-        acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION)
-        acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT)
+        # DO NOT share: CURL_LOCK_DATA_SSL_SESSION (causes stream error 92)
+        # DO NOT share: CURL_LOCK_DATA_CONNECT (causes 70% CPU and slow journeys)
         self.wrapper = wrapper
         self.response_callback = None
 
