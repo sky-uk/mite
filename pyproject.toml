@@ -85,6 +85,7 @@ dev = [
     "ruff>=0.1.0",
     "hypothesis", # used in finagle/thrift tests
     "werkzeug==3.1.3",
+    "httpbin>=0.10.2", # Required for werkzeug 3.x compatibility
     "Cython<3.0", # required for coverage plugin and acurl
 ]
 
@@ -134,17 +135,11 @@ packages = [
 ]
 
 [tool.hatch.envs.default]
-dependencies = [
-    "mite[all]",
-    "mite[dev]"
-]
+features = ["all", "dev"]
 
 
 [tool.hatch.envs.test]
-dependencies = [
-    "mite[all]",
-    "mite[dev]"
-]
+features = ["all", "dev"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
