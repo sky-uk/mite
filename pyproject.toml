@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "A Python Performance Testing Framework"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.11"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
@@ -54,6 +54,10 @@ websocket = ["websockets"]
 browser = ["bs4"]
 # HAR file conversion utility
 har = ["jinja2"]
+# Database support via SQLAlchemy
+database = ["sqlalchemy"]
+# Playwright browser automation
+playwright = ["playwright"]
 # Complete installation with all modules
 all = [
     "acurl",
@@ -62,6 +66,7 @@ all = [
     "boto3",
     "bs4",
     "jinja2",
+    "playwright",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
@@ -125,6 +130,7 @@ packages = [
     "mite_kafka",
     "mite_selenium",
     "mite_websocket",
+    "mite_playwright",
 ]
 
 [tool.hatch.envs.default]
@@ -284,7 +290,7 @@ indent-style = "space"
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket"]
+known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket", "mite_playwright", "mite_db_datapool"]
 force-single-line = false
 lines-after-imports = 2
 
@@ -313,6 +319,8 @@ source = [
     "mite_kafka",
     "mite_websocket",
     "mite_finagle",
+    "mite_db_datapool",
+    "mite_playwright",
 ]
 omit = [
     "*/test/*",
