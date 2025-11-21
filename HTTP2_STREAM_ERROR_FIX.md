@@ -16,11 +16,11 @@ Intermittent `acurl.AcurlError: curl failed with code 92 Stream error in the HTT
 2. **Server Verification** - Confirmed server supports HTTP/2 correctly via direct curl test
 3. **First Attempt** - Added `CURL_LOCK_DATA_CONNECT` connection sharing → Errors eliminated but CPU spiked 10% → 70%
 4. **Performance Issue** - Connection sharing caused severe CPU overhead and slow percentile latencies
-5. **Second Attempt** - No-op lock callbacks → No improvement
-6. **Third Attempt** - `CURLMOPT_MAX_HOST_CONNECTIONS=0` → No improvement
-7. **Fourth Attempt** - Removed connection sharing, kept only DNS/cookie sharing → Errors returned
-8. **Root Cause Identified** - HTTP/2 itself was causing both errors and performance issues
-9. **Final Solution** - Force HTTP/1.1 by default, make HTTP version configurable
+5. **Second Attempt** - Tried different connection tuning approaches → No improvement
+6. **Third Attempt** - Removed connection sharing, kept only DNS/cookie sharing → Errors returned
+7. **Root Cause Identified** - HTTP/2 itself was causing both errors and performance issues
+8. **Final Solution** - Make HTTP version configurable (default "auto"), allow users to force HTTP/1.1
+9. **Curl Version Discovery** - Found old curl 7.74.0 in base image may have contributed to HTTP/2 issues
 
 ---
 
@@ -85,28 +85,7 @@ acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
 - No negative impact on HTTP/1.1 (it naturally creates multiple connections anyway)
 - Since default is "auto" (may use HTTP/2), this prevents issues proactively
 
-**4. No-op lock callbacks for single-threaded asyncio** (`acurl/src/session.pyx`)
-
-```cython
-# No-op lock functions - eliminates mutex overhead in single-threaded asyncio
-cdef void noop_lock(CURL *handle, int data, int access, void *userptr) nogil:
-    pass
-
-cdef void noop_unlock(CURL *handle, int data, void *userptr) nogil:
-    pass
-
-# Apply to share interface
-acurl_share_setopt_lockfunc(self.shared, CURLSHOPT_LOCKFUNC, noop_lock)
-acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
-```
-
-**Why we keep this:**
-- We still share DNS cache and cookies (via `CURL_LOCK_DATA_DNS` and `CURL_LOCK_DATA_COOKIE`)
-- Libcurl's default mutex locks are pure overhead in single-threaded asyncio event loop
-- No actual concurrency, so locks provide zero safety benefit but cost CPU cycles
-- Minimal code, no downside to keeping them
-
-**5. Session accepts http_version parameter** (`acurl/src/session.pyx`)
+**4. Session accepts http_version parameter** (`acurl/src/session.pyx`)
 
 ```cython
 def __cinit__(self, wrapper, http_version="auto"):

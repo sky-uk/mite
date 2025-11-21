@@ -78,12 +78,8 @@ cdef extern from "<curl/curl.h>":
     ctypedef void CURLSH
     ctypedef int CURLSHcode
     ctypedef int CURLSHoption
-    ctypedef void (*curl_lock_function)(CURL *handle, int data, int access, void *userptr)
-    ctypedef void (*curl_unlock_function)(CURL *handle, int data, void *userptr)
     
     cdef int CURLSHOPT_SHARE
-    cdef int CURLSHOPT_LOCKFUNC
-    cdef int CURLSHOPT_UNLOCKFUNC
     cdef int CURLSHOPT_USERDATA
     cdef int CURL_LOCK_DATA_COOKIE
     cdef int CURL_LOCK_DATA_DNS

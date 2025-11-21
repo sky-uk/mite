@@ -46,14 +46,6 @@ static inline CURLSHcode acurl_share_setopt_int(CURLSH *share, CURLSHoption opti
   return curl_share_setopt(share, option, data);
 }
 
-static inline CURLSHcode acurl_share_setopt_lockfunc(CURLSH *share, CURLSHoption option, curl_lock_function data) {
-  return curl_share_setopt(share, option, data);
-}
-
-static inline CURLSHcode acurl_share_setopt_unlockfunc(CURLSH *share, CURLSHoption option, curl_unlock_function data) {
-  return curl_share_setopt(share, option, data);
-}
-
 static inline CURLcode acurl_easy_setopt_voidptr(CURL *easy, CURLoption option, void *data) {
   return curl_easy_setopt(easy, option, data);
 }

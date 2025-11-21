@@ -56,16 +56,6 @@ cdef void cleanup_share(object share_capsule):
     cdef void* share_raw = PyCapsule_GetPointer(share_capsule, <const char*>NULL)
     curl_share_cleanup(<CURLSH*>share_raw)
 
-# No-op lock functions for single-threaded async environment
-# libcurl's share interface uses mutex locks by default which causes
-# unnecessary overhead in a single-threaded asyncio event loop.
-# These no-op callbacks eliminate lock contention at high request rates.
-cdef void noop_lock(CURL *handle, int data, int access, void *userptr) nogil:
-    pass
-
-cdef void noop_unlock(CURL *handle, int data, void *userptr) nogil:
-    pass
-
 # From the cython docs
 # <https://cython.readthedocs.io/en/latest/src/userguide/extension_types.html#disabling-cycle-breaking-tp-clear>:
 # > If any Python objects can be referenced [by this class], Cython will
@@ -95,13 +85,8 @@ cdef class Session:
 
     def __cinit__(self, wrapper, http_version="auto"):
         self.shared = curl_share_init()
-        # Set no-op lock functions to eliminate mutex overhead in single-threaded asyncio
-        # This is safe because we run in a single event loop thread
-        acurl_share_setopt_lockfunc(self.shared, CURLSHOPT_LOCKFUNC, noop_lock)
-        acurl_share_setopt_unlockfunc(self.shared, CURLSHOPT_UNLOCKFUNC, noop_unlock)
         # Share only cookies and DNS - NOT SSL sessions or connections
-        # HTTP/2 causes stream errors and high CPU with connection sharing
-        # HTTP/1.1 is the recommended default for stability and performance
+        # Each session maintains independent connections for simplicity and performance
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
         self.wrapper = wrapper
