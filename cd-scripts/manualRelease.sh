@@ -17,14 +17,14 @@ if isOnMaster; then
     echo "##### Build Linux-Wheels #####"
     buildLinuxWheels
 
-    if [ "$VERSION_INCREMENT" = false ]; then
-            echo "Mite version not incremented, nothing to upload"
+    if [ "$VERSION_INCREMENT" = false ] && [ "$ACURL_CHANGED" = false ]; then
+        echo "Mite version not incremented and Acurl not changed, nothing to upload"
     else
         echo "##### Init .pypirc #####"
         initPypirc
 
         echo "##### Upload package #####"
-        python3 -m twine upload wheelhouse/*
+        python3 -m twine upload wheelhouse/* 
     fi
 
 else
