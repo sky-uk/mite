@@ -11,14 +11,11 @@ function isOnMaster() {
 }
 
 function tagBuild() {   
-    if [ -z "$1" ]; then
-        VERSION_INCREMENT_TYPE=""
-    else
-        VERSION_INCREMENT_TYPE="--${1}"
-    fi
+    VERSION_INCREMENT_TYPE="--${1}"
     git config user.email "mite@noreply.github.com"
     git config user.name "Jenkins-CI"
     pip3 install docopt GitPython packaging requests
+    echo "Tagging the build with a ${VERSION_INCREMENT_TYPE} version increment"
     python3 cd-scripts/cdTagRelease.py ${VERSION_INCREMENT_TYPE}
     if (( $? == 1)); then
         VERSION_INCREMENT=false
