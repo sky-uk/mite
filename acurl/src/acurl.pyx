@@ -52,9 +52,20 @@ cdef class CurlWrapper:
     cdef object timer_handle
     cdef object loop
 
-    def __cinit__(self, object loop):
+    def __cinit__(self, object loop, int max_connects=100):
         self.multi = curl_multi_init()
-        acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, 1000)  # FIXME: magic number
+        # max_connects sets CURLMOPT_MAXCONNECTS: connection pool/cache size
+        # NOT a concurrency limit - controls how many idle connections to keep
+        # Useful for memory tuning regardless of HTTP version (1.1 or 2)
+        acurl_multi_setopt_long(self.multi, CURLMOPT_MAXCONNECTS, max_connects)
+        
+        # Allow multiple connections per host (important for HTTP/2 at high load)
+        # Default libcurl behavior limits to 1 connection per host, which causes
+        # stream queuing when HTTP/2 server stream limits (~100-128) are exceeded
+        # Setting to 0 = unlimited connections per host (curl creates as needed)
+        # Has no negative impact on HTTP/1.1 usage
+        acurl_multi_setopt_long(self.multi, CURLMOPT_MAX_HOST_CONNECTIONS, 0)
+        
         acurl_multi_setopt_socketcb(self.multi, CURLMOPT_SOCKETFUNCTION, handle_socket)
         acurl_multi_setopt_pointer(self.multi, CURLMOPT_SOCKETDATA, <void*>self)
         acurl_multi_setopt_timercb(self.multi, CURLMOPT_TIMERFUNCTION, start_timeout)
@@ -106,8 +117,8 @@ cdef class CurlWrapper:
                 raise Exception("oops2")
             message = curl_multi_info_read(self.multi, &_pending)
 
-    def session(self):
-        return Session.__new__(Session, self)
+    def session(self, http_version="auto"):
+        return Session.__new__(Session, self, http_version)
 
     def __dealloc__(self):
         # FIXME: I (AWE) can't convince myself that this definitely doesn't
