@@ -150,8 +150,6 @@ cdef extern from "acurl_wrappers.h":
     CURLcode acurl_easy_getinfo_voidptr(CURL *curl, CURLINFO info, void **data)
     # curl_share_setopt
     CURLSHcode acurl_share_setopt_int(CURLSH *share, CURLSHoption option, int data)
-    CURLSHcode acurl_share_setopt_lockfunc(CURLSH *share, CURLSHoption option, curl_lock_function data)
-    CURLSHcode acurl_share_setopt_unlockfunc(CURLSH *share, CURLSHoption option, curl_unlock_function data)
     # curl_easy_setopt
     CURLcode acurl_easy_setopt_voidptr(CURL *easy, CURLoption option, void *data)
     CURLcode acurl_easy_setopt_cstr(CURL *easy, CURLoption option, const char *data)
