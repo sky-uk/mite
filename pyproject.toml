@@ -166,6 +166,7 @@ MITE_PERFTEST_OUT = "output"
 
 [tool.hatch.envs.perf-test.scripts]
 perf-test = "python test/perf/perftest.py {args:}"
+cleanup = "bash test/perf/cleanup_ports.sh"
 
 [[tool.hatch.envs.perf-test.matrix]]
 python = ["3.11"] # Extend to 3.10 as we should support this.

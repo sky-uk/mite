@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import atexit
 import datetime
 import math
 import os
 import re
 import signal
 import subprocess
+import sys
 import time
 
 import altair as alt
@@ -15,10 +17,63 @@ import psutil
 if os.path.dirname(__file__) != "":
     os.chdir(os.path.dirname(__file__))
 
+# Global list to track all spawned processes
+_spawned_processes = []
+
+
+def cleanup_processes():
+    """Clean up all spawned processes and their ports."""
+    for process in _spawned_processes:
+        if process is not None:
+            try:
+                # Try graceful termination first
+                if process.is_running():
+                    process.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    
+    # Wait a bit for graceful shutdown
+    time.sleep(1)
+    
+    # Force kill any remaining processes
+    for process in _spawned_processes:
+        if process is not None:
+            try:
+                if process.is_running():
+                    process.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    
+    _spawned_processes.clear()
+
+
+# Register cleanup to run on exit
+atexit.register(cleanup_processes)
+
+
+def signal_handler(signum, frame):
+    """Handle interrupt signals gracefully."""
+    print(f"\nReceived signal {signum}, cleaning up...")
+    cleanup_processes()
+    sys.exit(1)
+
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
 
 def run_test(scenario):
+    http_server = None
+    runner = None
+    duplicator = None
+    collector = None
+    controller = None
+    
     try:
         http_server = psutil.Popen(("python", "./http_server.py"), stdout=subprocess.PIPE)
+        _spawned_processes.append(http_server)
+        
         runner = psutil.Popen(
             (
                 "mite",
@@ -26,10 +81,16 @@ def run_test(scenario):
                 # "--log-level=DEBUG"
             )
         )
+        _spawned_processes.append(runner)
+        
         duplicator = psutil.Popen(("mite", "duplicator", "tcp://127.0.0.1:14303"))
+        _spawned_processes.append(duplicator)
+        
         # TODO: we should make sure that the collector has a tmpfs in RAM to
         # run in, so that disk performance doesn't get into the mix...
         collector = psutil.Popen(("mite", "collector"))
+        _spawned_processes.append(collector)
+        
         controller = psutil.Popen(
             (
                 "mite",
@@ -39,6 +100,7 @@ def run_test(scenario):
                 scenario,
             )
         )
+        _spawned_processes.append(controller)
         # TODO: prometheus exporter
 
         # TODO: make sure all have started happily, none have errored
@@ -93,9 +155,31 @@ def run_test(scenario):
 
         return rows
     finally:
-        for process in (runner, collector, duplicator, http_server):
+        # Clean up processes for this specific test
+        for process in (controller, collector, duplicator, runner, http_server):
             if process is not None:
-                process.terminate()
+                try:
+                    if process.is_running():
+                        process.terminate()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+        
+        # Wait a bit for graceful shutdown
+        time.sleep(1)
+        
+        # Force kill any that didn't terminate
+        for process in (controller, collector, duplicator, runner, http_server):
+            if process is not None:
+                try:
+                    if process.is_running():
+                        process.kill()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+        
+        # Remove from global list
+        for process in (controller, collector, duplicator, runner, http_server):
+            if process in _spawned_processes:
+                _spawned_processes.remove(process)
 
 
 if __name__ == "__main__":
