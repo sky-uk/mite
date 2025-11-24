@@ -83,6 +83,7 @@ test = [
     "boto3",
     "bs4",
     "jinja2",
+    "playwright",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
@@ -169,7 +170,7 @@ python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.test-playwright]
-features = ["playwright", "dev"]
+features = ["test, "dev"]
 post-install-commands = [
     "playwright install chromium"
 ]
