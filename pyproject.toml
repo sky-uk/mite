@@ -82,6 +82,7 @@ test = [
     "boto3",
     "bs4",
     "jinja2",
+    "playwright>=1.18",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
