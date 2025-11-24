@@ -23,4 +23,6 @@ def collector(opts):
         use_json=opts["--collector-use-json"],
     )
     receiver.add_raw_listener(collector.process_raw_message)
-    asyncio.get_event_loop().run_until_complete(receiver.run())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(receiver.run())

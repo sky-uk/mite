@@ -69,7 +69,7 @@ class Runner:
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
         if loop is None:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop_policy().get_event_loop()
         self._loop = loop
         self._fixture_registry = {}
         self._debug = debug

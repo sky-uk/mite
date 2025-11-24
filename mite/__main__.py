@@ -239,7 +239,8 @@ def controller(opts):
     # Done setting up scenarios
     controller = Controller(scenario_spec, scenario_manager, config_manager)
     server = _create_controller_server(opts)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     logging_id = None
     logging_url = opts["--logging-webhook"]
     if logging_url is None:
@@ -276,7 +277,8 @@ def controller(opts):
 def runner(opts):
     transport = _create_runner_transport(opts)
     sender = _create_sender(opts)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(_create_runner(opts, transport, sender.send).run())
     # Under rare conditions, we've seen a race condition on the runner's exit
     # that leads to an exception like:
@@ -298,14 +300,17 @@ def recorder(opts):
     receiver = _recorder_receiver(opts)
     recorder = Recorder(opts["--recorder-dir"])
     receiver.add_listener(recorder.process_message)
-    asyncio.get_event_loop().run_until_complete(receiver.run())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(receiver.run())
 
 
 def prometheus_exporter(opts):
     receiver = _create_prometheus_exporter_receiver(opts)
     receiver.add_listener(prometheus_metrics.process)
     _start_web_in_thread(opts)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())
 
 

@@ -15,7 +15,7 @@ class Duplicator:
         self._out_sockets = [nanomsg.Socket(nanomsg.PUSH) for _ in out_addresses]
         for socket, address in zip(self._out_sockets, out_addresses):
             socket.bind(address)
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop_policy().get_event_loop()
 
     async def run(self, stop_func=None):
         return await self._loop.run_in_executor(None, self._run, stop_func)
@@ -46,7 +46,7 @@ class Receiver:
         self._socket = nanomsg.Socket(nanomsg.PULL)
         self._listeners = listeners or []
         self._raw_listeners = raw_listeners or []
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_event_loop_policy().get_event_loop()
 
     def bind(self, address):
         self._socket.bind(address)
@@ -86,7 +86,7 @@ class RunnerTransport:
         self._sock = nanomsg.Socket(nanomsg.REQ)
         self._sock.connect(socket_address)
         if loop is None:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop_policy().get_event_loop()
         self._loop = loop
 
     def _hello(self):
@@ -130,7 +130,7 @@ class ControllerServer:
         self._sock = nanomsg.Socket(nanomsg.REP)
         self._sock.bind(socket_address)
         if loop is None:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop_policy().get_event_loop()
         self._loop = loop
 
     async def run(self, controller, stop_func=None):
