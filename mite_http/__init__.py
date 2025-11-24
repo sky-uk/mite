@@ -35,9 +35,15 @@ class SessionPool:
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
-    def __init__(self):
-        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+    def __init__(self, max_connects=None, http_version="auto"):
+        # Allow programmatic configuration of max connections
+        # If not provided, uses acurl's default (100)
+        if max_connects is not None:
+            self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop(), max_connects)
+        else:
+            self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
         self._pool = deque()
+        self._http_version = http_version
 
     @asynccontextmanager
     async def session_context(self, context):
@@ -47,22 +53,41 @@ class SessionPool:
         del context.http
 
     @classmethod
-    def decorator(cls, func):
-        @wraps(func)
-        async def wrapper(ctx, *args, **kwargs):
-            loop = asyncio.get_event_loop()
-            try:
-                instance = cls._session_pools[loop]
-            except KeyError:
-                instance = cls()
-                cls._session_pools[loop] = instance
-            async with instance.session_context(ctx):
-                return await func(ctx, *args, **kwargs)
+    def decorator(cls, func=None, max_connects=None, http_version="auto"):
+        """
+        Decorator to inject HTTP session into context.
+        
+        Can be used as:
+            @mite_http
+            def my_journey(ctx): ...
+            
+        Or with custom parameters:
+            @mite_http(max_connects=50, http_version="1.1")
+            def my_journey(ctx): ...
+            
+        http_version: "auto" (default, curl negotiates), "1.1" (HTTP/1.1), or "2" (HTTP/2)
+        """
+        def decorator_wrapper(f):
+            @wraps(f)
+            async def wrapper(ctx, *args, **kwargs):
+                loop = asyncio.get_event_loop()
+                try:
+                    instance = cls._session_pools[loop]
+                except KeyError:
+                    instance = cls(max_connects=max_connects, http_version=http_version)
+                    cls._session_pools[loop] = instance
+                async with instance.session_context(ctx):
+                    return await f(ctx, *args, **kwargs)
 
-        return wrapper
+            return wrapper
+        
+        # Support both @mite_http and @mite_http(max_connects=50, http_version="2")
+        if func is not None:
+            return decorator_wrapper(func)
+        return decorator_wrapper
 
     async def _checkout(self, context):
-        session = self._wrapper.session()
+        session = self._wrapper.session(self._http_version)
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
@@ -93,8 +118,38 @@ class SessionPool:
         pass
 
 
-def mite_http(func):
-    return SessionPool.decorator(func)
+def mite_http(func=None, max_connects=None, http_version="auto"):
+    """
+    Decorator to inject HTTP session into mite context.
+    
+    Usage:
+        @mite_http
+        async def my_journey(ctx):
+            await ctx.http.get("https://example.com")
+    
+    Or with custom parameters:
+        @mite_http(max_connects=50, http_version="1.1")
+        async def my_journey(ctx):
+            await ctx.http.get("https://example.com")
+    
+    Args:
+        func: The function to decorate (when used without parentheses)
+        max_connects: Connection pool/cache size (default: 100)
+                     This is NOT a concurrency limit - it's how many idle
+                     connections curl keeps alive. Set to at least the number
+                     of unique hosts you access, or you'll see performance
+                     degradation from constant reconnections.
+                     
+                     - Few hosts (1-10): max_connects=25-50
+                     - Many hosts (10-100): max_connects=100 (default)
+                     - Very many hosts (100+): max_connects=200-500
+        
+        http_version: HTTP protocol version (default: "auto")
+                     - "auto": Let curl negotiate automatically (default, preserves original behavior)
+                     - "1.1": Force HTTP/1.1 (recommended if experiencing HTTP/2 issues)
+                     - "2": Force HTTP/2 (may cause stream errors and high CPU in some cases)
+    """
+    return SessionPool.decorator(func, max_connects=max_connects, http_version=http_version)
 
 
 def create_http_cookie(ctx, *args, **kwargs):

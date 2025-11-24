@@ -81,14 +81,26 @@ cdef class Session:
     cdef CURLSH* shared
     cdef CurlWrapper wrapper
     cdef public object response_callback
+    cdef int curl_http_version
 
-    def __cinit__(self, wrapper):
+    def __cinit__(self, wrapper, http_version="auto"):
         self.shared = curl_share_init()
+        # Share only cookies and DNS - NOT SSL sessions or connections
+        # Each session maintains independent connections for simplicity and performance
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE)
         acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS)
-        acurl_share_setopt_int(self.shared, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION)
         self.wrapper = wrapper
         self.response_callback = None
+        
+        # Configure HTTP version (default to auto for backward compatibility)
+        if http_version == "1.1":
+            self.curl_http_version = CURL_HTTP_VERSION_1_1
+        elif http_version == "2":
+            self.curl_http_version = CURL_HTTP_VERSION_2_0
+        elif http_version == "auto":
+            self.curl_http_version = 0  # CURL_HTTP_VERSION_NONE (let curl decide)
+        else:
+            raise ValueError(f"Invalid http_version: {http_version}. Must be '1.1', '2', or 'auto'")
 
     def __dealloc__(self):
         if self.wrapper.loop is None or self.wrapper.loop.is_closed():
@@ -131,6 +143,9 @@ cdef class Session:
         acurl_easy_setopt_voidptr(curl, CURLOPT_SHARE, self.shared)
         acurl_easy_setopt_cstr(curl, CURLOPT_URL, url.encode())
         acurl_easy_setopt_cstr(curl, CURLOPT_CUSTOMREQUEST, method)
+        # Set HTTP version as configured (default: auto - let curl negotiate)
+        if self.curl_http_version != 0:
+            acurl_easy_setopt_int(curl, CURLOPT_HTTP_VERSION, self.curl_http_version)
         # curl_easy_setopt(rd->curl, CURLOPT_VERBOSE, 1)  # DEBUG
         acurl_easy_setopt_cstr(curl, CURLOPT_ENCODING, b"")
         # FIXME: make this configurable?

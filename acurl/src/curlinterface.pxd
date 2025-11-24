@@ -78,10 +78,13 @@ cdef extern from "<curl/curl.h>":
     ctypedef void CURLSH
     ctypedef int CURLSHcode
     ctypedef int CURLSHoption
+    
     cdef int CURLSHOPT_SHARE
+    cdef int CURLSHOPT_USERDATA
     cdef int CURL_LOCK_DATA_COOKIE
     cdef int CURL_LOCK_DATA_DNS
     cdef int CURL_LOCK_DATA_SSL_SESSION
+    cdef int CURL_LOCK_DATA_CONNECT
 
     CURLSH *curl_share_init()
     void curl_share_cleanup(CURLSH* share)
@@ -107,6 +110,11 @@ cdef extern from "<curl/curl.h>":
     cdef int CURLOPT_COOKIELIST
     cdef int CURLOPT_POSTFIELDSIZE
     cdef int CURLOPT_POSTFIELDS
+    cdef int CURLOPT_HTTP_VERSION
+
+    # HTTP version constants
+    cdef int CURL_HTTP_VERSION_1_1
+    cdef int CURL_HTTP_VERSION_2_0
 
     # Info
     ctypedef int CURLINFO
