@@ -83,7 +83,6 @@ test = [
     "boto3",
     "bs4",
     "jinja2",
-    "playwright",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
@@ -185,7 +184,7 @@ python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.perf-test]
-features = ["all", "dev"]
+features = ["test", "dev"]
 dependencies = [
     "aiohttp",
     "sanic",
