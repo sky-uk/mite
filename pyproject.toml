@@ -66,7 +66,6 @@ all = [
     "boto3",
     "bs4",
     "jinja2",
-    "playwright",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
@@ -164,22 +163,7 @@ test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 acurl-test = "pytest {args:acurl/tests/}"
 
-
 [[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11"]
-
-
-[tool.hatch.envs.test-playwright]
-features = ["test", "dev"]
-post-install-commands = [
-    "playwright install chromium"
-]
-
-[tool.hatch.envs.test-playwright.scripts]
-test = "pytest --ignore-glob='test/test_*.py' test/test_mite_playwright.py {args}"
-test-cov = "pytest --ignore-glob='test/test_*.py' --cov=mite_playwright --cov-report=html --cov-report=term test/test_mite_playwright.py {args}"
-
-[[tool.hatch.envs.test-playwright.matrix]]
 python = ["3.10", "3.11"]
 
 
