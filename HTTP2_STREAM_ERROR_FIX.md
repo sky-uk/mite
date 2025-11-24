@@ -18,33 +18,38 @@ Intermittent `acurl.AcurlError: curl failed with code 92 Stream error in the HTT
 4. **Performance Issue** - Connection sharing caused severe CPU overhead and slow percentile latencies
 5. **Second Attempt** - Tried different connection tuning approaches → No improvement
 6. **Third Attempt** - Removed connection sharing, kept only DNS/cookie sharing → Errors returned
-7. **Root Cause Identified** - HTTP/2 itself was causing both errors and performance issues
-8. **Final Solution** - Make HTTP version configurable (default "auto"), allow users to force HTTP/1.1
-9. **Curl Version Discovery** - Found old curl 7.74.0 in base image may have contributed to HTTP/2 issues
+7. **Root Cause Identified** - HTTP/2 implementation in old libcurl versions causes both errors and performance issues
+8. **Curl Version Discovery** - Found curl 7.74.0 (Dec 2020) in python:3.11.2-slim base image
+9. **Solution Confirmed** - Upgrading to python:3.11.14-slim (curl 8.14) **completely resolved the HTTP/2 stream errors**
+10. **Backward Compatibility** - Made HTTP version configurable (default "auto") for users who cannot upgrade curl
 
 ---
 
 ## Root Cause
 
-**HTTP/2 Incompatibility**
+The HTTP/2 stream error (code 92) was caused by **a bug in curl 7.74.0's HTTP/2 implementation**. The investigation revealed:
 
-The stream error 92 and performance issues were both symptoms of HTTP/2 behavior in libcurl:
-- HTTP/2 stream ID conflicts when connections are shared improperly
-- High CPU overhead from HTTP/2 multiplexing management
-- Sporadic high percentile latencies from HTTP/2 head-of-line blocking
+1. **Old Curl Version**: Base image python:3.11.2-slim uses curl 7.74.0 from December 2020
+2. **HTTP/2 Stream Error**: This version produces intermittent error 92 ("Stream error in the HTTP/2 framing layer") at ~3% of requests
+3. **Attempted Workaround**: Adding `CURL_LOCK_DATA_CONNECT` connection sharing eliminated errors but caused severe CPU overhead (10% → 70%)
 
-**Testing proved:**
-- HTTP/1.1: No errors, 10% CPU usage ✅
-- HTTP/2 with connection sharing: No errors, 70% CPU usage ❌
-- HTTP/2 without connection sharing: Stream errors, high CPU ❌
+The connection sharing experiment temporarily masked the stream errors but created unacceptable performance problems, confirming the issue was a bug in curl 7.74.0's HTTP/2 implementation.
+
+**Verified Solution**: Upgrading to python:3.11.14-slim (curl 8.14) completely eliminated the HTTP/2 stream errors without requiring HTTP version downgrade.
 
 ---
 
 ## Solution
 
-**Make HTTP version configurable (default: auto for backward compatibility)**
+**Primary: Upgrade curl to 8.14+ (Verified Fix)**
 
-Added `http_version` parameter to control HTTP protocol version while preserving original behavior. Also improved connection management and eliminated mutex lock overhead.
+Upgrade your base image to python:3.11.14-slim or newer to get curl 8.14+. This completely resolves the HTTP/2 stream errors while maintaining optimal performance.
+
+**Verified**: Upgrading from python:3.11.2-slim (curl 7.74.0) to python:3.11.14-slim (curl 8.14) eliminated all HTTP/2 stream error 92 occurrences.
+
+**Fallback: HTTP version configuration for backward compatibility**
+
+For users who cannot upgrade curl, added `http_version` parameter to control HTTP protocol version (default "auto" preserves original behavior).
 
 ### Changes Made
 
