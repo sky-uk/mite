@@ -2,7 +2,17 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from mite_playwright import mite_playwright
+# Check if playwright is available
+try:
+    from mite_playwright import mite_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not PLAYWRIGHT_AVAILABLE,
+    reason="Playwright not installed - run with 'hatch run test-playwright.py3.11:test'"
+)
 
 
 @pytest.mark.asyncio

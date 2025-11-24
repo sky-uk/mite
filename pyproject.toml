@@ -168,6 +168,20 @@ acurl-test = "pytest {args:acurl/tests/}"
 python = ["3.10", "3.11"]
 
 
+[tool.hatch.envs.test-playwright]
+features = ["playwright", "dev"]
+post-install-commands = [
+    "playwright install chromium"
+]
+
+[tool.hatch.envs.test-playwright.scripts]
+test = "pytest --ignore-glob='test/test_*.py' test/test_mite_playwright.py {args}"
+test-cov = "pytest --ignore-glob='test/test_*.py' --cov=mite_playwright --cov-report=html --cov-report=term test/test_mite_playwright.py {args}"
+
+[[tool.hatch.envs.test-playwright.matrix]]
+python = ["3.10", "3.11"]
+
+
 [tool.hatch.envs.perf-test]
 features = ["all", "dev"]
 dependencies = [
