@@ -3,6 +3,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 VERSION_INCREMENT_TYPE=${1}
+echo "VERSION_INCREMENT_TYPE is set to: ${VERSION_INCREMENT_TYPE} | ${1}"
 
 # if isOnMaster; then
 echo "##### Job running on MASTER. Proceeding with the Tag and Release script. ######"
