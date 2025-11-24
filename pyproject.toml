@@ -97,7 +97,6 @@ dev = [
     "pytest-cov",
     "pytest-httpbin",
     "pytest-httpserver",
-    "pytest-playwright==0.7.2",
     "ruff>=0.1.0",
     "hypothesis", # used in finagle/thrift tests
     "werkzeug==3.1.3",
@@ -162,6 +161,7 @@ test = "pytest {args:test/}"
 test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 acurl-test = "pytest {args:acurl/tests/}"
+playwright-test = "pip install pytest-playwright && playwright install && pytest {args:test/test_mite_playwright.py}"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11"]
