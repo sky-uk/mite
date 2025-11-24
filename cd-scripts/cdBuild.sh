@@ -21,7 +21,7 @@ echo $JOB_NAME
 
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Running as MITE-CI. ######"
-    hatch env remove test.py3.11 && hatch run test.py3.11:test-cov ; TESTS_EXIT_CODE=$?
+    hatch env remove test.py3.11 && hatch -vvv run test.py3.11:test-cov ; TESTS_EXIT_CODE=$?
 
 elif [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
     echo "##### Running as ACURL-CI. ######"
