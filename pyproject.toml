@@ -97,7 +97,7 @@ dev = [
     "pytest-cov",
     "pytest-httpbin",
     "pytest-httpserver",
-    "pytest-playwright",
+    "pytest-playwright==0.7.2",
     "ruff>=0.1.0",
     "hypothesis", # used in finagle/thrift tests
     "werkzeug==3.1.3",
