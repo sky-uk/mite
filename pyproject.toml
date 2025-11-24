@@ -170,7 +170,7 @@ python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.test-playwright]
-features = ["test, "dev"]
+features = ["test", "dev"]
 post-install-commands = [
     "playwright install chromium"
 ]
