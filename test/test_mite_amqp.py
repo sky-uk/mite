@@ -45,7 +45,7 @@ async def test_mite_amqp_connect():
     with patch("aio_pika.connect", side_effect=connect_mock):
         await dummy_journey(context)
 
-    connect_mock.assert_awaited_once_with(url, loop=asyncio.get_event_loop())
+    connect_mock.assert_awaited_once_with(url, loop=asyncio.get_running_loop())
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_mite_amqp_connect_robust():
     with patch("aio_pika.connect_robust", side_effect=connect_mock):
         await dummy_journey(context)
 
-    connect_mock.assert_awaited_once_with(url, loop=asyncio.get_event_loop())
+    connect_mock.assert_awaited_once_with(url, loop=asyncio.get_running_loop())
 
 
 def test_amqp_message():
