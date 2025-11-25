@@ -21,6 +21,7 @@ classifiers = [
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
 dependencies = [
+    "acurl",
     "docopt",
     "flask",
     "msgpack",
