@@ -21,10 +21,11 @@ echo $JOB_NAME
 
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Running as MITE-CI. ######"
-    hatch run test.py3.11:test-cov ; TESTS_EXIT_CODE=$?
+    hatch env remove test.py3.11 && hatch run test.py3.11:test-cov ; TESTS_EXIT_CODE=$?
+
 elif [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
     echo "##### Running as ACURL-CI. ######"
-    hatch run test.py3.11:acurl-test ; TESTS_EXIT_CODE=$?
+    hatch env remove test.py3.11 && hatch run test.py3.11:acurl-test ; TESTS_EXIT_CODE=$?
 fi
 
 [ "$PRE_COMMIT_STATUS" -eq 0 -a "$TESTS_EXIT_CODE" -eq 0 ] || exit 1
