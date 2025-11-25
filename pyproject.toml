@@ -28,7 +28,7 @@ dependencies = [
     "prettytable",
     "pyzmq",
     "ujson",
-    "uvloop",
+    "uvloop==0.21.0",
 ]
 
 [project.optional-dependencies]
