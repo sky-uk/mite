@@ -81,3 +81,6 @@ exclude = [".git", "build", "dist", ".eggs", ".tox"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
