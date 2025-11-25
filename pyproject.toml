@@ -21,6 +21,7 @@ classifiers = [
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
 dependencies = [
+    "acurl",
     "docopt",
     "flask",
     "msgpack",
@@ -66,7 +67,6 @@ all = [
     "boto3",
     "bs4",
     "jinja2",
-    "playwright",
     "selenium<4",
     "selenium-wire==4.6.5",
     "sqlalchemy",
@@ -163,13 +163,12 @@ test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 acurl-test = "pytest {args:acurl/tests/}"
 
-
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.perf-test]
-features = ["all", "dev"]
+features = ["test", "dev"]
 dependencies = [
     "aiohttp",
     "sanic",
