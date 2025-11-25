@@ -1,7 +1,7 @@
 import json
 import os
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 from docopt import docopt
 
@@ -121,6 +121,7 @@ def test_collector_cli_defaults():
     with patch("asyncio.get_event_loop"), patch(
         "mite.cli.collector._collector_receiver"
     ) as receiver_mock:
+        receiver_mock.return_value.run = AsyncMock()
         c = cli_collector.collector(opts)
     c = receiver_mock.return_value.add_raw_listener.call_args_list[0][0][0].__self__
     assert c._filter_fn is None
@@ -134,6 +135,7 @@ def test_collector_cli_use_json():
     with patch("asyncio.get_event_loop"), patch(
         "mite.cli.collector._collector_receiver"
     ) as receiver_mock:
+        receiver_mock.return_value.run = AsyncMock()
         cli_collector.collector(opts)
     c = receiver_mock.return_value.add_raw_listener.call_args_list[0][0][0].__self__
     assert c._use_json
@@ -148,6 +150,7 @@ def test_collector_cli_filter():
     with patch("asyncio.get_event_loop"), patch(
         "mite.cli.collector._collector_receiver"
     ) as receiver_mock:
+        receiver_mock.return_value.run = AsyncMock()
         cli_collector.collector(opts)
     c = receiver_mock.return_value.add_raw_listener.call_args_list[0][0][0].__self__
     assert c._filter_fn is foo
