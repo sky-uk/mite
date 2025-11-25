@@ -28,7 +28,7 @@ dependencies = [
     "prettytable",
     "pyzmq",
     "ujson",
-    "uvloop",
+    "uvloop==0.21.0",
 ]
 
 [project.optional-dependencies]
@@ -72,7 +72,6 @@ all = [
     "sqlalchemy",
     "thrift",
     "ujson",
-    "uvloop==0.21.0",
     "websockets",
 ]
 # Testing dependencies (excludes packages with complex system dependencies like playwright)
@@ -88,7 +87,6 @@ test = [
     "sqlalchemy",
     "thrift",
     "ujson",
-    "uvloop==0.21.0",
     "websockets",
 ]
 # Development dependencies
