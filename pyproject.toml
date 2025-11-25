@@ -29,8 +29,6 @@ dependencies = [
     "pyzmq",
     "ujson",
     "uvloop==0.21.0",
-    "websockets",
-
 ]
 
 [project.optional-dependencies]
@@ -74,6 +72,7 @@ all = [
     "sqlalchemy",
     "thrift",
     "ujson",
+    "websockets",
 ]
 # Testing dependencies (excludes packages with complex system dependencies like playwright)
 test = [
@@ -88,6 +87,7 @@ test = [
     "sqlalchemy",
     "thrift",
     "ujson",
+    "websockets",
 ]
 # Development dependencies
 dev = [
