@@ -68,6 +68,13 @@ Issues = "https://github.com/sky-uk/mite/issues"
 [project.scripts]
 mite = "mite.__main__:main"
 
+[project.entry-points.mite_stats]
+mite = "mite.stats:_MITE_STATS"
+mite_finagle = "mite_finagle.stats:STATS"
+mite_http = "mite_http.stats:STATS"
+mite_selenium = "mite_selenium.stats:STATS"
+mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
+
 
 # Hatch configuration ##############################################
 
