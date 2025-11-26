@@ -21,6 +21,7 @@ classifiers = [
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
 # ALL dependencies included for a "batteries included" experience
+# The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
     "acurl",
     "aio_pika",
@@ -32,7 +33,6 @@ dependencies = [
     "jinja2",
     "msgpack",
     "nanomsg",
-    "playwright",
     "prettytable",
     "pyzmq",
     "selenium<4",
