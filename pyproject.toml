@@ -20,77 +20,31 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
+# ALL dependencies included for a "batteries included" experience
 dependencies = [
     "acurl",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
     "docopt",
     "flask",
+    "jinja2",
     "msgpack",
     "nanomsg",
+    "playwright",
     "prettytable",
     "pyzmq",
+    "selenium<4",
+    "selenium-wire==4.6.5",
+    "sqlalchemy",
+    "thrift",
     "ujson",
     "uvloop==0.21.0",
+    "websockets",
 ]
 
 [project.optional-dependencies]
-# HTTP/REST testing support
-http = ["acurl"]
-# AMQP/RabbitMQ testing support
-amqp = ["aio_pika"]
-# Kafka testing support
-kafka = ["aiokafka"]
-# Thrift/Finagle protocol support
-finagle = ["thrift"]
-# S3-based data pools
-s3datapools = ["boto3"]
-# Selenium browser automation (v3.x for compatibility)
-# TODO - Update (or remove) the Selenium version when migrating to v4. The version is explicitly defined
-#        as less than 4 as there are backward compatibility issues with Rust from version 4 on
-selenium = ["selenium<4"]
-# Selenium with wire protocol inspection
-selenium_wire = ["selenium-wire==4.6.5"]
-# WebSocket testing support
-websocket = ["websockets"]
-# Browser HTML parsing support
-browser = ["bs4"]
-# HAR file conversion utility
-har = ["jinja2"]
-# Database support via SQLAlchemy
-database = ["sqlalchemy"]
-# Playwright browser automation
-playwright = ["playwright"]
-# Complete installation with all modules
-all = [
-    "acurl",
-    "aio_pika",
-    "aiokafka",
-    "boto3",
-    "bs4",
-    "jinja2",
-    "selenium<4",
-    "selenium-wire==4.6.5",
-    "sqlalchemy",
-    "thrift",
-    "ujson",
-    "uvloop==0.21.0",
-    "websockets",
-]
-# Testing dependencies (excludes packages with complex system dependencies like playwright)
-test = [
-    "acurl",
-    "aio_pika",
-    "aiokafka",
-    "boto3",
-    "bs4",
-    "jinja2",
-    "selenium<4",
-    "selenium-wire==4.6.5",
-    "sqlalchemy",
-    "thrift",
-    "ujson",
-    "uvloop==0.21.0",
-    "websockets",
-]
 # Development dependencies
 dev = [
     "pytest",
@@ -151,11 +105,11 @@ packages = [
 ]
 
 [tool.hatch.envs.default]
-features = ["all", "dev"]
+features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["test", "dev"]
+features = ["dev"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
@@ -168,7 +122,7 @@ python = ["3.10", "3.11"]
 
 
 [tool.hatch.envs.perf-test]
-features = ["test", "dev"]
+features = ["dev"]
 dependencies = [
     "aiohttp",
     "sanic",
