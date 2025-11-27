@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "Cython<3.0"]
+requires = ["setuptools", "wheel", "Cython>=3.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "ujson>=4.1.0",
@@ -35,7 +36,7 @@ dev = [
     "pytest-cov",
     "pytest-httpbin",
     "ruff>=0.1.0",
-    "Cython<3.0",
+    "Cython>=3.0",
 ]
 
 [project.urls]

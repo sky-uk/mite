@@ -32,7 +32,7 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     node.next = NULL
     return node
 
-cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
+cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.header_buffer == NULL:  # FIXME: unlikely
@@ -42,7 +42,7 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     response.header_buffer_tail = node
     return node.len
 
-cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata):
+cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
     if response.body_buffer == NULL:  # FIXME: unlikely
