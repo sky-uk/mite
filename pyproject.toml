@@ -21,77 +21,31 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
+# ALL dependencies included for a "batteries included" experience
+# The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
+    "acurl",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
     "docopt",
     "flask",
+    "jinja2",
     "msgpack",
     "nanomsg",
     "prettytable",
     "pyzmq",
+    "selenium<4",
+    "selenium-wire==4.6.5",
+    "sqlalchemy",
+    "thrift",
     "ujson",
     "uvloop==0.21.0",
+    "websockets",
 ]
 
 [project.optional-dependencies]
-# HTTP/REST testing support
-http = ["acurl"]
-# AMQP/RabbitMQ testing support
-amqp = ["aio_pika"]
-# Kafka testing support
-kafka = ["aiokafka"]
-# Thrift/Finagle protocol support
-finagle = ["thrift"]
-# S3-based data pools
-s3datapools = ["boto3"]
-# Selenium browser automation (v3.x for compatibility)
-# TODO - Update (or remove) the Selenium version when migrating to v4. The version is explicitly defined
-#        as less than 4 as there are backward compatibility issues with Rust from version 4 on
-selenium = ["selenium<4"]
-# Selenium with wire protocol inspection
-selenium_wire = ["selenium-wire==4.6.5"]
-# WebSocket testing support
-websocket = ["websockets"]
-# Browser HTML parsing support
-browser = ["bs4"]
-# HAR file conversion utility
-har = ["jinja2"]
-# Database support via SQLAlchemy
-database = ["sqlalchemy"]
-# Playwright browser automation
-playwright = ["playwright"]
-# Complete installation with all modules
-all = [
-    "acurl",
-    "aio_pika",
-    "aiokafka",
-    "boto3",
-    "bs4",
-    "jinja2",
-    "playwright",
-    "selenium<4",
-    "selenium-wire==4.6.5",
-    "sqlalchemy",
-    "thrift",
-    "ujson",
-    "uvloop==0.21.0",
-    "websockets",
-]
-# Testing dependencies (excludes packages with complex system dependencies like playwright)
-test = [
-    "acurl",
-    "aio_pika",
-    "aiokafka",
-    "boto3",
-    "bs4",
-    "jinja2",
-    "selenium<4",
-    "selenium-wire==4.6.5",
-    "sqlalchemy",
-    "thrift",
-    "ujson",
-    "uvloop==0.21.0",
-    "websockets",
-]
 # Development dependencies
 dev = [
     "pytest",
@@ -114,6 +68,13 @@ Issues = "https://github.com/sky-uk/mite/issues"
 
 [project.scripts]
 mite = "mite.__main__:main"
+
+[project.entry-points.mite_stats]
+mite = "mite.stats:_MITE_STATS"
+mite_finagle = "mite_finagle.stats:STATS"
+mite_http = "mite_http.stats:STATS"
+mite_selenium = "mite_selenium.stats:STATS"
+mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
 
 
 # Hatch configuration ##############################################
@@ -152,11 +113,11 @@ packages = [
 ]
 
 [tool.hatch.envs.default]
-features = ["all", "dev"]
+features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["test", "dev"]
+features = ["dev"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
@@ -164,13 +125,12 @@ test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 acurl-test = "pytest {args:acurl/tests/}"
 
-
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11", "3.12"]
 
 
 [tool.hatch.envs.perf-test]
-features = ["all", "dev"]
+features = ["dev"]
 dependencies = [
     "aiohttp",
     "sanic",
