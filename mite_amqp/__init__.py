@@ -15,7 +15,7 @@ class AMQPError(MiteError):
 
 class _AMQPWrapper:
     def __init__(self):
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop_policy().get_event_loop()
 
     def install(self, context):
         context.amqp = self
