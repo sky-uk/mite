@@ -19,17 +19,12 @@ class Duplicator:
         ]
         for address, socket in self._out_sockets:
             socket.bind(address)
-        if loop is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        self._loop = loop
+        # Do not store the loop; always get it when needed
         self._debug_messages_to_dump = 0
 
     async def run(self, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, stop_func)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._run, stop_func)
 
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
@@ -70,15 +65,7 @@ class Receiver:
         self._socket = self._zmq_context.socket(zmq.PULL)
         self._listeners = listeners or []
         self._raw_listeners = raw_listeners or []
-        if loop is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            self._loop = loop
-        else:
-            self._loop = loop
+        # Do not store the loop; always get it when needed
 
     def bind(self, address):
         self._socket.bind(address)
@@ -98,7 +85,8 @@ class Receiver:
         return self._socket.recv()
 
     async def run(self, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, stop_func)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._run, stop_func)
 
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
@@ -120,20 +108,15 @@ class RunnerTransport:
         self._zmq_context = zmq.Context()
         self._sock = self._zmq_context.socket(zmq.REQ)
         self._sock.connect(socket_address)
-        if loop is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        self._loop = loop
+        # Do not store the loop; always get it when needed
 
     def _hello(self):
         self._sock.send(pack_msg((_MSG_TYPE_HELLO, None)))
         return unpack_msg(self._sock.recv())
 
     async def hello(self):
-        return await self._loop.run_in_executor(None, self._hello)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._hello)
 
     def _request_work(self, runner_id, current_work, completed_data_ids, max_work):
         self._sock.send(
@@ -151,8 +134,8 @@ class RunnerTransport:
         logger.debug(
             f"Requesting work runner_id={runner_id} current_work={current_work} completed_data_ids={completed_data_ids} max_work={max_work}"
         )
-
-        return await self._loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
             None,
             self._request_work,
             runner_id,
@@ -167,7 +150,8 @@ class RunnerTransport:
 
     async def bye(self, runner_id):
         logger.debug("Saying bye")
-        return await self._loop.run_in_executor(None, self._bye, runner_id)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._bye, runner_id)
 
 
 class ControllerServer:
@@ -175,13 +159,7 @@ class ControllerServer:
         self._zmq_context = zmq.Context()
         self._sock = self._zmq_context.socket(zmq.REP)
         self._sock.bind(socket_address)
-        if loop is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        self._loop = loop
+        # Do not store the loop; always get it when needed
 
     async def run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():
