@@ -44,13 +44,14 @@ function buildLinuxWheels() {
     CIBW_BEFORE_ALL_LINUX="yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
     CIBW_SKIP="*i686"
 
-    if [ "$VERSION_INCREMENT" = false ]; then
-        echo "Mite version not incremented, not building"
-    else
-        echo "##### Building Mite #####"
-        pip3 install --user cibuildwheel==2.8.1 build twine
-        python3 -m build --outdir ./wheelhouse
-    fi
+    # if [ "$VERSION_INCREMENT" = false ]; then
+    #     echo "Mite version not incremented, not building"
+    # else
+    #     echo "##### Building Mite #####"
+    #     pip3 install --user cibuildwheel==2.8.1 build twine
+    #     python3 -m build --outdir ./wheelhouse
+    # fi
+    ACURL_CHANGED=true
     
     if [ "$ACURL_CHANGED" = true ]; then
         echo "##### Building Acurl #####"

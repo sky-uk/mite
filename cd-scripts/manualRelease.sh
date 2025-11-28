@@ -21,7 +21,7 @@ else
     initPypirc
 
     echo "##### Upload package #####"
-    python3 -m twine upload wheelhouse/* 
+    # python3 -m twine upload wheelhouse/* 
 fi
 
 # else
