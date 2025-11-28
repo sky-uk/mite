@@ -20,7 +20,11 @@ class Duplicator:
         for address, socket in self._out_sockets:
             socket.bind(address)
         if loop is None:
-            loop = asyncio.get_event_loop_policy().get_event_loop()
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         self._loop = loop
         self._debug_messages_to_dump = 0
 
@@ -66,7 +70,15 @@ class Receiver:
         self._socket = self._zmq_context.socket(zmq.PULL)
         self._listeners = listeners or []
         self._raw_listeners = raw_listeners or []
-        self._loop = loop or asyncio.get_event_loop_policy().get_event_loop()
+        if loop is None:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            self._loop = loop
+        else:
+            self._loop = loop
 
     def bind(self, address):
         self._socket.bind(address)
@@ -109,7 +121,11 @@ class RunnerTransport:
         self._sock = self._zmq_context.socket(zmq.REQ)
         self._sock.connect(socket_address)
         if loop is None:
-            loop = asyncio.get_event_loop_policy().get_event_loop()
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         self._loop = loop
 
     def _hello(self):
@@ -160,7 +176,11 @@ class ControllerServer:
         self._sock = self._zmq_context.socket(zmq.REP)
         self._sock.bind(socket_address)
         if loop is None:
-            loop = asyncio.get_event_loop_policy().get_event_loop()
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         self._loop = loop
 
     async def run(self, controller, stop_func=None):
