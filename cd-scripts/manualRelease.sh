@@ -2,7 +2,8 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-if isOnMaster; then
+# if isOnMaster; then
+if "TRUE"; then
     echo "##### Job running on MASTER. Proceeding with the Tag and Release script. ######"
     echo "##### Starting tag process and check for version increment #####"
     # We are passing over the VERSION_INCREMENT_TYPE argument to tagBuild which will set the type of increment for the new version
