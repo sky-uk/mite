@@ -29,5 +29,6 @@ def stats(opts):
         exclude = exclude.split(",")
     stats = Stats(sender=agg_sender.send, include=include, exclude=exclude)
     receiver.add_listener(stats.process)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())

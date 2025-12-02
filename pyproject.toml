@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: POSIX :: Linux",
 ]
 # Core dependencies for the base mite framework (runner, controller, messaging, CLI)
@@ -41,7 +42,7 @@ dependencies = [
     "sqlalchemy",
     "thrift",
     "ujson",
-    "uvloop==0.21.0",
+    "uvloop>=0.21.0",
     "websockets",
 ]
 

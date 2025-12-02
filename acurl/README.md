@@ -11,7 +11,7 @@ class SessionPool:
     ...
     def __init__(self):
         import acurl
-        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop_policy().get_event_loop())
         ...
 ```
 

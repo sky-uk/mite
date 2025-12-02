@@ -8,7 +8,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 class KafkaProducer:
     def __init__(self, ctx):
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop_policy().get_event_loop()
         self._producer = None
         self._context = ctx
 
@@ -35,7 +35,7 @@ class KafkaProducer:
 
 class KafkaConsumer:
     def __init__(self, ctx):
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop_policy().get_event_loop()
         self._consumer = None
         self._topics = None
         self._context = ctx

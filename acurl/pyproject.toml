@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "acurl"
-version = "1.0.8"
+version = "1.1.0"
 description = "An async Curl library."
 readme = "README.md"
 license = "MIT"
@@ -23,10 +23,11 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "ujson>=4.1.0",
-    "uvloop==0.21.0",
+    "uvloop>=0.21.0",
 ]
 
 [project.optional-dependencies]
@@ -82,3 +83,6 @@ exclude = [".git", "build", "dist", ".eggs", ".tox"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
