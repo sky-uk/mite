@@ -79,9 +79,11 @@ def main():
         )
         sys.exit(1)
 
-    try:
-        latest_tag = repo.git.describe(["--abbrev=0", "--tags"])
-    except git.exc.GitCommandError:
+    # Get all tags and find the highest version across all branches
+    tags = [tag.name for tag in repo.tags]
+    if tags:
+        latest_tag = max(tags, key=lambda t: parse(t))
+    else:
         latest_tag = "v0.0.0"
 
     current_latest_version = parse(latest_tag)
