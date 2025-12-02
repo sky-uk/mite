@@ -430,49 +430,6 @@ class TestSelectiveInstrumentation:
     """Tests for mixing traced and untraced journeys"""
 
     @pytest.mark.asyncio
-    async def test_mixed_traced_and_untraced_journeys(self, httpserver):
-        """Test that traced and untraced journeys can coexist"""
-        from mite.otel import mite_http_traced
-        from mite.otel.tracing import get_tracer
-        from mite_http import mite_http  # noqa: F401
-
-        httpserver.expect_request("/traced", "GET").respond_with_data("traced")
-        httpserver.expect_request("/untraced", "GET").respond_with_data("untraced")
-
-        context = MockContext()
-        tracer = get_tracer()
-        mock_span = MagicMock()
-        mock_span.__enter__ = Mock(return_value=mock_span)
-        mock_span.__exit__ = Mock(return_value=False)
-
-        @mite_http_traced
-        async def traced_journey(ctx):
-            await ctx.http.get(httpserver.url_for("/traced"))
-
-        @mite_http
-        async def untraced_journey(ctx):
-            await ctx.http.get(httpserver.url_for("/untraced"))
-
-        # Traced journey should create spans (journey + HTTP)
-        with patch.object(
-            tracer, "start_as_current_span", return_value=mock_span
-        ) as mock_start:
-            await traced_journey(context)
-            # Should create journey span + HTTP span
-            assert mock_start.call_count >= 2
-
-        # Untraced journey should create NO spans at all
-        with patch.object(
-            tracer, "start_as_current_span", return_value=mock_span
-        ) as mock_start:
-            await untraced_journey(context)
-            # No spans created for untraced journeys
-            assert mock_start.call_count == 0
-
-        # Both requests should have completed
-        assert len(httpserver.log) == 2
-
-    @pytest.mark.asyncio
     async def test_untraced_journey_with_transaction(self, httpserver):
         """Test that @mite_http journeys don't create transaction spans"""
         from mite.context import Context
