@@ -15,7 +15,7 @@ class AMQPError(MiteError):
 
 class _AMQPWrapper:
     def __init__(self):
-        self._loop = asyncio.get_event_loop_policy().get_event_loop()
+        pass
 
     def install(self, context):
         context.amqp = self
@@ -24,11 +24,13 @@ class _AMQPWrapper:
         del context.amqp
 
     async def connect_robust(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
+        loop = asyncio.get_running_loop()
+        kwargs.setdefault("loop", loop)
         return await aio_pika.connect_robust(*args, **kwargs)
 
     async def connect(self, *args, **kwargs):
-        kwargs.setdefault("loop", self._loop)
+        loop = asyncio.get_running_loop()
+        kwargs.setdefault("loop", loop)
         return await aio_pika.connect(*args, **kwargs)
 
     def message(self, body, **kwargs):
