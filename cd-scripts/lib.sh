@@ -57,10 +57,6 @@ function buildLinuxWheels() {
         cd acurl
         pip3 install --user cibuildwheel==2.8.1 build Cython twine
         python3 -m build --sdist --outdir ../wheelhouse
-        # CIBW_BUILD="cp310-* cp311-*" \
-        # CIBW_BEFORE_ALL_LINUX="$CIBW_BEFORE_ALL_LINUX" \
-        # CIBW_SKIP="$CIBW_SKIP" \
-        # python3 -m cibuildwheel --output-dir ../wheelhouse
         cd ../
     fi
 }
