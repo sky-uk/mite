@@ -60,6 +60,13 @@ dev = [
     "httpbin>=0.10.2", # Required for werkzeug 3.x compatibility
     "Cython<3.0", # required for coverage plugin and acurl
 ]
+otel = [
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.20.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
+    "opentelemetry-exporter-zipkin>=1.20.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/sky-uk/mite/"
@@ -118,7 +125,7 @@ features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["dev"]
+features = ["dev", "otel"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
