@@ -125,7 +125,7 @@ features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["dev"]
+features = ["dev", "otel"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
