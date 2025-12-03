@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 def generic_receiver(opts):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     receiver = _msg_backend_module(opts).Receiver()
     receiver.connect(opts['RECEIVE_SOCKET'])

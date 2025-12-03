@@ -70,7 +70,7 @@ def test_non_default_bins():
 
 
 def test_decorator_without_async_loop_running():
-    with patch("asyncio.get_event_loop", side_effect=Exception("oops")):
+    with patch("asyncio.get_running_loop", side_effect=Exception("oops")):
 
         @mite_http
         async def foo():

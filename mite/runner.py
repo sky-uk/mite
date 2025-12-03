@@ -68,9 +68,6 @@ class Runner:
         self._loop_wait_min = loop_wait_min
         self._loop_wait_max = loop_wait_max
         self._max_work = max_work
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
         self._fixture_registry = {}
         self._debug = debug
 
@@ -140,8 +137,9 @@ class Runner:
             nonlocal waiter, timeout_handle, _completed
             await waiter
             timeout_handle.cancel()
-            timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
-            waiter = self._loop.create_future()
+            loop = asyncio.get_running_loop()
+            timeout_handle = loop.call_later(self._loop_wait_max, stop_waiting)
+            waiter = loop.create_future()
             c = []
             for f in _completed:
                 scenario_id, scenario_data_id = f.result()
@@ -151,8 +149,9 @@ class Runner:
             del _completed[:]
             return c
 
-        timeout_handle = self._loop.call_later(self._loop_wait_max, stop_waiting)
-        waiter = self._loop.create_future()
+        loop = asyncio.get_running_loop()
+        timeout_handle = loop.call_later(self._loop_wait_max, stop_waiting)
+        waiter = loop.create_future()
         completed_data_ids = []
         while not self._stop:
             work, config_list, self._stop = await self._transport.request_work(

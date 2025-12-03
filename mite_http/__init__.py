@@ -36,7 +36,7 @@ class SessionPool:
     _session_pools = {}
 
     def __init__(self):
-        self._wrapper = acurl.CurlWrapper(asyncio.get_event_loop())
+        self._wrapper = None
         self._pool = deque()
 
     @asynccontextmanager
@@ -50,7 +50,8 @@ class SessionPool:
     def decorator(cls, func):
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
-            loop = asyncio.get_event_loop()
+            # Get the current running loop - we're in an async context so this should always work
+            loop = asyncio.get_running_loop()
             try:
                 instance = cls._session_pools[loop]
             except KeyError:
@@ -62,6 +63,9 @@ class SessionPool:
         return wrapper
 
     async def _checkout(self, context):
+        if self._wrapper is None:
+            loop = asyncio.get_running_loop()
+            self._wrapper = acurl.CurlWrapper(loop)
         session = self._wrapper.session()
         session_wrapper = AcurlSessionWrapper(session)
 

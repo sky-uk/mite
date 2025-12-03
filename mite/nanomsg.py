@@ -15,10 +15,10 @@ class Duplicator:
         self._out_sockets = [nanomsg.Socket(nanomsg.PUSH) for _ in out_addresses]
         for socket, address in zip(self._out_sockets, out_addresses):
             socket.bind(address)
-        self._loop = asyncio.get_event_loop()
 
     async def run(self, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, stop_func)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._run, stop_func)
 
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
@@ -46,7 +46,6 @@ class Receiver:
         self._socket = nanomsg.Socket(nanomsg.PULL)
         self._listeners = listeners or []
         self._raw_listeners = raw_listeners or []
-        self._loop = loop or asyncio.get_event_loop()
 
     def bind(self, address):
         self._socket.bind(address)
@@ -64,7 +63,8 @@ class Receiver:
         return self._socket.recv()
 
     async def run(self, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, stop_func)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._run, stop_func)
 
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
@@ -85,16 +85,14 @@ class RunnerTransport:
     def __init__(self, socket_address, loop=None):
         self._sock = nanomsg.Socket(nanomsg.REQ)
         self._sock.connect(socket_address)
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
 
     def _hello(self):
         self._sock.send(pack_msg((_MSG_TYPE_HELLO, None)))
         return unpack_msg(self._sock.recv())
 
     async def hello(self):
-        return await self._loop.run_in_executor(None, self._hello)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._hello)
 
     def _request_work(self, runner_id, current_work, completed_data_ids, max_work):
         self._sock.send(
@@ -108,7 +106,8 @@ class RunnerTransport:
         return unpack_msg(self._sock.recv())
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
-        return await self._loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
             None,
             self._request_work,
             runner_id,
@@ -122,19 +121,18 @@ class RunnerTransport:
         return unpack_msg(self._sock.recv())
 
     async def bye(self, runner_id):
-        return await self._loop.run_in_executor(None, self._bye, runner_id)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._bye, runner_id)
 
 
 class ControllerServer:
     def __init__(self, socket_address, loop=None):
         self._sock = nanomsg.Socket(nanomsg.REP)
         self._sock.bind(socket_address)
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        self._loop = loop
 
     async def run(self, controller, stop_func=None):
-        return await self._loop.run_in_executor(None, self._run, controller, stop_func)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._run, controller, stop_func)
 
     def _run(self, controller, stop_func=None):
         while stop_func is None or not stop_func():

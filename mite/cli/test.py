@@ -142,7 +142,8 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     receiver.add_listener(debug_message_output.process_message)
     _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     if opts["--debugging"]:
         loop.set_debug(True)
 

@@ -31,4 +31,6 @@ def duplicator(opts):
         duplicator._debug_messages_to_dump = messages_to_dump
 
     signal.signal(signal.SIGUSR1, handler)
-    asyncio.get_event_loop().run_until_complete(duplicator.run())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(duplicator.run())
