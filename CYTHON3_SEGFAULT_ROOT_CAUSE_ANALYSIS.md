@@ -1,6 +1,4 @@
-# Python 3.12 + Cython 3 Upgrade Notes
-
-**Note:** This upgrade keeps uvloop pinned at ==0.21.0. To upgrade uvloop in the future, we'll need to replace deprecated `asyncio.get_event_loop()` calls in `mite/__main__.py` and `mite/zmq.py` with `asyncio.new_event_loop()` or `asyncio.get_running_loop()` as appropriate.
+# Cython 3 Upgrade Notes
 
 ## Why the Previous Attempt Failed (Sept 2024, commit 266efeb)
 
@@ -62,42 +60,3 @@ wrapper.loop.add_reader(sock, wrapper.curl_perform_read, sock)  # correct
 
 - Removed extra `wrapper` argument from all `add_reader()`, `add_writer()`, `call_soon()`, and `call_later()` calls
 - This was the critical bug that caused crashes during testing
-
-### 4. Update version constraints
-
-**Why:** Allow Cython 3 and Python 3.12 while maintaining backward compatibility.
-
-**Changed files:**
-
-- `acurl/pyproject.toml` and `pyproject.toml`:
-  - Cython: `<3.0` → `>=3.0` (enable Cython 3)
-  - Python: `<3.12` → `<3.13` (enable Python 3.12)
-  - uvloop: kept at `==0.21.0` (newer versions require event loop API changes)
-  - Added Python 3.12 classifier
-  
-### 5. Update test matrix
-
-**Why:** Ensure CI tests Python 3.12 compatibility.
-
-**Changed file:** `pyproject.toml`
-
-- Added "3.12" to hatch test matrix
-
-## Testing Results
-
-Tested with both Python 3.11.9 and 3.12.3 using Cython 3.2.1:
-
-- ✅ Basic HTTP requests work
-- ✅ 100+ concurrent requests work  
-- ✅ Full mite framework (runner + controller) works
-- ✅ 500+ requests with mite_http journey - no segfaults
-- ✅ Backward compatible with Python 3.11
-
-## Files Modified
-
-1. `acurl/src/acurl.pyx` - Added `noexcept`, fixed callback arguments
-2. `acurl/src/session.pyx` - Added `noexcept` to callbacks
-3. `acurl/setup.py` - Added `language_level: 3`
-4. `acurl/pyproject.toml` - Updated Cython/Python/uvloop versions
-5. `pyproject.toml` - Updated Cython/Python/uvloop versions, added Python 3.12 to test matrix
-
