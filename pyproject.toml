@@ -118,6 +118,7 @@ packages = [
     "mite_selenium",
     "mite_websocket",
     "mite_playwright",
+    "mite_ui",
 ]
 
 [tool.hatch.envs.default]
@@ -269,7 +270,7 @@ indent-style = "space"
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket", "mite_playwright", "mite_db_datapool"]
+known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket", "mite_playwright", "mite_db_datapool", "mite_ui"]
 force-single-line = false
 lines-after-imports = 2
 
@@ -300,6 +301,7 @@ source = [
     "mite_finagle",
     "mite_db_datapool",
     "mite_playwright",
+    "mite_ui"
 ]
 omit = [
     "*/test/*",
