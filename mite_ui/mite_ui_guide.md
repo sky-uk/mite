@@ -12,6 +12,15 @@ This document explains the architecture and flow of the Mite UI implementation, 
 
 ## Usage
 
+Before running command add @mite_ui_wrapper("object") where object is journey/scenario/config/datapool to identify
+For ex:
+
+```python
+@mite_ui_wrapper("journey")
+async def test_sample_journey():
+    pass
+```
+
 `mite ui <root path to test>`
 
 ## Classes and Responsibilities
