@@ -16,7 +16,6 @@ Usage:
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
-    mite [options] ui [TEST_LOC_ROOT_PATH]
 
     mite --help
     mite --version
@@ -29,7 +28,6 @@ Arguments:
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
     CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
     PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
-    TEST_LOC_ROOT_PATH      Root path for test artefact location discovery, used by the UI [default: .]
 
 Examples:
     # run the example scenario called "scenario"
@@ -353,9 +351,6 @@ def main():
         cat(opts)
     elif opts["uncat"]:
         uncat(opts)
-    elif opts["ui"]:
-        from mite_ui.cheap_mitefinder import mite_ui
-        mite_ui(opts)
 
 
 if __name__ == "__main__":
