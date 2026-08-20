@@ -16,7 +16,10 @@ Commit this file in the same commit as the code change.
 - **[medium]** `resp.connection` lifecycle after `read()` — capture `peername` before `async with` block exits
 - **[low]** DNS events fire on cache hit? — expect no (which yields `namelookup_time = 0` on hot path); measure
 - **[low]** Connection reuse detection on HTTPS with TLS session tickets — likely reported as new conn by aiohttp; document divergence
-- **[low]** `resp.get_encoding()` default vs acurl `.text` decoding parity
+- **[resolved]** `resp.get_encoding()` default vs acurl `.text` decoding — decision: match acurl
+  (`latin1` fallback) via custom `.text` property (Option C); revisit in Phase 6 if needed
+- **[low]** `start_time` int→float change downstream impact — verify no consumer type-asserts `int`
+  before Phase 3.4 lands; grep Grafana panels + log tooling (see Open Question 4)
 - **[unknown]** Exact `keepalive_timeout` / `ttl_dns_cache` values to match acurl — tune via Phase 5
 
 ---
@@ -27,6 +30,8 @@ Commit this file in the same commit as the code change.
 2. External Grafana dashboards updated for `backend` label? (blocks Step 3.4)
 3. Any external acurl consumers found in Phase 0? → **No PyPI reverse-deps found. GitHub code search
    incomplete (requires auth). Best evidence: all installs appear mite-ecosystem. EOL = ≤6mo confirmed.**
+4. `start_time` int→float precision change — do any external Grafana panels or log-analysis tools
+   type-assert `int` on this field? Verify before Phase 3.4 lands.
 
 ---
 
@@ -91,6 +96,27 @@ Commit this file in the same commit as the code change.
 Source audit: `mite_http/__init__.py`, `mite_browser/__init__.py`, `mite/otel/acurl_integration.py`,
 `acurl/src/session.pyx`, `acurl/src/response.pyx`, `acurl/src/request.pyx`.
 
+### Extraction constraints (Phase 1.2)
+
+- `AcurlSessionWrapper.__session` and `__callback` are Python name-mangled (double-underscore
+  prefix → `_AcurlSessionWrapper__session`, `_AcurlSessionWrapper__callback`). Phase 1.2
+  extraction to `_acurl_backend.py` must preserve these exact names. Renaming to
+  single-underscore changes access semantics and breaks any code that reflects on `__dict__`.
+
+### Prometheus / stats consumers (from mite_http/stats.py)
+
+The following `http_metrics` fields are consumed as Prometheus labels or histogram values.
+Any schema change here is a coordinated breaking change requiring Grafana dashboard updates
+(same coordination path as the `backend` label in Step 3.4a):
+
+| Field | Consumer | Role |
+|---|---|---|
+| `test`, `journey`, `transaction` | `mite_http_response_total` | labels |
+| `method` | `mite_http_response_total` | label — see Coordinated Fixes |
+| `response_code` | `mite_http_response_total` | label |
+| `total_time` | `mite_http_response_time_seconds` | histogram value |
+| `dns_time` | `mite_dns_time` | histogram value |
+
 ### Session-level methods (on `AcurlSessionWrapper` / `acurl.Session`)
 
 | Method | Signature | Called from | Notes |
@@ -144,16 +170,19 @@ avoid a breaking change, OR document a deliberate swap with a migration note.
 | `text` | `str` | mite_browser | decoded via `encoding` property |
 | `json()` | `Any` | tests, journey code | `json.loads(body)` |
 | `cookies` | `dict` | mite_browser (Page.cookies) | parsed from curl cookie list |
-| `request.method` | `bytes` | mite_http (as `method`) | e.g. `b"GET"` — note: bytes not str |
+| `request.method` | `bytes` | mite_http (as `method`) | acurl emits `b"GET"` — **coordinated fix to `str`**, see Coordinated Fixes |
 | `primary_ip` | `str` | mite_http | `CURLINFO_PRIMARY_IP` |
 | `download_size` | `float` | mite_http, OTel | `CURLINFO_SIZE_DOWNLOAD` — note: float not int |
-| `start_time` | `int` | mite_http | Unix timestamp (seconds), set at request start |
+| `start_time` | `int` | mite_http | acurl: `unsigned long` seconds from `time(NULL)` — **aiohttp will emit `float`**, see Coordinated Fixes |
 | `namelookup_time` | `float` | mite_http, OTel | `CURLINFO_NAMELOOKUP_TIME` (seconds) |
 | `connect_time` | `float` | mite_http, OTel | `CURLINFO_CONNECT_TIME` |
 | `appconnect_time` | `float` | mite_http (as `tls_time`) | `CURLINFO_APPCONNECT_TIME` |
 | `pretransfer_time` | `float` | mite_http (as `transfer_start_time`) | `CURLINFO_PRETRANSFER_TIME` |
 | `starttransfer_time` | `float` | mite_http, OTel | `CURLINFO_STARTTRANSFER_TIME` |
 | `total_time` | `float` | mite_http, OTel | `CURLINFO_TOTAL_TIME` |
+| `body` | `bytes` | acurl tests only | raw pre-buffered body; aiohttp wrapper exposes for test parity |
+| `history` | `list[ResponseLike]` | acurl tests only (`test_session.py:99`) | redirect chain; aiohttp exposes native `resp.history` wrapped in `AiohttpResponse` |
+| `encoding` | `str` (internal) | internal to `.text` | acurl: parses Content-Type charset, else `"latin1"`; aiohttp wrapper must match |
 
 ### Other acurl types used
 
@@ -166,7 +195,7 @@ avoid a breaking change, OR document a deliberate swap with a migration note.
 
 | Field name | Source attr | Notes |
 |---|---|---|
-| `start_time` | `r.start_time` | Unix int |
+| `start_time` | `r.start_time` | acurl: `int` seconds; aiohttp: `float` — see Coordinated Fixes |
 | `effective_url` | `r.url` | |
 | `response_code` | `r.status_code` | |
 | `dns_time` | `r.namelookup_time` | |
@@ -176,21 +205,79 @@ avoid a breaking change, OR document a deliberate swap with a migration note.
 | `first_byte_time` | `r.starttransfer_time` | |
 | `total_time` | `r.total_time` | |
 | `primary_ip` | `r.primary_ip` | |
-| `method` | `r.request.method` | bytes in acurl; aiohttp backend must emit str |
-| `download_size` | `r.download_size` | float from acurl |
-| `**additional_metrics` | session wrapper dict | journey-supplied extras |
+| `method` | `r.request.method` | acurl: `bytes`; **both backends to emit `str`** — see Coordinated Fixes |
+| `download_size` | `r.download_size` | `float` |
+| `**additional_metrics` | session wrapper dict | journey-supplied extras; snapshot at emission time |
 
-### Broken / unimplemented methods found during audit
+### Coordinated fixes (both backends, ships with Phase 3.4)
 
-These are called in production code but are not implemented in `acurl.Session`.
-They must be implemented in the aiohttp backend (and ideally fixed in the acurl backend too).
+These are backward-incompatible `http_metrics` schema changes. They ship together with the
+`backend` label rollout (Phase 3.4) to minimise dashboard churn. Include in 3.4a dashboard-owner
+notification.
 
-| Method/attr | Called from | Verdict |
+1. **`method` field: `bytes` → `str`.**
+   acurl currently emits `b"GET"`, which Prometheus renders as `"b'GET'"` in the
+   `mite_http_response_total` label (`mite_http/stats.py:19`). This is a **pre-existing bug**.
+   Both backends emit `str` from Phase 3.4 onward. Fix acurl backend's `response_callback`
+   in `mite_http/__init__.py` at the same time.
+
+2. **`start_time` field: `int` → `float`.**
+   acurl emits `unsigned long` (whole seconds). aiohttp will emit `time.time()` (float,
+   sub-second precision). Existing test fixture (`test/test_stats.py:6`) already uses a
+   float value. **Action before Phase 3.4**: verify no downstream consumer (Grafana, log
+   tooling) type-asserts `int` on this field (see Open Question 4).
+
+3. **`method` and `start_time` on acurl backend**: fix `mite_http/__init__.py:88`
+   (`method=r.request.method` → `method=r.request.method.decode()`) and note that
+   `start_time` will remain `int` on the acurl backend until acurl is removed. Document
+   this one-release inconsistency.
+
+### Deferred: mite_browser broken methods
+
+The following are called in `mite_browser/__init__.py` but not implemented in `acurl.Session`:
+
+| Method/attr | Called from | Status |
 |---|---|---|
-| `session.request(method, url, **kwargs)` | `mite_browser:69`, `mite_browser:268` | Must add to aiohttp backend; fix acurl backend |
-| `session.erase_session_cookies()` | `mite_browser:121` | Must add to both backends |
-| `session.get_cookie_list()` | `mite_browser:124` | Must add to both backends |
-| `session.headers` | `mite_browser:103` | Must add to both backends (read-only mapping of default headers) |
+| `session.request(method, url, **kwargs)` | `mite_browser:69`, `mite_browser:268` | Deferred |
+| `session.erase_session_cookies()` | `mite_browser:121` | Deferred |
+| `session.get_cookie_list()` | `mite_browser:124` | Deferred |
+| `session.headers` | `mite_browser:103` | Deferred |
+
+**Decision (2026-08-20)**: mite_browser is not in active use. Do **not** implement these on
+either backend during this migration. Revisit after Phase 6 dual-run if mite_browser is
+scheduled for reactivation. Any code path hitting them fails today and will continue to fail
+post-migration — no regression introduced.
+
+Verification: `browser.headers` has **zero call sites** outside `mite_browser` itself
+(grep confirmed 2026-08-20). Same for the other three methods.
+
+### AiohttpResponse implementation notes (informs Phase 2.3)
+
+- **Body storage**: store `_body_bytes: bytes` after `await resp.read()`. Expose as `.body`
+  property for test parity with acurl.
+- **`.text` property — Option C (matches acurl exactly)**:
+  parse `Content-Type` header for `charset=<X>` substring, else default to `"latin1"`.
+  Do **not** delegate to `resp.get_encoding()` (uses charset-normalizer/chardet/utf-8 defaults).
+  Revisit in Phase 6 if any journey depends on aiohttp-style encoding detection.
+- **`.history`**: expose aiohttp's native `resp.history` tuple, wrapping each entry in
+  `AiohttpResponse` for type parity with acurl's `list[_Response]` semantics.
+- **`request` object**: expose an object with `.method: str`, `.url: str`, `.headers: dict`,
+  `.cookies: dict`, and a minimal `to_curl()` shim for test parity. `to_curl()` is test/debug
+  only — not expected to be byte-identical to libcurl output, just functionally equivalent for
+  common cases. `pip install mite` users will have access to it.
+- **`additional_metrics` snapshot timing**: read `session.additional_metrics` at `http_metrics`
+  emission time (after response completes), NOT at request submission. Matches acurl's
+  synchronous callback timing — journey code can mutate the dict between `request()` call and
+  response readiness.
+- **`start_time` capture**: record `time.time()` (float) inside the `on_request_start`
+  TraceConfig callback (Phase 2.2). Pass through to `http_metrics` emission in Phase 2.5.
+- **`primary_ip` capture**: read `resp.connection.transport.get_extra_info('peername')` inside
+  the `async with session.request(...)` block, immediately after `await resp.read()`, before
+  the block exits.
+
+---
+
+## Discovery Findings
 
 ### PyPI Download Stats (2026-02-20 → 2026-08-19, 181 days)
 
@@ -239,18 +326,33 @@ and `from acurl import` in repos outside sky-uk/mite. Log any findings under Ope
   unauthenticated API blocked). Manual authenticated search required before Phase 7.2 EOL announcement.
   Low risk: zero reverse-deps on PyPI and PyPI homepage points to sky-uk/mite.
 
-- **2026-08-20** Four methods/attrs called in `mite_browser` are **not implemented** in `acurl.Session`
-  and would raise `AttributeError` at runtime: `request()`, `erase_session_cookies()`,
-  `get_cookie_list()`, `headers`. These affect embedded-resource downloads and XHR requests.
-  The aiohttp backend **must implement all four**. The acurl backend should be patched in Phase 1
-  (or a shim added to `AcurlSessionWrapper`) to avoid regression when exercising these paths.
+- **2026-08-20** Four methods/attrs called in `mite_browser` are not implemented in `acurl.Session`:
+  `request()`, `erase_session_cookies()`, `get_cookie_list()`, `headers`. **Decision**: mite_browser
+  not in active use — deferred to post-migration investigation. Neither backend implements them for
+  now. Zero external call sites confirmed by grep (2026-08-20). See Session Protocol §
+  "Deferred: mite_browser broken methods".
+
+- **2026-08-20** `method` field in `http_metrics` is currently `bytes` (e.g. `b"GET"`) from acurl.
+  This produces malformed Prometheus labels today (`"b'GET'"` in `mite_http_response_total`).
+  **Fix**: both backends emit `str` from Phase 3.4. Also fix acurl's response_callback in
+  `mite_http/__init__.py:88` at the same time. Coordinated with dashboard-owner notification
+  in Step 3.4a.
+
+- **2026-08-20** `start_time` field is `int` (seconds) from acurl; aiohttp will emit `float`
+  (sub-second). Test fixture (`test/test_stats.py:6`) already uses float. **Action before
+  Phase 3.4**: verify no downstream Grafana panels or log-analysis tooling type-asserts `int`
+  on `start_time` (see Open Question 4).
 
 - **2026-08-20** `cert` tuple order in acurl is `(key_file, cert_file)` — opposite of the Python
   `ssl`/`requests` convention of `(certfile, keyfile)`. The aiohttp backend must match acurl's
-  order to avoid a silent breaking change, OR document a deliberate swap in CHANGELOG/migration guide.
+  order to avoid a silent breaking change. Add explicit test in Phase 4.3.
 
 ---
 
 ## Deviations from Plan
 
-_(append-only; date each entry, include reason)_
+- **2026-08-20** Phase 0.2 audit found: (a) four mite_browser methods unimplemented in acurl —
+  decision to defer both backends rather than fix acurl; (b) `method` field bytes→str is a bugfix
+  not just an aiohttp change; (c) `cert` tuple order is `(key, cert)` not `(cert, key)`;
+  (d) `start_time` will be float on aiohttp vs int on acurl for one release. All documented
+  under Session Protocol and Open Issues above.
