@@ -32,7 +32,7 @@ Commit this file in the same commit as the code change.
 
 ## Phase 0 — Discovery
 - [x] 0.1 Audit acurl PyPI download stats + GitHub `import acurl` search — see Discovery Findings
-- [ ] 0.2 Freeze session protocol (kwargs-in / attrs-out table)
+- [x] 0.2 Freeze session protocol (kwargs-in / attrs-out table) — see Session Protocol below
 - [ ] 0.3 Record ambiguity resolutions (appconnect approximation, primary_ip capture ordering, cert SSLContext caching)
 
 ## Phase 1 — Backend Abstraction
@@ -86,7 +86,111 @@ Commit this file in the same commit as the code change.
 
 ---
 
-## Discovery Findings
+## Session Protocol (frozen — ground truth for Phase 1 Protocols)
+
+Source audit: `mite_http/__init__.py`, `mite_browser/__init__.py`, `mite/otel/acurl_integration.py`,
+`acurl/src/session.pyx`, `acurl/src/response.pyx`, `acurl/src/request.pyx`.
+
+### Session-level methods (on `AcurlSessionWrapper` / `acurl.Session`)
+
+| Method | Signature | Called from | Notes |
+|---|---|---|---|
+| `get` | `async (url, **kwargs) -> ResponseLike` | mite_browser, OTel patch | proxied via `__getattr__` |
+| `post` | `async (url, **kwargs) -> ResponseLike` | mite_browser, OTel patch | proxied via `__getattr__` |
+| `put` | `async (url, **kwargs) -> ResponseLike` | OTel patch | proxied |
+| `patch` | `async (url, **kwargs) -> ResponseLike` | mite_browser, OTel patch | proxied |
+| `delete` | `async (url, **kwargs) -> ResponseLike` | OTel patch | proxied |
+| `head` | `async (url, **kwargs) -> ResponseLike` | OTel patch | proxied |
+| `options` | `async (url, **kwargs) -> ResponseLike` | mite_browser, OTel patch | proxied |
+| `request` | `async (method: str, url: str, **kwargs) -> ResponseLike` | mite_browser:69, mite_browser:268 | ⚠️ NOT on acurl.Session — broken today; must be added to aiohttp backend |
+| `set_response_callback` | `(cb: Callable) -> None` | mite_http/__init__.py:93 | defined on AcurlSessionWrapper |
+| `erase_all_cookies` | `() -> None` | mite_browser:118 | proxied to acurl.Session |
+| `erase_session_cookies` | `() -> None` | mite_browser:121 | ⚠️ NOT on acurl.Session — broken today; add to aiohttp backend |
+| `get_cookie_list` | `() -> list` | mite_browser:124 | ⚠️ NOT on acurl.Session — broken today; add to aiohttp backend |
+
+### Session-level attributes
+
+| Attribute | Type | Set by | Notes |
+|---|---|---|---|
+| `additional_metrics` | `dict` | journey code | on AcurlSessionWrapper, merged into http_metrics |
+| `headers` | `dict` | — | mite_browser:103 reads it; ⚠️ NOT on acurl.Session — broken today |
+
+### Request kwargs (all HTTP methods)
+
+| kwarg | Type | Default | acurl source |
+|---|---|---|---|
+| `url` | `str` | required | `session.pyx:_outer_request` |
+| `headers` | `dict[str,str]` | `{}` | `session.pyx:231` |
+| `cookies` | `dict[str,str]` | `None` | `session.pyx:233` |
+| `auth` | `tuple[str, str]` | `None` | `session.pyx:177-185` |
+| `data` | `str \| bytes` | `None` | `session.pyx:239-246` |
+| `json` | `Any` | `None` | `session.pyx:234-238` (serialized; mutually exclusive with data) |
+| `cert` | `tuple[str, str]` | `None` | `session.pyx:187-196` — order is `(key_file, cert_file)` ⚠️ |
+| `allow_redirects` | `bool` | `True` | `session.pyx:271` |
+| `max_redirects` | `int` | `5` | `session.pyx:272` |
+
+**`cert` order note**: acurl sets `CURLOPT_SSLKEY=cert[0]`, `CURLOPT_SSLCERT=cert[1]`,
+i.e. `cert = (key_file, cert_file)`. This is the **opposite** of the Python `ssl` / `requests`
+convention of `(certfile, keyfile)`. The aiohttp backend must match acurl's tuple order to
+avoid a breaking change, OR document a deliberate swap with a migration note.
+
+### Response attributes (`acurl._Response`)
+
+| Attribute | Type | Used in | Notes |
+|---|---|---|---|
+| `status_code` | `int` | mite_http, OTel | `CURLINFO_RESPONSE_CODE` |
+| `url` | `str` | mite_http (as `effective_url`) | `CURLINFO_EFFECTIVE_URL` |
+| `headers` | `CaseInsensitiveDict` | OTel, mite_browser | multi-value headers joined with `, ` |
+| `text` | `str` | mite_browser | decoded via `encoding` property |
+| `json()` | `Any` | tests, journey code | `json.loads(body)` |
+| `cookies` | `dict` | mite_browser (Page.cookies) | parsed from curl cookie list |
+| `request.method` | `bytes` | mite_http (as `method`) | e.g. `b"GET"` — note: bytes not str |
+| `primary_ip` | `str` | mite_http | `CURLINFO_PRIMARY_IP` |
+| `download_size` | `float` | mite_http, OTel | `CURLINFO_SIZE_DOWNLOAD` — note: float not int |
+| `start_time` | `int` | mite_http | Unix timestamp (seconds), set at request start |
+| `namelookup_time` | `float` | mite_http, OTel | `CURLINFO_NAMELOOKUP_TIME` (seconds) |
+| `connect_time` | `float` | mite_http, OTel | `CURLINFO_CONNECT_TIME` |
+| `appconnect_time` | `float` | mite_http (as `tls_time`) | `CURLINFO_APPCONNECT_TIME` |
+| `pretransfer_time` | `float` | mite_http (as `transfer_start_time`) | `CURLINFO_PRETRANSFER_TIME` |
+| `starttransfer_time` | `float` | mite_http, OTel | `CURLINFO_STARTTRANSFER_TIME` |
+| `total_time` | `float` | mite_http, OTel | `CURLINFO_TOTAL_TIME` |
+
+### Other acurl types used
+
+| Type | Used in | Purpose |
+|---|---|---|
+| `acurl.CurlWrapper(loop)` | `mite_http/__init__.py:68` | one per event loop; owns multi handle |
+| `acurl.Cookie(...)` | `mite_http/__init__.py:105` | via `create_http_cookie(ctx, ...)` |
+
+### http_metrics message fields (emitted by response_callback)
+
+| Field name | Source attr | Notes |
+|---|---|---|
+| `start_time` | `r.start_time` | Unix int |
+| `effective_url` | `r.url` | |
+| `response_code` | `r.status_code` | |
+| `dns_time` | `r.namelookup_time` | |
+| `connect_time` | `r.connect_time` | |
+| `tls_time` | `r.appconnect_time` | |
+| `transfer_start_time` | `r.pretransfer_time` | |
+| `first_byte_time` | `r.starttransfer_time` | |
+| `total_time` | `r.total_time` | |
+| `primary_ip` | `r.primary_ip` | |
+| `method` | `r.request.method` | bytes in acurl; aiohttp backend must emit str |
+| `download_size` | `r.download_size` | float from acurl |
+| `**additional_metrics` | session wrapper dict | journey-supplied extras |
+
+### Broken / unimplemented methods found during audit
+
+These are called in production code but are not implemented in `acurl.Session`.
+They must be implemented in the aiohttp backend (and ideally fixed in the acurl backend too).
+
+| Method/attr | Called from | Verdict |
+|---|---|---|
+| `session.request(method, url, **kwargs)` | `mite_browser:69`, `mite_browser:268` | Must add to aiohttp backend; fix acurl backend |
+| `session.erase_session_cookies()` | `mite_browser:121` | Must add to both backends |
+| `session.get_cookie_list()` | `mite_browser:124` | Must add to both backends |
+| `session.headers` | `mite_browser:103` | Must add to both backends (read-only mapping of default headers) |
 
 ### PyPI Download Stats (2026-02-20 → 2026-08-19, 181 days)
 
@@ -134,6 +238,16 @@ and `from acurl import` in repos outside sky-uk/mite. Log any findings under Ope
 - **2026-08-20** GitHub code search for external acurl consumers could not be completed (no `gh` CLI,
   unauthenticated API blocked). Manual authenticated search required before Phase 7.2 EOL announcement.
   Low risk: zero reverse-deps on PyPI and PyPI homepage points to sky-uk/mite.
+
+- **2026-08-20** Four methods/attrs called in `mite_browser` are **not implemented** in `acurl.Session`
+  and would raise `AttributeError` at runtime: `request()`, `erase_session_cookies()`,
+  `get_cookie_list()`, `headers`. These affect embedded-resource downloads and XHR requests.
+  The aiohttp backend **must implement all four**. The acurl backend should be patched in Phase 1
+  (or a shim added to `AcurlSessionWrapper`) to avoid regression when exercising these paths.
+
+- **2026-08-20** `cert` tuple order in acurl is `(key_file, cert_file)` — opposite of the Python
+  `ssl`/`requests` convention of `(certfile, keyfile)`. The aiohttp backend must match acurl's
+  order to avoid a silent breaking change, OR document a deliberate swap in CHANGELOG/migration guide.
 
 ---
 
