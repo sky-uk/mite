@@ -36,6 +36,9 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-httpbin",
+    "werkzeug==3.1.3",
+    "httpbin>=0.10.2", 
+    "pytest-httpserver",
     "ruff>=0.1.0",
     "Cython>=3.0",
 ]
