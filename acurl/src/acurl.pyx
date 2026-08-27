@@ -96,14 +96,16 @@ cdef class CurlWrapper:
                 easy = message.easy_handle
                 acurl_easy_getinfo_voidptr(easy, CURLINFO_PRIVATE, &response_raw)
                 response = <_Response>response_raw
-                if message.data.result == CURLE_OK:
-                    response.future.set_result(response)
-                else:
-                    response.future.set_exception(AcurlError(f"curl failed with code {message.data.result} {curl_easy_strerror(message.data.result).decode('utf-8')}"))
-
-                curl_multi_remove_handle(self.multi, easy)
-            else:
-                raise Exception("oops2")
+                if not response.future.done():
+                    if message.data.result == CURLE_OK:
+                        response.future.set_result(response)
+                    else:
+                        response.future.set_exception(AcurlError(f"curl failed with code {message.data.result} {curl_easy_strerror(message.data.result).decode('utf-8')}"))
+                try:
+                    curl_multi_remove_handle(self.multi, easy)
+                finally:
+                    # pairs with Py_INCREF in _inner_request(session.pyx); curl is done with the handle here
+                    Py_DECREF(response)
             message = curl_multi_info_read(self.multi, &_pending)
 
     def session(self):

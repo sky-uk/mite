@@ -243,9 +243,20 @@ cdef class _Response:
     def _get_header_lines(self):
         cdef list headers = self.header.split("\r\n")
         headers = headers[:-2]  # drop the final blank lines
-        while headers[0].startswith("HTTP/1.1 100"):
-            headers = headers[2:]
-        return headers[1:]  # drop the final response code
+        # libcurl feeds the header callback one block per response, including
+        # interim 1xx ones (100 Continue, 103 Early Hints), all concatenated
+        # into a single buffer.  The last status line is by definition the
+        # final response's, so everything after it is the real header set.
+        # Scanning backwards avoids having to know how many interim blocks
+        # there are or how long each one is -- 103 carries headers, 100 does
+        # not.  Safe because redirects are followed manually with a fresh
+        # handle per hop (see Session._outer_request), so one buffer never
+        # holds two final responses.
+        cdef Py_ssize_t i
+        for i in range(len(headers) - 1, -1, -1):
+            if headers[i].startswith("HTTP/"):
+                return headers[i + 1:]  # drop the final status line
+        return headers
 
     # TODO: is this part of the request api?
     @property
