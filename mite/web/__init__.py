@@ -2,6 +2,7 @@ import logging
 
 from flask import Flask, Response
 
+from .influxdb import InfluxMetrics
 from .prometheus import PrometheusMetrics
 
 app = Flask(__name__)
@@ -9,6 +10,7 @@ app = Flask(__name__)
 # log line from the prometheus scrape.  But I don't think it works...
 app.logger.setLevel(logging.WARNING)
 
+influxdb_metrics = InfluxMetrics(include_buckets=False)
 prometheus_metrics = PrometheusMetrics()
 
 
