@@ -21,6 +21,9 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 
 ## Installation
 
+> [!WARNING]
+> Deprecation notice: Selenium and Thrift/Finagle support are receiving reduced priority and will move out of the default install in the next major release (3.0). If you rely on them, either install with pip install mite[all] to lock in explicit dependencies, or pin mite<3.0 until you've migrated.
+
 ```bash
 pip install mite
 ```

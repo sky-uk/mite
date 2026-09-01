@@ -37,10 +37,10 @@ dependencies = [
     "nanomsg",
     "prettytable",
     "pyzmq",
-    "selenium<4",
-    "selenium-wire==4.6.5",
+    "selenium<4",  # deprecated: will move to an optional extra in mite 3.0
+    "selenium-wire==4.6.5",  # deprecated: will move to an optional extra in mite 3.0
     "sqlalchemy",
-    "thrift",
+    "thrift",  # deprecated: will move to an optional extra in mite 3.0
     "ujson",
     "uvloop>=0.21.0",
     "websockets",
@@ -51,7 +51,6 @@ all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,brow
 amqp = ["aio_pika"]
 browser = ["bs4", "mite[http]"]
 db = ["sqlalchemy"]
-finagle = ["thrift"]
 http  = ["acurl"]
 kafka = ["aiokafka"]
 otel = [
@@ -62,9 +61,12 @@ otel = [
     "opentelemetry-exporter-zipkin>=1.20.0",
 ]
 s3 = ["boto3"]
+websocket = ["websockets"]
+
+# NOTE: selenium/selenium_wire/finagle are low-priority in 3.0; pin mite<3 or use mite[all] to retain current behaviour
+finagle = ["thrift"]
 selenium  = ["selenium<4"]
 selenium_wire = ["selenium<4", "selenium-wire==4.6.5"]
-websocket = ["websockets"]
 
 # Development dependencies
 dev = [
