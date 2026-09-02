@@ -13,6 +13,7 @@ Usage:
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
+    mite [options] influxdb_exporter [--stats-out-socket=SOCKET]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
@@ -315,7 +316,6 @@ def prometheus_exporter(opts):
 def influxdb_exporter(opts):
     receiver = _create_influxdb_exporter_receiver(opts)
     receiver.add_listener(influxdb_metrics.process)
-    _start_web_in_thread(opts)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())
