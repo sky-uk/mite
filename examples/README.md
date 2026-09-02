@@ -21,7 +21,7 @@ For example, provide a dockerfile and run command
 
 ```
 
-Modify the `demo_req` journey in local/demo.py to send a HTTP request to an endpoint from the custom apiserver
+Modify the `demo_req` journey in examples/demo.py to send a HTTP request to an endpoint from the custom apiserver
 
 ```
 Note: The _API_URL listens to port 8000 of the apiserver container by default

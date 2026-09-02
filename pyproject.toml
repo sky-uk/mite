@@ -120,6 +120,7 @@ exclude = [
     "__pycache__",
 ]
 
+# Keep in sync with [tool.coverage.run].source and [tool.ruff.lint.isort].known-first-party
 [tool.hatch.build.targets.wheel]
 packages = [
     "mite",
@@ -282,6 +283,7 @@ indent-style = "space"
 # Use \n line endings
 line-ending = "auto"
 
+# Keep in sync with [tool.hatch.build.targets.wheel].packages and [tool.coverage.run].source
 [tool.ruff.lint.isort]
 known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket", "mite_playwright", "mite_db_datapool"]
 force-single-line = false
@@ -300,6 +302,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 
+# Keep in sync with [tool.hatch.build.targets.wheel].packages and [tool.ruff.lint.isort].known-first-party
 [tool.coverage.run]
 branch = true
 source = [

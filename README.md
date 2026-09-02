@@ -203,7 +203,7 @@ docker build -t mite .
 
 Run mite deployments:
 
-Use `make` from `mite/local` dir:
+Use `make` from `mite/examples` dir:
 ```
 make up # start mite containers
 make status # check status of mite containers
@@ -214,7 +214,7 @@ or
 docker-compose -f docker_compose.yml up
 ```
 
-For more information on distributed mite usage, [info](/local/README.md)
+For more information on distributed mite usage, [info](/examples/README.md)
 
 ## Maintainers
 
