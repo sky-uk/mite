@@ -2,6 +2,8 @@ import importlib.util
 import logging
 import socket
 import time
+import warnings
+
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
@@ -14,6 +16,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
+
+
+warnings.warn(
+    "mite_selenium is a low-priority/legacy feature and will not receive "
+    "continued support after mite 3.0; pin 'mite<3' if you depend on it, "
+    "or use mite[all] to keep it available explicitly.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 
 logger = logging.getLogger(__name__)
 

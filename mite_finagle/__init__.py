@@ -1,8 +1,18 @@
 import asyncio
 import time
+import warnings
+
 from contextlib import asynccontextmanager
 from functools import wraps
 from itertools import count
+
+warnings.warn(
+    "mite_finagle is a low-priority/legacy feature and will not receive "
+    "continued support after mite 3.0; pin 'mite<3' if you depend on it, "
+    "or use mite[all] to keep it available explicitly.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 try:
     from .mux import CanTinit, Dispatch, Init, Message, Ping
