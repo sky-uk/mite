@@ -2,6 +2,7 @@ import logging
 
 from flask import Flask, Response
 
+from .influxdb import InfluxMetrics
 from .prometheus import PrometheusMetrics
 
 app = Flask(__name__)
@@ -10,6 +11,9 @@ app = Flask(__name__)
 app.logger.setLevel(logging.WARNING)
 
 prometheus_metrics = PrometheusMetrics()
+
+def influx_metrics(include_buckets=False):
+    return InfluxMetrics(include_buckets=include_buckets)
 
 
 @app.route('/metrics')

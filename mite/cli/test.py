@@ -7,6 +7,7 @@ import tracemalloc
 from prettytable import PrettyTable
 
 from mite.datapools import SingleRunDataPoolWrapper
+from mite.influxdb_processor import InfluxDBProcessor
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
 
 from ..collector import Collector
@@ -75,6 +76,10 @@ def _setup_msg_processors(receiver, opts):
     extra_processors = [
         spec_import(x)(opts) for x in opts["--message-processors"].split(",") if x
     ]
+
+    if opts["--influxdb"]:
+        extra_processors.append(InfluxDBProcessor(opts))
+
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)

@@ -32,6 +32,7 @@ dependencies = [
     "bs4",
     "docopt",
     "flask",
+    "influxdb3-python",
     "jinja2",
     "msgpack",
     "nanomsg",

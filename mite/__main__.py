@@ -2,8 +2,8 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb] SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -13,9 +13,11 @@ Usage:
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
+    mite [options] influxdb_exporter [--stats-out-socket=SOCKET]
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
+    mite [options] influxdb init
 
     mite --help
     mite --version
@@ -98,6 +100,8 @@ Options:
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
+    --influxdb                                              Send stats to InfluxDB
+    --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
 import asyncio
 import logging
@@ -122,12 +126,13 @@ from .cli.common import (
     _get_scenario_with_kwargs,
 )
 from .cli.duplicator import duplicator
+from .cli.influxdb import influxdb_init
 from .cli.test import journey_cmd, scenario_cmd
 from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module
-from .web import app, prometheus_metrics
+from .web import app, prometheus_metrics, influx_metrics
 
 
 def _recorder_receiver(opts):
@@ -138,6 +143,13 @@ def _recorder_receiver(opts):
 
 
 def _create_prometheus_exporter_receiver(opts):
+    socket = opts["--stats-out-socket"]
+    receiver = _msg_backend_module(opts).Receiver()
+    receiver.bind(socket)
+    return receiver
+
+
+def _create_influxdb_exporter_receiver(opts):
     socket = opts["--stats-out-socket"]
     receiver = _msg_backend_module(opts).Receiver()
     receiver.bind(socket)
@@ -301,6 +313,15 @@ def prometheus_exporter(opts):
     loop.run_until_complete(receiver.run())
 
 
+def influxdb_exporter(opts):
+    include_buckets = opts.get("--include-buckets", False)
+    receiver = _create_influxdb_exporter_receiver(opts)
+    receiver.add_listener(influx_metrics(include_buckets=include_buckets).process)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(receiver.run())
+
+
 def setup_logging(opts):
     logging.basicConfig(
         level=opts["--log-level"],
@@ -343,6 +364,10 @@ def main():
         receiver.generic_receiver(opts)
     elif opts["prometheus_exporter"]:
         prometheus_exporter(opts)
+    elif opts["influxdb"] and opts["init"]:
+        influxdb_init(opts)
+    elif opts["influxdb_exporter"]:
+        influxdb_exporter(opts)
     elif opts["recorder"]:
         recorder(opts)
     elif opts["har"]:
