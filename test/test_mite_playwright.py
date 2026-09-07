@@ -11,7 +11,7 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(
     not PLAYWRIGHT_AVAILABLE,
-    reason="Playwright not installed - run with 'hatch run test-playwright.py3.11:test'"
+    reason="Playwright not installed - run with 'hatch run test-playwright.py3.12:test'"
 )
 
 
