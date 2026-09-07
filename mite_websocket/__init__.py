@@ -1,4 +1,5 @@
 import logging
+import warnings
 from contextlib import asynccontextmanager
 
 import websockets
@@ -52,6 +53,18 @@ async def _websocket_context_manager(context):
 
 
 def mite_websocket(func):
+    # NOTE: fires at first use, not import time (unlike mite_finagle/mite_selenium's
+    # module-level warnings) — mite/stats.py eagerly imports every mite_stats entry
+    # point on `mite stats`/controller startup, so an import-time warning here would
+    # fire unconditionally regardless of whether the package is actually used.
+    # Do not "fix" this inconsistency by moving it to module scope.
+    warnings.warn(
+        "mite_websocket will require 'pip install mite[websocket]' starting in "
+        "mite 3.0; no functional change today.",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     async def wrapper(ctx, *args, **kwargs):
         async with _websocket_context_manager(ctx):
             return await func(ctx, *args, **kwargs)

@@ -1,7 +1,20 @@
-from pytest import raises
+import subprocess
+import sys
+from unittest.mock import MagicMock
+
+from pytest import raises, warns
 
 from mite import zmq
 from mite.utils import _msg_backend_module, spec_import
+
+
+def test_mite_utils_no_warning_on_import():
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite.utils"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_spec_import():
@@ -14,6 +27,15 @@ def test_spec_import():
 def test_msg_backend_module_zmq():
     opts = {"--message-backend": "ZMQ"}
     assert _msg_backend_module(opts) == zmq
+
+
+def test_msg_backend_module_nanomsg_warns(monkeypatch):
+    # The real nanomsg C-extension doesn't import in this dev environment (see
+    # the skipped test below), so mock it to exercise the warning without a
+    # working nanomsg install.
+    monkeypatch.setitem(sys.modules, "mite.nanomsg", MagicMock())
+    with warns(FutureWarning, match="nanomsg support will move"):
+        _msg_backend_module({"--message-backend": "nanomsg"})
 
 
 # TODO: Add libnanomsg to Jenkins slave

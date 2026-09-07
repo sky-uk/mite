@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -12,6 +14,32 @@ from mite_browser import (
     _field_is_disabled,
     browser_decorator,
 )
+
+
+def test_mite_browser_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate shared class state
+    # in place and corrupt later tests in this process (see mite_http precedent)
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite_browser"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mite_browser_warns_on_use():
+    # Real decoration (not a bare browser_decorator() call) exercises the path
+    # where both mite_browser's and the transitive mite_http warning fire.
+    with pytest.warns(FutureWarning) as record:
+
+        @browser_decorator()
+        async def dummy_journey(ctx):
+            pass
+
+    assert len(record) == 2
+    messages = [str(w.message) for w in record]
+    assert any("mite_browser will require" in m for m in messages)
+    assert any("mite_http will require" in m for m in messages)
 
 
 def test_fake_form_field_create():

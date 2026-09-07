@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import warnings
 
 import msgpack
 
@@ -24,6 +25,15 @@ async def sleep(delay, always=False, **kwargs):  # pragma: no cover
 def _msg_backend_module(opts):
     msg_backend = opts["--message-backend"]
     if msg_backend == "nanomsg":
+        # TODO(release-B): tighten to "pip install mite[nanomsg]" once that extra
+        # exists (see PACKAGING_EXTRAS_PLAN.md step 11).
+        # NOTE: fires at first use, not import time — see rationale in mite_http/__init__.py.
+        warnings.warn(
+            "nanomsg support will move to an optional extra in a future mite 3.0 "
+            "release; no functional change today.",
+            FutureWarning,
+            stacklevel=2,
+        )
         from . import nanomsg
 
         return nanomsg

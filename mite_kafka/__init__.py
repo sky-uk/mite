@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import warnings
 from contextlib import asynccontextmanager
 from functools import wraps
 
@@ -69,6 +70,18 @@ async def _kafka_context_manager(ctx):
 
 
 def mite_kafka(func):
+    # NOTE: fires at first use, not import time (unlike mite_finagle/mite_selenium's
+    # module-level warnings) — mite/stats.py eagerly imports every mite_stats entry
+    # point on `mite stats`/controller startup, so an import-time warning here would
+    # fire unconditionally regardless of whether the package is actually used.
+    # Do not "fix" this inconsistency by moving it to module scope.
+    warnings.warn(
+        "mite_kafka will require 'pip install mite[kafka]' starting in mite 3.0; "
+        "no functional change today.",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     async def wrapper(ctx, *args, **kwargs):
         async with _kafka_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
@@ -143,6 +156,14 @@ def mite_kafka_managed_adapter(
         raise Exception("Cannot specify both only_consumer and only_producer")
     if security_protocol is None:
         security_protocol = "PLAINTEXT"
+
+    # NOTE: fires at first use, not import time — see rationale in mite_kafka(func) above.
+    warnings.warn(
+        "mite_kafka will require 'pip install mite[kafka]' starting in mite 3.0; "
+        "no functional change today.",
+        FutureWarning,
+        stacklevel=2,
+    )
 
     def wrapper_factory(func):
         @wraps(func)

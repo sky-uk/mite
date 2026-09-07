@@ -1,5 +1,7 @@
 import asyncio
 import os
+import subprocess
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -7,6 +9,25 @@ from mocks.mock_context import MockContext
 
 import mite_http.stats as mite_http_stats
 from mite_http import SessionPool, mite_http
+
+
+def test_mite_http_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate the shared
+    # SessionPool class in place and corrupt state for later tests in this process
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite_http"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mite_http_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_http will require"):
+
+        @mite_http
+        async def dummy_journey(ctx):
+            pass
 
 
 @pytest.mark.asyncio

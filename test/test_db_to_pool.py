@@ -1,4 +1,7 @@
 import sqlite3
+import subprocess
+import sys
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
@@ -8,6 +11,36 @@ from mite_db_datapool.db_to_pool import (
     DBIterableDataPool,
     DBRecyclableIterableDataPool,
 )
+
+
+def test_db_to_pool_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate shared class state
+    # in place and corrupt later tests in this process (see mite_http precedent)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-W",
+            "error::FutureWarning",
+            "-c",
+            "import mite_db_datapool.db_to_pool",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_db_iterable_datapool_warns_on_use():
+    # Stub engine: .connect() context manager -> .execute(...).fetchall() == []
+    # so populate() sets db_exhausted=True after one iteration, never touching a
+    # real DB. Do NOT use preload_minimum=0/max_size=0 to avoid DB access —
+    # `if preload_minimum:` treats 0 as falsy and takes the DB-draining else branch.
+    stub_engine = MagicMock()
+    stub_conn = stub_engine.connect.return_value.__enter__.return_value
+    stub_conn.execute.return_value.fetchall.return_value = []
+
+    with pytest.warns(FutureWarning, match="mite_db_datapool will require"):
+        DBIterableDataPool(stub_engine, "SELECT * FROM test_table")
 
 
 @pytest.fixture
