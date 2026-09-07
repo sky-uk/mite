@@ -2,7 +2,7 @@
 # this stops the requirement for rust be dragged in (causing much "fun" in so far as the image size bloats
 # to approx 2Gb!)
 
-FROM python:3.11.13-alpine3.22
+FROM python:3.12.14-alpine3.23
 
 # py3-cryptography is added here as a means to get python cryptography onto the image (prebuilt) and without
 # need to install rust compiler
@@ -10,12 +10,8 @@ RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-de
 
 # This little bit of magic caches the dependencies in a docker layer, so that
 # rebuilds locally are not so expensive 
-COPY acurl/setup.cfg /acurl-setup.cfg
-COPY setup.cfg /mite-setup.cfg
-
-RUN python3 -c "import configparser; c = configparser.ConfigParser(); c.read('/mite-setup.cfg'); print(c['options']['install_requires'])" | grep -v acurl | xargs pip install
-
-RUN python3 -c "import configparser; c = configparser.ConfigParser(); c.read('/acurl-setup.cfg'); print(c['options']['install_requires'])" | xargs pip install
+COPY acurl/pyproject.toml /acurl-pyproject.toml
+COPY pyproject.toml /mite-pyproject.toml
 
 ADD . / /mite/
 
@@ -23,7 +19,7 @@ WORKDIR /mite/acurl
 RUN pip install --no-cache-dir -e .
 
 WORKDIR /mite
-RUN pip install --no-cache-dir -e .[amqp]
+RUN pip install --no-cache-dir -e .[all]
 
 # We can't dockerignore the .git directory because we need it for calculating
 # the scm-version
