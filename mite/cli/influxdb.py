@@ -22,7 +22,10 @@ def influxdb_init(opts):
 
     all_stats = []
     for ep in importlib.metadata.entry_points(group="mite_stats"):
-        all_stats.extend(ep.load())
+        try:
+            all_stats.extend(ep.load())
+        except Exception as e:
+            logger.warning(f"Failed to load stats from entry point {ep.name}: {e}")
 
     points = []
     tns = time_ns()
