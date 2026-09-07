@@ -363,11 +363,10 @@ def main():
         receiver.generic_receiver(opts)
     elif opts["prometheus_exporter"]:
         prometheus_exporter(opts)
-    elif opts["influxdb"]:
-        if opts["init"]:
-            influxdb_init(opts)
-        else:
-            influxdb_exporter(opts)
+    elif opts["influxdb"] and opts["init"]:
+        influxdb_init(opts)
+    elif opts["influxdb_exporter"]:
+        influxdb_exporter(opts)
     elif opts["recorder"]:
         recorder(opts)
     elif opts["har"]:
