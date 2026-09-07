@@ -142,3 +142,35 @@ Total requests (1 min): 681,760
 | Controller | ~38MB | ~2%   |
 | Duplicator | ~39MB | ~22%  |
 | Runner     | ~104MB| ~114% |
+
+# Troubleshooting
+
+## `pip install -e ".[extra]"` fails with `error: resolution-too-deep`
+
+Seen when installing an optional extra (e.g. `.[otel]`) into a venv that already
+has a large, loosely-pinned set of packages installed (common if the venv is
+shared with another project) — pip's resolver can't backtrack through the
+combined dependency graph in reasonable time. Using a clean Hatch-managed
+environment (`hatch run test:test`) avoids this since it won't have unrelated
+projects' dependencies already installed.
+
+Workaround: install each package in the extra individually with `--no-deps`,
+bypassing resolution entirely:
+
+```bash
+pip install --no-deps opentelemetry-api opentelemetry-sdk \
+    opentelemetry-exporter-otlp-proto-http opentelemetry-exporter-otlp-proto-grpc \
+    opentelemetry-exporter-zipkin
+```
+
+This can skip transitive dependencies that pip would normally pull in
+automatically. If an import then fails (e.g. `ModuleNotFoundError:
+No module named 'opentelemetry.semconv'`), find the exact version the parent
+package requires from its own wheel metadata, then install that with
+`--no-deps` too:
+
+```bash
+pip download --no-deps -d /tmp/x opentelemetry-sdk==<installed-version>
+unzip -p /tmp/x/*.whl "*.dist-info/METADATA" | grep Requires-Dist
+pip install --no-deps opentelemetry-semantic-conventions==<version-shown-above>
+```
