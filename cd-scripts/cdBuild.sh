@@ -9,7 +9,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # First run pre-commit checks, then run the appropriate test script based on JOB_NAME.
 
 echo "##### Run pre-commit checks before running tests #####"
-/home/jenkins/.local/bin/pre-commit run --origin HEAD --source origin/master
+pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
 if [ $PRE_COMMIT_STATUS -ne 0 ]; then
