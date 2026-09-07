@@ -10,8 +10,10 @@ app = Flask(__name__)
 # log line from the prometheus scrape.  But I don't think it works...
 app.logger.setLevel(logging.WARNING)
 
-influxdb_metrics = InfluxMetrics(include_buckets=False)
 prometheus_metrics = PrometheusMetrics()
+
+def influx_metrics(include_buckets=False):
+    return InfluxMetrics(include_buckets=include_buckets)
 
 
 @app.route('/metrics')

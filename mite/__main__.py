@@ -101,7 +101,7 @@ Options:
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
     --influxdb                                              Send stats to InfluxDB
-    --influxdb-include-buckets                              Include histogram buckets when sending stats to InfluxDB
+    --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
 import asyncio
 import logging
@@ -132,7 +132,7 @@ from .controller import Controller
 from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module
-from .web import app, prometheus_metrics, influxdb_metrics
+from .web import app, prometheus_metrics, influx_metrics
 
 
 def _recorder_receiver(opts):
@@ -314,8 +314,9 @@ def prometheus_exporter(opts):
 
 
 def influxdb_exporter(opts):
+    include_buckets = opts.get("--include-buckets", False)
     receiver = _create_influxdb_exporter_receiver(opts)
-    receiver.add_listener(influxdb_metrics.process)
+    receiver.add_listener(influx_metrics(include_buckets=include_buckets).process)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())
