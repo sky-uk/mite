@@ -16,6 +16,11 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
+python -m venv /tmp/mite-resolve
+source /tmp/mite-resolve/bin/activate
+pip install -e .
+pip freeze > /tmp/resolved.txt
+
 export HATCH_DEBUG=1
 
 echo $JOB_NAME
