@@ -15,7 +15,8 @@ PRE_COMMIT_STATUS=$?
 if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
-pip install "virtualenv<21" --force-reinstall
+
+hatch self report --no-open
 
 hatch --version
 hatch config show          # shows resolved config incl. installer settings
