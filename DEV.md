@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.10 or 3.11
+- Python 3.10-3.12
 - [Hatch](https://hatch.pypa.io/) for project management
 
 Install Hatch:
