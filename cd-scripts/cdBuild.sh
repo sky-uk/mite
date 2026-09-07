@@ -16,6 +16,9 @@ if [ $PRE_COMMIT_STATUS -ne 0 ]; then
     git diff
 fi
 
+hatch --version
+hatch config show          # shows resolved config incl. installer settings
+pip show virtualenv   # if hatch was installed with plain pip
 
 echo $JOB_NAME
 
