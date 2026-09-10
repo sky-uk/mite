@@ -186,6 +186,26 @@ acurl-format = [
     "cd acurl && ruff format .",
 ]
 
+[tool.hatch.envs.release]
+detached = true
+python = "3.12"
+dependencies = [
+    "build==1.6.1",
+    "cibuildwheel==4.2.1",
+    "docopt==0.6.2",
+    "packaging==26.3",
+    "twine==7.0.0",
+]
+
+[tool.hatch.envs.release.scripts]
+tag-create   = "python cd-scripts/cdTagRelease.py create {args}"
+tag-push     = "python cd-scripts/cdTagRelease.py push {args}"
+build-mite   = "python -m build --outdir wheelhouse-mite"
+sdist-acurl  = "python -m build --sdist --outdir wheelhouse-acurl acurl/"
+wheels-acurl = "python -m cibuildwheel --output-dir wheelhouse-acurl acurl/"
+check        = "python -m twine check {args}"
+upload       = "python -m twine upload --non-interactive --skip-existing {args}"
+
 # ruff configuration ##############################################
 
 [tool.ruff]
