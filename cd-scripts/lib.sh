@@ -40,10 +40,6 @@ function checkAcurl() {
 }
 
 function buildLinuxWheels() {
-    
-    CIBW_BEFORE_ALL_LINUX="yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
-    CIBW_SKIP="*i686"
-
     if [ "$VERSION_INCREMENT" = false ]; then
         echo "Mite version not incremented, not building"
     else

@@ -86,3 +86,13 @@ python_files = ["test_*.py"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-*"
+skip  = "*_i686 *-musllinux_*"     # musllinux deferred
+archs = ["x86_64"]                 # aarch64 deferred, needs QEMU on the agent
+test-requires = ["pytest", "pytest-asyncio", "pytest-httpbin"]
+test-command  = "pytest {project}/tests"
+
+[tool.cibuildwheel.linux]
+before-all = "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
