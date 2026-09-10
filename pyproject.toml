@@ -122,6 +122,7 @@ packages = [
 
 [tool.hatch.envs.default]
 features = ["dev"]
+installer = "pip"
 
 
 [tool.hatch.envs.test]
