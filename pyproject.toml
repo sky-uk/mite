@@ -32,7 +32,6 @@ dependencies = [
     "bs4",
     "docopt",
     "flask",
-    "influxdb3-python",
     "jinja2",
     "msgpack",
     "nanomsg",
@@ -67,6 +66,10 @@ otel = [
     "opentelemetry-exporter-otlp-proto-http>=1.20.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
     "opentelemetry-exporter-zipkin>=1.20.0",
+]
+influxdb = [
+    "influxdb3-python",
+    "influxdb-client",
 ]
 
 [project.urls]
@@ -126,7 +129,7 @@ features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["dev", "otel"]
+features = ["dev", "otel", "influxdb"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
