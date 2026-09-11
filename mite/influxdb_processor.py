@@ -18,3 +18,6 @@ class InfluxDBProcessor:
 
     def process_message(self, msg):
         self._stats.process(msg)
+
+    def close(self):
+        self._influx_metrics.close()

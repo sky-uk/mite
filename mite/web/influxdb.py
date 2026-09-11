@@ -3,9 +3,13 @@ import os
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
-from influxdb_client_3 import InfluxDBClient3, Point
 from time import time_ns
+from typing import cast
 from concurrent.futures import ThreadPoolExecutor
+from threading import BoundedSemaphore
+from packaging.version import Version, InvalidVersion
+
+from mite.exceptions import InfluxConfigError
 
 
 logger = logging.getLogger(__name__)
@@ -21,38 +25,133 @@ class InfluxPoint:
 
 class InfluxdbWriter:
     def __init__(self):
-        host = os.getenv("INFLUXDB_HOST")
-        token = os.getenv("INFLUXDB_TOKEN")
-        database = os.getenv("INFLUXDB_DATABASE")
-
-        if not host or not token or not database:
-            raise ValueError("INFLUXDB_HOST, INFLUXDB_DATABASE, and INFLUXDB_TOKEN variables are empty")
-
-        self.client = InfluxDBClient3(
-            host=host,
-            token=token,
-            database=database,
-        )
+        raw_version = os.getenv("INFLUXDB_VERSION", "v3")
+        try:
+            self.major_version = Version(raw_version).major
+        except (TypeError, InvalidVersion):
+            raise ValueError(f"Invalid INFLUXDB_VERSION: {raw_version}")
         self._executor = ThreadPoolExecutor(max_workers=1)
+        self._write_slots = BoundedSemaphore(value=1)
+        try:
+            self._create_client()
+        except Exception as e:
+            logger.exception(f"Failed to create InfluxDB client: {e}")
+            raise
+
+    def _create_client(self):
+        if self.major_version == 3:
+            from influxdb_client_3 import InfluxDBClient3, Point as V3Point
+            host = os.getenv("INFLUXDB_HOST")
+            token = os.getenv("INFLUXDB_TOKEN")
+            database = os.getenv("INFLUXDB_DATABASE")
+
+            if not host or not token or not database:
+                raise InfluxConfigError("Missing Influxdb config")
+
+            self.v3_client = InfluxDBClient3(
+                host=host,
+                token=token,
+                database=database,
+            )
+            self.V3Point = V3Point
+        else:
+            from influxdb_client.client.influxdb_client import InfluxDBClient
+            from influxdb_client.client.write.point import Point as V2Point
+            from influxdb_client.client.write_api import SYNCHRONOUS
+
+            if self.major_version == 1:
+                host = os.getenv("INFLUXDB_HOST")
+                username = os.getenv("INFLUXDB_USERNAME")
+                password = os.getenv("INFLUXDB_PASSWORD")
+                database = os.getenv("INFLUXDB_DATABASE")
+
+                if not host or not username or not password or not database:
+                    raise InfluxConfigError("Missing Influxdb config")
+
+                retention_policy = os.getenv("INFLUXDB_RETENTION_POLICY", "autogen")
+                self.bucket = f"{database}/{retention_policy}"
+                self.org = "-"
+
+                self.v2_client = InfluxDBClient(
+                    url=host,
+                    token=f"{username}:{password}",
+                    org=self.org,
+                )
+
+            elif self.major_version == 2:
+                host = os.getenv("INFLUXDB_HOST")
+                token = os.getenv("INFLUXDB_TOKEN")
+                bucket = os.getenv("INFLUXDB_BUCKET")
+                org = os.getenv("INFLUXDB_ORG")
+
+                if not host or not token or not bucket or not org:
+                    raise InfluxConfigError("Missing Influxdb config")
+
+                self.bucket = bucket
+                self.org = org
+
+                self.v2_client = InfluxDBClient(
+                    url=host,
+                    token=token,
+                    org=org,
+                )
+            else:
+                raise InfluxConfigError(f"Unsupported InfluxDB major version: {self.major_version}")
+            self.V2Point = V2Point
+            self.v2_write_api = self.v2_client.write_api(write_options=SYNCHRONOUS)
+
 
     def _do_write(self, points):
+        from influxdb_client.domain.write_precision import WritePrecision
         influx_points = []
         for point in points:
-            influx_point = Point(point.measurement)
+            if self.major_version == 3:
+                influx_point = self.V3Point(point.measurement)
+            else:
+                influx_point = self.V2Point(point.measurement)
             for tag_key, tag_value in point.tags.items():
                 influx_point.tag(tag_key, tag_value)
             for field_key, field_value in point.fields.items():
                 influx_point.field(field_key, field_value)
-            influx_point.time(point.time_ns)
+            influx_point.time(point.time_ns, write_precision=WritePrecision.NS)
             influx_points.append(influx_point)
 
-        try:
-            self.client.write(influx_points)
-        except Exception as e:
-            logger.warning(f"Failed to write to InfluxDB: {e}")
+        if self.major_version == 3:
+            self.v3_client.write(influx_points)
+        else:
+            self.v2_write_api.write(
+                bucket=self.bucket,
+                org=self.org,
+                record=influx_points,
+                write_precision=cast(WritePrecision, WritePrecision.NS))
 
     def write_points(self, points):
-        self._executor.submit(self._do_write, points)
+        if not self._write_slots.acquire(blocking=False):
+            logger.warning("Skipping InfluxDB write because a previous write is still pending")
+            return None
+
+        try:
+            future = self._executor.submit(self._do_write, points)
+        except Exception:
+            self._write_slots.release()
+            raise
+
+        future.add_done_callback(self._complete_write)
+        return future
+
+    def _complete_write(self, future):
+        self._write_slots.release()
+        try:
+            future.result()
+        except Exception:
+            logger.exception("Failed to write to InfluxDB")
+
+
+    def close(self):
+        self._executor.shutdown(wait=True)
+        client = getattr(self, "v3_client", None) or getattr(self, "v2_client", None)
+        if client is not None:
+            client.close()
 
 
 class InfluxStat:

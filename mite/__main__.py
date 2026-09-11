@@ -316,10 +316,17 @@ def prometheus_exporter(opts):
 def influxdb_exporter(opts):
     include_buckets = opts.get("--include-buckets", False)
     receiver = _create_influxdb_exporter_receiver(opts)
-    receiver.add_listener(influx_metrics(include_buckets=include_buckets).process)
+    metrics = influx_metrics(include_buckets=include_buckets)
+    receiver.add_listener(metrics.process)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(receiver.run())
+    try:
+        loop.run_until_complete(receiver.run())
+    except KeyboardInterrupt:
+        logger.info("Received interrupt signal, shutting down InfluxDB exporter")
+    finally:
+        metrics.close()
+        loop.close()
 
 
 def setup_logging(opts):
