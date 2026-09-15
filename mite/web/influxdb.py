@@ -1,5 +1,6 @@
 import logging
 import os
+from abc import abstractmethod, ABC
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
@@ -23,92 +24,32 @@ class InfluxPoint:
     time_ns: int
 
 
-class InfluxdbWriter:
-    def __init__(self):
-        raw_version = os.getenv("INFLUXDB_VERSION", "v3")
-        try:
-            self.major_version = Version(raw_version).major
-        except (TypeError, InvalidVersion):
-            raise ValueError(f"Invalid INFLUXDB_VERSION: {raw_version}")
-        self._executor = ThreadPoolExecutor(max_workers=1)
-        self._write_slots = BoundedSemaphore(value=1)
-        try:
-            self._create_client()
-        except Exception as e:
-            logger.exception(f"Failed to create InfluxDB client: {e}")
-            raise
+class _InfluxBackend(ABC):
+    @abstractmethod
+    def write_points(self, points: list[InfluxPoint]) -> None: ...
 
-    def _create_client(self):
-        if self.major_version == 3:
-            from influxdb_client_3 import InfluxDBClient3, Point as V3Point
-            host = os.getenv("INFLUXDB_HOST")
-            token = os.getenv("INFLUXDB_TOKEN")
-            database = os.getenv("INFLUXDB_DATABASE")
-
-            if not host or not token or not database:
-                raise InfluxConfigError("Missing Influxdb config")
-
-            self.v3_client = InfluxDBClient3(
-                host=host,
-                token=token,
-                database=database,
-            )
-            self.V3Point = V3Point
-        else:
-            from influxdb_client.client.influxdb_client import InfluxDBClient
-            from influxdb_client.client.write.point import Point as V2Point
-            from influxdb_client.client.write_api import SYNCHRONOUS
-
-            if self.major_version == 1:
-                host = os.getenv("INFLUXDB_HOST")
-                username = os.getenv("INFLUXDB_USERNAME")
-                password = os.getenv("INFLUXDB_PASSWORD")
-                database = os.getenv("INFLUXDB_DATABASE")
-
-                if not host or not username or not password or not database:
-                    raise InfluxConfigError("Missing Influxdb config")
-
-                retention_policy = os.getenv("INFLUXDB_RETENTION_POLICY", "autogen")
-                self.bucket = f"{database}/{retention_policy}"
-                self.org = "-"
-
-                self.v2_client = InfluxDBClient(
-                    url=host,
-                    token=f"{username}:{password}",
-                    org=self.org,
-                )
-
-            elif self.major_version == 2:
-                host = os.getenv("INFLUXDB_HOST")
-                token = os.getenv("INFLUXDB_TOKEN")
-                bucket = os.getenv("INFLUXDB_BUCKET")
-                org = os.getenv("INFLUXDB_ORG")
-
-                if not host or not token or not bucket or not org:
-                    raise InfluxConfigError("Missing Influxdb config")
-
-                self.bucket = bucket
-                self.org = org
-
-                self.v2_client = InfluxDBClient(
-                    url=host,
-                    token=token,
-                    org=org,
-                )
-            else:
-                raise InfluxConfigError(f"Unsupported InfluxDB major version: {self.major_version}")
-            self.V2Point = V2Point
-            self.v2_write_api = self.v2_client.write_api(write_options=SYNCHRONOUS)
+    @abstractmethod
+    def close(self) -> None: ...
 
 
-    def _do_write(self, points):
+class _InfluxV2ClientBackend(_InfluxBackend):
+    def __init__(self, *, url, token, org, bucket):
+        from influxdb_client.client.influxdb_client import InfluxDBClient
+        from influxdb_client.client.write.point import Point
+        from influxdb_client.client.write_api import SYNCHRONOUS
+
+        self._bucket = bucket
+        self._org = org
+        self._point_type = Point
+        self._client = InfluxDBClient(url=url, token=token, org=org)
+        self._write_api = self._client.write_api(write_options=SYNCHRONOUS)
+
+    def write_points(self, points: list[InfluxPoint]) -> None:
         from influxdb_client.domain.write_precision import WritePrecision
+
         influx_points = []
         for point in points:
-            if self.major_version == 3:
-                influx_point = self.V3Point(point.measurement)
-            else:
-                influx_point = self.V2Point(point.measurement)
+            influx_point = self._point_type(point.measurement)
             for tag_key, tag_value in point.tags.items():
                 influx_point.tag(tag_key, tag_value)
             for field_key, field_value in point.fields.items():
@@ -116,18 +57,127 @@ class InfluxdbWriter:
             influx_point.time(point.time_ns, write_precision=WritePrecision.NS)
             influx_points.append(influx_point)
 
-        if self.major_version == 3:
-            self.v3_client.write(influx_points)
-        else:
-            self.v2_write_api.write(
-                bucket=self.bucket,
-                org=self.org,
-                record=influx_points,
-                write_precision=cast(WritePrecision, WritePrecision.NS))
+        self._write_api.write(
+            bucket=self._bucket,
+            org=self._org,
+            record=influx_points,
+            write_precision=cast(WritePrecision, WritePrecision.NS),
+        )
+
+    def close(self) -> None:
+        self._client.close()
+
+
+class _InfluxV1Backend(_InfluxV2ClientBackend):
+    def __init__(self):
+        host = os.getenv("INFLUXDB1_HOST")
+        username = os.getenv("INFLUXDB1_USERNAME")
+        password = os.getenv("INFLUXDB1_PASSWORD")
+        database = os.getenv("INFLUXDB1_DATABASE")
+
+        if not host or not username or not password or not database:
+            raise InfluxConfigError("Missing Influxdb1 config")
+
+        retention_policy = os.getenv("INFLUXDB1_RETENTION_POLICY", "autogen")
+        super().__init__(
+            url=host,
+            token=f"{username}:{password}",
+            org="-",
+            bucket=f"{database}/{retention_policy}",
+        )
+
+
+class _InfluxV2Backend(_InfluxV2ClientBackend):
+    def __init__(self):
+        host = os.getenv("INFLUXDB_HOST")
+        token = os.getenv("INFLUXDB_TOKEN")
+        bucket = os.getenv("INFLUXDB_BUCKET")
+        org = os.getenv("INFLUXDB_ORG")
+
+        if not host or not token or not bucket or not org:
+            raise InfluxConfigError("Missing Influxdb config")
+
+        super().__init__(url=host, token=token, org=org, bucket=bucket)
+
+
+class _InfluxV3Backend(_InfluxBackend):
+    def __init__(self):
+        from influxdb_client_3 import InfluxDBClient3, Point
+
+        host = os.getenv("INFLUXDB_HOST")
+        token = os.getenv("INFLUXDB_TOKEN")
+        database = os.getenv("INFLUXDB_DATABASE")
+
+        if not host or not token or not database:
+            raise InfluxConfigError("Missing Influxdb config")
+
+        self._point_type = Point
+        self._client = InfluxDBClient3(
+            host=host,
+            token=token,
+            database=database,
+        )
+
+    def write_points(self, points: list[InfluxPoint]) -> None:
+        from influxdb_client.domain.write_precision import WritePrecision
+
+        influx_points = []
+        for point in points:
+            influx_point = self._point_type(point.measurement)
+            for tag_key, tag_value in point.tags.items():
+                influx_point.tag(tag_key, tag_value)
+            for field_key, field_value in point.fields.items():
+                influx_point.field(field_key, field_value)
+            influx_point.time(point.time_ns, write_precision=WritePrecision.NS)
+            influx_points.append(influx_point)
+
+        self._client.write(influx_points)
+
+    def close(self) -> None:
+        self._client.close()
+
+
+def _create_influx_backend() -> _InfluxBackend:
+    raw_version = os.getenv("INFLUXDB_VERSION", "v3")
+
+    try:
+        major_version = Version(raw_version).major
+    except (TypeError, InvalidVersion) as error:
+        raise ValueError(f"Invalid INFLUXDB_VERSION: {raw_version}") from error
+
+    backends = {
+        1: _InfluxV1Backend,
+        2: _InfluxV2Backend,
+        3: _InfluxV3Backend,
+    }
+
+    try:
+        return backends[major_version]()
+    except KeyError as error:
+        raise InfluxConfigError(
+            f"Unsupported InfluxDB major version: {major_version}"
+        ) from error
+
+
+class InfluxdbWriter:
+    def __init__(self):
+        try:
+            self._backend = _create_influx_backend()
+        except Exception as error:
+            logger.exception("Failed to create InfluxDB client: %s", error)
+            raise
+
+        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._write_slots = BoundedSemaphore(value=1)
+
+    def _do_write(self, points):
+        self._backend.write_points(points)
 
     def write_points(self, points):
         if not self._write_slots.acquire(blocking=False):
-            logger.warning("Skipping InfluxDB write because a previous write is still pending")
+            logger.warning(
+                "Skipping InfluxDB write because a previous write is still pending"
+            )
             return None
 
         try:
@@ -146,12 +196,9 @@ class InfluxdbWriter:
         except Exception:
             logger.exception("Failed to write to InfluxDB")
 
-
     def close(self):
         self._executor.shutdown(wait=True)
-        client = getattr(self, "v3_client", None) or getattr(self, "v2_client", None)
-        if client is not None:
-            client.close()
+        self._backend.close()
 
 
 class InfluxStat:
