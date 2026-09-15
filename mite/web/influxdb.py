@@ -70,15 +70,15 @@ class _InfluxV2ClientBackend(_InfluxBackend):
 
 class _InfluxV1Backend(_InfluxV2ClientBackend):
     def __init__(self):
-        host = os.getenv("INFLUXDB1_HOST")
-        username = os.getenv("INFLUXDB1_USERNAME")
-        password = os.getenv("INFLUXDB1_PASSWORD")
-        database = os.getenv("INFLUXDB1_DATABASE")
+        host = os.getenv("INFLUXDB_HOST")
+        username = os.getenv("INFLUXDB_USERNAME")
+        password = os.getenv("INFLUXDB_PASSWORD")
+        database = os.getenv("INFLUXDB_DATABASE")
 
         if not host or not username or not password or not database:
             raise InfluxConfigError("Missing Influxdb1 config")
 
-        retention_policy = os.getenv("INFLUXDB1_RETENTION_POLICY", "autogen")
+        retention_policy = os.getenv("INFLUXDB_RETENTION_POLICY", "autogen")
         super().__init__(
             url=host,
             token=f"{username}:{password}",
