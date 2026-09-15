@@ -67,6 +67,10 @@ otel = [
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
     "opentelemetry-exporter-zipkin>=1.20.0",
 ]
+influxdb = [
+    "influxdb3-python",
+    "influxdb-client",
+]
 
 [project.urls]
 Homepage = "https://github.com/sky-uk/mite/"
@@ -125,7 +129,7 @@ features = ["dev"]
 
 
 [tool.hatch.envs.test]
-features = ["dev", "otel"]
+features = ["dev", "otel", "influxdb"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
