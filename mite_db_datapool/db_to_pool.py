@@ -1,4 +1,5 @@
 import logging
+import warnings
 from collections import deque
 
 from sqlalchemy import text
@@ -16,6 +17,19 @@ class DBIterableDataPool:
         preload_minimum=None,
         max_size=None,
     ):
+        # NOTE: fires at first use, not import time (unlike mite_finagle/mite_selenium's
+        # module-level warnings) — mite/stats.py eagerly imports every mite_stats entry
+        # point on `mite stats`/controller startup, so an import-time warning here would
+        # fire unconditionally regardless of whether the package is actually used.
+        # Do not "fix" this inconsistency by moving it to module scope. Unconditional
+        # (before the preload_minimum/max_size branching below) so every construction
+        # path warns, not just the ones that end up loading data.
+        warnings.warn(
+            "mite_db_datapool will require 'pip install mite[db]' starting in mite "
+            "3.0; no functional change today.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.db_engine = db_engine
         self.query = query
         self.max_size = max_size

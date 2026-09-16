@@ -1,5 +1,6 @@
 import asyncio
 import re
+import warnings
 from functools import wraps
 from urllib.parse import urlencode, urljoin
 
@@ -42,6 +43,20 @@ def url_builder(base_url, *args, **kwargs):
 
 def browser_decorator(separation=0, embedded_resources=False):
     def wrapper_factory(func):
+        # NOTE: applying @browser_decorator() to a scenario function triggers
+        # mite_http's own first-use warning too, because @mite_http decorates
+        # `wrapper` synchronously inside this same wrapper_factory call. Both
+        # warnings fire back-to-back at decoration time (when the outer decorator
+        # is applied to a function), NOT at scenario invocation time as one might
+        # assume. This is accepted, not a bug — do not suppress the transitive
+        # mite_http warning.
+        warnings.warn(
+            "mite_browser will require 'pip install mite[browser]' starting in "
+            "mite 3.0; no functional change today.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         @wraps(func)
         @mite_http
         async def wrapper(context, *args, **kwargs):

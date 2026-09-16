@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -5,6 +7,25 @@ from mocks.mock_context import MockContext
 from websockets.exceptions import WebSocketException
 
 from mite_websocket import WebsocketError, mite_websocket
+
+
+def test_mite_websocket_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate shared class state
+    # in place and corrupt later tests in this process (see mite_http precedent)
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite_websocket"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mite_websocket_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_websocket will require"):
+
+        @mite_websocket
+        async def dummy_journey(ctx):
+            pass
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,35 @@
+import subprocess
+import sys
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
 
-from mite_kafka import KafkaConsumer, KafkaProducer, mite_kafka
+from mite_kafka import KafkaConsumer, KafkaProducer, mite_kafka, mite_kafka_managed_adapter
+
+
+def test_mite_kafka_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate shared class state
+    # in place and corrupt later tests in this process (see mite_http precedent)
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite_kafka"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mite_kafka_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_kafka will require"):
+
+        @mite_kafka
+        async def dummy_journey(ctx):
+            pass
+
+
+def test_mite_kafka_managed_adapter_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_kafka will require"):
+        mite_kafka_managed_adapter(bootstrap_servers="localhost:9092")
 
 
 @pytest.mark.asyncio

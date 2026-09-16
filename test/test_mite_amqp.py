@@ -1,4 +1,6 @@
 import asyncio
+import subprocess
+import sys
 from unittest.mock import AsyncMock, patch
 
 import aio_pika
@@ -6,6 +8,25 @@ import pytest
 from mocks.mock_context import MockContext
 
 from mite_amqp import _AMQPWrapper, mite_amqp
+
+
+def test_mite_amqp_no_warning_on_import():
+    # subprocess, not importlib.reload: reload() would mutate shared class state
+    # in place and corrupt later tests in this process (see mite_http precedent)
+    result = subprocess.run(
+        [sys.executable, "-W", "error::FutureWarning", "-c", "import mite_amqp"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_mite_amqp_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_amqp will require"):
+
+        @mite_amqp
+        async def dummy_journey(ctx):
+            pass
 
 
 @pytest.mark.asyncio

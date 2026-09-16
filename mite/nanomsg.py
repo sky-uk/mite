@@ -7,6 +7,11 @@ from .utils import pack_msg, unpack_msg
 
 logger = logging.getLogger(__name__)
 
+# NOTE: the nanomsg deprecation warning lives in mite/utils.py:_msg_backend_module,
+# the single choke point every nanomsg entry path (runner, controller, duplicator
+# CLI) passes through — not here, to avoid duplicating it across this module's 5
+# socket-owning classes.
+
 
 class Duplicator:
     def __init__(self, in_address, out_addresses):
