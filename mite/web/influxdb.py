@@ -69,16 +69,16 @@ class _InfluxV2ClientBackend(_InfluxBackend):
 
 
 class _InfluxV1Backend(_InfluxV2ClientBackend):
-    def __init__(self):
-        host = os.getenv("INFLUXDB_HOST")
-        username = os.getenv("INFLUXDB_USERNAME")
-        password = os.getenv("INFLUXDB_PASSWORD")
-        database = os.getenv("INFLUXDB_DATABASE")
+    def __init__(self, suffix=""):
+        host = os.getenv(f"INFLUXDB_HOST{suffix}")
+        username = os.getenv(f"INFLUXDB_USERNAME{suffix}")
+        password = os.getenv(f"INFLUXDB_PASSWORD{suffix}")
+        database = os.getenv(f"INFLUXDB_DATABASE{suffix}")
 
         if not host or not username or not password or not database:
             raise InfluxConfigError("Missing Influxdb1 config")
 
-        retention_policy = os.getenv("INFLUXDB_RETENTION_POLICY", "autogen")
+        retention_policy = os.getenv(f"INFLUXDB_RETENTION_POLICY{suffix}", "autogen")
         super().__init__(
             url=host,
             token=f"{username}:{password}",
@@ -88,11 +88,11 @@ class _InfluxV1Backend(_InfluxV2ClientBackend):
 
 
 class _InfluxV2Backend(_InfluxV2ClientBackend):
-    def __init__(self):
-        host = os.getenv("INFLUXDB_HOST")
-        token = os.getenv("INFLUXDB_TOKEN")
-        bucket = os.getenv("INFLUXDB_BUCKET")
-        org = os.getenv("INFLUXDB_ORG")
+    def __init__(self, suffix=""):
+        host = os.getenv(f"INFLUXDB_HOST{suffix}")
+        token = os.getenv(f"INFLUXDB_TOKEN{suffix}")
+        bucket = os.getenv(f"INFLUXDB_BUCKET{suffix}")
+        org = os.getenv(f"INFLUXDB_ORG{suffix}")
 
         if not host or not token or not bucket or not org:
             raise InfluxConfigError("Missing Influxdb config")
@@ -101,12 +101,12 @@ class _InfluxV2Backend(_InfluxV2ClientBackend):
 
 
 class _InfluxV3Backend(_InfluxBackend):
-    def __init__(self):
+    def __init__(self, suffix=""):
         from influxdb_client_3 import InfluxDBClient3, Point
 
-        host = os.getenv("INFLUXDB_HOST")
-        token = os.getenv("INFLUXDB_TOKEN")
-        database = os.getenv("INFLUXDB_DATABASE")
+        host = os.getenv(f"INFLUXDB_HOST{suffix}")
+        token = os.getenv(f"INFLUXDB_TOKEN{suffix}")
+        database = os.getenv(f"INFLUXDB_DATABASE{suffix}")
 
         if not host or not token or not database:
             raise InfluxConfigError("Missing Influxdb config")
@@ -137,9 +137,12 @@ class _InfluxV3Backend(_InfluxBackend):
         self._client.close()
 
 
-def _create_influx_backend() -> _InfluxBackend:
-    raw_version = os.getenv("INFLUXDB_VERSION", "v3")
+def _create_influx_backend(suffix: str) -> _InfluxBackend:
+    return _create_single_backend(suffix)
 
+
+def _create_single_backend(suffix: str) -> _InfluxBackend:
+    raw_version = os.getenv(f"INFLUXDB_VERSION{suffix}", "v3")
     try:
         major_version = Version(raw_version).major
     except (TypeError, InvalidVersion) as error:
@@ -152,7 +155,7 @@ def _create_influx_backend() -> _InfluxBackend:
     }
 
     try:
-        return backends[major_version]()
+        return backends[major_version](suffix)
     except KeyError as error:
         raise InfluxConfigError(
             f"Unsupported InfluxDB major version: {major_version}"
@@ -160,9 +163,9 @@ def _create_influx_backend() -> _InfluxBackend:
 
 
 class InfluxdbWriter:
-    def __init__(self):
+    def __init__(self, suffix=""):
         try:
-            self._backend = _create_influx_backend()
+            self._backend = _create_influx_backend(suffix)
         except Exception as error:
             logger.exception("Failed to create InfluxDB client: %s", error)
             raise
@@ -408,8 +411,8 @@ class InfluxHistogram(InfluxStat):
 INFLUX_STAT_TYPES = {"Counter": InfluxCounter, "Gauge": InfluxGauge, "Histogram": InfluxHistogram}
 
 class InfluxMetrics(InfluxdbWriter):
-    def __init__(self, include_buckets=False):
-        super().__init__()
+    def __init__(self, include_buckets=False, suffix=""):
+        super().__init__(suffix=suffix)
         self.include_buckets = include_buckets
         self.stats = {}
 

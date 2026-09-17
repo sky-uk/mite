@@ -78,7 +78,10 @@ def _setup_msg_processors(receiver, opts):
     ]
 
     if opts["--influxdb"]:
-        extra_processors.append(InfluxDBProcessor(opts))
+        influxdb_count = int(opts["--influxdb"])
+        for i in range(influxdb_count):
+            suffix = "" if i == 0 else f"_{i+1}"
+            extra_processors.append(InfluxDBProcessor(opts, suffix=suffix))
 
     for processor in extra_processors:
         if hasattr(processor, "process_message"):

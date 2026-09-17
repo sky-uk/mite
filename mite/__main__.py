@@ -2,8 +2,8 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb] SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb] JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -17,7 +17,7 @@ Usage:
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
-    mite [options] influxdb init
+    mite [options] influxdb init [--influxdb=N]
 
     mite --help
     mite --version
@@ -30,6 +30,7 @@ Arguments:
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
     CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
     PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
+    N                       Number of InfluxDB write destinations
 
 Examples:
     # run the example scenario called "scenario"
@@ -100,7 +101,7 @@ Options:
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
-    --influxdb                                              Send stats to InfluxDB
+    --influxdb=N                                            Send stats to N number of InfluxDB instances
     --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
 import asyncio

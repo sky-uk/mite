@@ -25,22 +25,20 @@ def influxdb_init(opts):
         stat_type = type(stat).__name__
 
         if stat_type in ("Counter", "Accumulator"):
-            p = InfluxPoint(
+            points.append(InfluxPoint(
                 measurement=name,
                 tags=tags,
                 fields={"value": 0, "value_cumulative": 0},
                 time_ns=tns,
-            )
-            points.append(p)
+            ))
 
         elif stat_type == "Gauge":
-            p = InfluxPoint(
+            points.append(InfluxPoint(
                 measurement=name,
                 tags=tags,
                 fields={"value": 0.0},
                 time_ns=tns,
-            )
-            points.append(p)
+            ))
 
         elif stat_type == "Histogram":
             fields = {}
@@ -55,26 +53,33 @@ def influxdb_init(opts):
                 "count_cumulative": 0,
                 "avg_cumulative": 0.0,
             })
-
-            p = InfluxPoint(
+            points.append(InfluxPoint(
                 measurement=f"{name}_summary",
                 tags=tags,
                 fields=fields,
                 time_ns=tns,
-            )
-            points.append(p)
-    writer = InfluxdbWriter()
-    try:
-        future = writer.write_points(points)
-        if future is None:
-            raise InfluxConfigError("InfluxDB writer was busy; init write was skipped")
-        future.result()
-        logger.info(f"Initialized {len(all_stats)} metrics:")
-        for stat in all_stats:
-            logger.info(f"  - {stat.name}")
-        return 0
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        return 1
-    finally:
-        writer.close()
+            ))
+
+    influxdb_count = int(opts.get("--influxdb") or 1)
+    exit_code = 0
+
+    for i in range(influxdb_count):
+        suffix = "" if i == 0 else f"_{i + 1}"
+        writer = InfluxdbWriter(suffix=suffix)
+        try:
+            future = writer.write_points(points)
+            if future is None:
+                raise InfluxConfigError(
+                    f"InfluxDB writer{suffix} was busy; init write was skipped"
+                )
+            future.result()
+            logger.info(f"Initialized {len(all_stats)} metrics for instance{suffix or ' (default)'}:")
+            for stat in all_stats:
+                logger.info(f"  - {stat.name}")
+        except Exception as e:
+            logger.error(f"Error initializing instance{suffix}: {e}")
+            exit_code = 1
+        finally:
+            writer.close()
+
+    return exit_code
