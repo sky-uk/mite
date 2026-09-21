@@ -6,12 +6,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # Here we check the JOB_NAME variable to determine which kind of run it is and call the appropriate script.
 # Note that this script only runs tests. The release scripts are not called from here.
 
-# httpbin (a dev dependency) pulls in brotlicffi, which has no musllinux wheel on PyPI and must compile from source.
-command -v apk >/dev/null 2>&1 && apk add --no-cache clang build-base musl-dev
-
 # First run pre-commit checks, then run the appropriate test script based on JOB_NAME.
 echo "##### Run pre-commit checks before running tests #####"
-hatch run pre-commit run --origin HEAD --source origin/master
+pre-commit run --origin HEAD --source origin/master
 PRE_COMMIT_STATUS=$?
 
 if [ $PRE_COMMIT_STATUS -ne 0 ]; then
