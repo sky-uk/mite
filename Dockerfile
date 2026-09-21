@@ -8,9 +8,6 @@ FROM python:3.12.14-alpine3.24
 # need to install rust compiler
 RUN apk add --no-cache gnupg libressl tar ca-certificates gcc cmake make libc-dev coreutils g++ libzmq zeromq zeromq-dev git curl-dev libffi libffi-dev libbz2 bzip2-dev xz-dev libjpeg jpeg-dev py3-cryptography
 
-COPY acurl/pyproject.toml /acurl-pyproject.toml
-COPY pyproject.toml /mite-pyproject.toml
-
 ADD . / /mite/
 
 WORKDIR /mite/acurl
