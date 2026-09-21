@@ -25,25 +25,25 @@ classifiers = [
 # ALL dependencies included for a "batteries included" experience
 # The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
-    "acurl",
-    "aio_pika",
-    "aiokafka",
-    "boto3",
-    "bs4",
-    "docopt",
-    "flask",
-    "jinja2",
-    "msgpack",
-    "nanomsg",
-    "prettytable",
-    "pyzmq",
-    "selenium<4",
+    "acurl>=1.2",
+    "aio_pika>=10.0",
+    "aiokafka>=0.12",
+    "boto3>=1.35",
+    "bs4>=0.0.2",
+    "docopt>=0.6",
+    "flask>=3.0",
+    "jinja2>=3.1",
+    "msgpack>=1.0",
+    "nanomsg>=1.0",
+    "prettytable>=3.10",
+    "pyzmq>=26.0",
+    "selenium>=3.141,<4",
     "selenium-wire==4.6.5",
-    "sqlalchemy",
-    "thrift",
-    "ujson",
+    "sqlalchemy>=2.0",
+    "thrift>=0.20",
+    "ujson>=5.10",
     "uvloop>=0.21.0",
-    "websockets",
+    "websockets>=13",
 ]
 
 [project.optional-dependencies]
@@ -126,6 +126,7 @@ packages = [
 
 [tool.hatch.envs.default]
 features = ["dev"]
+installer = "uv"
 
 
 [tool.hatch.envs.test]
