@@ -6,9 +6,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # Here we check the JOB_NAME variable to determine which kind of run it is and call the appropriate script.
 # Note that this script only runs tests. The release scripts are not called from here.
 
-export HATCH_UV=1
-pip install uv
-
 # First run pre-commit checks, then run the appropriate test script based on JOB_NAME.
 echo "##### Run pre-commit checks before running tests #####"
 hatch run pre-commit run --origin HEAD --source origin/master

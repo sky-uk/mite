@@ -26,40 +26,40 @@ classifiers = [
 # The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
     "acurl",
-    "aio_pika>=9.4.0",
-    "aiokafka>=0.11.0",
-    "boto3>=1.42",
-    "bs4>=0.0.2",
-    "docopt>=0.6.2",
-    "flask>=3.0.0",
-    "jinja2>=3.1.0",
-    "msgpack>=1.0.0",
-    "nanomsg>=1.0",
-    "prettytable>=3.9.0",
-    "pyzmq>=25.0.0",
-    "selenium>=3.141.0,<4",
+    "aio_pika",
+    "aiokafka",
+    "boto3",
+    "bs4",
+    "docopt",
+    "flask",
+    "jinja2",
+    "msgpack",
+    "nanomsg",
+    "prettytable",
+    "pyzmq",
+    "selenium<4",
     "selenium-wire==4.6.5",
-    "sqlalchemy>=2.0.0",
-    "thrift>=0.16.0",
-    "ujson>=5.8.0",
+    "sqlalchemy",
+    "thrift",
+    "ujson",
     "uvloop>=0.21.0",
-    "websockets>=12.0",
+    "websockets",
 ]
 
 [project.optional-dependencies]
 # Development dependencies
 dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-httpbin>=2.0.0",
-    "pytest-httpserver>=1.0.8",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-httpbin",
+    "pytest-httpserver",
     "ruff>=0.1.0",
-    "hypothesis>=6.90.0", # used in finagle/thrift tests
+    "hypothesis", # used in finagle/thrift tests
     "werkzeug==3.1.3",
     "httpbin>=0.10.2", # Required for werkzeug 3.x compatibility
     "Cython>=3.0", # required for coverage plugin and acurl
-    "pre-commit>=3.5.0",
+    "pre-commit",
 ]
 otel = [
     "opentelemetry-api>=1.20.0",
