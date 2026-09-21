@@ -28,7 +28,7 @@ dependencies = [
     "acurl",
     "aio_pika",
     "aiokafka",
-    "boto3",
+    "boto3>=1.42",
     "bs4",
     "docopt",
     "flask",
