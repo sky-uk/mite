@@ -18,6 +18,9 @@ fi
 
 echo $JOB_NAME
 
+# httpbin (a dev dependency) pulls in brotlicffi, which has no musllinux wheel on PyPI and must compile from source.
+command -v apk >/dev/null 2>&1 && apk add --no-cache clang build-base musl-dev
+
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Running as MITE-CI. ######"
     hatch env remove test.py3.11 && hatch run test.py3.11:test-cov ; TESTS_EXIT_CODE=$?
