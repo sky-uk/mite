@@ -123,12 +123,10 @@ packages = [
 
 [tool.hatch.envs.default]
 features = ["dev"]
-installer = "uv"
 
 
 [tool.hatch.envs.test]
 features = ["dev", "otel"]
-installer = "uv"
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
