@@ -7,6 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # Note that this script only runs tests. The release scripts are not called from here.
 
 export HATCH_UV=1
+pip install uv
 
 # First run pre-commit checks, then run the appropriate test script based on JOB_NAME.
 echo "##### Run pre-commit checks before running tests #####"
