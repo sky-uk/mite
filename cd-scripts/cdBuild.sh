@@ -8,7 +8,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # First run pre-commit checks, then run the appropriate test script based on JOB_NAME.
 
-HATCH_UV=1
+export HATCH_UV=1
 pip install uv
 
 echo "##### Run pre-commit checks before running tests #####"
