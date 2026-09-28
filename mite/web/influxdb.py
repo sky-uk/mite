@@ -4,6 +4,7 @@ from abc import abstractmethod, ABC
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
+import time
 from time import time_ns
 from typing import cast
 from concurrent.futures import ThreadPoolExecutor
@@ -163,6 +164,13 @@ def _create_single_backend(suffix: str) -> _InfluxBackend:
 
 
 class InfluxdbWriter:
+    # After this many consecutive skipped writes (previous write still in
+    # flight), escalate to an ERROR log -- a handful of skips under a load
+    # spike is normal backpressure, but a sustained run means the backend
+    # can't keep up at all and this needs to be visible, not just noise at
+    # WARNING level.
+    CONSECUTIVE_SKIP_ALERT_THRESHOLD = 50
+
     def __init__(self, suffix=""):
         try:
             self._backend = _create_influx_backend(suffix)
@@ -172,17 +180,37 @@ class InfluxdbWriter:
 
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._write_slots = BoundedSemaphore(value=1)
+        self._skipped_writes = 0
+        self._consecutive_skips = 0
 
     def _do_write(self, points):
         self._backend.write_points(points)
 
     def write_points(self, points):
         if not self._write_slots.acquire(blocking=False):
-            logger.warning(
-                "Skipping InfluxDB write because a previous write is still pending"
-            )
+            self._skipped_writes += 1
+            self._consecutive_skips += 1
+            if self._consecutive_skips == self.CONSECUTIVE_SKIP_ALERT_THRESHOLD:
+                logger.error(
+                    "InfluxDB writer has skipped %d consecutive writes -- the backend is "
+                    "not keeping up with the current write cadence",
+                    self._consecutive_skips,
+                )
+            elif self._consecutive_skips % self.CONSECUTIVE_SKIP_ALERT_THRESHOLD == 0:
+                logger.error(
+                    "InfluxDB writer is still falling behind: %d consecutive writes skipped "
+                    "(%d total)",
+                    self._consecutive_skips, self._skipped_writes,
+                )
+            else:
+                logger.warning(
+                    "Skipping InfluxDB write because a previous write is still pending "
+                    "(%d skipped so far, this batch had %d points)",
+                    self._skipped_writes, len(points),
+                )
             return None
 
+        self._consecutive_skips = 0
         try:
             future = self._executor.submit(self._do_write, points)
         except Exception:
@@ -202,7 +230,6 @@ class InfluxdbWriter:
     def close(self):
         self._executor.shutdown(wait=True)
         self._backend.close()
-
 
 class InfluxStat:
     def __init__(self, name, message):
@@ -411,10 +438,22 @@ class InfluxHistogram(InfluxStat):
 INFLUX_STAT_TYPES = {"Counter": InfluxCounter, "Gauge": InfluxGauge, "Histogram": InfluxHistogram}
 
 class InfluxMetrics(InfluxdbWriter):
+    # Stats dumps every ~0.25s (shared with the prometheus exporter, so that
+    # cadence can't be changed here), but a single InfluxDB write consistently
+    # takes longer than that under load, so points are buffered across
+    # several process() calls and only actually written at this slower
+    # cadence instead of dropping batches via the writer's semaphore.
+    MIN_FLUSH_INTERVAL = 1.0
+    # Hard cap on buffered points so a stalled/unreachable backend can't grow
+    # memory unbounded over a long test run, so oldest points are dropped.
+    MAX_PENDING_POINTS = 5000
+
     def __init__(self, include_buckets=False, suffix=""):
         super().__init__(suffix=suffix)
         self.include_buckets = include_buckets
         self.stats = {}
+        self._pending_points = []
+        self._last_flush_time = time.monotonic()
 
     def process(self, message):
         logger.debug(f"message to iterate in influxdb metrics: {message}")
@@ -430,10 +469,30 @@ class InfluxMetrics(InfluxdbWriter):
             else:
                 dirty_keys[name] = self.stats[name].update(stat)
 
-        points = []
         tns = time_ns()
         for name, stat in self.stats.items():
             if name in dirty_keys:
-                points.extend(stat.to_points(tns, touched_keys=dirty_keys[name]))
-        if points:
-            self.write_points(points)
+                self._pending_points.extend(stat.to_points(tns, touched_keys=dirty_keys[name]))
+
+        if len(self._pending_points) > self.MAX_PENDING_POINTS:
+            dropped = len(self._pending_points) - self.MAX_PENDING_POINTS
+            self._pending_points = self._pending_points[-self.MAX_PENDING_POINTS:]
+            logger.error(
+                "InfluxDB pending point backlog exceeded %d, dropped %d oldest points",
+                self.MAX_PENDING_POINTS, dropped,
+            )
+
+        now = time.monotonic()
+        if self._pending_points and now - self._last_flush_time >= self.MIN_FLUSH_INTERVAL:
+            future = self.write_points(self._pending_points)
+            if future is not None:
+                # only clear once the batch was actually accepted for writing
+                # otherwise we'd silently drop points on a busy writer
+                self._pending_points = []
+                self._last_flush_time = now
+
+    def close(self):
+        if self._pending_points:
+            self.write_points(self._pending_points)
+            self._pending_points = []
+        super().close()
