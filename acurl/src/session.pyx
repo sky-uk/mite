@@ -1,7 +1,7 @@
 #cython: language_level=3
 
 from libc.stdlib cimport malloc
-from libc.string cimport strndup
+from libc.string cimport memcpy 
 from cpython.pycapsule cimport PyCapsule_New, PyCapsule_GetPointer
 from curlinterface cimport *
 from cpython.ref cimport Py_INCREF
@@ -18,7 +18,11 @@ class RequestError(Exception):
 cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     cdef BufferNode* node = <BufferNode*>malloc(sizeof(BufferNode))
     if node == NULL:
-        printf("OOOPS!!!!")  # FIXME: better checks
+        return NULL;
+    node.buffer = <char*>malloc(size)
+    if size > 0 and node.buffer == NULL:
+        free(node)  # don't leak the node struct we just allocated
+        return NULL
     node.len = size
     # FIXME: the curl docs give an example function that uses realloc on a
     # single buffer rather than a linked list.  Possibly that method would be
@@ -28,13 +32,15 @@ cdef BufferNode* alloc_buffer_node(size_t size, char *data):
     # response data).  It would also make the code less complicated.  Worth
     # benchmarking the effects someday...
     # <https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html>
-    node.buffer = strndup(data, size)
+    memcpy(node.buffer, data, size)
     node.next = NULL
     return node
 
 cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
+    if node == NULL:
+        return 0  # signals libcurl to abort; surfaces as AcurlError via check_multi_info()
     if response.header_buffer == NULL:  # FIXME: unlikely
         response.header_buffer = node
     if response.header_buffer_tail != NULL:  # FIXME: likely
@@ -45,6 +51,8 @@ cdef size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
 cdef size_t body_callback(char *ptr, size_t size, size_t nmemb, void *userdata) noexcept:
     cdef _Response response = <_Response>userdata
     cdef BufferNode* node = alloc_buffer_node(size * nmemb, ptr)
+    if node == NULL:
+        return 0  # signals libcurl to abort; surfaces as AcurlError via check_multi_info()
     if response.body_buffer == NULL:  # FIXME: unlikely
         response.body_buffer = node
     if response.body_buffer_tail != NULL:  # FIXME: likely
@@ -158,20 +166,7 @@ cdef class Session:
         acurl_easy_setopt_voidptr(curl, CURLOPT_WRITEDATA, <void*>response)
         acurl_easy_setopt_writecb(curl, CURLOPT_HEADERFUNCTION, header_callback)
         acurl_easy_setopt_voidptr(curl, CURLOPT_HEADERDATA, <void*>response)
-
-        # We need to increment the reference count on the response.  To
-        # python's eyes the last reference to it disappears when we exit this
-        # function (and thus it would get collected) -- but the curl event
-        # loop has a reference to it so it needs to remain alive.  FIXME:
-        # where does it get decrefed?  In principle we need a matching
-        # Py_DECREF somewhere in the code.  But there's malignant
-        # counter-wizardry coming from cython -- when we coerce the pointer
-        # out of curl, it gets assigned into a python variable, which cython
-        # will "helpfully" decref for us when it goes out of scope -- so the
-        # decref might already be handled for us (we do prevent the magic
-        # decref in some circumstances, though).  This is not really an
-        # optimal situation and we need to get to the bottom of it...  (Is it
-        # related to the no_gc_clear and the crashes that it now prevents?)
+        # pair with Py_DECREF in check_multi_info (acurl.pyx) ; curl holds a raw ref via CURLOPT_PRIVATE
         Py_INCREF(response)
 
         if auth is not None:
@@ -258,12 +253,6 @@ cdef class Session:
             data,
             cert,
         )
-        # This decref is the partner to the incref in _inner_request above --
-        # at this point curl is done with the response and so we no longer
-        # need to keep its refcount incremented to prevent the GC from
-        # cleaning it up when the only reference to it is held by curl and not
-        # python.
-        Py_DECREF(response)
         cdef _Response old_response
         if self.response_callback:
             # FIXME: should this be async?
