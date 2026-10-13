@@ -1,7 +1,7 @@
 # InfluxDB Quickstart
 
 Short reference for configuring and running Mite's InfluxDB integration. For
-architecture details see [README.md](README.md).
+architecture details see [INFLUXDB_EXPORTER.md](INFLUXDB_EXPORTER.md).
 
 ## Intro
 

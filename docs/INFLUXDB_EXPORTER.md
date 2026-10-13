@@ -1,4 +1,4 @@
-# mite.web InfluxDB Integration
+# InfluxDB Exporter
 
 This package provides the InfluxDB metrics backend for Mite. It converts the
 internal stats model (`Counter`, `Gauge`, `Histogram` — see
