@@ -99,7 +99,9 @@ cdef class Session:
             # the cycle collector.
             curl_share_cleanup(self.shared)
         else:
-            self.wrapper.loop.call_soon(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
+            # __dealloc__ can run on any thread via the cyclic GC (For ex. the newly added
+            # InfluxDB Writer thread), so scheduling must be thread-safe
+            self.wrapper.loop.call_soon_threadsafe(cleanup_share, PyCapsule_New(self.shared, NULL, NULL))
 
     def cookies(self):
         cdef CURL* curl = curl_easy_init()

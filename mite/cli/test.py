@@ -7,6 +7,7 @@ import tracemalloc
 from prettytable import PrettyTable
 
 from mite.datapools import SingleRunDataPoolWrapper
+from mite.influxdb_processor import InfluxDBProcessor
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
 
 from ..collector import Collector
@@ -75,6 +76,13 @@ def _setup_msg_processors(receiver, opts):
     extra_processors = [
         spec_import(x)(opts) for x in opts["--message-processors"].split(",") if x
     ]
+
+    if opts["--influxdb"]:
+        influxdb_count = int(opts["--influxdb"])
+        for i in range(influxdb_count):
+            suffix = "" if i == 0 else f"_{i+1}"
+            extra_processors.append(InfluxDBProcessor(opts, suffix=suffix))
+
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)
@@ -84,6 +92,7 @@ def _setup_msg_processors(receiver, opts):
             logging.error(
                 f"Class {processor.__name__} does not have a process(_raw)_message method!"
             )
+    return extra_processors
 
 
 def _get_http_stats_output(receiver):
@@ -140,7 +149,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     receiver = DirectReciever()
     debug_message_output = DebugMessageOutput(opts)
     receiver.add_listener(debug_message_output.process_message)
-    _setup_msg_processors(receiver, opts)
+    extra_processors = _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -171,6 +180,10 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             ex = task.exception()
             tb = ex.__traceback__
             raise ex.with_traceback(tb)
+
+    for processor in extra_processors:
+        if hasattr(processor, "close"):
+            processor.close()
 
     http_stats_output._scenarios_completed_time = time.time()
     has_error = False
