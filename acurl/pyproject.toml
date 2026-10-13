@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython>=3.0"]
+requires = ["setuptools==84.0.0", "Cython==3.3.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -90,9 +90,9 @@ markers = [
 [tool.cibuildwheel]
 build = "cp310-* cp311-* cp312-* cp313-*"
 skip  = "*_i686 *-musllinux_*"     # musllinux deferred
-archs = ["x86_64"]                 # aarch64 deferred, needs QEMU on the agent
-test-requires = ["pytest", "pytest-asyncio", "pytest-httpbin"]
+test-requires = ["pytest", "pytest-asyncio", "pytest-httpbin", "pytest-httpserver"]
 test-command  = "pytest {project}/tests"
 
 [tool.cibuildwheel.linux]
+archs = ["x86_64"]                 # aarch64 deferred, needs QEMU on the agent
 before-all = "yum install -y libcurl-devel || apt-get install -y libcurl-dev || apk add curl-dev"
