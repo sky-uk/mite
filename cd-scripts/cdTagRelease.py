@@ -14,13 +14,47 @@ Options:
 """
 
 import logging
+import re
+import subprocess
 import sys
 
 import docopt
-import git
 from packaging.version import parse
 
+
 logger = logging.getLogger("cdRelease")
+
+
+class GitError(Exception):
+    pass
+
+
+def git(*args, check=True):
+    """Run a git command and return its stdout, stripped."""
+    proc = subprocess.run(["git", *args], capture_output=True, text=True)
+    if check and proc.returncode != 0:
+        raise GitError(
+            f"git {' '.join(args)} failed ({proc.returncode}): {proc.stderr.strip()}"
+        )
+    return proc.stdout.strip()
+
+
+# Must stay in sync with tag_regex in pyproject.toml:92, which is what
+# hatch-vcs uses to derive the package version from the tag.
+TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+
+def all_version_tags():
+    return [t for t in git("tag", "--list").splitlines() if TAG_RE.match(t)]
+
+
+def latest_version():
+    tags = all_version_tags()
+    return max(parse(t) for t in tags) if tags else parse("v0.0.0")
+
+
+def head_version_tags():
+    return [t for t in git("tag", "--points-at", "HEAD").splitlines() if TAG_RE.match(t)]
 
 
 def increment_version_manually(clv, opts):
@@ -36,24 +70,16 @@ def increment_version_manually(clv, opts):
         major = clv.major
         minor = clv.minor
         patch = clv.micro + 1
+    else:
+        raise AssertionError("no version increment type given")
 
     return f"v{major}.{minor}.{patch}"
 
 
-def create_and_push_tag(repo, tag):
+def create_and_push_tag(tag):
     logger.info(f"Creating git tag '{tag}'")
-    try:
-        git_tag = repo.create_tag(tag, message=f"Automatic version tag {tag}")
-    except git.exc.GitCommandError:
-        logger.error(f"Failed creating tag {tag}, possibly already exists")
-        sys.exit(1)
-
-    repo.remotes.origin.push(git_tag)
-
-    status = repo.remotes.origin.push(git_tag)
-    if status.error:
-        logger.error(f"Failed to push remote tag: {status.error}")
-        sys.exit(1)
+    git("tag", "-a", tag, "-m", f"Automatic version tag {tag}")
+    git("push", "origin", f"refs/tags/{tag}")
 
 
 def main():
@@ -69,29 +95,14 @@ def main():
         )
         sys.exit(1)
 
-    repo = git.Repo(".")
-
-    if current_tag := next(
-        (tag for tag in repo.tags if tag.commit == repo.head.commit), None
-    ):
-        logger.error(
-            f"Commit hash '{repo.head.commit}' Already has a tag '{current_tag}'"
-        )
+    existing = head_version_tags()
+    if existing:
+        logger.error("HEAD already tagged (%s)", ", ".join(existing))
         sys.exit(1)
 
-    # Get all tags and find the highest version across all branches
-    tags = [tag.name for tag in repo.tags]
-    if tags:
-        latest_tag = max(tags, key=lambda t: parse(t))
-    else:
-        latest_tag = "v0.0.0"
+    new_tag = increment_version_manually(latest_version(), opts)
 
-    current_latest_version = parse(latest_tag)
-
-    # Get version increment from command line arg.
-    new_tag = increment_version_manually(current_latest_version, opts)
-
-    create_and_push_tag(repo, new_tag)
+    create_and_push_tag(new_tag)
     sys.exit(0)
 
 
