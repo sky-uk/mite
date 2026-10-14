@@ -1,15 +1,17 @@
 """cdRelease
 
 Usage:
-    cdRelease.py [options] [--patch|--minor|--major]
-
+    cdRelease.py create (--patch | --minor | --major) --output=<file>
+    cdRelease.py push --tag=<tag>
     cdRelease.py (-h | --help)
 
 Options:
-    -h --help       Show this screen
-    --patch         Increment patch version segment
-    --minor         Increment minor version segment
-    --major         Increment major version segment
+    -h --help        Show this screen
+    --patch          Increment patch version segment
+    --minor          Increment minor version segment
+    --major          Increment major version segment
+    --output=<file>  Write the created tag name to this file
+    --tag=<tag>      Tag to push
 
 """
 
@@ -17,12 +19,21 @@ import logging
 import re
 import subprocess
 import sys
+from pathlib import Path
+
 
 import docopt
 from packaging.version import parse
 
 
 logger = logging.getLogger("cdRelease")
+
+
+# Exit-code contract with cd-scripts/manualRelease.sh, which branches on all
+# three. Conflating these is what made failed releases report success.
+EXIT_OK = 0
+EXIT_FAILURE = 1
+EXIT_NOTHING = 2  # already tagged; not an error
 
 
 class GitError(Exception):
@@ -54,7 +65,11 @@ def latest_version():
 
 
 def head_version_tags():
-    return [t for t in git("tag", "--points-at", "HEAD").splitlines() if TAG_RE.match(t)]
+    return [
+        t
+        for t in git("tag", "--points-at", "HEAD").splitlines()
+        if TAG_RE.match(t)
+    ]
 
 
 def increment_version_manually(clv, opts):
@@ -76,10 +91,26 @@ def increment_version_manually(clv, opts):
     return f"v{major}.{minor}.{patch}"
 
 
-def create_and_push_tag(tag):
-    logger.info(f"Creating git tag '{tag}'")
-    git("tag", "-a", tag, "-m", f"Automatic version tag {tag}")
+def cmd_create(opts):
+    existing = head_version_tags()
+    if existing:
+        logger.info(
+            "HEAD already tagged (%s); nothing to do", ", ".join(existing)
+        )
+        return EXIT_NOTHING
+
+    new_tag = increment_version_manually(latest_version(), opts)
+    logger.info("Creating local git tag '%s'", new_tag)
+    git("tag", "-a", new_tag, "-m", f"Automatic version tag {new_tag}")
+    Path(opts["--output"]).write_text(new_tag)
+    return EXIT_OK
+
+
+def cmd_push(opts):
+    tag = opts["--tag"]
+    logger.info("Pushing tag '%s'", tag)
     git("push", "origin", f"refs/tags/{tag}")
+    return EXIT_OK
 
 
 def main():
@@ -89,22 +120,18 @@ def main():
         format="[%(asctime)s] <%(levelname)s> [%(name)s] [%(funcName)s] %(message)s",
     )
 
-    if not any([opts["--major"], opts["--minor"], opts["--patch"]]):
-        logger.error(
-            "The job requires on option between major, minor or patch to know how to increment the version. Aborting.'"
-        )
-        sys.exit(1)
+    try:
+        if opts["create"]:
+            return cmd_create(opts)
+        if opts["push"]:
+            return cmd_push(opts)
+    except GitError as exc:
+        logger.error("%s", exc)
+        return EXIT_FAILURE
 
-    existing = head_version_tags()
-    if existing:
-        logger.error("HEAD already tagged (%s)", ", ".join(existing))
-        sys.exit(1)
-
-    new_tag = increment_version_manually(latest_version(), opts)
-
-    create_and_push_tag(new_tag)
-    sys.exit(0)
+    logger.error("no subcommand matched")
+    return EXIT_FAILURE
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
