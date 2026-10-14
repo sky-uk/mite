@@ -1,64 +1,69 @@
 #!/bin/bash
 
 function isOnMaster() {
-	current_revision=$(git rev-parse HEAD)
-	branch=$(git branch -r --contains $current_revision)
-	set +e
-	echo "$branch" | grep -q "origin/master$"
-	result=$?
-	set -e
-	return ${result}
+    git fetch --quiet origin master || return 1
+    git merge-base --is-ancestor HEAD origin/master
 }
 
-function tagBuild() {   
-    VERSION_INCREMENT_TYPE="${1}"
-    git config user.email "mite@noreply.github.com"
-    git config user.name "Jenkins-CI"
-    pip3 install docopt GitPython packaging requests
-    echo "Tagging the build with a ${VERSION_INCREMENT_TYPE} version increment"
-    python3 cd-scripts/cdTagRelease.py --${VERSION_INCREMENT_TYPE}
-    if (( $? == 1)); then
-        VERSION_INCREMENT=false
+function assertReleasable() {
+    : "${PYPI_TOKEN:?PYPI_TOKEN is not set}"
+    : "${VERSION_INCREMENT_TYPE:?VERSION_INCREMENT_TYPE is not set}"
+
+    case "$VERSION_INCREMENT_TYPE" in
+        patch|minor|major) ;;
+        *) echo "invalid VERSION_INCREMENT_TYPE: $VERSION_INCREMENT_TYPE" >&2; exit 1 ;;
+    esac
+
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "working tree dirty; refusing to release" >&2
+        git status --short
+        exit 1
     fi
 }
 
 function checkAcurl() {
-    ACURL_CHANGED=false
+    local response http_code published local_version
 
-    if [[ -n $(git show --name-only ${CD_VCS_REF} ./acurl) ]]; then
-        echo "Acurl has changed"
+    response=$(curl -sS --retry 3 --retry-connrefused --max-time 30 \
+                    -w '\n%{http_code}' https://pypi.org/pypi/acurl/json)
+    http_code=$(tail -n1 <<<"$response")
+
+    case "$http_code" in
+        200) published=$(sed '$d' <<<"$response" | jq -r '.info.version') ;;
+        404) echo "acurl not yet on PyPI; will publish"; ACURL_CHANGED=true; return ;;
+        *)   echo "PyPI lookup failed (HTTP $http_code); refusing to guess" >&2; exit 1 ;;
+    esac
+
+    [[ -n "$published" && "$published" != "null" ]] \
+        || { echo "could not parse published acurl version" >&2; exit 1; }
+
+    local_version=$(hatch run release:python -c \
+        "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('acurl/pyproject.toml').read_text())['project']['version'])")
+
+    # compare with packaging.version.parse, not string equality
+    if hatch run release:python -c "
+import sys
+from packaging.version import parse
+sys.exit(0 if parse(sys.argv[1]) != parse(sys.argv[2]) else 1)" "$local_version" "$published"; then
+        echo "acurl $published -> $local_version; will publish"
         ACURL_CHANGED=true
-        LATEST_ACURL_VERSION=$(curl -s https://pypi.org/pypi/acurl/json | jq -r '.info .version')
-        CURRENT_ACURL_VERSION=$(grep '^version = ' acurl/pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-        if [[ "$CURRENT_ACURL_VERSION" == "$LATEST_ACURL_VERSION" ]]; then
-            echo "Acurl has changed, but the version hasn't been updated in pyproject.toml"
-            echo "Current version: $CURRENT_ACURL_VERSION, PyPI version: $LATEST_ACURL_VERSION"
-            exit 1
-        fi
-        echo "Acurl version will be updated from $LATEST_ACURL_VERSION to $CURRENT_ACURL_VERSION"
+    else
+        echo "acurl unchanged at $published"
+        ACURL_CHANGED=false
     fi
 }
 
 function buildLinuxWheels() {
-    if [ "$VERSION_INCREMENT" = false ]; then
-        echo "Mite version not incremented, not building"
-    else
+    rm -rf wheelhouse-mite wheelhouse-acurl
+
+    if [ "$VERSION_INCREMENT" = true ]; then
         echo "##### Building Mite #####"
-        pip3 install --user cibuildwheel==2.8.1 build twine
-        python3 -m build --outdir ./wheelhouse
+        hatch run release:build-mite
     fi
-    
+
     if [ "$ACURL_CHANGED" = true ]; then
         echo "##### Building Acurl #####"
-        cd acurl
-        pip3 install --user cibuildwheel==2.8.1 build Cython twine
-        python3 -m build --sdist --outdir ../wheelhouse
-        cd ../
+        hatch run release:wheels-acurl
+        hatch run release:sdist-acurl
     fi
-}
-
-function initPypirc() {
-    echo -e "[pypi]" > ~/.pypirc
-    echo -e "username = __token__" >> ~/.pypirc
-    echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
 }
