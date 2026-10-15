@@ -99,6 +99,17 @@ def cmd_create(opts):
         )
         return EXIT_NOTHING
 
+    # If the clone has no version tags at all (e.g. a shallow clone that
+    # didn't fetch tags), latest_version() would silently fall back to
+    # v0.0.0 and we'd tag/publish v0.0.1 as if this were an unreleased
+    # project. Fail closed instead of guessing.
+    if not all_version_tags():
+        logger.error(
+            "no existing version tags found; refusing to guess the next "
+            "version (check that tags were fetched)"
+        )
+        return EXIT_FAILURE
+
     new_tag = increment_version_manually(latest_version(), opts)
     logger.info("Creating local git tag '%s'", new_tag)
     git("tag", "-a", new_tag, "-m", f"Automatic version tag {new_tag}")
