@@ -198,13 +198,14 @@ dependencies = [
 ]
 
 [tool.hatch.envs.release.scripts]
-tag-create   = "python cd-scripts/cdTagRelease.py create {args}"
-tag-push     = "python cd-scripts/cdTagRelease.py push {args}"
-build-mite   = "python -m build --outdir wheelhouse-mite"
-sdist-acurl  = "python -m build --sdist --outdir wheelhouse-acurl acurl/"
-wheels-acurl = "cd acurl && python -m cibuildwheel --platform linux --output-dir ../wheelhouse-acurl ."
-check        = "python -m twine check {args}"
-upload       = "python -m twine upload --non-interactive --skip-existing {args}"
+tag-create    = "python cd-scripts/cdTagRelease.py create {args}"
+tag-push      = "python cd-scripts/cdTagRelease.py push {args}"
+acurl-changed = "python cd-scripts/checkAcurlVersion.py {args}"
+build-mite    = "python -m build --outdir wheelhouse-mite"
+sdist-acurl   = "python -m build --sdist --outdir wheelhouse-acurl acurl/"
+wheels-acurl  = "cd acurl && python -m cibuildwheel --platform linux --output-dir ../wheelhouse-acurl ."
+check         = "python -m twine check {args}"
+upload        = "python -m twine upload --non-interactive --skip-existing {args}"
 
 # ruff configuration ##############################################
 

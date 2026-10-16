@@ -22,7 +22,7 @@ function assertReleasable() {
 }
 
 function checkAcurl() {
-    local response http_code published local_version
+    local response http_code published
 
     response=$(curl -sS --retry 3 --retry-connrefused --max-time 30 \
                     -w '\n%{http_code}' https://pypi.org/pypi/acurl/json)
@@ -37,20 +37,9 @@ function checkAcurl() {
     [[ -n "$published" && "$published" != "null" ]] \
         || { echo "could not parse published acurl version" >&2; exit 1; }
 
-    local_version=$(hatch run release:python -c \
-        "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('acurl/pyproject.toml').read_text())['project']['version'])")
-
-    # compare with packaging.version.parse, not string equality
-    if hatch run release:python -c "
-import sys
-from packaging.version import parse
-sys.exit(0 if parse(sys.argv[1]) != parse(sys.argv[2]) else 1)" "$local_version" "$published"; then
-        echo "acurl $published -> $local_version; will publish"
-        ACURL_CHANGED=true
-    else
-        echo "acurl unchanged at $published"
-        ACURL_CHANGED=false
-    fi
+    rm -f .acurl-changed
+    hatch run release:acurl-changed --published="$published" --output=.acurl-changed
+    ACURL_CHANGED=$(cat .acurl-changed)
 }
 
 function buildLinuxWheels() {
