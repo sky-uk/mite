@@ -100,16 +100,19 @@ infrastructure.
 Single machine
 --------------
 
-In the doc/example/ directory, you will find a docker-compose.yml file
-which will deploy a full mite stack, along with supporting programs, on
-your local machine.  While impractical for running a significant load
+In the root of the repository, you will find a ``docker_compose.yml``
+file which will deploy a full mite stack, along with supporting
+programs, on your local machine.  A companion
+``docker_compose_monitoring.yml`` adds a Prometheus and Grafana
+monitoring stack.  While impractical for running a significant load
 injection exercise (due to the performance limitations of a single
 machine), this serves to illustrate the mechanics of getting the
 components to talk to each other and the outside world.  For a concrete,
 configuration-level view of setting up a mite pipeline, the reader is
-referred to the files in that directory.  In the sections that follow,
-we will discuss a few more abstract considerations for deploying mite in
-different kinds of environments.
+referred to those files, along with the helper scripts in
+``local/`` (see ``local/README.md``).  In the sections that follow,
+we will discuss a few more abstract considerations for deploying mite
+in different kinds of environments.
 
 .. _vm-deployment:
 

@@ -52,5 +52,5 @@ points out, you will also need to edit the datasource of the dashboard
 to match the prometheus instance you configured grafana with.
 
 .. _The Prometheus documentation: https://prometheus.io/docs/visualization/grafana/
-.. _a dashboard: https://github.com/sky-uk/id-mite-nft/blob/master/provisioning/grafana/dashboard-json/mite.json
+.. _a dashboard: https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/grafana_dashboard_template.json
 .. _dashboard variables: https://grafana.com/docs/reference/templating/

@@ -97,20 +97,19 @@ has received – of all types.  Therefore, we need to write a custom
 value)`` tuples.
 
 We also need to inform mite about our stats, using pythonʼs entry points
-mechanism.  To do so, we add a section to the ``setup.cfg`` file for our
-package:
+mechanism.  To do so, we add a section to the ``pyproject.toml`` file
+for our package:
 
-.. code-block:: cfg
+.. code-block:: toml
 
-   [options.entry_points]
-   mite_stats =
-       mite_amqp = id_mite_nft.amqp:_MITE_STATS
+   [project.entry-points.mite_stats]
+   mite_amqp = "your_package.amqp:_MITE_STATS"
 
 
 .. note::
 
-   It is also possible to specify the equivalent information in
-   ``setup.py`` if that is the configuration file your project uses.
+   If your project still uses setuptoolsʼ ``setup.cfg`` or ``setup.py``,
+   the equivalent information can be specified there instead.
 
 
 Configuring custom stats
