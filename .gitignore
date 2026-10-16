@@ -26,6 +26,10 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+wheelhouse-mite/
+wheelhouse-acurl/
+.release-tag
+.acurl-changed
 
 # Auto-generated version files (hatch-vcs, setuptools-scm)
 */_version.py

@@ -38,7 +38,78 @@ Not yet authorized
 
 ## Internal
 
-See the documentation in `DEV.md` in the `sky-id-mite-nft` repo.
+Jenkins job **`mite-manual-release`** (`cd.yml`), triggered manually. Entry point
+is `cd-scripts/manualRelease.sh`. Requires `PYPI_TOKEN` in the agent environment.
+
+### Trigger
+
+One parameter, selected when the job is run:
+
+| Parameter | Values | Effect |
+|---|---|---|
+| `VERSION_INCREMENT_TYPE` | `patch` / `minor` / `major` | Which segment of **mite's** version to bump |
+
+This parameter affects mite only. **acurl is versioned independently** — publishing
+it requires bumping `version` in `acurl/pyproject.toml` by hand; the release job
+detects that automatically (see "Versioning" below) and does not need a
+separate trigger.
+
+### What the job does, in order
+
+```
+1. isOnMaster          -> not on master? exit 0, nothing happens
+2. assertReleasable    -> PYPI_TOKEN set? valid increment type? working tree clean?
+3. checkAcurl          -> local acurl version != published PyPI version? -> ACURL_CHANGED
+4. tag-create          -> create the next mite version tag LOCALLY (not pushed yet)
+5. buildLinuxWheels    -> mite sdist+wheel; acurl manylinux wheels + sdist (if ACURL_CHANGED)
+6. twine check         -> validate every artifact before anything is uploaded
+7. twine upload         -> publish to PyPI
+8. tag-push            -> push the mite tag to origin -- LAST, only after a successful upload
+```
+
+If anything in steps 5-7 fails, the local tag from step 4 is deleted automatically.
+Nothing is left on `origin`; the next attempt starts from a clean state.
+
+### Versioning
+
+- **mite** — derived from git tags by `hatch-vcs`
+  (`git describe --dirty --tags --long --match 'v*'`). The release tag must exist
+  *before* the build, because the build reads the version from it. The next
+  version is the highest existing `v*` tag plus the selected increment.
+- **acurl** — a plain `version` string in `acurl/pyproject.toml`, bumped by hand in
+  the PR that changes acurl. Published automatically on the next release run after
+  that version differs from what's currently on PyPI.
+
+### Artifacts
+
+| Project | Output directory | Contents |
+|---|---|---|
+| mite | `wheelhouse-mite/` | pure-Python wheel + sdist |
+| acurl | `wheelhouse-acurl/` | manylinux x86_64 wheels (cp310-cp313) + sdist |
+
+acurl wheels are built with `cibuildwheel`, and each wheel's own test suite runs
+**inside its build container** before upload — a wheel is never published without
+first passing its tests on the exact interpreter it was built for.
+
+### Operator notes
+
+- **Triggered on a non-master branch** -> exits 0 silently. This is expected, not
+  an error.
+- **Commit already tagged** -> mite's release is skipped; acurl may still publish
+  if its version changed independently.
+- **Dirty working tree** -> the job refuses to release. `hatch-vcs`'s `--dirty`
+  flag would otherwise produce a version PyPI rejects, and that would only be
+  discovered after tagging and building — the job checks this upfront instead.
+- **Retrying a failed release is safe.** Uploads use `--skip-existing`, and a
+  failed attempt never leaves an orphan tag, so simply re-running the job after
+  fixing whatever broke is the correct recovery — no manual tag cleanup needed.
+- **The release toolchain is pinned** (`[tool.hatch.envs.release]` in
+  `pyproject.toml`) — `cibuildwheel`, `twine`, and `build` versions are fixed, so
+  the job's behaviour doesn't drift between runs.
+- **`origin/master` tags are the source of truth for the next version.** Keep a
+  local clone's tags in sync with `git fetch --tags --force` before relying on
+  `git describe` locally — a stale or local-only tag will compute the wrong next
+  version.
 
 # Docs
 
@@ -66,7 +137,7 @@ git push
 
 ## Unit tests
 
-Run the unit tests on all supported Python versions (currently 3.10 and 3.11):
+Run the unit tests on all supported Python versions (currently 3.10-3.13):
 
 ```bash
 hatch run test:test
@@ -87,7 +158,7 @@ Run acurl tests:
 hatch run test:acurl-test
 ```
 
-The tests will automatically run on both Python 3.10 and 3.11 if you have them installed. Hatch will manage the virtual environments for you.
+The tests will automatically run on every installed Python version in the matrix (3.10-3.13) if you have them installed. Hatch will manage the virtual environments for you.
 
 ## Performance tests
 
