@@ -72,6 +72,24 @@ influxdb = [
     "influxdb-client",
 ]
 
+# Future-facing extras for mite 3.0's dependency slimming. Every package listed
+# here is still in the mandatory `dependencies` list above, so installing any
+# of these extras today is a functional no-op — it installs exactly what
+# `pip install mite` already installs. They become load-bearing once a future
+# major release removes these packages from `dependencies`. See
+# PACKAGING_EXTRAS_PLAN.md.
+kafka         = ["aiokafka"]
+amqp          = ["aio_pika"]
+finagle       = ["thrift"]
+selenium      = ["selenium>=3.141,<4"]
+selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
+s3            = ["boto3"]
+db            = ["sqlalchemy"]
+websocket     = ["websockets"]
+http          = ["acurl"]
+browser       = ["bs4", "mite[http]"]
+all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser]"]
+
 [project.urls]
 Homepage = "https://github.com/sky-uk/mite/"
 Documentation = "https://sky-uk.github.io/mite/"
@@ -111,6 +129,10 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
+# NOTE: keep this package list in sync with [tool.coverage.run].source and
+# [tool.ruff.lint.isort].known-first-party below. Also keep in mind the
+# optional-dependencies extras above list the same packages' third-party
+# dependencies, not these package names themselves.
 packages = [
     "mite",
     "mite_amqp",
@@ -295,6 +317,8 @@ indent-style = "space"
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
+# NOTE: keep in sync with [tool.hatch.build.targets.wheel].packages and
+# [tool.coverage.run].source.
 known-first-party = ["mite", "mite_http", "mite_kafka", "mite_amqp", "mite_selenium", "mite_finagle", "mite_browser", "mite_websocket", "mite_playwright", "mite_db_datapool"]
 force-single-line = false
 lines-after-imports = 2
@@ -313,6 +337,8 @@ markers = [
 ]
 
 [tool.coverage.run]
+# NOTE: keep in sync with [tool.hatch.build.targets.wheel].packages and
+# [tool.ruff.lint.isort].known-first-party.
 branch = true
 source = [
     "acurl",
