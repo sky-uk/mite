@@ -2,8 +2,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Check if playwright is available
+# Check if playwright is available. mite_playwright itself always imports
+# successfully now (see PACKAGING_PLAN_EXECUTION.md Step 1 - the playwright
+# import is deferred to first use), so the availability check must probe
+# playwright directly rather than mite_playwright.
 try:
+    import playwright  # noqa: F401
+
     from mite_playwright import mite_playwright
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
@@ -11,7 +16,7 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(
     not PLAYWRIGHT_AVAILABLE,
-    reason="Playwright not installed - run with 'hatch run test-playwright.py3.12:test'"
+    reason="Playwright not installed - run 'pip install playwright && playwright install'"
 )
 
 
@@ -24,7 +29,7 @@ async def test_mite_playwright_decorator():
         assert playwright is not None
         return "success"
 
-    with patch("mite_playwright.async_playwright") as mock_pw:
+    with patch("playwright.async_api.async_playwright") as mock_pw:
         mock_playwright_instance = AsyncMock()
         mock_pw.return_value.start = AsyncMock(return_value=mock_playwright_instance)
 

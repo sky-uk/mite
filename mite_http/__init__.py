@@ -4,8 +4,6 @@ from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
-import acurl
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,6 +62,8 @@ class SessionPool:
 
     async def _checkout(self, context):
         if self._wrapper is None:
+            import acurl
+
             loop = asyncio.get_running_loop()
             self._wrapper = acurl.CurlWrapper(loop)
         session = self._wrapper.session()
@@ -98,8 +98,16 @@ class SessionPool:
 
 
 def mite_http(func):
+    try:
+        import acurl  # noqa: F401 - fail at journey import, not mid-run
+    except ImportError as e:
+        raise ModuleNotFoundError(
+            "mite_http requires the 'http' extra: pip install mite[http]"
+        ) from e
     return SessionPool.decorator(func)
 
 
 def create_http_cookie(ctx, *args, **kwargs):
+    import acurl
+
     return acurl.Cookie(*args, **kwargs)

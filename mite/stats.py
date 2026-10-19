@@ -185,8 +185,14 @@ class Stats:
             logging.info(f"Registering stats processors from {entry_point.name}")
             try:
                 self._all_stats += entry_point.load()
-            except Exception as e:
-                logging.warning(f"Failed to load stats from entry point {entry_point.name}: {e}")
+            except ImportError as e:
+                # Expected when the integration's optional dependency isn't
+                # installed - after the mite_* decoupling (see
+                # PACKAGING_PLAN_EXECUTION.md Step 1), stats.py modules
+                # themselves never import heavy third-party packages, so this
+                # should only fire for a genuinely missing extra. Any other
+                # exception is a real bug and must not be swallowed here.
+                logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
 
         self.sender = sender
         self.dump_timeout = time.time() + 0.25

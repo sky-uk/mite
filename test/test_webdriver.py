@@ -1,6 +1,11 @@
 from unittest.mock import call, patch
 
 import pytest
+import selenium.webdriver.support.expected_conditions  # noqa: F401 - import so
+# the submodule is registered as an attribute of selenium.webdriver.support,
+# which patch("selenium.webdriver.support.expected_conditions") requires.
+# Previously a side effect of mite_selenium's own top-level import; that
+# import is now deferred (see PACKAGING_PLAN_EXECUTION.md Step 1).
 from mocks.mock_context import MockContext
 from mocks.mock_selenium import mock_paint_times, mock_performance_times
 from selenium.common.exceptions import TimeoutException
@@ -59,7 +64,7 @@ def test_webdriver_capabilities_as_dict():
     assert wrapper._capabilities == {"browser": "Chrome"}
 
 
-@patch("mite_selenium.SeleniumRemote", autospec=True)
+@patch("selenium.webdriver.Remote", autospec=True)
 def test_webdriver_start_stop(MockRemote):
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
     wrapper._start()
@@ -88,7 +93,7 @@ def test_get_js_metrics_context():
 @pytest.mark.asyncio
 async def test_js_metrics_context_manager():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote") as mock_remote:
+    with patch("selenium.webdriver.Remote") as mock_remote:
         wrapper._start()
         js_context = wrapper.get_js_metrics_context()
 
@@ -104,9 +109,9 @@ async def test_js_metrics_context_manager():
 
 def test_wait_for_element():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
+    with patch("selenium.webdriver.Remote") as mock_remote, patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions") as mock_ec:
         wrapper._start()
         locator = ("foo", "bar")
         wrapper.wait_for_element(locator, timeout=7)
@@ -120,9 +125,9 @@ def test_wait_for_element():
 
 def test_wait_for_element_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote"), patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC"):
+    with patch("selenium.webdriver.Remote"), patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions"):
         wrapper._start()
         locator = ("foo", "bar")
         mock_web_driver_wait.return_value.until.side_effect = TimeoutException
@@ -132,9 +137,9 @@ def test_wait_for_element_raises_timeout_exception():
 
 def test_wait_for_elements():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
+    with patch("selenium.webdriver.Remote") as mock_remote, patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions") as mock_ec:
         wrapper._start()
         locator = ("foo", "bar")
         wrapper.wait_for_elements(locator, timeout=7)
@@ -148,9 +153,9 @@ def test_wait_for_elements():
 
 def test_wait_for_elements_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote"), patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC"):
+    with patch("selenium.webdriver.Remote"), patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions"):
         wrapper._start()
         locator = ("foo", "bar")
         mock_web_driver_wait.return_value.until.side_effect = TimeoutException
@@ -160,9 +165,9 @@ def test_wait_for_elements_raises_timeout_exception():
 
 def test_wait_for_url():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote") as mock_remote, patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC") as mock_ec:
+    with patch("selenium.webdriver.Remote") as mock_remote, patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions") as mock_ec:
         wrapper._start()
         locator = "https://google.com"
         wrapper.wait_for_url(locator, timeout=7)
@@ -176,9 +181,9 @@ def test_wait_for_url():
 
 def test_wait_for_url_raises_timeout_exception():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote"), patch(
-        "mite_selenium.WebDriverWait"
-    ) as mock_web_driver_wait, patch("mite_selenium.EC"):
+    with patch("selenium.webdriver.Remote"), patch(
+        "selenium.webdriver.support.ui.WebDriverWait"
+    ) as mock_web_driver_wait, patch("selenium.webdriver.support.expected_conditions"):
         wrapper._start()
         locator = "https://google.com"
         mock_web_driver_wait.return_value.until.side_effect = TimeoutException
@@ -188,7 +193,7 @@ def test_wait_for_url_raises_timeout_exception():
 
 def test_webdriver_get():
     wrapper = _setup_wrapper(DICT_CAPABILITIES_CONFIG)
-    with patch("mite_selenium.SeleniumRemote") as mock_remote:
+    with patch("selenium.webdriver.Remote") as mock_remote:
         mock_remote.return_value.capabilities = {"browserName": "chrome"}
         mock_remote.return_value.execute_script.side_effect = [
             mock_performance_times,
@@ -213,7 +218,7 @@ async def test_selenium_context_manager():
         pass
 
     # patch with async decorator misbehaving
-    with patch("mite_selenium.SeleniumRemote", autospec=True) as mock_remote:
+    with patch("selenium.webdriver.Remote", autospec=True) as mock_remote:
         await test(context)
 
     mock_remote.assert_called()
@@ -230,7 +235,7 @@ async def test_selenium_context_manager_with_parens():
         pass
 
     # patch with async decorator misbehaving
-    with patch("mite_selenium.SeleniumRemote", autospec=True) as mock_remote:
+    with patch("selenium.webdriver.Remote", autospec=True) as mock_remote:
         await test(context)
 
     mock_remote.assert_called()

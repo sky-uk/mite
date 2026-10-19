@@ -3,8 +3,6 @@ import threading
 from contextlib import asynccontextmanager
 from functools import wraps
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-
 
 class KafkaProducer:
     def __init__(self, ctx):
@@ -12,6 +10,8 @@ class KafkaProducer:
         self._context = ctx
 
     async def create_and_start(self, *args, **kwargs):
+        from aiokafka import AIOKafkaProducer
+
         self._producer = AIOKafkaProducer(*args, **kwargs)
         await self._producer.start()
 
@@ -39,6 +39,8 @@ class KafkaConsumer:
         self._context = ctx
 
     async def create_and_start(self, *topics, **kwargs):
+        from aiokafka import AIOKafkaConsumer
+
         self._consumer = AIOKafkaConsumer(*topics, **kwargs)
         self._topics = topics
         await self._consumer.start()
@@ -69,6 +71,13 @@ async def _kafka_context_manager(ctx):
 
 
 def mite_kafka(func):
+    try:
+        import aiokafka  # noqa: F401 - fail at journey import, not mid-run
+    except ImportError as e:
+        raise ModuleNotFoundError(
+            "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
+        ) from e
+
     async def wrapper(ctx, *args, **kwargs):
         async with _kafka_context_manager(ctx):
             return await func(ctx, *args, **kwargs)
@@ -143,6 +152,13 @@ def mite_kafka_managed_adapter(
         raise Exception("Cannot specify both only_consumer and only_producer")
     if security_protocol is None:
         security_protocol = "PLAINTEXT"
+
+    try:
+        import aiokafka  # noqa: F401 - fail at journey import, not mid-run
+    except ImportError as e:
+        raise ModuleNotFoundError(
+            "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
+        ) from e
 
     def wrapper_factory(func):
         @wraps(func)

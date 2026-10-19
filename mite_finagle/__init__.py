@@ -4,14 +4,7 @@ from contextlib import asynccontextmanager
 from functools import wraps
 from itertools import count
 
-try:
-    from .mux import CanTinit, Dispatch, Init, Message, Ping
-    from .thrift import _ThriftError
-except ImportError as e:
-    # FIXME: are we sure this is the only kind of ImportError we will get?
-    raise ModuleNotFoundError(
-        "The mite_finagle module requires the thrift package to be installed"
-    ) from e
+from .mux import CanTinit, Dispatch, Init, Message, Ping
 
 # TODO:
 # - headers (ptp, request id, ...)
@@ -101,6 +94,8 @@ class MiteFinagleConnection:
         return self._process_result(result)
 
     async def _main_loop(self, return_msg=None, return_after_reply=None):
+        from .thrift import _ThriftError
+
         while True:
             message = await Message.read_from_async_stream(self._reader)
             # print("recv", message.to_bytes())
@@ -141,6 +136,8 @@ class MiteFinagleConnection:
         )
 
     def _process_result(self, result):
+        from .thrift import _ThriftError
+
         if isinstance(result, _ThriftError):
             raise MiteFinagleError("encountered thrift error", result._wrapped)
         else:
@@ -159,6 +156,13 @@ class MiteFinagle:
 
 
 def mite_finagle(f):
+    try:
+        import thrift  # noqa: F401 - fail at journey import, not mid-run
+    except ImportError as e:
+        raise ModuleNotFoundError(
+            "mite_finagle requires the 'finagle' extra: pip install mite[finagle]"
+        ) from e
+
     @wraps(f)
     async def inner(ctx, *args, **kwargs):
         if getattr(ctx, "finagle", None) is not None:

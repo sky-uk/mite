@@ -6,12 +6,6 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
 
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver import Remote as SeleniumRemote
-from selenium.webdriver.remote.remote_connection import RemoteConnection
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-
 from mite.exceptions import MiteError
 from mite.utils import spec_import
 
@@ -26,6 +20,8 @@ class _SeleniumWrapper:
         using a spec_import'"""
         self._context = context
         # Should only need the capabilities setting, other options for selenium experts
+        from selenium.webdriver.remote.remote_connection import RemoteConnection
+
         self._command_executor = RemoteConnection(
             self._context.config.get(
                 "webdriver_command_executor", "http://127.0.0.1:4444/wd/hub"
@@ -49,6 +45,8 @@ class _SeleniumWrapper:
         return value
 
     def _start(self):
+        from selenium.webdriver import Remote as SeleniumRemote
+
         self._context.browser = self
         self._remote = SeleniumRemote(
             desired_capabilities=self._capabilities,
@@ -179,6 +177,8 @@ class _SeleniumWrapper:
         return JsMetricsContext(self)
 
     def wait_for_elements(self, locator, timeout=5):
+        from selenium.webdriver.support import expected_conditions as EC
+
         return self._wait_for(
             EC.presence_of_all_elements_located,
             locator,
@@ -187,6 +187,8 @@ class _SeleniumWrapper:
         )
 
     def wait_for_element(self, locator, timeout=5):
+        from selenium.webdriver.support import expected_conditions as EC
+
         return self._wait_for(
             EC.presence_of_element_located,
             locator,
@@ -195,6 +197,8 @@ class _SeleniumWrapper:
         )
 
     def wait_for_url(self, locator, timeout=5):
+        from selenium.webdriver.support import expected_conditions as EC
+
         return self._wait_for(
             EC.url_to_be,
             locator,
@@ -203,6 +207,9 @@ class _SeleniumWrapper:
         )
 
     def _wait_for(self, condition_func, locator, err_msg, timeout=5):
+        from selenium.common.exceptions import TimeoutException
+        from selenium.webdriver.support.ui import WebDriverWait
+
         try:
             return WebDriverWait(self._remote, timeout).until(condition_func(locator))
         except TimeoutException as te:
@@ -288,6 +295,14 @@ async def _selenium_context_manager(context, wire):
 
 def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
+        try:
+            import selenium  # noqa: F401 - fail at journey import, not mid-run
+        except ImportError as e:
+            raise ModuleNotFoundError(
+                "mite_selenium requires the 'selenium' extra: "
+                "pip install mite[selenium]"
+            ) from e
+
         if wire:
             try:
                 importlib.import_module("seleniumwire.webdriver")
