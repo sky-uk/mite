@@ -45,6 +45,44 @@ docker run --rm -it mite sh
 
 Run `mite --help` for a full list of commands
 
+### Optional install extras
+
+`pip install mite` already installs every integration mite ships — the extras
+below are installable labels only, added ahead of a future major release that
+will actually make them optional. Today, installing any of them (or none)
+installs exactly the same packages:
+
+| Extra | Covers |
+|---|---|
+| `kafka` | Kafka integration (`aiokafka`) |
+| `amqp` | AMQP/RabbitMQ integration (`aio_pika`) |
+| `finagle` | Finagle/Thrift integration (`thrift`) |
+| `selenium` | Selenium WebDriver integration |
+| `selenium_wire` | Selenium with request/response capture (`selenium-wire`) |
+| `s3` | S3-backed datapools (`boto3`) |
+| `db` | SQL-backed datapools (`sqlalchemy`) |
+| `websocket` | WebSocket integration |
+| `http` | HTTP integration (`acurl`) |
+| `browser` | Browser/HTML-scraping integration (depends on `http`) |
+| `all` | Union of the above |
+
+```bash
+pip install 'mite[kafka]'
+pip install 'mite[all]'
+```
+
+(quote the brackets so your shell doesn't treat them as a glob)
+
+This list doesn't include `playwright`, `otel`, `influxdb`, or `dev` —
+`playwright` needs a separate `playwright install` step to download browser
+binaries so it isn't installed by any extra; `otel`, `influxdb`, and `dev` are
+separate, pre-existing extras unrelated to this list. **Every extra above is
+currently a functional no-op**: all of their packages are still in `mite`'s
+mandatory dependency list, so
+`pip install 'mite[kafka]'` installs exactly what `pip install mite` installs.
+They only become meaningful once a future major release actually removes
+packages from the default install.
+
 ## Your first scenario
 
 Scenarios are a combination of 3 things, a set of journeys to run, a
