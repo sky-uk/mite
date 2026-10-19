@@ -1,26 +1,75 @@
 """cdRelease
 
 Usage:
-    cdRelease.py [options] [--patch|--minor|--major]
-
+    cdRelease.py create (--patch | --minor | --major) --output=<file>
+    cdRelease.py push --tag=<tag>
     cdRelease.py (-h | --help)
 
 Options:
-    -h --help       Show this screen
-    --patch         Increment patch version segment
-    --minor         Increment minor version segment
-    --major         Increment major version segment
+    -h --help        Show this screen
+    --patch          Increment patch version segment
+    --minor          Increment minor version segment
+    --major          Increment major version segment
+    --output=<file>  Write the created tag name to this file
+    --tag=<tag>      Tag to push
 
 """
 
 import logging
+import re
+import subprocess
 import sys
+from pathlib import Path
+
 
 import docopt
-import git
 from packaging.version import parse
 
+
 logger = logging.getLogger("cdRelease")
+
+
+# Exit-code contract with cd-scripts/manualRelease.sh, which branches on all
+# three. Conflating these is what made failed releases report success.
+EXIT_OK = 0
+EXIT_FAILURE = 1
+EXIT_NOTHING = 2  # already tagged; not an error
+
+
+class GitError(Exception):
+    pass
+
+
+def git(*args, check=True):
+    """Run a git command and return its stdout, stripped."""
+    proc = subprocess.run(["git", *args], capture_output=True, text=True)
+    if check and proc.returncode != 0:
+        raise GitError(
+            f"git {' '.join(args)} failed ({proc.returncode}): {proc.stderr.strip()}"
+        )
+    return proc.stdout.strip()
+
+
+# Must stay in sync with tag_regex in pyproject.toml:92, which is what
+# hatch-vcs uses to derive the package version from the tag.
+TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+
+def all_version_tags():
+    return [t for t in git("tag", "--list").splitlines() if TAG_RE.match(t)]
+
+
+def latest_version():
+    tags = all_version_tags()
+    return max(parse(t) for t in tags) if tags else parse("v0.0.0")
+
+
+def head_version_tags():
+    return [
+        t
+        for t in git("tag", "--points-at", "HEAD").splitlines()
+        if TAG_RE.match(t)
+    ]
 
 
 def increment_version_manually(clv, opts):
@@ -36,24 +85,43 @@ def increment_version_manually(clv, opts):
         major = clv.major
         minor = clv.minor
         patch = clv.micro + 1
+    else:
+        raise AssertionError("no version increment type given")
 
     return f"v{major}.{minor}.{patch}"
 
 
-def create_and_push_tag(repo, tag):
-    logger.info(f"Creating git tag '{tag}'")
-    try:
-        git_tag = repo.create_tag(tag, message=f"Automatic version tag {tag}")
-    except git.exc.GitCommandError:
-        logger.error(f"Failed creating tag {tag}, possibly already exists")
-        sys.exit(1)
+def cmd_create(opts):
+    existing = head_version_tags()
+    if existing:
+        logger.info(
+            "HEAD already tagged (%s); nothing to do", ", ".join(existing)
+        )
+        return EXIT_NOTHING
 
-    repo.remotes.origin.push(git_tag)
+    # If the clone has no version tags at all (e.g. a shallow clone that
+    # didn't fetch tags), latest_version() would silently fall back to
+    # v0.0.0 and we'd tag/publish v0.0.1 as if this were an unreleased
+    # project. Fail closed instead of guessing.
+    if not all_version_tags():
+        logger.error(
+            "no existing version tags found; refusing to guess the next "
+            "version (check that tags were fetched)"
+        )
+        return EXIT_FAILURE
 
-    status = repo.remotes.origin.push(git_tag)
-    if status.error:
-        logger.error(f"Failed to push remote tag: {status.error}")
-        sys.exit(1)
+    new_tag = increment_version_manually(latest_version(), opts)
+    logger.info("Creating local git tag '%s'", new_tag)
+    git("tag", "-a", new_tag, "-m", f"Automatic version tag {new_tag}")
+    Path(opts["--output"]).write_text(new_tag)
+    return EXIT_OK
+
+
+def cmd_push(opts):
+    tag = opts["--tag"]
+    logger.info("Pushing tag '%s'", tag)
+    git("push", "origin", f"refs/tags/{tag}")
+    return EXIT_OK
 
 
 def main():
@@ -63,37 +131,18 @@ def main():
         format="[%(asctime)s] <%(levelname)s> [%(name)s] [%(funcName)s] %(message)s",
     )
 
-    if not any([opts["--major"], opts["--minor"], opts["--patch"]]):
-        logger.error(
-            "The job requires on option between major, minor or patch to know how to increment the version. Aborting.'"
-        )
-        sys.exit(1)
+    try:
+        if opts["create"]:
+            return cmd_create(opts)
+        if opts["push"]:
+            return cmd_push(opts)
+    except GitError as exc:
+        logger.error("%s", exc)
+        return EXIT_FAILURE
 
-    repo = git.Repo(".")
-
-    if current_tag := next(
-        (tag for tag in repo.tags if tag.commit == repo.head.commit), None
-    ):
-        logger.error(
-            f"Commit hash '{repo.head.commit}' Already has a tag '{current_tag}'"
-        )
-        sys.exit(1)
-
-    # Get all tags and find the highest version across all branches
-    tags = [tag.name for tag in repo.tags]
-    if tags:
-        latest_tag = max(tags, key=lambda t: parse(t))
-    else:
-        latest_tag = "v0.0.0"
-
-    current_latest_version = parse(latest_tag)
-
-    # Get version increment from command line arg.
-    new_tag = increment_version_manually(current_latest_version, opts)
-
-    create_and_push_tag(repo, new_tag)
-    sys.exit(0)
+    logger.error("no subcommand matched")
+    return EXIT_FAILURE
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
