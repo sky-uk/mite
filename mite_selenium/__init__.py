@@ -2,6 +2,7 @@ import importlib.util
 import logging
 import socket
 import time
+import warnings
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
@@ -311,6 +312,17 @@ def mite_selenium(*args, wire=False):
                     "The wire=True argument to mite_selenium is only supported "
                     + "if mite was installed with the 'selenium_wire' extra"
                 )
+
+        # NOTE: fires at first use, not import time - see rationale in
+        # mite_http/__init__.py. Extra name tracks the wire flag, since
+        # wire=True pulls in selenium-wire rather than plain selenium.
+        extra = "selenium_wire" if wire else "selenium"
+        warnings.warn(
+            f"mite_selenium will require 'pip install mite[{extra}]' starting "
+            "in mite 3.0; no functional change today.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):

@@ -174,26 +174,60 @@ _MITE_STATS = [
 ]
 
 
+def _is_first_party_entry_point(entry_point):
+    """True if this entry point was registered by mite itself, rather than
+    by a third-party extension (see docs/stats.rst's documented
+    [options.entry_points] mechanism for registering external mite_stats
+    processors). Checked via the distribution name, not the entry point's
+    own name - a third party's entry point can itself be named e.g.
+    'mite_amqp', matching docs/stats.rst's own example, so a name-prefix
+    check would misclassify it."""
+    try:
+        dist = entry_point.dist
+    except AttributeError:
+        # EntryPoint.dist may be unavailable on some supported Python
+        # versions/backports; treat as third-party (the lenient, safer
+        # default) rather than guessing.
+        return False
+    return dist is not None and dist.name == "mite"
+
+
+def load_stats_entry_points(include=None, exclude=None):
+    """Load every registered mite_stats entry point, applying include/exclude
+    name filters. Shared by mite.stats.Stats and mite.cli.influxdb.influxdb_init
+    so the two don't drift in how they handle a failing entry point."""
+    all_stats = []
+    for entry_point in importlib.metadata.entry_points(group="mite_stats"):
+        if include is not None and entry_point.name not in include:
+            continue
+        if exclude is not None and entry_point.name in exclude:
+            continue
+        logging.info(f"Registering stats processors from {entry_point.name}")
+        try:
+            all_stats += entry_point.load()
+        except ImportError as e:
+            # Expected when the integration's optional dependency isn't
+            # installed - after the mite_* decoupling (see
+            # PACKAGING_PLAN_EXECUTION.md Step 1), mite's own stats.py
+            # modules never import heavy third-party packages, so this
+            # should only fire for a genuinely missing extra.
+            logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
+        except Exception as e:
+            if _is_first_party_entry_point(entry_point):
+                # A bug in one of mite's own stats modules, not a missing
+                # optional dependency - must not be silently swallowed.
+                raise
+            # A third-party plugin's own bug. docs/stats.rst documents
+            # mite_stats as a public extension point for other teams'
+            # code; a broken third-party plugin shouldn't take down every
+            # other processor, including mite's own.
+            logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
+    return all_stats
+
+
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
-        self._all_stats = []
-        for entry_point in importlib.metadata.entry_points(group="mite_stats"):
-            if include is not None and entry_point.name not in include:
-                continue
-            if exclude is not None and entry_point.name in exclude:
-                continue
-            logging.info(f"Registering stats processors from {entry_point.name}")
-            try:
-                self._all_stats += entry_point.load()
-            except ImportError as e:
-                # Expected when the integration's optional dependency isn't
-                # installed - after the mite_* decoupling (see
-                # PACKAGING_PLAN_EXECUTION.md Step 1), stats.py modules
-                # themselves never import heavy third-party packages, so this
-                # should only fire for a genuinely missing extra. Any other
-                # exception is a real bug and must not be swallowed here.
-                logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
-
+        self._all_stats = load_stats_entry_points(include=include, exclude=exclude)
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
 

@@ -1,7 +1,7 @@
-import importlib.metadata
 import logging
 from time import time_ns
 from mite.exceptions import InfluxConfigError
+from mite.stats import load_stats_entry_points
 
 logger = logging.getLogger(__name__)
 
@@ -9,12 +9,7 @@ logger = logging.getLogger(__name__)
 def influxdb_init(opts):
     from mite.web.influxdb import InfluxPoint, InfluxdbWriter
 
-    all_stats = []
-    for ep in importlib.metadata.entry_points(group="mite_stats"):
-        try:
-            all_stats.extend(ep.load())
-        except Exception as e:
-            logger.warning(f"Failed to load stats from entry point {ep.name}: {e}")
+    all_stats = load_stats_entry_points()
 
     points = []
     tns = time_ns()

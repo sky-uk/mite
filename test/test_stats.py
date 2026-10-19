@@ -1,5 +1,7 @@
 import unittest.mock as mock
 
+import pytest
+
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
 TXN_MSG = {
@@ -34,14 +36,19 @@ def test_label_extractor_txn_msg():
 
 
 class EntryPointMock:
-    def __init__(self, group=""):
+    def __init__(self, group="", dist_name="mite", raises=None):
         self.__val = group
+        self._raises = raises
+        self.dist = mock.Mock(name=dist_name)
+        self.dist.name = dist_name
 
     @property
     def name(self):
         return self.__val
 
     def load(self):
+        if self._raises is not None:
+            raise self._raises
         return [self.__val]
 
 
@@ -70,6 +77,48 @@ class TestModularity:
         ):
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]
+
+    def test_first_party_import_error_is_logged_not_raised(self):
+        with mock.patch("logging.error") as logging_error, mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[
+                EntryPointMock(group="x", dist_name="mite", raises=ImportError("no acurl")),
+                EntryPointMock(group="y"),
+            ],
+        ):
+            s = Stats(None)
+            assert s._all_stats == ["y"]
+            logging_error.assert_called_once()
+            assert "x" in logging_error.call_args[0][0]
+
+    def test_first_party_other_exception_is_raised(self):
+        with mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[
+                EntryPointMock(
+                    group="x", dist_name="mite", raises=AttributeError("real bug")
+                )
+            ],
+        ):
+            with pytest.raises(AttributeError, match="real bug"):
+                Stats(None)
+
+    def test_third_party_any_exception_is_logged_not_raised(self):
+        with mock.patch("logging.error") as logging_error, mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[
+                EntryPointMock(
+                    group="mite_amqp",
+                    dist_name="id_mite_nft",
+                    raises=AttributeError("third-party plugin bug"),
+                ),
+                EntryPointMock(group="y"),
+            ],
+        ):
+            s = Stats(None)
+            assert s._all_stats == ["y"]
+            logging_error.assert_called_once()
+            assert "mite_amqp" in logging_error.call_args[0][0]
 
 
 class TestCounter:

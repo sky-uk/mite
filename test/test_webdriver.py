@@ -1,4 +1,6 @@
 from unittest.mock import call, patch
+import importlib
+import warnings
 
 import pytest
 import selenium.webdriver.support.expected_conditions  # noqa: F401 - import so
@@ -10,6 +12,7 @@ from mocks.mock_context import MockContext
 from mocks.mock_selenium import mock_paint_times, mock_performance_times
 from selenium.common.exceptions import TimeoutException
 
+import mite_selenium as mite_selenium_pkg
 from mite.exceptions import MiteError
 from mite_selenium import _SeleniumWrapper, mite_selenium
 
@@ -246,3 +249,35 @@ def _setup_wrapper(capabilites):
     context = MockContext()
     context.config = capabilites
     return _SeleniumWrapper(context)
+
+
+def test_no_warning_on_bare_import():
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        importlib.reload(mite_selenium_pkg)
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert not future_warnings
+
+
+def test_warns_on_use():
+    with pytest.warns(FutureWarning, match=r"mite_selenium will require.*\[selenium\]"):
+
+        @mite_selenium
+        def foo(ctx):
+            pass
+
+
+def test_warns_on_use_with_wire():
+    # seleniumwire's own import can fail in this dev environment for reasons
+    # unrelated to this warning (a pre-existing blinker/seleniumwire version
+    # incompatibility, not something this change touches) - mock it out so
+    # this test exercises the warning text, not seleniumwire's own install
+    # state.
+    with patch("importlib.import_module"):
+        with pytest.warns(
+            FutureWarning, match=r"mite_selenium will require.*\[selenium_wire\]"
+        ):
+
+            @mite_selenium(wire=True)
+            def foo(ctx):
+                pass
