@@ -1,13 +1,14 @@
 import logging
 
 from .stats import Stats
-from .web.influxdb import InfluxMetrics
 
 logger = logging.getLogger(__name__)
 
 
 class InfluxDBProcessor:
     def __init__(self, opts, suffix=""):
+        from .web.influxdb import InfluxMetrics
+
         include_buckets = opts.get("--include-buckets", False)
         self._influx_metrics = InfluxMetrics(include_buckets=include_buckets, suffix=suffix)
         # Stats aggregator - instead of sending to socket, we'll capture dumps

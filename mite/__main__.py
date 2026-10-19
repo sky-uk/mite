@@ -130,10 +130,8 @@ from .cli.duplicator import duplicator
 from .cli.influxdb import influxdb_init
 from .cli.test import journey_cmd, scenario_cmd
 from .controller import Controller
-from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module
-from .web import app, prometheus_metrics, influx_metrics
 
 
 def _recorder_receiver(opts):
@@ -170,7 +168,7 @@ def _create_controller_server(opts):
 logger = logging.getLogger(__name__)
 
 
-def _start_web_in_thread(opts):
+def _start_web_in_thread(opts, app):
     address = opts["--web-address"]
     kwargs = {"port": 9301}
     if address.startswith("["):
@@ -306,15 +304,42 @@ def recorder(opts):
 
 
 def prometheus_exporter(opts):
+    try:
+        from .web import app, prometheus_metrics
+    except ImportError as e:
+        # flask/jinja2 are permanent mandatory dependencies (see
+        # PACKAGING_EXTRAS_PLAN.md Decision Log, round 6-7) - there is no
+        # optional extra to direct the user to. This should only fire on a
+        # broken or incomplete install.
+        raise SystemExit(
+            "The prometheus_exporter command requires flask, which should "
+            "already be installed as a core mite dependency. Try "
+            "reinstalling mite."
+        ) from e
+
     receiver = _create_prometheus_exporter_receiver(opts)
     receiver.add_listener(prometheus_metrics.process)
-    _start_web_in_thread(opts)
+    _start_web_in_thread(opts, app)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())
 
 
 def influxdb_exporter(opts):
+    try:
+        from .web import influx_metrics
+    except ImportError as e:
+        # Same failure mode as prometheus_exporter above - .web itself only
+        # needs flask/jinja2 (permanent core deps) to import; the influxdb
+        # client libraries it uses are already imported lazily inside
+        # influx_metrics. This should only fire on a broken or incomplete
+        # install.
+        raise SystemExit(
+            "The influxdb_exporter command requires flask, which should "
+            "already be installed as a core mite dependency. Try "
+            "reinstalling mite."
+        ) from e
+
     include_buckets = opts.get("--include-buckets", False)
     receiver = _create_influxdb_exporter_receiver(opts)
     metrics = influx_metrics(include_buckets=include_buckets)
@@ -343,6 +368,19 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
+    try:
+        from .har_to_mite import har_convert_to_mite
+    except ImportError as e:
+        # jinja2 is a permanent mandatory dependency (also pulled in by
+        # flask, see PACKAGING_EXTRAS_PLAN.md Decision Log round 7) - there
+        # is no optional extra to direct the user to. This should only fire
+        # on a broken or incomplete install.
+        raise SystemExit(
+            "The har_converter command requires jinja2, which should "
+            "already be installed as a core mite dependency. Try "
+            "reinstalling mite."
+        ) from e
+
     har_convert_to_mite(
         opts["HAR_FILE_PATH"], opts["CONVERTED_FILE_PATH"], opts["--sleep-time"]
     )

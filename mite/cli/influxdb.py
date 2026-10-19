@@ -1,13 +1,14 @@
 import importlib.metadata
 import logging
 from time import time_ns
-from mite.web.influxdb import InfluxPoint, InfluxdbWriter
 from mite.exceptions import InfluxConfigError
 
 logger = logging.getLogger(__name__)
 
 
 def influxdb_init(opts):
+    from mite.web.influxdb import InfluxPoint, InfluxdbWriter
+
     all_stats = []
     for ep in importlib.metadata.entry_points(group="mite_stats"):
         try:
