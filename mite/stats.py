@@ -182,13 +182,7 @@ def _is_first_party_entry_point(entry_point):
     own name - a third party's entry point can itself be named e.g.
     'mite_amqp', matching docs/stats.rst's own example, so a name-prefix
     check would misclassify it."""
-    try:
-        dist = entry_point.dist
-    except AttributeError:
-        # EntryPoint.dist may be unavailable on some supported Python
-        # versions/backports; treat as third-party (the lenient, safer
-        # default) rather than guessing.
-        return False
+    dist = getattr(entry_point, "dist", None)
     return dist is not None and dist.name == "mite"
 
 
@@ -202,7 +196,7 @@ def load_stats_entry_points(include=None, exclude=None):
             continue
         if exclude is not None and entry_point.name in exclude:
             continue
-        logging.info(f"Registering stats processors from {entry_point.name}")
+        logger.info(f"Registering stats processors from {entry_point.name}")
         try:
             all_stats += entry_point.load()
         except ImportError as e:
@@ -211,7 +205,7 @@ def load_stats_entry_points(include=None, exclude=None):
             # PACKAGING_PLAN_EXECUTION.md Step 1), mite's own stats.py
             # modules never import heavy third-party packages, so this
             # should only fire for a genuinely missing extra.
-            logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
+            logger.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
         except Exception as e:
             if _is_first_party_entry_point(entry_point):
                 # A bug in one of mite's own stats modules, not a missing
@@ -221,7 +215,7 @@ def load_stats_entry_points(include=None, exclude=None):
             # mite_stats as a public extension point for other teams'
             # code; a broken third-party plugin shouldn't take down every
             # other processor, including mite's own.
-            logging.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
+            logger.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
     return all_stats
 
 

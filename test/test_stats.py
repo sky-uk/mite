@@ -39,7 +39,7 @@ class EntryPointMock:
     def __init__(self, group="", dist_name="mite", raises=None):
         self.__val = group
         self._raises = raises
-        self.dist = mock.Mock(name=dist_name)
+        self.dist = mock.Mock()
         self.dist.name = dist_name
 
     @property
@@ -54,7 +54,7 @@ class EntryPointMock:
 
 class TestModularity:
     def test_modularity(self):
-        with mock.patch("logging.info") as logging_info, mock.patch(
+        with mock.patch("mite.stats.logger.info") as logging_info, mock.patch(
             "importlib.metadata.entry_points", return_value=[EntryPointMock(group="x")]
         ) as iter_entry_points:
             s = Stats(None)
@@ -79,7 +79,7 @@ class TestModularity:
             assert s._all_stats == ["y"]
 
     def test_first_party_import_error_is_logged_not_raised(self):
-        with mock.patch("logging.error") as logging_error, mock.patch(
+        with mock.patch("mite.stats.logger.error") as logging_error, mock.patch(
             "importlib.metadata.entry_points",
             return_value=[
                 EntryPointMock(group="x", dist_name="mite", raises=ImportError("no acurl")),
@@ -104,7 +104,7 @@ class TestModularity:
                 Stats(None)
 
     def test_third_party_any_exception_is_logged_not_raised(self):
-        with mock.patch("logging.error") as logging_error, mock.patch(
+        with mock.patch("mite.stats.logger.error") as logging_error, mock.patch(
             "importlib.metadata.entry_points",
             return_value=[
                 EntryPointMock(
