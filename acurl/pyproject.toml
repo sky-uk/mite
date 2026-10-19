@@ -36,7 +36,7 @@ test = [
     "pytest-asyncio",
     "pytest-httpbin",
     "pytest-httpserver",
-    "werkzeug==3.1.3",     # keep in sync with root pyproject.toml:57-58
+    "werkzeug==3.1.9",     # keep in sync with root pyproject.toml:57-58
     "httpbin>=0.10.2",     # required for werkzeug 3.x compatibility
 ]
 dev = [
