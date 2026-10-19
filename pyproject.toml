@@ -35,6 +35,7 @@ dependencies = [
     "jinja2>=3.1",
     "msgpack>=1.0",
     "nanomsg>=1.0",
+    "packaging>=22",
     "prettytable>=3.10",
     "pyzmq>=26.0",
     "selenium>=3.141,<4",
@@ -105,6 +106,7 @@ mite_finagle = "mite_finagle.stats:STATS"
 mite_http = "mite_http.stats:STATS"
 mite_selenium = "mite_selenium.stats:STATS"
 mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
+mite_playwright = "mite_playwright.stats:STATS"
 
 
 # Hatch configuration ##############################################
