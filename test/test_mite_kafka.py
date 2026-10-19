@@ -1,9 +1,17 @@
+import importlib
+import warnings
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
 
-from mite_kafka import KafkaConsumer, KafkaProducer, mite_kafka
+import mite_kafka as mite_kafka_pkg
+from mite_kafka import (
+    KafkaConsumer,
+    KafkaProducer,
+    mite_kafka,
+    mite_kafka_managed_adapter,
+)
 
 
 @pytest.mark.asyncio
@@ -68,3 +76,32 @@ async def test_create_consumer():
         await kafka_wrapper.create_and_start(bootstrap_servers="broker_url")
         # Assert that the AIOKafkaConsumer class was called with the expected arguments
         consumer_start_mock.assert_awaited_once()
+
+
+def test_no_warning_on_bare_import():
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        importlib.reload(mite_kafka_pkg)
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert not future_warnings
+
+
+def test_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_kafka will require"):
+
+        @mite_kafka
+        def foo(ctx):
+            pass
+
+
+def test_managed_adapter_no_warning_on_bare_import():
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        importlib.reload(mite_kafka_pkg)
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert not future_warnings
+
+
+def test_managed_adapter_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_kafka will require"):
+        mite_kafka_managed_adapter(bootstrap_servers="localhost:9092")

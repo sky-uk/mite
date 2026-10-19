@@ -1,10 +1,13 @@
 import asyncio
+import importlib
+import warnings
 from unittest.mock import AsyncMock, patch
 
 import aio_pika
 import pytest
 from mocks.mock_context import MockContext
 
+import mite_amqp as mite_amqp_pkg
 from mite_amqp import _AMQPWrapper, mite_amqp
 
 
@@ -75,3 +78,19 @@ def test_amqp_message_string():
     w = _AMQPWrapper()
     m = w.message("hi")
     assert isinstance(m, aio_pika.Message)
+
+
+def test_no_warning_on_bare_import():
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        importlib.reload(mite_amqp_pkg)
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert not future_warnings
+
+
+def test_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_amqp will require"):
+
+        @mite_amqp
+        def foo(ctx):
+            pass

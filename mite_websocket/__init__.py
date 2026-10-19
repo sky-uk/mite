@@ -1,4 +1,5 @@
 import logging
+import warnings
 from contextlib import asynccontextmanager
 
 import websockets
@@ -52,6 +53,15 @@ async def _websocket_context_manager(context):
 
 
 def mite_websocket(func):
+    # NOTE: fires at first use, not import time - see rationale in
+    # mite_http/__init__.py.
+    warnings.warn(
+        "mite_websocket will require 'pip install mite[websocket]' starting "
+        "in mite 3.0; no functional change today.",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     async def wrapper(ctx, *args, **kwargs):
         async with _websocket_context_manager(ctx):
             return await func(ctx, *args, **kwargs)

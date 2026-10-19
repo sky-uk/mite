@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import warnings
 from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
@@ -104,6 +105,17 @@ def mite_http(func):
         raise ModuleNotFoundError(
             "mite_http requires the 'http' extra: pip install mite[http]"
         ) from e
+    # NOTE: fires at first use, not import time (unlike mite_finagle/mite_selenium's
+    # module-level warnings) - mite/stats.py eagerly imports every mite_stats entry
+    # point on `mite stats`/controller startup, so an import-time warning here would
+    # fire unconditionally regardless of whether the package is actually used.
+    # Do not "fix" this inconsistency by moving it to module scope.
+    warnings.warn(
+        "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
+        "no functional change today.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return SessionPool.decorator(func)
 
 

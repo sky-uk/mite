@@ -1,4 +1,5 @@
 import logging
+import warnings
 from collections import deque
 
 from sqlalchemy import text
@@ -16,6 +17,17 @@ class DBIterableDataPool:
         preload_minimum=None,
         max_size=None,
     ):
+        # NOTE: fires at first use, not import time - see rationale in
+        # mite_http/__init__.py. Unconditional, regardless of the
+        # preload_minimum/max_size branching below - DBRecyclableIterableDataPool
+        # calls super().__init__(...), which already hits this, so no separate
+        # call is needed there.
+        warnings.warn(
+            "mite_db_datapool will require 'pip install mite[db]' starting "
+            "in mite 3.0; no functional change today.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.db_engine = db_engine
         self.query = query
         self.max_size = max_size

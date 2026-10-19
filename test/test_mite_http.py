@@ -1,10 +1,13 @@
 import asyncio
+import importlib
 import os
+import warnings
 from unittest.mock import patch
 
 import pytest
 from mocks.mock_context import MockContext
 
+import mite_http as mite_http_pkg
 import mite_http.stats as mite_http_stats
 from mite_http import SessionPool, mite_http
 
@@ -93,3 +96,19 @@ async def test_decorator_eventloop_memoization():
     await foo(MockContext())
 
     assert asyncio.get_running_loop() in SessionPool._session_pools
+
+
+def test_no_warning_on_bare_import():
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        importlib.reload(mite_http_pkg)
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert not future_warnings
+
+
+def test_warns_on_use():
+    with pytest.warns(FutureWarning, match="mite_http will require"):
+
+        @mite_http
+        def foo(ctx):
+            pass

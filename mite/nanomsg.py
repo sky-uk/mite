@@ -1,6 +1,10 @@
 import asyncio
 import logging
 
+# NOTE: the mite 3.0 deprecation FutureWarning for nanomsg lives in
+# mite/utils.py:_msg_backend_module, the single choke point every nanomsg
+# entry path (runner, controller, duplicator CLI) passes through - not here,
+# to avoid duplicate warnings across this module's five socket-owning classes.
 import nanomsg
 
 from .utils import pack_msg, unpack_msg
