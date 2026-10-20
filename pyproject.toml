@@ -77,8 +77,7 @@ influxdb = [
 # here is still in the mandatory `dependencies` list above, so installing any
 # of these extras today is a functional no-op — it installs exactly what
 # `pip install mite` already installs. They become load-bearing once a future
-# major release removes these packages from `dependencies`. See
-# PACKAGING_EXTRAS_PLAN.md.
+# major release removes these packages from `dependencies`.
 kafka         = ["aiokafka"]
 amqp          = ["aio_pika"]
 finagle       = ["thrift"]

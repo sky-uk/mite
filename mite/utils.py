@@ -25,8 +25,7 @@ async def sleep(delay, always=False, **kwargs):  # pragma: no cover
 def _msg_backend_module(opts):
     msg_backend = opts["--message-backend"]
     if msg_backend == "nanomsg":
-        # TODO(release-B): tighten to "pip install mite[nanomsg]" once that extra
-        # exists (see PACKAGING_EXTRAS_PLAN.md step 11).
+        # TODO: tighten to "pip install mite[nanomsg]" once that extra exists.
         # NOTE: fires at first use, not import time - see rationale in
         # mite_http/__init__.py.
         warnings.warn(

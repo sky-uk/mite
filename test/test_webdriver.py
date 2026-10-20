@@ -7,7 +7,7 @@ import selenium.webdriver.support.expected_conditions  # noqa: F401 - import so
 # the submodule is registered as an attribute of selenium.webdriver.support,
 # which patch("selenium.webdriver.support.expected_conditions") requires.
 # Previously a side effect of mite_selenium's own top-level import; that
-# import is now deferred (see PACKAGING_PLAN_EXECUTION.md Step 1).
+# import is now deferred to first use.
 from mocks.mock_context import MockContext
 from mocks.mock_selenium import mock_paint_times, mock_performance_times
 from selenium.common.exceptions import TimeoutException

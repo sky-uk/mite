@@ -307,10 +307,10 @@ def prometheus_exporter(opts):
     try:
         from .web import app, prometheus_metrics
     except ImportError as e:
-        # flask/jinja2 are permanent mandatory dependencies (see
-        # PACKAGING_EXTRAS_PLAN.md Decision Log, round 6-7) - there is no
-        # optional extra to direct the user to. This should only fire on a
-        # broken or incomplete install.
+        # flask/jinja2 are permanent mandatory dependencies - they back
+        # built-in CLI features rather than opt-in integrations, so there
+        # is no optional extra to direct the user to. This should only
+        # fire on a broken or incomplete install.
         raise SystemExit(
             "The prometheus_exporter command requires flask, which should "
             "already be installed as a core mite dependency. Try "
@@ -371,10 +371,11 @@ def har_converter(opts):
     try:
         from .har_to_mite import har_convert_to_mite
     except ImportError as e:
-        # jinja2 is a permanent mandatory dependency (also pulled in by
-        # flask, see PACKAGING_EXTRAS_PLAN.md Decision Log round 7) - there
-        # is no optional extra to direct the user to. This should only fire
-        # on a broken or incomplete install.
+        # jinja2 is a permanent mandatory dependency - it backs a built-in
+        # CLI feature, and flask hard-depends on it regardless, so it can
+        # never actually be absent. There is no optional extra to direct
+        # the user to. This should only fire on a broken or incomplete
+        # install.
         raise SystemExit(
             "The har_converter command requires jinja2, which should "
             "already be installed as a core mite dependency. Try "

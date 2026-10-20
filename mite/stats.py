@@ -201,10 +201,10 @@ def load_stats_entry_points(include=None, exclude=None):
             all_stats += entry_point.load()
         except ImportError as e:
             # Expected when the integration's optional dependency isn't
-            # installed - after the mite_* decoupling (see
-            # PACKAGING_PLAN_EXECUTION.md Step 1), mite's own stats.py
-            # modules never import heavy third-party packages, so this
-            # should only fire for a genuinely missing extra.
+            # installed. mite's own stats.py modules import nothing heavier
+            # than mite.stats - their packages' __init__.py defer the heavy
+            # third-party imports - so this should only fire for a
+            # genuinely missing extra.
             logger.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
         except Exception as e:
             if _is_first_party_entry_point(entry_point):

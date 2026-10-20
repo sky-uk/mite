@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 # Check if playwright is available. mite_playwright itself always imports
-# successfully now (see PACKAGING_PLAN_EXECUTION.md Step 1 - the playwright
-# import is deferred to first use), so the availability check must probe
-# playwright directly rather than mite_playwright.
+# successfully now - its playwright import is deferred to first use - so
+# the availability check must probe playwright directly rather than
+# mite_playwright.
 try:
     import playwright  # noqa: F401
 
