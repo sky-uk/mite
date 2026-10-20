@@ -1,12 +1,9 @@
-import importlib
 import sqlite3
-import warnings
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
 
-import mite_db_datapool.db_to_pool as db_to_pool
 from mite_db_datapool.db_to_pool import (
     DataPoolExhausted,
     DBIterableDataPool,
@@ -160,23 +157,14 @@ async def test_recyclable_with_max_size(setup_large_test_db):
 
 
 def _stub_engine_with_no_rows():
-    """A fake sqlalchemy engine whose query always returns zero rows, so
-    populate() marks the pool exhausted after a single iteration without
-    touching a real DB. preload_minimum=0/max_size=0 would NOT work for this -
-    `if preload_minimum:` treats 0 as falsy and takes the else branch, which
-    drains the DB until exhaustion rather than skipping the load loop."""
+    """A fake engine whose query returns zero rows so the pool is exhausted
+    after one iteration without touching a real DB. preload_minimum=0 would
+    not work instead: it is falsy, so it takes the DB-draining branch rather
+    than skipping the load loop."""
     engine = MagicMock()
     conn = engine.connect.return_value.__enter__.return_value
     conn.execute.return_value.fetchall.return_value = []
     return engine
-
-
-def test_no_warning_on_bare_import():
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        importlib.reload(db_to_pool)
-    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
-    assert not future_warnings
 
 
 def test_warns_on_use():

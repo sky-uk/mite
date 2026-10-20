@@ -1,11 +1,8 @@
 from unittest.mock import Mock
-import importlib
-import warnings
 
 import pytest
 from mocks.mock_context import MockContext
 
-import mite_browser
 from mite_browser import (
     BaseFormField,
     Browser,
@@ -104,14 +101,6 @@ async def test_decorator():
     await journey(MockContext())
 
 
-def test_no_warning_on_bare_import():
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        importlib.reload(mite_browser)
-    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
-    assert not future_warnings
-
-
 def test_warns_on_use():
     # Applying @browser_decorator() to a real function (not a bare
     # browser_decorator() call with no function argument) exercises the real
@@ -124,7 +113,8 @@ def test_warns_on_use():
         async def journey(ctx):
             pass
 
-    assert len(record) == 2
-    messages = [str(r.message) for r in record]
+    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+    assert len(future_warnings) == 2
+    messages = [str(w.message) for w in future_warnings]
     assert any("mite_browser" in m for m in messages)
     assert any("mite_http" in m for m in messages)

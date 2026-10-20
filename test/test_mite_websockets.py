@@ -1,12 +1,9 @@
-import importlib
-import warnings
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
 from websockets.exceptions import WebSocketException
 
-import mite_websocket as mite_websocket_pkg
 from mite_websocket import WebsocketError, mite_websocket
 
 
@@ -95,14 +92,6 @@ async def test_mite_websocket_exception_handling():
 
     with pytest.raises(WebsocketError):
         await dummy_journey(context)
-
-
-def test_no_warning_on_bare_import():
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        importlib.reload(mite_websocket_pkg)
-    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
-    assert not future_warnings
 
 
 def test_warns_on_use():

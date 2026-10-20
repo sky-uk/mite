@@ -17,16 +17,13 @@ def _patched_stat(stat_type_name, name="mite_fake_metric", labels=("transaction"
 
 def test_influxdb_init_success():
     """Smoke test for point construction and the writer success path.
-    load_stats_entry_points() is patched out here, not exercised - its own
-    behaviour (filtering, exception handling) is covered separately in
-    test_stats.py. InfluxdbWriter is patched at its source module -
-    influxdb_init imports it function-locally, so patching there is what
-    actually takes effect.
+    load_stats_entry_points() is patched out (covered in test_stats.py);
+    InfluxdbWriter is patched at its source module because influxdb_init
+    imports it function-locally.
 
-    Covers the Counter/Gauge branches only; the Histogram branch (building
-    percentile + cumulative fields and the '_summary' measurement name) and
-    the multi-instance (--influxdb > 1) loop are knowingly left untested -
-    a deliberate scope decision, not an oversight."""
+    The Histogram branch and the `--influxdb > 1` multi-instance loop are
+    deliberately untested here.
+    """
     fake_stat = _patched_stat("Counter")
 
     future = MagicMock()
