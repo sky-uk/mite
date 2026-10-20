@@ -5,12 +5,12 @@ from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
+from mite._optional import require
+
 try:
     import acurl
-    _acurl_import_error = None
-except ImportError as e:  # pragma: no cover - exercised only on a slim install
+except ModuleNotFoundError:  # pragma: no cover - exercised only on a slim install
     acurl = None
-    _acurl_import_error = e
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +104,7 @@ class SessionPool:
 
 
 def mite_http(func):
-    if acurl is None:
-        raise ModuleNotFoundError(
-            "mite_http requires the 'http' extra: pip install mite[http]"
-        ) from _acurl_import_error
+    require(acurl, package="mite_http", extra="http")
     # NOTE: fires at first use, not import time - mite/stats.py eagerly
     # imports every mite_stats entry point on `mite stats`/controller
     # startup, so an import-time warning here would fire unconditionally

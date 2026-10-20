@@ -9,10 +9,10 @@ from .mux import CanTinit, Dispatch, Init, Message, Ping
 
 try:
     from .thrift import _ThriftError
-    _thrift_import_error = None
-except ImportError as e:  # pragma: no cover - exercised only on a slim install
+except ModuleNotFoundError:  # pragma: no cover - exercised only on a slim install
     _ThriftError = None
-    _thrift_import_error = e
+
+from mite._optional import require
 
 # TODO:
 # - headers (ptp, request id, ...)
@@ -160,10 +160,7 @@ class MiteFinagle:
 
 
 def mite_finagle(f):
-    if _ThriftError is None:
-        raise ModuleNotFoundError(
-            "mite_finagle requires the 'finagle' extra: pip install mite[finagle]"
-        ) from _thrift_import_error
+    require(_ThriftError, package="mite_finagle", extra="finagle")
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py.
     warnings.warn(

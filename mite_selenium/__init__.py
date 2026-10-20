@@ -13,15 +13,10 @@ try:
     from selenium.webdriver.remote.remote_connection import RemoteConnection
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.support.ui import WebDriverWait
-    _selenium_import_error = None
-except ImportError as e:  # pragma: no cover - exercised only on a slim install
-    TimeoutException = None
-    SeleniumRemote = None
-    RemoteConnection = None
-    EC = None
-    WebDriverWait = None
-    _selenium_import_error = e
+except ModuleNotFoundError:  # pragma: no cover - exercised only on a slim install
+    TimeoutException = SeleniumRemote = RemoteConnection = EC = WebDriverWait = None
 
+from mite._optional import require
 from mite.exceptions import MiteError
 from mite.utils import spec_import
 
@@ -298,11 +293,7 @@ async def _selenium_context_manager(context, wire):
 
 def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
-        if SeleniumRemote is None:
-            raise ModuleNotFoundError(
-                "mite_selenium requires the 'selenium' extra: "
-                "pip install mite[selenium]"
-            ) from _selenium_import_error
+        require(SeleniumRemote, package="mite_selenium", extra="selenium")
 
         if wire:
             try:
