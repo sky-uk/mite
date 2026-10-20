@@ -4,6 +4,13 @@ Mite Playwright - Simple async wrapper with automatic navigation metrics
 import logging
 from functools import wraps
 
+try:
+    from playwright.async_api import async_playwright
+    _playwright_import_error = None
+except ImportError as e:  # pragma: no cover - exercised only when playwright isn't installed
+    async_playwright = None
+    _playwright_import_error = e
+
 logger = logging.getLogger(__name__)
 
 
@@ -148,18 +155,14 @@ async def collect_metrics(response, context):
 
 def mite_playwright(func):
     """Decorator for async Playwright functions with mite integration"""
-    try:
-        import playwright  # noqa: F401 - fail at journey import, not mid-run
-    except ImportError as e:
+    if async_playwright is None:
         raise ModuleNotFoundError(
             "mite_playwright requires playwright: pip install playwright, "
             "then run 'playwright install' to download browser binaries"
-        ) from e
+        ) from _playwright_import_error
 
     @wraps(func)
     async def wrapper(ctx, *args, **kwargs):
-        from playwright.async_api import async_playwright
-
         playwright_instance = await async_playwright().start()
         try:
             wrapped_playwright = PlaywrightWrapper(playwright_instance, ctx)

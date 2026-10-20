@@ -7,6 +7,13 @@ from itertools import count
 
 from .mux import CanTinit, Dispatch, Init, Message, Ping
 
+try:
+    from .thrift import _ThriftError
+    _thrift_import_error = None
+except ImportError as e:  # pragma: no cover - exercised only on a slim install
+    _ThriftError = None
+    _thrift_import_error = e
+
 # TODO:
 # - headers (ptp, request id, ...)
 # - figure out how to generate/import cybertron thrift
@@ -95,8 +102,6 @@ class MiteFinagleConnection:
         return self._process_result(result)
 
     async def _main_loop(self, return_msg=None, return_after_reply=None):
-        from .thrift import _ThriftError
-
         while True:
             message = await Message.read_from_async_stream(self._reader)
             # print("recv", message.to_bytes())
@@ -137,8 +142,6 @@ class MiteFinagleConnection:
         )
 
     def _process_result(self, result):
-        from .thrift import _ThriftError
-
         if isinstance(result, _ThriftError):
             raise MiteFinagleError("encountered thrift error", result._wrapped)
         else:
@@ -157,12 +160,10 @@ class MiteFinagle:
 
 
 def mite_finagle(f):
-    try:
-        import thrift  # noqa: F401 - fail at journey import, not mid-run
-    except ImportError as e:
+    if _ThriftError is None:
         raise ModuleNotFoundError(
             "mite_finagle requires the 'finagle' extra: pip install mite[finagle]"
-        ) from e
+        ) from _thrift_import_error
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py.
     warnings.warn(

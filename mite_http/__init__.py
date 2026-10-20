@@ -5,6 +5,13 @@ from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
+try:
+    import acurl
+    _acurl_import_error = None
+except ImportError as e:  # pragma: no cover - exercised only on a slim install
+    acurl = None
+    _acurl_import_error = e
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,8 +70,6 @@ class SessionPool:
 
     async def _checkout(self, context):
         if self._wrapper is None:
-            import acurl
-
             loop = asyncio.get_running_loop()
             self._wrapper = acurl.CurlWrapper(loop)
         session = self._wrapper.session()
@@ -99,17 +104,14 @@ class SessionPool:
 
 
 def mite_http(func):
-    try:
-        import acurl  # noqa: F401 - fail at journey import, not mid-run
-    except ImportError as e:
+    if acurl is None:
         raise ModuleNotFoundError(
             "mite_http requires the 'http' extra: pip install mite[http]"
-        ) from e
-    # NOTE: fires at first use, not import time (unlike mite_finagle/mite_selenium's
-    # module-level warnings) - mite/stats.py eagerly imports every mite_stats entry
-    # point on `mite stats`/controller startup, so an import-time warning here would
-    # fire unconditionally regardless of whether the package is actually used.
-    # Do not "fix" this inconsistency by moving it to module scope.
+        ) from _acurl_import_error
+    # NOTE: fires at first use, not import time - mite/stats.py eagerly
+    # imports every mite_stats entry point on `mite stats`/controller
+    # startup, so an import-time warning here would fire unconditionally
+    # regardless of whether the package is actually used.
     warnings.warn(
         "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
         "no functional change today.",
@@ -120,6 +122,4 @@ def mite_http(func):
 
 
 def create_http_cookie(ctx, *args, **kwargs):
-    import acurl
-
     return acurl.Cookie(*args, **kwargs)

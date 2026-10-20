@@ -4,6 +4,14 @@ import warnings
 from contextlib import asynccontextmanager
 from functools import wraps
 
+try:
+    from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+    _aiokafka_import_error = None
+except ImportError as e:  # pragma: no cover - exercised only on a slim install
+    AIOKafkaConsumer = None
+    AIOKafkaProducer = None
+    _aiokafka_import_error = e
+
 
 class KafkaProducer:
     def __init__(self, ctx):
@@ -11,8 +19,6 @@ class KafkaProducer:
         self._context = ctx
 
     async def create_and_start(self, *args, **kwargs):
-        from aiokafka import AIOKafkaProducer
-
         self._producer = AIOKafkaProducer(*args, **kwargs)
         await self._producer.start()
 
@@ -40,8 +46,6 @@ class KafkaConsumer:
         self._context = ctx
 
     async def create_and_start(self, *topics, **kwargs):
-        from aiokafka import AIOKafkaConsumer
-
         self._consumer = AIOKafkaConsumer(*topics, **kwargs)
         self._topics = topics
         await self._consumer.start()
@@ -72,12 +76,10 @@ async def _kafka_context_manager(ctx):
 
 
 def mite_kafka(func):
-    try:
-        import aiokafka  # noqa: F401 - fail at journey import, not mid-run
-    except ImportError as e:
+    if AIOKafkaProducer is None:
         raise ModuleNotFoundError(
             "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
-        ) from e
+        ) from _aiokafka_import_error
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py.
     warnings.warn(
@@ -162,12 +164,10 @@ def mite_kafka_managed_adapter(
     if security_protocol is None:
         security_protocol = "PLAINTEXT"
 
-    try:
-        import aiokafka  # noqa: F401 - fail at journey import, not mid-run
-    except ImportError as e:
+    if AIOKafkaProducer is None:
         raise ModuleNotFoundError(
             "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
-        ) from e
+        ) from _aiokafka_import_error
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py. Two independent entry points into mite_kafka
     # (mite_kafka and mite_kafka_managed_adapter) - either is a valid "first use".

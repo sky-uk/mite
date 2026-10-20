@@ -29,7 +29,7 @@ async def test_mite_playwright_decorator():
         assert playwright is not None
         return "success"
 
-    with patch("playwright.async_api.async_playwright") as mock_pw:
+    with patch("mite_playwright.async_playwright") as mock_pw:
         mock_playwright_instance = AsyncMock()
         mock_pw.return_value.start = AsyncMock(return_value=mock_playwright_instance)
 
