@@ -7,6 +7,12 @@ logger = logging.getLogger(__name__)
 
 
 def influxdb_init(opts):
+    # Deferred, not module-level - this module is imported unconditionally
+    # by mite/__main__.py for every mite invocation (see its own `mite
+    # influxdb init` subcommand), but mite.web.influxdb pulls in flask via
+    # mite/web/__init__.py's own import chain. A module-level import here
+    # would make every mite process pay that cost just to register this
+    # one subcommand.
     from mite.web.influxdb import InfluxPoint, InfluxdbWriter
 
     all_stats = load_stats_entry_points()

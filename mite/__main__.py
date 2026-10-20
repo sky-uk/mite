@@ -304,6 +304,13 @@ def recorder(opts):
 
 
 def prometheus_exporter(opts):
+    # Deferred, not module-level (unlike the mite_* integration packages -
+    # see mite_http/__init__.py): this import is only needed by this one
+    # command. mite runner/controller/duplicator/collector never call it,
+    # but do import this module, and every runner process scales with load
+    # (docker_compose.yml runs multiple replicas) - a module-level import
+    # here would make each of them pay flask's ~7 MB / ~100 ms import cost
+    # for a dependency only prometheus_exporter actually uses.
     try:
         from .web import app, prometheus_metrics
     except ImportError as e:
@@ -326,6 +333,10 @@ def prometheus_exporter(opts):
 
 
 def influxdb_exporter(opts):
+    # Deferred, not module-level - same rationale as prometheus_exporter
+    # above: only this command needs it, and every other mite process
+    # (runner, controller, duplicator, collector) imports this module
+    # without using it.
     try:
         from .web import influx_metrics
     except ImportError as e:
@@ -368,6 +379,9 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
+    # Deferred, not module-level - only this command needs jinja2's Template
+    # construction (mite/har_to_mite.py builds one at module scope); every
+    # other mite process imports this module without using it.
     try:
         from .har_to_mite import har_convert_to_mite
     except ImportError as e:
