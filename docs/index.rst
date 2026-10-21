@@ -25,6 +25,8 @@ was simple:
    design-deployment
    prometheus
    stats
+   influxdb
+   otel
 
 
 ..
