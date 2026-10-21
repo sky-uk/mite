@@ -36,12 +36,7 @@ myst_heading_anchors = 3
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-#
-# ARCHITECTURE-HA-ROADMAP.md is an internal planning document, not user
-# documentation. Enabling myst_parser above makes every .md file under docs/ a
-# Sphinx source, so without this exclusion it would be built and would emit a
-# fatal "document isn't included in any toctree" warning under `sphinx-build -W`.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'ARCHITECTURE-HA-ROADMAP.md']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 
 # -- Options for HTML output -------------------------------------------------
