@@ -1,6 +1,6 @@
-# mite_finagle
+# Finagle
 
-This module contains the infrastructure for injecting load into finagle
+`mite_finagle` contains the infrastructure for injecting load into finagle
 services with mite.  Specifically, it implements the thrift binary RPC
 format wrapped in finagleʼs mux framing protocol.  In order to use it
 you must install mite with the `finagle` extra:

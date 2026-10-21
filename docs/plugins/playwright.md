@@ -1,4 +1,4 @@
-# mite_playwright
+# Playwright
 
 A transparent wrapper for Playwright that automatically collects comprehensive performance metrics during web automation testing.
 
@@ -15,7 +15,7 @@ A transparent wrapper for Playwright that automatically collects comprehensive p
 - **Performance Optimized** - Minimal overhead on test execution
 - **Error Handling** - Automatic error tracking and reporting
 
-## Quick Start
+## Quick start
 
 ### Installation
 
