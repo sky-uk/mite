@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'mite'
-copyright = '2019, Sky UK - Identity performance engineers'
-author = 'Sky UK - Identity performance engineers'
+copyright = '2026, Sky UK - SRE Performance engineers'
+author = 'Sky UK - SRE Performance engineers'
 
 
 # -- General configuration ---------------------------------------------------
