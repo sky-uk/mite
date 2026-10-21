@@ -1,8 +1,8 @@
-# mite_db_datapool
+# Database datapools
 
 ## Overview
 
-This module provides database-backed data pools for Mite testing scenarios. It allows you to load test data directly from databases and use it in your load testing journeys.
+`mite_db_datapool` provides database-backed data pools for Mite testing scenarios. It allows you to load test data directly from databases and use it in your load testing journeys.
 
 ## Why SQLAlchemy?
 

@@ -8,7 +8,7 @@ It converts the internal stats model (`Counter`, `Gauge`, `Histogram` — see
 [mite/stats.py](https://github.com/sky-uk/mite/blob/master/mite/stats.py)) into
 InfluxDB line-protocol points and writes them to one or more InfluxDB instances.
 
-## Quickstart
+## Quick start
 
 ### Configuration
 
