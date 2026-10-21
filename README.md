@@ -31,8 +31,9 @@ This requires that you have libcurl installed on your system (including C header
 ```
 sudo apt install libcurl4 libcurl4-openssl-dev
 ```
-(NB we recommend using a version of libcurl linked against openssl
-rather than gnutls, since the latter has memory leak problems)
+(NB we use a version of libcurl linked against openssl rather than
+gnutls. This was originally because gnutls had high memory usage; that
+issue has since been resolved, so use whichever you prefer)
 
 
 You can also use the dockerfile included in this repository to run
