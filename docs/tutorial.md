@@ -24,6 +24,7 @@ and two numbers (which will be supplied by the datapool, see below).
 
 ### Context
 
+```{important}
 The context is important for every journey.  It provides a number of
 useful methods for timing/naming of transactions, sending messages and
 defaults to including http functionality from acurl.  Functionality can
@@ -37,6 +38,7 @@ We also see that the config is attached to the context with
 `ctx.config.get('test_msg', 'Not set')` and in this case, the value of
 that config value is sent to the log collector with
 `ctx.send('test_message', content=ctx.config.get('test_msg', 'Not set'))`
+```
 
 ## Datapools
 
