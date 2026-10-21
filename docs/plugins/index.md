@@ -19,8 +19,10 @@ Not every mite package has a page here. `mite_http`, `mite_selenium`,
 without written documentation of their own — a known gap, rather than an
 omission from the list above.
 
-Three of them (`mite_http`, `mite_selenium` and `mite_kafka`) do register stats
-processors, which are listed under {doc}`../stats`.
+Having no page says nothing about whether a package is supported: `mite_http`
+and `mite_kafka` are among the integrations the team actively uses, and are
+listed under {doc}`../stats` along with `mite_selenium`. See the module
+support note on the {doc}`front page <../index>`.
 
 `acurl` is included above for convenience but is not a plugin: it is a separate
 distribution that `mite_http` builds on. Its page explains the distinction.
