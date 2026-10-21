@@ -1,3 +1,9 @@
+TO BE REVISITED: this list predates the documentation reorganisation and is
+now partly out of date - "writing journeys and scenarios" exists as
+docs/journeys.rst and docs/tutorial.md, and "plugin infrastructure" is
+partly covered by docs/plugins/.  Rewrite or drop it before using it as a
+work list.
+
 To write:
 - intro
   - philosophy
