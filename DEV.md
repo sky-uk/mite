@@ -113,20 +113,30 @@ first passing its tests on the exact interpreter it was built for.
 
 # Docs
 
+The docs are built with Sphinx, from a mix of `.rst` and Markdown sources
+under `docs/`. Build them with:
+
+```
+hatch run docs:build
+```
+
+The output lands in `docs/_build/html`. Warnings are treated as errors, so a
+broken cross-reference or a page missing from the toctree in `docs/index.rst`
+will fail the build rather than publish silently. `hatch run docs:clean`
+removes the build directory.
+
 To push a new version of the docs
 
 ```
 # Install graphviz on your system (On MacOS: brew install graphviz)
-pip install sphinx
 # somewhere on your machine
 MITE_DOCS_PATH=`pwd`
 git clone git@github.com:sky-uk/mite.git mite-docs
 cd mite-docs
 git checkout gh-pages
 # cd back to the mite checkout
-cd docs
-make html
-cp -r _build/html/* $MITE_DOCS_PATH/mite-docs
+hatch run docs:build
+cp -r docs/_build/html/* $MITE_DOCS_PATH/mite-docs
 cd $MITE_DOCS_PATH/mite-docs
 git add .
 git commit -m "update docs"
