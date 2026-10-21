@@ -15,7 +15,7 @@ environment like Kubernetes) or on different machines entirely.
 The components that make up mite are:
 
 - controller*: manages a test scenario and feeds tasks to the runners.
-  (For more on how mite tests are organized, see the `README`_)
+  (For more on how mite tests are organized, see :doc:`tutorial`)
 - runner: responsible for injecting the test load into the target system
 - duplicator*: a message router between the controller/runner and their
   downstream components
@@ -28,8 +28,6 @@ The components that make up mite are:
 - exporter*: (aka prometheus exporter) listens for aggregations from the
   stats component, and exposes these via HTTP to a
   :ref:`Prometheus instance <prometheus-doc>`
-
-.. _README: https://github.com/sky-uk/mite#your-first-scenario
 
 The components marked with an asterisk are singletons; the rest can be
 scaled up to meet the demand of the test.  The communication pathways

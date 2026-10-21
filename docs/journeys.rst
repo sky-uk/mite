@@ -6,10 +6,8 @@ Writing mite journeys and scenarios
 Journeys
 --------
 
-The basics of writing mite journey functions are explained in the
-`README`_.
-
-.. _README: https://github.com/sky-uk/mite#journeys
+The basics of writing mite journey functions are explained in
+:doc:`tutorial`.
 
 
 .. _data-creation-scenarios:

@@ -18,6 +18,7 @@ was simple:
    :maxdepth: 2
    :caption: Contents:
 
+   tutorial
    components
    journeys
    volume-model
