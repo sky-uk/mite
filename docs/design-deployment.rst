@@ -73,39 +73,40 @@ most sense to separate the runners from the other components of mite.
 This both avoids interference between the components and makes it easy
 to scale the resources devoted to the runners.
 
-A note on resource usage
-------------------------
+.. admonition:: Resource usage
+    :class: note
 
-In the following sections, we describe our “real-world” usage of mite.
-This infrastructure is somewhat overprovisioned for our needs, but our
-focus has been on the performance of the applications which we test.
-While not wishing to be profligate, we believe it would be a mistake to
-shrink the injection infrastructure close to its performance limits.
-When resource constraints appear in an NFT exercise, they should stem
-from the system under test and not the test apparatus.  Anything other
-than the most occasional exception to this rule is an indication that
-the NFT is not efficiently organized.
+    In the following sections, we describe our “real-world” usage of mite.
+    This infrastructure is somewhat overprovisioned for our needs, but our
+    focus has been on the performance of the applications which we test.
+    While not wishing to be profligate, we believe it would be a mistake to
+    shrink the injection infrastructure close to its performance limits.
+    When resource constraints appear in an NFT exercise, they should stem
+    from the system under test and not the test apparatus.  Anything other
+    than the most occasional exception to this rule is an indication that
+    the NFT is not efficiently organized.
 
-In fact, we have reason to believe that the peak performance of mite, in
-terms of maximum throughput per CPU and memory devoted to running mite,
-is significantly above what is implied by these numbers.  Furthermore,
-our resource usage already compares favorably with other performance
-engineering teams in Sky using different tools, even without having
-performed a dedicated performance tuning of our injection
-infrastructure.
+    In fact, we have reason to believe that the peak performance of mite, in
+    terms of maximum throughput per CPU and memory devoted to running mite,
+    is significantly above what is implied by these numbers.  Furthermore,
+    our resource usage already compares favorably with other performance
+    engineering teams in Sky using different tools, even without having
+    performed a dedicated performance tuning of our injection
+    infrastructure.
 
 
 Single machine
 --------------
 
-In the doc/example/ directory, you will find a docker-compose.yml file
+At the root of the repository you will find a ``docker_compose.yml`` file
 which will deploy a full mite stack, along with supporting programs, on
 your local machine.  While impractical for running a significant load
 injection exercise (due to the performance limitations of a single
 machine), this serves to illustrate the mechanics of getting the
 components to talk to each other and the outside world.  For a concrete,
 configuration-level view of setting up a mite pipeline, the reader is
-referred to the files in that directory.  In the sections that follow,
+referred to that file and to ``local/``, which documents how to swap in
+your own application under test.  In the sections that follow,
 we will discuss a few more abstract considerations for deploying mite in
 different kinds of environments.
 
@@ -171,10 +172,10 @@ Controller    1         2       500MB
 Duplicator    1         2       100MB
 Exporter      1         0.25    100MB
 Runner        50        1       500MB
-Stats         20        1       50MB
+Stats         25        1       50MB
 ==========    ========  ====    ======
 
-For injecting loads of up to 22k tps, we have found 50 runners and 20
+For injecting loads of up to 50k tps, we have found 50 runners and 25
 stats to be more than sufficient.  (We have noted that the abstract
 “CPU” is more performant in this environment than in the VMs in the
 previous section.)  As before, the network bandwidth used by mite in
