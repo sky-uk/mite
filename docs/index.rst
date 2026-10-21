@@ -27,6 +27,10 @@ was simple:
    stats
    influxdb
    otel
+   plugins/playwright
+   plugins/finagle
+   plugins/db_datapool
+   plugins/acurl
 
 
 ..
