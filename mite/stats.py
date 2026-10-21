@@ -176,12 +176,12 @@ _MITE_STATS = [
 
 def _is_first_party_entry_point(entry_point):
     """True if this entry point was registered by mite itself, rather than
-    by a third-party extension (see docs/stats.rst's documented
-    [options.entry_points] mechanism for registering external mite_stats
-    processors). Checked via the distribution name, not the entry point's
-    own name - a third party's entry point can itself be named e.g.
-    'mite_amqp', matching docs/stats.rst's own example, so a name-prefix
-    check would misclassify it."""
+    by a third-party extension (see docs/stats.rst for how external
+    processors register themselves under [project.entry-points.mite_stats]).
+    Checked via the distribution name, not the entry point's own name - a
+    third party's entry point can itself be named e.g. 'mite_amqp',
+    matching docs/stats.rst's own example, so a name-prefix check would
+    misclassify it."""
     dist = getattr(entry_point, "dist", None)
     return dist is not None and dist.name == "mite"
 
