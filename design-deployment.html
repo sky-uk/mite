@@ -217,9 +217,11 @@
 <li class="toctree-l1"><a class="reference internal" href="influxdb.html">InfluxDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="plugins/index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins/http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -326,8 +328,8 @@ the load on a 1:1 basis into the target system.  Therefore, it makes the
 most sense to separate the runners from the other components of mite.
 This both avoids interference between the components and makes it easy
 to scale the resources devoted to the runners.</p>
-<section id="a-note-on-resource-usage">
-<h3>A note on resource usage<a class="headerlink" href="#a-note-on-resource-usage" title="Link to this heading">¶</a></h3>
+<div class="note admonition">
+<p class="admonition-title">Resource usage</p>
 <p>In the following sections, we describe our “real-world” usage of mite.
 This infrastructure is somewhat overprovisioned for our needs, but our
 focus has been on the performance of the applications which we test.
@@ -344,17 +346,18 @@ our resource usage already compares favorably with other performance
 engineering teams in Sky using different tools, even without having
 performed a dedicated performance tuning of our injection
 infrastructure.</p>
-</section>
+</div>
 <section id="single-machine">
 <h3>Single machine<a class="headerlink" href="#single-machine" title="Link to this heading">¶</a></h3>
-<p>In the doc/example/ directory, you will find a docker-compose.yml file
+<p>At the root of the repository you will find a <code class="docutils literal notranslate"><span class="pre">docker_compose.yml</span></code> file
 which will deploy a full mite stack, along with supporting programs, on
 your local machine.  While impractical for running a significant load
 injection exercise (due to the performance limitations of a single
 machine), this serves to illustrate the mechanics of getting the
 components to talk to each other and the outside world.  For a concrete,
 configuration-level view of setting up a mite pipeline, the reader is
-referred to the files in that directory.  In the sections that follow,
+referred to that file and to <code class="docutils literal notranslate"><span class="pre">local/</span></code>, which documents how to swap in
+your own application under test.  In the sections that follow,
 we will discuss a few more abstract considerations for deploying mite in
 different kinds of environments.</p>
 </section>
@@ -433,14 +436,14 @@ with the following resource allocations:</p>
 <td><p>500MB</p></td>
 </tr>
 <tr class="row-even"><td><p>Stats</p></td>
-<td><p>20</p></td>
+<td><p>25</p></td>
 <td><p>1</p></td>
 <td><p>50MB</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>For injecting loads of up to 22k tps, we have found 50 runners and 20
+<p>For injecting loads of up to 50k tps, we have found 50 runners and 25
 stats to be more than sufficient.  (We have noted that the abstract
 “CPU” is more performant in this environment than in the VMs in the
 previous section.)  As before, the network bandwidth used by mite in
@@ -512,7 +515,6 @@ within-cluster communication of the scale that we require.</p>
 <li><a class="reference internal" href="#">Design and deployment</a><ul>
 <li><a class="reference internal" href="#design-of-mite">Design of mite</a></li>
 <li><a class="reference internal" href="#useful-topologies">Useful topologies</a><ul>
-<li><a class="reference internal" href="#a-note-on-resource-usage">A note on resource usage</a></li>
 <li><a class="reference internal" href="#single-machine">Single machine</a></li>
 <li><a class="reference internal" href="#virtual-machines">Virtual machines</a></li>
 <li><a class="reference internal" href="#the-cloud">The Cloud</a></li>

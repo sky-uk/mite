@@ -217,9 +217,11 @@
 <li class="toctree-l1"><a class="reference internal" href="influxdb.html">InfluxDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="plugins/index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins/http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -294,7 +296,7 @@ accessible to the prometheus from a firewall perspective).</p>
 <h2>Grafana<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <p>The grafana instance you are using will need to be set up with your
 prometheus as a data source.  <a class="reference external" href="https://prometheus.io/docs/visualization/grafana/">The Prometheus documentation</a> has an
-example of how to accomplish this.  We provide <a class="reference external" href="https://github.com/sky-uk/id-mite-nft/blob/master/provisioning/grafana/dashboard-json/mite.json">a dashboard</a> which is
+example of how to accomplish this.  We provide <a class="reference external" href="https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/grafana_dashboard_template.json">a dashboard</a> which is
 pre-configured for mite.  The dashboard assumes that you have several
 applications under test, which will have their measurements tagged in
 Prometheus with an <code class="docutils literal notranslate"><span class="pre">application</span></code> label.  You will need to edit the
@@ -303,6 +305,9 @@ applications.  (Otherwise, you can take out the <code class="docutils literal no
 query from all the dashboard panels).  As the grafana documentation
 points out, you will also need to edit the datasource of the dashboard
 to match the prometheus instance you configured grafana with.</p>
+<p>The docker compose stack at the root of the repository provisions <a class="reference external" href="https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/mite_docker.json">its own
+dashboard</a> instead, already wired to the prometheus in that stack, so there
+is nothing to edit if you only want to see mite reporting locally.</p>
 </section>
 </section>
 

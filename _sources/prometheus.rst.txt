@@ -51,6 +51,11 @@ query from all the dashboard panels).  As the grafana documentation
 points out, you will also need to edit the datasource of the dashboard
 to match the prometheus instance you configured grafana with.
 
+The docker compose stack at the root of the repository provisions `its own
+dashboard`_ instead, already wired to the prometheus in that stack, so there
+is nothing to edit if you only want to see mite reporting locally.
+
 .. _The Prometheus documentation: https://prometheus.io/docs/visualization/grafana/
-.. _a dashboard: https://github.com/sky-uk/id-mite-nft/blob/master/provisioning/grafana/dashboard-json/mite.json
+.. _a dashboard: https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/grafana_dashboard_template.json
+.. _its own dashboard: https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/mite_docker.json
 .. _dashboard variables: https://grafana.com/docs/reference/templating/

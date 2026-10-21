@@ -217,9 +217,11 @@
 <li class="toctree-l1"><a class="reference internal" href="influxdb.html">InfluxDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="plugins/index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins/http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -275,6 +277,22 @@ performance tests as code, and bring these same techniques to bear.</p></li>
 <li><p>Snakiness.  Python is the best language for us to accomplish our
 goals for the project.</p></li>
 </ol>
+<p>We use mite for:</p>
+<ul class="simple">
+<li><p>application performance testing — soak, peak and scalability runs</p></li>
+<li><p>exercising our internal Kafka consumers and producers</p></li>
+<li><p>writing directly into a database, either to test the database itself
+or to build the datapools a test will later draw on</p></li>
+</ul>
+<div class="note admonition">
+<p class="admonition-title">Module support</p>
+<p>The Kafka, HTTP and InfluxDB integrations are the ones we actively
+use and support.</p>
+<p>The rest still work and are documented here deliberately: other teams
+use them, and we would rather they stay discoverable than quietly
+disappear.  Expect less from us on those, and contributions to any of
+them are welcome.</p>
+</div>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
@@ -343,9 +361,11 @@ goals for the project.</p></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="plugins/index.html">Plugins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins/http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>

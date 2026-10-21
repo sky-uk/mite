@@ -217,9 +217,11 @@
 <li class="toctree-l1"><a class="reference internal" href="influxdb.html">InfluxDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="plugins/index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugins/http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -283,6 +285,8 @@ and waits for half a second.  This journey takes 3 arguments, a context
 and two numbers (which will be supplied by the datapool, see below).</p>
 <section id="context">
 <h3>Context<a class="headerlink" href="#context" title="Link to this heading">¶</a></h3>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
 <p>The context is important for every journey.  It provides a number of
 useful methods for timing/naming of transactions, sending messages and
 defaults to including http functionality from acurl.  Functionality can
@@ -293,6 +297,7 @@ indented block.</p>
 <code class="docutils literal notranslate"><span class="pre">ctx.config.get('test_msg',</span> <span class="pre">'Not</span> <span class="pre">set')</span></code> and in this case, the value of
 that config value is sent to the log collector with
 <code class="docutils literal notranslate"><span class="pre">ctx.send('test_message',</span> <span class="pre">content=ctx.config.get('test_msg',</span> <span class="pre">'Not</span> <span class="pre">set'))</span></code></p>
+</div>
 </section>
 </section>
 <section id="datapools">

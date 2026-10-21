@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Playwright" href="playwright.html"><link rel="prev" title="OpenTelemetry" href="../otel.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="HTTP" href="http.html"><link rel="prev" title="OpenTelemetry" href="../otel.html">
         <link rel="prefetch" href="../_static/mite.png" as="image">
         <link rel="prefetch" href="../_static/mite.png" as="image">
 
@@ -217,9 +217,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../influxdb.html">InfluxDB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Plugins</a><input aria-label="Toggle navigation of Plugins" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="http.html">HTTP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="amqp.html">AMQP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -268,20 +270,24 @@ decorator that dependency-injects an API object onto the journey context, so a
 journey can talk to a particular protocol or tool.</p>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="http.html">HTTP</a></li>
 <li class="toctree-l1"><a class="reference internal" href="playwright.html">Playwright</a></li>
 <li class="toctree-l1"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amqp.html">AMQP</a></li>
 <li class="toctree-l1"><a class="reference internal" href="acurl.html">acurl</a></li>
 </ul>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not every mite package has a page here. <code class="docutils literal notranslate"><span class="pre">mite_http</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>,
-<code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_amqp</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_websocket</span></code> and <code class="docutils literal notranslate"><span class="pre">mite_browser</span></code> currently ship
-without written documentation of their own — a known gap, rather than an
-omission from the list above.</p>
-<p>Three of them (<code class="docutils literal notranslate"><span class="pre">mite_http</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code> and <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>) do register stats
-processors, which are listed under <a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a>.</p>
+<p>Not every mite package has a page here. <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>,
+<code class="docutils literal notranslate"><span class="pre">mite_websocket</span></code> and <code class="docutils literal notranslate"><span class="pre">mite_browser</span></code> currently ship without written
+documentation of their own — a known gap, rather than an omission from the
+list above.</p>
+<p>Having no page says nothing about whether a package is supported: <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>
+is among the integrations the team actively uses, and is listed under
+<a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a> along with <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>. See the module support note on
+the <a class="reference internal" href="../index.html"><span class="doc">front page</span></a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">acurl</span></code> is included above for convenience but is not a plugin: it is a separate
 distribution that <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> builds on. Its page explains the distinction.</p>
 </div>
@@ -292,12 +298,12 @@ distribution that <code class="docutils literal notranslate"><span class="pre">m
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="playwright.html">
+          <a class="next-page" href="http.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Playwright</div>
+                <div class="title">HTTP</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
