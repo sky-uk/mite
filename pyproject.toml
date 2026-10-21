@@ -78,6 +78,7 @@ influxdb = [
 docs = [
     "sphinx",
     "myst-parser",
+    "furo",
 ]
 
 # Future-facing extras for mite 3.0's dependency slimming. Every package listed
@@ -227,6 +228,7 @@ detached = true
 dependencies = [
     "sphinx",
     "myst-parser",
+    "furo",
 ]
 
 [tool.hatch.envs.docs.scripts]
