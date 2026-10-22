@@ -82,14 +82,22 @@ class TestModularity:
         with mock.patch("mite.stats.logger.error") as logging_error, mock.patch(
             "importlib.metadata.entry_points",
             return_value=[
-                EntryPointMock(group="x", dist_name="mite", raises=ImportError("no acurl")),
+                EntryPointMock(
+                    group="x",
+                    dist_name="mite",
+                    raises=ModuleNotFoundError(
+                        "mite_http requires the 'http' extra: pip install mite[http]"
+                    ),
+                ),
                 EntryPointMock(group="y"),
             ],
         ):
             s = Stats(None)
             assert s._all_stats == ["y"]
             logging_error.assert_called_once()
-            assert "x" in logging_error.call_args[0][0]
+            message = logging_error.call_args[0][0]
+            assert "x" in message
+            assert "pip install mite[http]" in message
 
     def test_first_party_other_exception_is_raised(self):
         with mock.patch(
