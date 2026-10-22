@@ -52,10 +52,8 @@ class EntryPointMock:
         return [self.__val]
 
 
-# Every TestModularity test patches mite.stats._FIRST_PARTY_STATS to {}
-# (unless it's specifically testing first-party loading) so these tests
-# exercise only the entry-point scanning side, undisturbed by whatever
-# mite's own six processors happen to do at the time.
+# Each test patches _FIRST_PARTY_STATS to {} (unless testing first-party
+# loading) to isolate entry-point scanning from mite's own processors.
 class TestModularity:
     def test_modularity(self):
         with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
@@ -85,8 +83,7 @@ class TestModularity:
             assert s._all_stats == ["y"]
 
     def test_first_party_loaded_from_registry_not_entry_points(self):
-        """mite's own stats load via _FIRST_PARTY_STATS's "module:attr"
-        spec, resolved by _load_spec - not via importlib.metadata at all."""
+        # mite's own stats load via _FIRST_PARTY_STATS, not importlib.metadata.
         with mock.patch(
             "mite.stats._FIRST_PARTY_STATS", {"mock_stat": "mocks.mock_stats:STATS"}
         ), mock.patch(
@@ -104,19 +101,16 @@ class TestModularity:
             return_value=[EntryPointMock(group="mite_http"), EntryPointMock(group="y")],
         ):
             s = Stats(None)
-            # The reserved-name entry point is skipped, not loaded alongside
-            # the first-party one - otherwise mock_stats.STATS would appear
-            # twice in _all_stats.
+            # Reserved-name entry point is skipped, not loaded alongside the
+            # first-party one, or mock_stats.STATS would appear twice.
             assert s._all_stats == ["mock_stat", "y"]
             logging_warning.assert_called_once()
             assert "mite_http" in logging_warning.call_args[0][0]
 
     def test_import_error_is_a_warning(self):
-        # Drives this via a third-party entry point (not _FIRST_PARTY_STATS)
-        # deliberately: the ImportError branch keys off _ABSENCE_EXPECTED,
-        # not provenance, so there is no first/third-party distinction to
-        # test here - see test_import_error_for_an_expected_absence_is_a_debug_log
-        # below for the one thing that *does* vary the log level.
+        # Uses a third-party entry point: the ImportError branch keys off
+        # _ABSENCE_EXPECTED, not provenance, so there's nothing first-party
+        # specific to test here.
         with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
             "mite.stats.logger.log"
         ) as logging_log, mock.patch(
@@ -140,9 +134,8 @@ class TestModularity:
             assert "pip install mite[http]" in message
 
     def test_import_error_for_an_expected_absence_is_a_debug_log(self):
-        """mite_playwright isn't part of mite's default install (see
-        pyproject.toml), so a missing dependency for it specifically is
-        expected, not worth warning about."""
+        # mite_playwright isn't part of mite's default install, so a
+        # missing dependency for it is expected, not worth warning about.
         with mock.patch(
             "mite.stats._FIRST_PARTY_STATS", {"mite_playwright": "does.not:exist"}
         ), mock.patch("mite.stats.logger.log") as logging_log, mock.patch(
@@ -156,11 +149,8 @@ class TestModularity:
             assert "mite_playwright" in message
 
     def test_first_party_other_exception_is_raised(self):
-        # Exercises the real _load_spec/_iter_stats_sources path rather
-        # than mocking it away: "NOPE" doesn't exist on mocks.mock_stats
-        # (which only defines STATS), so getattr() raises a genuine
-        # AttributeError - the same kind of real bug this is meant to
-        # guard against, not a synthetic stand-in for one.
+        # "NOPE" doesn't exist on mocks.mock_stats, so this exercises a
+        # real AttributeError rather than a mocked-in one.
         with mock.patch(
             "mite.stats._FIRST_PARTY_STATS", {"x": "mocks.mock_stats:NOPE"}
         ), mock.patch("importlib.metadata.entry_points", return_value=[]):
@@ -205,28 +195,19 @@ class TestModularity:
             assert s._all_stats == ["x"]
 
     def test_first_party_stats_actually_load(self):
-        """Unpatched - exercises the real _FIRST_PARTY_STATS specs, not a
-        mock standing in for them. Guards against the specs drifting from
-        a future mite_*/stats.py rename or move - a mismatch here is a
-        silent "this integration's metrics are never aggregated", not an
-        import error, since load_stats_entry_points() treats a missing
-        stats source as indistinguishable from a legitimately absent one.
-
-        mite_playwright is deliberately not asserted on: playwright isn't
-        part of the default install (see pyproject.toml), so its absence
-        here is expected, not a regression - see _ABSENCE_EXPECTED."""
+        # Unpatched: guards against _FIRST_PARTY_STATS specs drifting from
+        # a future mite_*/stats.py rename or move. mite_playwright is
+        # skipped - it's not part of the default install, so its absence
+        # here is expected, not a regression.
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
             s = Stats(None)
         future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
         assert not future_warnings, future_warnings
         names = [stat.name for stat in s._all_stats]
-        # mite_selenium_page_load_tcp_time_seconds appears twice: a
-        # pre-existing duplicate entry in mite_selenium/stats.py's
-        # _PAGE_LOAD_METRICS list, unrelated to this change - not asserting
-        # full uniqueness here so this test doesn't mask that separately
-        # reported bug, but still asserting no *entry point* produced a
-        # duplicate (which is what this change could plausibly break).
+        # mite_selenium_page_load_tcp_time_seconds appears twice due to a
+        # pre-existing duplicate in mite_selenium/stats.py, unrelated to
+        # this change - not asserted on beyond allowing it here.
         duplicates = {n for n in names if names.count(n) > 1}
         assert duplicates <= {"mite_selenium_page_load_tcp_time_seconds"}, duplicates
         for expected in (
