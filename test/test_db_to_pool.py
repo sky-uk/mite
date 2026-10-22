@@ -1,9 +1,11 @@
+import importlib
 import sqlite3
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
 
+import mite_db_datapool.db_to_pool as db_to_pool_module
 from mite_db_datapool.db_to_pool import (
     DataPoolExhausted,
     DBIterableDataPool,
@@ -156,18 +158,9 @@ async def test_recyclable_with_max_size(setup_large_test_db):
     assert len(recycle_pool._available) == 2
 
 
-def _stub_engine_with_no_rows():
-    """A fake engine whose query returns zero rows so the pool is exhausted
-    after one iteration without touching a real DB. preload_minimum=0 would
-    not work instead: it is falsy, so it takes the DB-draining branch rather
-    than skipping the load loop."""
-    engine = MagicMock()
-    conn = engine.connect.return_value.__enter__.return_value
-    conn.execute.return_value.fetchall.return_value = []
-    return engine
-
-
-def test_warns_on_use():
-    engine = _stub_engine_with_no_rows()
+# Deliberately last in the file - importlib.reload() rebinds module
+# attributes and creates new class objects, so anything defined after it
+# could be affected.
+def test_warns_on_import():
     with pytest.warns(FutureWarning, match="mite_db_datapool will require"):
-        DBIterableDataPool(engine, "SELECT * FROM test_table")
+        importlib.reload(db_to_pool_module)

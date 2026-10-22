@@ -1,8 +1,10 @@
+import importlib
 from unittest.mock import Mock
 
 import pytest
 from mocks.mock_context import MockContext
 
+import mite_browser as mite_browser_pkg
 from mite_browser import (
     BaseFormField,
     Browser,
@@ -101,20 +103,12 @@ async def test_decorator():
     await journey(MockContext())
 
 
-def test_warns_on_use():
-    # Applying @browser_decorator() to a real function (not a bare
-    # browser_decorator() call with no function argument) exercises the real
-    # path where both mite_browser's own warning and mite_http's transitive
-    # warning fire - @mite_http decorates `wrapper` synchronously inside
-    # wrapper_factory, at decoration time, not at journey invocation time.
-    with pytest.warns(FutureWarning) as record:
-
-        @browser_decorator()
-        async def journey(ctx):
-            pass
-
-    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
-    assert len(future_warnings) == 2
-    messages = [str(w.message) for w in future_warnings]
-    assert any("mite_browser" in m for m in messages)
-    assert any("mite_http" in m for m in messages)
+# Deliberately last in the file - importlib.reload() rebinds module
+# attributes and creates new class objects, so anything defined after it
+# could be affected. Only mite_browser's own warning is expected here:
+# reloading mite_browser re-runs `from mite_http import mite_http`, but
+# mite_http itself is already in sys.modules and isn't reloaded, so its
+# module-level warning doesn't refire.
+def test_warns_on_import():
+    with pytest.warns(FutureWarning, match="mite_browser will require"):
+        importlib.reload(mite_browser_pkg)

@@ -1,11 +1,10 @@
+import importlib
+
 import pytest
 
-from mite_finagle import mite_finagle
+import mite_finagle as mite_finagle_pkg
 
 
-def test_warns_on_use():
+def test_warns_on_import():
     with pytest.warns(FutureWarning, match="mite_finagle will require"):
-
-        @mite_finagle
-        async def foo(ctx):
-            pass
+        importlib.reload(mite_finagle_pkg)

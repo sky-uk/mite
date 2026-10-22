@@ -1,9 +1,11 @@
+import importlib
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
 from websockets.exceptions import WebSocketException
 
+import mite_websocket as mite_websocket_pkg
 from mite_websocket import WebsocketError, mite_websocket
 
 
@@ -94,9 +96,9 @@ async def test_mite_websocket_exception_handling():
         await dummy_journey(context)
 
 
-def test_warns_on_use():
+# Deliberately last in the file - importlib.reload() rebinds module
+# attributes and creates new class objects, so anything defined after it
+# could be affected.
+def test_warns_on_import():
     with pytest.warns(FutureWarning, match="mite_websocket will require"):
-
-        @mite_websocket
-        def foo(ctx):
-            pass
+        importlib.reload(mite_websocket_pkg)

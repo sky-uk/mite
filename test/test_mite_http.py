@@ -1,7 +1,6 @@
 import asyncio
 import importlib
 import os
-import warnings
 from unittest.mock import patch
 
 import pytest
@@ -98,25 +97,9 @@ async def test_decorator_eventloop_memoization():
     assert asyncio.get_running_loop() in SessionPool._session_pools
 
 
-def test_warns_on_use():
+# Deliberately last in the file - importlib.reload() rebinds module
+# attributes and creates new class objects, so anything defined after it
+# could be affected.
+def test_warns_on_import():
     with pytest.warns(FutureWarning, match="mite_http will require"):
-
-        @mite_http
-        def foo(ctx):
-            pass
-
-
-# Deliberately the only test of this kind, and deliberately last in the
-# file - importlib.reload() rebinds module attributes and creates new
-# class objects, so anything defined after it could be affected. This
-# assertion was previously duplicated across all seven integration
-# packages. It guards a narrow case: a duplicate import-time warning
-# added alongside the first-use one. A warning *moved* to module scope is
-# already caught, since each test module imports its package at
-# collection time and the warning would fire outside pytest.warns.
-def test_no_warning_on_bare_import():
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
         importlib.reload(mite_http_pkg)
-    future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
-    assert not future_warnings
