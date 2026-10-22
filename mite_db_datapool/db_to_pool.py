@@ -2,7 +2,12 @@ import logging
 import warnings
 from collections import deque
 
-from sqlalchemy import text
+try:
+    from sqlalchemy import text
+except ModuleNotFoundError as e:
+    raise ModuleNotFoundError(
+        "mite_db_datapool requires the 'db' extra: pip install mite[db]"
+    ) from e
 
 from mite.datapools import DataPoolExhausted, DataPoolItem
 

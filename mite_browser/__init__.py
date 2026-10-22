@@ -4,7 +4,12 @@ import warnings
 from functools import wraps
 from urllib.parse import urlencode, urljoin
 
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ModuleNotFoundError as e:
+    raise ModuleNotFoundError(
+        "mite_browser requires the 'browser' extra: pip install mite[browser]"
+    ) from e
 
 from mite import ensure_fixed_separation
 from mite.exceptions import MiteError

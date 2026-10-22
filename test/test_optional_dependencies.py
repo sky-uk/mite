@@ -47,6 +47,10 @@ import %s
         ("mite_selenium", "selenium", "pip install mite[selenium]"),
         ("mite_finagle", "thrift", "pip install mite[finagle]"),
         ("mite_playwright", "playwright", "pip install playwright"),
+        ("mite_amqp", "aio_pika", "pip install mite[amqp]"),
+        ("mite_websocket", "websockets", "pip install mite[websocket]"),
+        ("mite_db_datapool", "sqlalchemy", "pip install mite[db]"),
+        ("mite_browser", "bs4", "pip install mite[browser]"),
         # mite_browser imports mite_http at module level, so a missing
         # acurl - mite_http's own optional dependency - propagates
         # transitively, with mite_http's own message.
