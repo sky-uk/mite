@@ -112,14 +112,6 @@ package:
    It is also possible to specify the equivalent information in
    ``setup.py`` if that is the configuration file your project uses.
 
-.. note::
-
-   The names ``mite``, ``mite_http``, ``mite_kafka``, ``mite_selenium``,
-   ``mite_finagle``, and ``mite_playwright`` are reserved for miteʼs own
-   stats processors, which are not loaded via this entry point mechanism.
-   Registering one of these names yourself will be ignored, with a warning
-   logged at startup.
-
 
 Configuring custom stats
 ------------------------
