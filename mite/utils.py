@@ -1,6 +1,5 @@
 import asyncio
 import importlib
-import warnings
 
 import msgpack
 
@@ -25,20 +24,6 @@ async def sleep(delay, always=False, **kwargs):  # pragma: no cover
 def _msg_backend_module(opts):
     msg_backend = opts["--message-backend"]
     if msg_backend == "nanomsg":
-        # TODO: tighten to "pip install mite[nanomsg]" once that extra exists.
-        # NOTE: fires at first use, not import time, unlike the other
-        # integrations' warnings (see mite_http/__init__.py for the general
-        # rationale). TODO(packaging): revisit - this one is runtime-
-        # conditional on --message-backend, not on package import, and
-        # mite/__init__.py imports mite.utils unconditionally, so a
-        # module-level warning here would fire in every mite process
-        # regardless of backend. Open question for the team.
-        warnings.warn(
-            "nanomsg support will move to an optional extra in a future mite "
-            "3.0 release; no functional change today.",
-            FutureWarning,
-            stacklevel=2,
-        )
         from . import nanomsg
 
         return nanomsg
