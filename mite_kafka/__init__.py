@@ -4,13 +4,12 @@ import warnings
 from contextlib import asynccontextmanager
 from functools import wraps
 
-from mite._optional import require
-
 try:
     from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-except ModuleNotFoundError:  # pragma: no cover - exercised only on a slim install
-    AIOKafkaConsumer = None
-    AIOKafkaProducer = None
+except ModuleNotFoundError as e:
+    raise ModuleNotFoundError(
+        "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
+    ) from e
 
 
 class KafkaProducer:
@@ -76,7 +75,6 @@ async def _kafka_context_manager(ctx):
 
 
 def mite_kafka(func):
-    require(AIOKafkaProducer, package="mite_kafka", extra="kafka")
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py.
     warnings.warn(
@@ -161,7 +159,6 @@ def mite_kafka_managed_adapter(
     if security_protocol is None:
         security_protocol = "PLAINTEXT"
 
-    require(AIOKafkaProducer, package="mite_kafka", extra="kafka")
     # NOTE: fires at first use, not import time - see rationale in
     # mite_http/__init__.py. Two independent entry points into mite_kafka
     # (mite_kafka and mite_kafka_managed_adapter) - either is a valid "first use".
