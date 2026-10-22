@@ -1,5 +1,16 @@
 # Database datapools
 
+```{note}
+The integrations the team actively uses and supports are listed on the
+{doc}`front page <../index>`: Kafka, HTTP and InfluxDB. Database datapools
+are not currently one of them, but it remains available, documented, and
+open to contributions — if you rely on it or want to improve it, it's a
+good candidate.
+```
+
+Install: `pip install mite[db]` (no functional change today — every mite
+install already includes it; this will matter starting in mite 3.0).
+
 ## Overview
 
 `mite_db_datapool` provides database-backed data pools for Mite testing scenarios. It allows you to load test data directly from databases and use it in your load testing journeys.
