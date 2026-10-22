@@ -21,6 +21,14 @@ except ModuleNotFoundError as e:
 from mite.exceptions import MiteError
 from mite.utils import spec_import
 
+warnings.warn(
+    "mite_selenium will require 'pip install mite[selenium]' starting in "
+    "mite 3.0 - or mite[selenium_wire] if you use wire=True; "
+    "no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -252,6 +260,8 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
         )
 
     def _start(self):
+        # FIXME(packaging): see the wire=True guard in mite_selenium()
+        # below - this import is currently broken on a stock install.
         module = importlib.import_module("seleniumwire.webdriver")
         self._context.browser = self
         addr = socket.gethostbyname(socket.gethostname())
@@ -295,6 +305,26 @@ async def _selenium_context_manager(context, wire):
 def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
         if wire:
+            # FIXME(packaging): this guard conflates "seleniumwire isn't
+            # installed" with "seleniumwire is installed but broken" - both
+            # raise ModuleNotFoundError here, but for different modules.
+            # In this repo's own test/dev environment, seleniumwire IS
+            # installed and this import still fails: selenium-wire==4.6.5
+            # imports blinker._saferef, which was removed in blinker>=1.9;
+            # mite's own flask>=3.0 pin resolves to flask 3.1.3, which
+            # requires blinker>=1.9.0. No selenium-wire release fixes this -
+            # 5.1.0 (latest, Oct 2022) still declares an unbounded
+            # blinker>=1.4, and additionally requires selenium>=4.0.0, which
+            # mite's own selenium>=3.141,<4 pin forbids. Upstream has had no
+            # release since Oct 2022. wire=True is non-functional on a
+            # current `pip install mite` as a result - needs a 3.0.0
+            # decision (drop selenium-wire, pin flask back, or something
+            # else), not a packaging-prep fix. Pre-existing on master;
+            # unrelated to this file's deprecation-warning changes.
+            # Once resolved, this except should also raise
+            # ModuleNotFoundError (not bare Exception) with `from e`, so a
+            # future, different break in this import surfaces its own
+            # traceback instead of always reporting "extra not installed".
             try:
                 importlib.import_module("seleniumwire.webdriver")
             except ModuleNotFoundError:
@@ -302,21 +332,6 @@ def mite_selenium(*args, wire=False):
                     "The wire=True argument to mite_selenium is only supported "
                     + "if mite was installed with the 'selenium_wire' extra"
                 )
-
-        # NOTE: fires at first use, not import time, unlike the other
-        # integrations' warnings (see mite_http/__init__.py for the general
-        # rationale). TODO(packaging): revisit - the wire flag means this
-        # warning has two possible messages ([selenium] vs [selenium_wire]),
-        # which a module-level warning can't express. Open question for the
-        # team: split into two warnings guarded by a module-level default,
-        # or accept call-time here as the one exception.
-        extra = "selenium_wire" if wire else "selenium"
-        warnings.warn(
-            f"mite_selenium will require 'pip install mite[{extra}]' starting "
-            "in mite 3.0; no functional change today.",
-            FutureWarning,
-            stacklevel=2,
-        )
 
         @wraps(func)
         async def wrapper(ctx, *args, **kwargs):
