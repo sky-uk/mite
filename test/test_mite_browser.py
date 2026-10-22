@@ -1,4 +1,6 @@
 import importlib
+import subprocess
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -14,6 +16,31 @@ from mite_browser import (
     _field_is_disabled,
     browser_decorator,
 )
+
+# Runs in a subprocess - see test_mite_http.py's test_raises_when_acurl_missing
+# for why this isn't done via importlib.reload() in-process.
+_BLOCK_ACURL_AND_IMPORT = """
+import builtins
+real_import = builtins.__import__
+def fake_import(name, *args, **kwargs):
+    if name == "acurl":
+        raise ModuleNotFoundError(name)
+    return real_import(name, *args, **kwargs)
+builtins.__import__ = fake_import
+import mite_browser
+"""
+
+
+def test_raises_when_acurl_missing():
+    # mite_browser imports mite_http at module level, so a missing acurl -
+    # mite_http's own optional dependency - propagates transitively.
+    result = subprocess.run(
+        [sys.executable, "-c", _BLOCK_ACURL_AND_IMPORT],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "pip install mite[http]" in result.stderr
 
 
 def test_fake_form_field_create():

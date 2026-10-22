@@ -2,16 +2,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Check if playwright is available. mite_playwright itself always imports
-# successfully now - its playwright import is deferred to first use - so
-# the availability check must probe playwright directly rather than
-# mite_playwright.
+# Check if playwright is available. mite_playwright itself raises
+# ModuleNotFoundError at import time when playwright isn't installed, so
+# that import is the availability check.
 try:
-    import playwright  # noqa: F401
-
     from mite_playwright import mite_playwright
     PLAYWRIGHT_AVAILABLE = True
-except ImportError:
+except ModuleNotFoundError:
     PLAYWRIGHT_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
