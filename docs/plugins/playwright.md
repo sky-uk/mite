@@ -2,6 +2,14 @@
 
 A transparent wrapper for Playwright that automatically collects comprehensive performance metrics during web automation testing.
 
+```{note}
+The integrations the team actively uses and supports are listed on the
+{doc}`front page <../index>`: Kafka, HTTP and InfluxDB. Playwright is not
+currently one of them, but it remains available, documented, and open to
+contributions — if you rely on it or want to improve it, it's a good
+candidate.
+```
+
 ## Overview
 
 `mite_playwright` provides seamless integration with Playwright, automatically capturing detailed performance metrics including DNS timing, TCP/TLS handshake times, paint events, and browser performance data without requiring any changes to your existing Playwright code.
