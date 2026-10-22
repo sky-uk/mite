@@ -2,13 +2,18 @@
 
 `mite_finagle` contains the infrastructure for injecting load into finagle
 services with mite.  Specifically, it implements the thrift binary RPC
-format wrapped in finagleʼs mux framing protocol.  In order to use it
-you must install mite with the `finagle` extra:
+format wrapped in finagleʼs mux framing protocol.
 
+```{note}
+The integrations the team actively uses and supports are listed on the
+{doc}`front page <../index>`: Kafka, HTTP and InfluxDB. Finagle is not
+currently one of them, but it remains available, documented, and open to
+contributions — if you rely on it or want to improve it, it's a good
+candidate.
 ```
-cd /path/to/mite
-pip install ".[finagle]"
-```
+
+Install: `pip install mite[finagle]` (no functional change today — every
+mite install already includes it; this will matter starting in mite 3.0).
 
 ## Design
 

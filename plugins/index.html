@@ -218,6 +218,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Plugins</a><input aria-label="Toggle navigation of Plugins" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="http.html">HTTP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kafka.html">Kafka</a></li>
 <li class="toctree-l2"><a class="reference internal" href="playwright.html">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
@@ -271,6 +272,7 @@ journey can talk to a particular protocol or tool.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="http.html">HTTP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kafka.html">Kafka</a></li>
 <li class="toctree-l1"><a class="reference internal" href="playwright.html">Playwright</a></li>
 <li class="toctree-l1"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
@@ -280,14 +282,14 @@ journey can talk to a particular protocol or tool.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not every mite package has a page here. <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>,
-<code class="docutils literal notranslate"><span class="pre">mite_websocket</span></code> and <code class="docutils literal notranslate"><span class="pre">mite_browser</span></code> currently ship without written
-documentation of their own — a known gap, rather than an omission from the
-list above.</p>
-<p>Having no page says nothing about whether a package is supported: <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>
-is among the integrations the team actively uses, and is listed under
-<a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a> along with <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>. See the module support note on
-the <a class="reference internal" href="../index.html"><span class="doc">front page</span></a>.</p>
+<p>Not every mite package has a page here. <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_websocket</span></code> and
+<code class="docutils literal notranslate"><span class="pre">mite_browser</span></code> currently ship without written documentation of their own — a
+known gap, rather than an omission from the list above.</p>
+<p>Having no page says nothing about whether a package is supported: <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>
+is listed as a registered stats processor under <a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a> despite having
+no page here. See the module support note on the
+<a class="reference internal" href="../index.html"><span class="doc">front page</span></a> for which integrations the team actively
+maintains.</p>
 <p><code class="docutils literal notranslate"><span class="pre">acurl</span></code> is included above for convenience but is not a plugin: it is a separate
 distribution that <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> builds on. Its page explains the distinction.</p>
 </div>

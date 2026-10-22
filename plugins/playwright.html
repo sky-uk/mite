@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Finagle" href="finagle.html"><link rel="prev" title="HTTP" href="http.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Finagle" href="finagle.html"><link rel="prev" title="Kafka" href="kafka.html">
         <link rel="prefetch" href="../_static/mite.png" as="image">
         <link rel="prefetch" href="../_static/mite.png" as="image">
 
@@ -218,6 +218,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="http.html">HTTP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kafka.html">Kafka</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Playwright</a></li>
 <li class="toctree-l2"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
@@ -266,6 +267,14 @@
           <section id="playwright">
 <h1>Playwright<a class="headerlink" href="#playwright" title="Link to this heading">¶</a></h1>
 <p>A transparent wrapper for Playwright that automatically collects comprehensive performance metrics during web automation testing.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The integrations the team actively uses and supports are listed on the
+<a class="reference internal" href="../index.html"><span class="doc">front page</span></a>: Kafka, HTTP and InfluxDB. Playwright is not
+currently one of them, but it remains available, documented, and open to
+contributions — if you rely on it or want to improve it, it’s a good
+candidate.</p>
+</div>
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">mite_playwright</span></code> provides seamless integration with Playwright, automatically capturing detailed performance metrics including DNS timing, TCP/TLS handshake times, paint events, and browser performance data without requiring any changes to your existing Playwright code.</p>
@@ -495,14 +504,14 @@ playwright<span class="w"> </span>install
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="http.html">
+          <a class="prev-page" href="kafka.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">HTTP</div>
+                <div class="title">Kafka</div>
                 
               </div>
             </a>

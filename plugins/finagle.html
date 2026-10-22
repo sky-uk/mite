@@ -218,6 +218,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../otel.html">OpenTelemetry</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Plugins</a><input aria-label="Toggle navigation of Plugins" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="http.html">HTTP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kafka.html">Kafka</a></li>
 <li class="toctree-l2"><a class="reference internal" href="playwright.html">Playwright</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
@@ -267,12 +268,17 @@
 <h1>Finagle<a class="headerlink" href="#finagle" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">mite_finagle</span></code> contains the infrastructure for injecting load into finagle
 services with mite.  Specifically, it implements the thrift binary RPC
-format wrapped in finagleʼs mux framing protocol.  In order to use it
-you must install mite with the <code class="docutils literal notranslate"><span class="pre">finagle</span></code> extra:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">mite</span>
-<span class="n">pip</span> <span class="n">install</span> <span class="s2">".[finagle]"</span>
-</pre></div>
+format wrapped in finagleʼs mux framing protocol.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The integrations the team actively uses and supports are listed on the
+<a class="reference internal" href="../index.html"><span class="doc">front page</span></a>: Kafka, HTTP and InfluxDB. Finagle is not
+currently one of them, but it remains available, documented, and open to
+contributions — if you rely on it or want to improve it, it’s a good
+candidate.</p>
 </div>
+<p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[finagle]</span></code> (no functional change today — every
+mite install already includes it; this will matter starting in mite 3.0).</p>
 <section id="design">
 <h2>Design<a class="headerlink" href="#design" title="Link to this heading">¶</a></h2>
 <p>Unlike http which might be the paradigm of performance testing you are

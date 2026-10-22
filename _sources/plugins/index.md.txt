@@ -8,6 +8,7 @@ journey can talk to a particular protocol or tool.
 :maxdepth: 1
 
 http
+kafka
 playwright
 finagle
 db_datapool
@@ -16,15 +17,15 @@ acurl
 ```
 
 ```{note}
-Not every mite package has a page here. `mite_selenium`, `mite_kafka`,
-`mite_websocket` and `mite_browser` currently ship without written
-documentation of their own — a known gap, rather than an omission from the
-list above.
+Not every mite package has a page here. `mite_selenium`, `mite_websocket` and
+`mite_browser` currently ship without written documentation of their own — a
+known gap, rather than an omission from the list above.
 
-Having no page says nothing about whether a package is supported: `mite_kafka`
-is among the integrations the team actively uses, and is listed under
-{doc}`../stats` along with `mite_selenium`. See the module support note on
-the {doc}`front page <../index>`.
+Having no page says nothing about whether a package is supported: `mite_selenium`
+is listed as a registered stats processor under {doc}`../stats` despite having
+no page here. See the module support note on the
+{doc}`front page <../index>` for which integrations the team actively
+maintains.
 
 `acurl` is included above for convenience but is not a plugin: it is a separate
 distribution that `mite_http` builds on. Its page explains the distinction.
