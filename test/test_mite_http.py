@@ -8,7 +8,7 @@ import pytest
 from mocks.mock_context import MockContext
 
 import mite_http as mite_http_pkg
-import mite_http.stats as mite_http_stats
+import mite.integration_stats.http as mite_http_stats
 from mite_http import SessionPool, mite_http
 
 
