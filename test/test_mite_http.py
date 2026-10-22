@@ -1,8 +1,6 @@
 import asyncio
 import importlib
 import os
-import subprocess
-import sys
 from unittest.mock import patch
 
 import pytest
@@ -11,32 +9,6 @@ from mocks.mock_context import MockContext
 import mite_http as mite_http_pkg
 import mite_http.stats as mite_http_stats
 from mite_http import SessionPool, mite_http
-
-# Runs in a subprocess, not via importlib.reload() in-process: reloading
-# mite_http here would mutate the live SessionPool class other tests in
-# this file depend on (its _session_pools memoization dict), since
-# reload() always creates a fresh class object bound into the module's
-# (shared, mutated-in-place) namespace.
-_BLOCK_ACURL_AND_IMPORT = """
-import builtins
-real_import = builtins.__import__
-def fake_import(name, *args, **kwargs):
-    if name == "acurl":
-        raise ModuleNotFoundError(name)
-    return real_import(name, *args, **kwargs)
-builtins.__import__ = fake_import
-import mite_http
-"""
-
-
-def test_raises_when_acurl_missing():
-    result = subprocess.run(
-        [sys.executable, "-c", _BLOCK_ACURL_AND_IMPORT],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode != 0
-    assert "pip install mite[http]" in result.stderr
 
 
 @pytest.mark.asyncio

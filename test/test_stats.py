@@ -111,7 +111,12 @@ class TestModularity:
             logging_warning.assert_called_once()
             assert "mite_http" in logging_warning.call_args[0][0]
 
-    def test_first_party_import_error_is_a_warning(self):
+    def test_import_error_is_a_warning(self):
+        # Drives this via a third-party entry point (not _FIRST_PARTY_STATS)
+        # deliberately: the ImportError branch keys off _ABSENCE_EXPECTED,
+        # not provenance, so there is no first/third-party distinction to
+        # test here - see test_import_error_for_an_expected_absence_is_a_debug_log
+        # below for the one thing that *does* vary the log level.
         with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
             "mite.stats.logger.log"
         ) as logging_log, mock.patch(
@@ -151,11 +156,15 @@ class TestModularity:
             assert "mite_playwright" in message
 
     def test_first_party_other_exception_is_raised(self):
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
-            "mite.stats._iter_stats_sources",
-            return_value=[("x", mock.Mock(side_effect=AttributeError("real bug")), True)],
-        ):
-            with pytest.raises(AttributeError, match="real bug"):
+        # Exercises the real _load_spec/_iter_stats_sources path rather
+        # than mocking it away: "NOPE" doesn't exist on mocks.mock_stats
+        # (which only defines STATS), so getattr() raises a genuine
+        # AttributeError - the same kind of real bug this is meant to
+        # guard against, not a synthetic stand-in for one.
+        with mock.patch(
+            "mite.stats._FIRST_PARTY_STATS", {"x": "mocks.mock_stats:NOPE"}
+        ), mock.patch("importlib.metadata.entry_points", return_value=[]):
+            with pytest.raises(AttributeError):
                 Stats(None)
 
     def test_third_party_any_exception_is_logged_not_raised(self):
