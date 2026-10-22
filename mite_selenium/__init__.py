@@ -303,9 +303,13 @@ def mite_selenium(*args, wire=False):
                     + "if mite was installed with the 'selenium_wire' extra"
                 )
 
-        # NOTE: fires at first use, not import time - see rationale in
-        # mite_http/__init__.py. Extra name tracks the wire flag, since
-        # wire=True pulls in selenium-wire rather than plain selenium.
+        # NOTE: fires at first use, not import time, unlike the other
+        # integrations' warnings (see mite_http/__init__.py for the general
+        # rationale). TODO(packaging): revisit - the wire flag means this
+        # warning has two possible messages ([selenium] vs [selenium_wire]),
+        # which a module-level warning can't express. Open question for the
+        # team: split into two warnings guarded by a module-level default,
+        # or accept call-time here as the one exception.
         extra = "selenium_wire" if wire else "selenium"
         warnings.warn(
             f"mite_selenium will require 'pip install mite[{extra}]' starting "

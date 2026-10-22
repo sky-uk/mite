@@ -12,6 +12,13 @@ except ModuleNotFoundError as e:
         "mite_http requires the 'http' extra: pip install mite[http]"
     ) from e
 
+warnings.warn(
+    "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
+    "no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,16 +111,6 @@ class SessionPool:
 
 
 def mite_http(func):
-    # NOTE: fires at first use, not import time - mite/stats.py eagerly
-    # imports every mite_stats entry point on `mite stats`/controller
-    # startup, so an import-time warning here would fire unconditionally
-    # regardless of whether the package is actually used.
-    warnings.warn(
-        "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
-        "no functional change today.",
-        FutureWarning,
-        stacklevel=2,
-    )
     return SessionPool.decorator(func)
 
 

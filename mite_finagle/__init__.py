@@ -14,6 +14,13 @@ except ModuleNotFoundError as e:
         "mite_finagle requires the 'finagle' extra: pip install mite[finagle]"
     ) from e
 
+warnings.warn(
+    "mite_finagle will require 'pip install mite[finagle]' starting in "
+    "mite 3.0; no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 # TODO:
 # - headers (ptp, request id, ...)
 # - figure out how to generate/import cybertron thrift
@@ -160,15 +167,6 @@ class MiteFinagle:
 
 
 def mite_finagle(f):
-    # NOTE: fires at first use, not import time - see rationale in
-    # mite_http/__init__.py.
-    warnings.warn(
-        "mite_finagle will require 'pip install mite[finagle]' starting in "
-        "mite 3.0; no functional change today.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
     @wraps(f)
     async def inner(ctx, *args, **kwargs):
         if getattr(ctx, "finagle", None) is not None:
