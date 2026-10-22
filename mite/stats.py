@@ -4,7 +4,6 @@ import time
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
-from functools import partial
 from numbers import Number
 from typing import Any, Callable, DefaultDict, Sequence, Tuple
 
@@ -176,68 +175,14 @@ _MITE_STATS = [
 ]
 
 
-# Loaded directly rather than via [project.entry-points.mite_stats] - an
-# entry point always imports the integration package's __init__.py first
-# (Python initialises the parent package before any submodule), and that
-# package now raises ModuleNotFoundError at import time when its optional
-# dependency is absent (see mite_http/__init__.py and siblings). Resolving
-# these from an explicit dict means mite's own six processors don't depend
-# on packaging metadata being in sync with the source tree - a stale
-# editable install's entry_points.txt can't cause a double registration
-# (see _iter_stats_sources below) - and the pip-installed distribution's
-# dist.name no longer needs to be checked to tell first-party from
-# third-party (compare the old _is_first_party_entry_point, which this
-# replaces).
-_FIRST_PARTY_STATS = {
-    "mite": "mite.stats:_MITE_STATS",
-    "mite_finagle": "mite_finagle.stats:STATS",
-    "mite_http": "mite_http.stats:STATS",
-    "mite_kafka": "mite_kafka.stats:_KAFKA_STATS",
-    "mite_playwright": "mite_playwright.stats:STATS",
-    "mite_selenium": "mite_selenium.stats:STATS",
-}
-
-# Entry points whose dependency is deliberately not part of the default
-# install (see pyproject.toml), so a load failure there is expected, not
-# worth warning about. The other five join this set once 3.0.0 moves their
-# dependencies into extras too.
-_ABSENCE_EXPECTED = frozenset({"mite_playwright"})
-
-
-def _load_spec(spec):
-    """Resolve a "module:attr" spec, the same contract importlib.metadata's
-    EntryPoint.load() uses - so _FIRST_PARTY_STATS can be loaded the same
-    way as a third-party entry point, below."""
-    module_name, attr = spec.split(":", 1)
-    module = importlib.import_module(module_name)
-    return getattr(module, attr)
-
-
-def _iter_stats_sources():
-    """Yields (name, loader, is_first_party) for every stats source: mite's
-    own six first, then every registered mite_stats entry point. An entry
-    point whose name collides with one of mite's own is skipped - see
-    _FIRST_PARTY_STATS's docstring for why a stale editable install could
-    otherwise double-register every first-party stat."""
-    for name, spec in _FIRST_PARTY_STATS.items():
-        yield name, partial(_load_spec, spec), True
-    for entry_point in importlib.metadata.entry_points(group="mite_stats"):
-        if entry_point.name in _FIRST_PARTY_STATS:
-            logger.warning(
-                f"Ignoring entry point {entry_point.name!r}: this name is "
-                "reserved for mite's own stats processors."
-            )
-            continue
-        yield entry_point.name, entry_point.load, False
-
-
 def load_stats_entry_points(include=None, exclude=None):
-    """Load every stats source (mite's own six, plus every registered
-    mite_stats entry point), applying include/exclude name filters. Shared
-    by mite.stats.Stats and mite.cli.influxdb.influxdb_init so the two
-    don't drift in how they handle a failing source."""
+    """Load every registered mite_stats entry point, applying include/exclude
+    name filters. Shared by mite.stats.Stats and
+    mite.cli.influxdb.influxdb_init so the two don't drift in how they
+    handle a failing source."""
     all_stats = []
-    for name, load, is_first_party in _iter_stats_sources():
+    for entry_point in importlib.metadata.entry_points(group="mite_stats"):
+        name = entry_point.name
         if include is not None and name not in include:
             continue
         if exclude is not None and name in exclude:
@@ -255,7 +200,7 @@ def load_stats_entry_points(include=None, exclude=None):
             # for a one-shot call at process startup.
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FutureWarning)
-                all_stats += load()
+                all_stats += entry_point.load()
         except ImportError as e:
             # Each mite_* integration package raises ModuleNotFoundError
             # (an ImportError subclass) at its own import time when its
@@ -264,25 +209,12 @@ def load_stats_entry_points(include=None, exclude=None):
             # triggers the same raise. Metrics of this type simply won't be
             # aggregated on this host; the integration itself still works
             # wherever its dependency is installed (e.g. on the runners
-            # sending these metrics). DEBUG for a dependency that isn't
-            # even part of the default install (see _ABSENCE_EXPECTED) -
-            # WARNING otherwise, since that host is missing something the
-            # runners sending it metrics may well have.
-            level = logging.DEBUG if name in _ABSENCE_EXPECTED else logging.WARNING
-            logger.log(
-                level,
+            # sending these metrics).
+            logger.warning(
                 f"Not aggregating metrics from {name}: its stats processor "
-                f"could not be loaded on this host: {e}",
+                f"could not be loaded on this host: {e}"
             )
         except Exception as e:
-            if is_first_party:
-                # A bug in one of mite's own stats modules, not a missing
-                # optional dependency - must not be silently swallowed.
-                raise
-            # A third-party plugin's own bug. docs/stats.rst documents
-            # mite_stats as a public extension point for other teams'
-            # code; a broken third-party plugin shouldn't take down every
-            # other processor, including mite's own.
             logger.error(f"Failed to load stats from entry point {name}: {e}")
     return all_stats
 

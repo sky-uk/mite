@@ -1,8 +1,5 @@
-import logging
 import unittest.mock as mock
 import warnings
-
-import pytest
 
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
@@ -52,11 +49,9 @@ class EntryPointMock:
         return [self.__val]
 
 
-# Each test patches _FIRST_PARTY_STATS to {} (unless testing first-party
-# loading) to isolate entry-point scanning from mite's own processors.
 class TestModularity:
     def test_modularity(self):
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
+        with mock.patch(
             "mite.stats.logger.info"
         ) as logging_info, mock.patch(
             "importlib.metadata.entry_points", return_value=[EntryPointMock(group="x")]
@@ -67,7 +62,7 @@ class TestModularity:
             assert s._all_stats == ["x"]
 
     def test_modularity_include(self):
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
+        with mock.patch(
             "importlib.metadata.entry_points",
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
@@ -75,45 +70,17 @@ class TestModularity:
             assert s._all_stats == ["x"]
 
     def test_modularity_exclude(self):
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
+        with mock.patch(
             "importlib.metadata.entry_points",
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]
 
-    def test_first_party_loaded_from_registry_not_entry_points(self):
-        # mite's own stats load via _FIRST_PARTY_STATS, not importlib.metadata.
-        with mock.patch(
-            "mite.stats._FIRST_PARTY_STATS", {"mock_stat": "mocks.mock_stats:STATS"}
-        ), mock.patch(
-            "importlib.metadata.entry_points", return_value=[]
-        ) as iter_entry_points:
-            s = Stats(None)
-            assert s._all_stats == ["mock_stat"]
-            iter_entry_points.assert_called_once()
-
-    def test_entry_point_colliding_with_reserved_name_is_skipped(self):
-        with mock.patch(
-            "mite.stats._FIRST_PARTY_STATS", {"mite_http": "mocks.mock_stats:STATS"}
-        ), mock.patch("mite.stats.logger.warning") as logging_warning, mock.patch(
-            "importlib.metadata.entry_points",
-            return_value=[EntryPointMock(group="mite_http"), EntryPointMock(group="y")],
-        ):
-            s = Stats(None)
-            # Reserved-name entry point is skipped, not loaded alongside the
-            # first-party one, or mock_stats.STATS would appear twice.
-            assert s._all_stats == ["mock_stat", "y"]
-            logging_warning.assert_called_once()
-            assert "mite_http" in logging_warning.call_args[0][0]
-
     def test_import_error_is_a_warning(self):
-        # Uses a third-party entry point: the ImportError branch keys off
-        # _ABSENCE_EXPECTED, not provenance, so there's nothing first-party
-        # specific to test here.
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
-            "mite.stats.logger.log"
-        ) as logging_log, mock.patch(
+        with mock.patch(
+            "mite.stats.logger.warning"
+        ) as logging_warning, mock.patch(
             "importlib.metadata.entry_points",
             return_value=[
                 EntryPointMock(
@@ -127,45 +94,20 @@ class TestModularity:
         ):
             s = Stats(None)
             assert s._all_stats == ["y"]
-            logging_log.assert_called_once()
-            level, message = logging_log.call_args[0]
-            assert level == logging.WARNING
+            logging_warning.assert_called_once()
+            message = logging_warning.call_args[0][0]
             assert "x" in message
             assert "pip install mite[http]" in message
 
-    def test_import_error_for_an_expected_absence_is_a_debug_log(self):
-        # mite_playwright isn't part of mite's default install, so a
-        # missing dependency for it is expected, not worth warning about.
+    def test_other_exception_is_logged_not_raised(self):
         with mock.patch(
-            "mite.stats._FIRST_PARTY_STATS", {"mite_playwright": "does.not:exist"}
-        ), mock.patch("mite.stats.logger.log") as logging_log, mock.patch(
-            "importlib.metadata.entry_points", return_value=[]
-        ):
-            s = Stats(None)
-            assert s._all_stats == []
-            logging_log.assert_called_once()
-            level, message = logging_log.call_args[0]
-            assert level == logging.DEBUG
-            assert "mite_playwright" in message
-
-    def test_first_party_other_exception_is_raised(self):
-        # "NOPE" doesn't exist on mocks.mock_stats, so this exercises a
-        # real AttributeError rather than a mocked-in one.
-        with mock.patch(
-            "mite.stats._FIRST_PARTY_STATS", {"x": "mocks.mock_stats:NOPE"}
-        ), mock.patch("importlib.metadata.entry_points", return_value=[]):
-            with pytest.raises(AttributeError):
-                Stats(None)
-
-    def test_third_party_any_exception_is_logged_not_raised(self):
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
             "mite.stats.logger.error"
         ) as logging_error, mock.patch(
             "importlib.metadata.entry_points",
             return_value=[
                 EntryPointMock(
                     group="mite_amqp",
-                    raises=AttributeError("third-party plugin bug"),
+                    raises=AttributeError("plugin bug"),
                 ),
                 EntryPointMock(group="y"),
             ],
@@ -180,7 +122,7 @@ class TestModularity:
             warnings.warn("some mite 3.0 deprecation", FutureWarning, stacklevel=2)
             return ["x"]
 
-        with mock.patch("mite.stats._FIRST_PARTY_STATS", {}), mock.patch(
+        with mock.patch(
             "importlib.metadata.entry_points",
             return_value=[EntryPointMock(group="x")],
         ) as iter_entry_points:
@@ -195,10 +137,8 @@ class TestModularity:
             assert s._all_stats == ["x"]
 
     def test_first_party_stats_actually_load(self):
-        # Unpatched: guards against _FIRST_PARTY_STATS specs drifting from
-        # a future mite_*/stats.py rename or move. mite_playwright is
-        # skipped - it's not part of the default install, so its absence
-        # here is expected, not a regression.
+        # Unpatched: exercises the real entry points registered in
+        # pyproject.toml for mite's own stats processors.
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
             s = Stats(None)
