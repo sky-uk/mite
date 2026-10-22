@@ -200,12 +200,18 @@ def load_stats_entry_points(include=None, exclude=None):
         try:
             all_stats += entry_point.load()
         except ImportError as e:
-            # Expected when the integration's optional dependency isn't
-            # installed. mite's own stats.py modules import nothing heavier
-            # than mite.stats - their packages' __init__.py defer the heavy
-            # third-party imports - so this should only fire for a
-            # genuinely missing extra.
-            logger.error(f"Failed to load stats from entry point {entry_point.name}: {e}")
+            # Each mite_* integration package raises ModuleNotFoundError
+            # (an ImportError subclass) at its own import time when its
+            # optional third-party dependency isn't installed - loading its
+            # mite_stats entry point imports that package's __init__.py,
+            # which triggers the same raise. Metrics of this type simply
+            # won't be aggregated on this host; the integration itself
+            # still works wherever its dependency is installed (e.g. on
+            # the runners sending these metrics).
+            logger.error(
+                f"Not aggregating metrics from entry point {entry_point.name}: "
+                f"its stats processor could not be loaded on this host: {e}"
+            )
         except Exception as e:
             if _is_first_party_entry_point(entry_point):
                 # A bug in one of mite's own stats modules, not a missing
