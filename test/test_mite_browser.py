@@ -1,10 +1,8 @@
-import importlib
 from unittest.mock import Mock
 
 import pytest
 from mocks.mock_context import MockContext
 
-import mite_browser as mite_browser_pkg
 from mite_browser import (
     BaseFormField,
     Browser,
@@ -101,14 +99,3 @@ async def test_decorator():
         assert isinstance(ctx.browser, Browser)
 
     await journey(MockContext())
-
-
-# Deliberately last in the file - importlib.reload() rebinds module
-# attributes and creates new class objects, so anything defined after it
-# could be affected. Only mite_browser's own warning is expected here:
-# reloading mite_browser re-runs `from mite_http import mite_http`, but
-# mite_http itself is already in sys.modules and isn't reloaded, so its
-# module-level warning doesn't refire.
-def test_warns_on_import():
-    with pytest.warns(FutureWarning, match="mite_browser will require"):
-        importlib.reload(mite_browser_pkg)

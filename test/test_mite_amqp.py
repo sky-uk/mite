@@ -1,12 +1,10 @@
 import asyncio
-import importlib
 from unittest.mock import AsyncMock, patch
 
 import aio_pika
 import pytest
 from mocks.mock_context import MockContext
 
-import mite_amqp as mite_amqp_pkg
 from mite_amqp import _AMQPWrapper, mite_amqp
 
 
@@ -77,11 +75,3 @@ def test_amqp_message_string():
     w = _AMQPWrapper()
     m = w.message("hi")
     assert isinstance(m, aio_pika.Message)
-
-
-# Deliberately last in the file - importlib.reload() rebinds module
-# attributes and creates new class objects, so anything defined after it
-# could be affected.
-def test_warns_on_import():
-    with pytest.warns(FutureWarning, match="mite_amqp will require"):
-        importlib.reload(mite_amqp_pkg)

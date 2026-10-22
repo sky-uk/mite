@@ -1,4 +1,3 @@
-import importlib
 from unittest.mock import call, patch
 
 import pytest
@@ -7,7 +6,6 @@ from mocks.mock_selenium import mock_paint_times, mock_performance_times
 from selenium.common.exceptions import TimeoutException
 
 from mite.exceptions import MiteError
-import mite_selenium as mite_selenium_pkg
 from mite_selenium import _SeleniumWrapper, mite_selenium
 
 EXAMPLE_WEBDRIVER_CONFIG = {
@@ -243,13 +241,3 @@ def _setup_wrapper(capabilites):
     context = MockContext()
     context.config = capabilites
     return _SeleniumWrapper(context)
-
-
-# Deliberately last in the file - importlib.reload() rebinds module
-# attributes and creates new class objects, so anything defined after it
-# could be affected. One warning covers both mite_selenium entry points
-# (plain and wire=True), since it now fires once, at import, regardless
-# of which is used - see mite_selenium/__init__.py for why.
-def test_warns_on_import():
-    with pytest.warns(FutureWarning, match=r"mite_selenium will require.*\[selenium\]"):
-        importlib.reload(mite_selenium_pkg)

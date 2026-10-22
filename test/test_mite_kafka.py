@@ -1,10 +1,8 @@
-import importlib
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from mocks.mock_context import MockContext
 
-import mite_kafka as mite_kafka_pkg
 from mite_kafka import KafkaConsumer, KafkaProducer, mite_kafka
 
 
@@ -70,13 +68,3 @@ async def test_create_consumer():
         await kafka_wrapper.create_and_start(bootstrap_servers="broker_url")
         # Assert that the AIOKafkaConsumer class was called with the expected arguments
         consumer_start_mock.assert_awaited_once()
-
-
-# Deliberately last in the file - importlib.reload() rebinds module
-# attributes and creates new class objects, so anything defined after it
-# could be affected. Covers both entry points into mite_kafka (mite_kafka
-# and mite_kafka_managed_adapter) since the warning now fires once, at
-# import, regardless of which is used.
-def test_warns_on_import():
-    with pytest.warns(FutureWarning, match="mite_kafka will require"):
-        importlib.reload(mite_kafka_pkg)

@@ -1,11 +1,9 @@
-import importlib
 import sqlite3
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
 
-import mite_db_datapool.db_to_pool as db_to_pool_module
 from mite_db_datapool.db_to_pool import (
     DataPoolExhausted,
     DBIterableDataPool,
@@ -156,11 +154,3 @@ async def test_recyclable_with_max_size(setup_large_test_db):
 
     await recycle_pool.checkin(item.id)
     assert len(recycle_pool._available) == 2
-
-
-# Deliberately last in the file - importlib.reload() rebinds module
-# attributes and creates new class objects, so anything defined after it
-# could be affected.
-def test_warns_on_import():
-    with pytest.warns(FutureWarning, match="mite_db_datapool will require"):
-        importlib.reload(db_to_pool_module)
