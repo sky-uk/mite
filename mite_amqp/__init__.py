@@ -3,12 +3,8 @@ import logging
 import warnings
 from contextlib import asynccontextmanager
 
-try:
-    import aio_pika
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_amqp requires the 'amqp' extra: pip install mite[amqp]"
-    ) from e
+import aio_pika
+
 
 from mite.exceptions import MiteError
 

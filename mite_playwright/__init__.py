@@ -4,13 +4,7 @@ Mite Playwright - Simple async wrapper with automatic navigation metrics
 import logging
 from functools import wraps
 
-try:
-    from playwright.async_api import async_playwright
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_playwright requires playwright: pip install playwright, "
-        "then run 'playwright install' to download browser binaries"
-    ) from e
+from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
 

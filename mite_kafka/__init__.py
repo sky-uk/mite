@@ -4,12 +4,7 @@ import warnings
 from contextlib import asynccontextmanager
 from functools import wraps
 
-try:
-    from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_kafka requires the 'kafka' extra: pip install mite[kafka]"
-    ) from e
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 warnings.warn(
     "mite_kafka will require 'pip install mite[kafka]' starting in mite 3.0; "

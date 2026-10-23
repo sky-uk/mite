@@ -6,13 +6,7 @@ from functools import wraps
 from itertools import count
 
 from .mux import CanTinit, Dispatch, Init, Message, Ping
-
-try:
-    from .thrift import _ThriftError
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_finagle requires the 'finagle' extra: pip install mite[finagle]"
-    ) from e
+from .thrift import _ThriftError
 
 warnings.warn(
     "mite_finagle will require 'pip install mite[finagle]' starting in "

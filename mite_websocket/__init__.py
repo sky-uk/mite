@@ -1,14 +1,8 @@
 import logging
 import warnings
 from contextlib import asynccontextmanager
-
-try:
-    import websockets
-    from websockets.exceptions import WebSocketException
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_websocket requires the 'websocket' extra: pip install mite[websocket]"
-    ) from e
+import websockets
+from websockets.exceptions import WebSocketException
 
 from mite.exceptions import MiteError
 

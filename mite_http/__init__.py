@@ -5,12 +5,7 @@ from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
-try:
-    import acurl
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_http requires the 'http' extra: pip install mite[http]"
-    ) from e
+import acurl
 
 warnings.warn(
     "mite_http will require 'pip install mite[http]' starting in mite 3.0; "

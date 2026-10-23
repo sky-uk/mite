@@ -7,16 +7,11 @@ from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
 
-try:
-    from selenium.common.exceptions import TimeoutException
-    from selenium.webdriver import Remote as SeleniumRemote
-    from selenium.webdriver.remote.remote_connection import RemoteConnection
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.support.ui import WebDriverWait
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        "mite_selenium requires the 'selenium' extra: pip install mite[selenium]"
-    ) from e
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver import Remote as SeleniumRemote
+from selenium.webdriver.remote.remote_connection import RemoteConnection
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
