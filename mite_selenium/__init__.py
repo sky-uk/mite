@@ -23,7 +23,7 @@ from mite.utils import spec_import
 
 warnings.warn(
     "mite_selenium will require 'pip install mite[selenium]' starting in "
-    "mite 3.0 - or mite[selenium_wire] if you use wire=True; "
+    "mite 3.0 or mite[selenium_wire] if you use wire=True; "
     "no functional change today.",
     FutureWarning,
     stacklevel=2,
@@ -278,7 +278,7 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
 
     def _start(self):
         # FIXME(packaging): see the wire=True guard in mite_selenium()
-        # below - this import is currently broken on a stock install.
+        # below. This import is currently broken on a stock install.
         module = importlib.import_module("seleniumwire.webdriver")
         self._context.browser = self
         addr = socket.gethostbyname(socket.gethostname())
@@ -323,7 +323,7 @@ def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
         if wire:
             # FIXME(packaging): this guard combines "seleniumwire isn't
-            # installed" with "seleniumwire is installed but broken" - both
+            # installed" with "seleniumwire is installed but broken". Both
             # raise ModuleNotFoundError here, but for different modules.
             # selenium-wire==4.6.5 imports blinker._saferef,
             # which was removed in blinker>=1.9;
@@ -333,7 +333,7 @@ def mite_selenium(*args, wire=False):
             # blinker>=1.4, and additionally requires selenium>=4.0.0, which
             # mite's own selenium>=3.141,<4 pin forbids.
             # Upstream has had no release since Oct 2022.
-            # wire=True is non-functional on a current `pip install mite` as a result -
+            # wire=True is non-functional on a current `pip install mite` as a result.
             # It needs a decision:drop selenium-wire, pin flask back, or something
             # else, not a packaging-prep fix.
             # NOTE: Writing this as FIXME becuase we don't really support Selenium

@@ -1,6 +1,5 @@
 """Verifies that each integration package raises ModuleNotFoundError with a
-useful message at import time when its optional dependency is absent - see
-mite_http/__init__.py and its siblings.
+useful message at import time when its optional dependency is absent.
 
 Run in a subprocess, not via importlib.reload() in-process: reloading one
 of these modules would mutate live classes (e.g. mite_http.SessionPool and

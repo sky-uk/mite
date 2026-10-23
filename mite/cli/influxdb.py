@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 def influxdb_init(opts):
     # Deferred, a module-level import here
-    # would make every mite process pay that cost just to register this
-    # one subcommand.
+    # would make every mite process pay the import
+    # cost just to register this one subcommand.
     from mite.web.influxdb import InfluxPoint, InfluxdbWriter
 
     all_stats = load_stats_entry_points()
