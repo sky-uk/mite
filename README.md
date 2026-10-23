@@ -47,10 +47,10 @@ Run `mite --help` for a full list of commands
 
 ### Optional install extras
 
-`pip install mite` already installs every integration mite ships — the extras
-below are installable labels only, added ahead of a future major release that
-will actually make them optional. Today, installing any of them (or none)
-installs exactly the same packages:
+`pip install mite` already installs every integration mite ships. 
+The extras below are installable labels only, added ahead of a future major 
+release that will actually make them optional. 
+Today, installing any of them (or none) installs exactly the same packages:
 
 | Extra | Covers |
 |---|---|
@@ -73,12 +73,12 @@ pip install 'mite[all]'
 
 (quote the brackets so your shell doesn't treat them as a glob)
 
-This list doesn't include `playwright`, `otel`, `influxdb`, or `dev` —
+This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.
 `playwright` needs a separate `playwright install` step to download browser
-binaries so it isn't installed by any extra; `otel`, `influxdb`, and `dev` are
-separate, pre-existing extras unrelated to this list. **Every extra above is
-currently a functional no-op**: all of their packages are still in `mite`'s
-mandatory dependency list, so
+binaries so it isn't installed by any extra; 
+`otel`, `influxdb`, and `dev` are separate, pre-existing extras unrelated to this list. 
+**Every extra above is currently a functional no-op**: 
+all of their packages are still in `mite` mandatory dependency list, so
 `pip install 'mite[kafka]'` installs exactly what `pip install mite` installs.
 They only become meaningful once a future major release actually removes
 packages from the default install.

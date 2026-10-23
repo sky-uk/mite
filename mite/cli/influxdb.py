@@ -7,10 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def influxdb_init(opts):
-    # Deferred, not module-level - this module is imported unconditionally
-    # by mite/__main__.py for every mite invocation (see its own `mite
-    # influxdb init` subcommand), but mite.web.influxdb pulls in flask via
-    # mite/web/__init__.py's own import chain. A module-level import here
+    # Deferred, a module-level import here
     # would make every mite process pay that cost just to register this
     # one subcommand.
     from mite.web.influxdb import InfluxPoint, InfluxdbWriter
@@ -27,40 +24,48 @@ def influxdb_init(opts):
         stat_type = type(stat).__name__
 
         if stat_type in ("Counter", "Accumulator"):
-            points.append(InfluxPoint(
-                measurement=name,
-                tags=tags,
-                fields={"value": 0, "value_cumulative": 0},
-                time_ns=tns,
-            ))
+            points.append(
+                InfluxPoint(
+                    measurement=name,
+                    tags=tags,
+                    fields={"value": 0, "value_cumulative": 0},
+                    time_ns=tns,
+                )
+            )
 
         elif stat_type == "Gauge":
-            points.append(InfluxPoint(
-                measurement=name,
-                tags=tags,
-                fields={"value": 0.0},
-                time_ns=tns,
-            ))
+            points.append(
+                InfluxPoint(
+                    measurement=name,
+                    tags=tags,
+                    fields={"value": 0.0},
+                    time_ns=tns,
+                )
+            )
 
         elif stat_type == "Histogram":
             fields = {}
             for pct in [50, 75, 90, 95, 99]:
                 fields[f"p{pct}"] = 0.0
                 fields[f"p{pct}_cumulative"] = 0.0
-            fields.update({
-                "sum": 0.0,
-                "count": 0,
-                "avg": 0.0,
-                "sum_cumulative": 0.0,
-                "count_cumulative": 0,
-                "avg_cumulative": 0.0,
-            })
-            points.append(InfluxPoint(
-                measurement=f"{name}_summary",
-                tags=tags,
-                fields=fields,
-                time_ns=tns,
-            ))
+            fields.update(
+                {
+                    "sum": 0.0,
+                    "count": 0,
+                    "avg": 0.0,
+                    "sum_cumulative": 0.0,
+                    "count_cumulative": 0,
+                    "avg_cumulative": 0.0,
+                }
+            )
+            points.append(
+                InfluxPoint(
+                    measurement=f"{name}_summary",
+                    tags=tags,
+                    fields=fields,
+                    time_ns=tns,
+                )
+            )
 
     influxdb_count = int(opts.get("--influxdb") or 1)
     exit_code = 0
@@ -75,7 +80,9 @@ def influxdb_init(opts):
                     f"InfluxDB writer{suffix} was busy; init write was skipped"
                 )
             future.result()
-            logger.info(f"Initialized {len(all_stats)} metrics for instance{suffix or ' (default)'}:")
+            logger.info(
+                f"Initialized {len(all_stats)} metrics for instance{suffix or ' (default)'}:"
+            )
             for stat in all_stats:
                 logger.info(f"  - {stat.name}")
         except Exception as e:

@@ -104,6 +104,7 @@ Options:
     --influxdb=N                                            Send stats to N number of InfluxDB instances
     --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
+
 import asyncio
 import logging
 import os
@@ -231,7 +232,9 @@ def _controller_log_end(logging_id, logging_url):
 
     url = f"{logging_url}end"
     logger.info(f"Logging test end to {url}")
-    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode()))
+    resp = urlopen(
+        UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode())
+    )
     if resp.status != 204:
         logger.warning(
             f"Could not complete test end logging; status was {resp.status_code}"
@@ -244,7 +247,9 @@ def controller(opts):
     scenario_spec = opts["SCENARIO_SPEC"]
     scenario_manager = _create_scenario_manager(opts)
     sender = _create_sender(opts)
-    scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
+    scenarios = _get_scenario_with_kwargs(
+        scenario_spec, config_manager, sender
+    )
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
     # Done setting up scenarios
@@ -272,7 +277,8 @@ def controller(opts):
     try:
         loop.run_until_complete(
             asyncio.gather(
-                controller_report(), server.run(controller, controller.should_stop)
+                controller_report(),
+                server.run(controller, controller.should_stop),
             )
         )
     except KeyboardInterrupt:
@@ -304,25 +310,9 @@ def recorder(opts):
 
 
 def prometheus_exporter(opts):
-    # Deferred, not module-level (unlike the mite_* integration packages -
-    # see mite_http/__init__.py): this import is only needed by this one
-    # command. mite runner/controller/duplicator/collector never call it,
-    # but do import this module, and every runner process scales with load
-    # (docker_compose.yml runs multiple replicas) - a module-level import
-    # here would make each of them pay flask's ~7 MB / ~100 ms import cost
-    # for a dependency only prometheus_exporter actually uses.
-    try:
-        from .web import app, prometheus_metrics
-    except ImportError as e:
-        # flask/jinja2 are permanent mandatory dependencies - they back
-        # built-in CLI features rather than opt-in integrations, so there
-        # is no optional extra to direct the user to. This should only
-        # fire on a broken or incomplete install.
-        raise SystemExit(
-            "The prometheus_exporter command requires flask, which should "
-            "already be installed as a core mite dependency. Try "
-            "reinstalling mite."
-        ) from e
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .web import app, prometheus_metrics
 
     receiver = _create_prometheus_exporter_receiver(opts)
     receiver.add_listener(prometheus_metrics.process)
@@ -333,23 +323,9 @@ def prometheus_exporter(opts):
 
 
 def influxdb_exporter(opts):
-    # Deferred, not module-level - same rationale as prometheus_exporter
-    # above: only this command needs it, and every other mite process
-    # (runner, controller, duplicator, collector) imports this module
-    # without using it.
-    try:
-        from .web import influx_metrics
-    except ImportError as e:
-        # Same failure mode as prometheus_exporter above - .web itself only
-        # needs flask/jinja2 (permanent core deps) to import; the influxdb
-        # client libraries it uses are already imported lazily inside
-        # influx_metrics. This should only fire on a broken or incomplete
-        # install.
-        raise SystemExit(
-            "The influxdb_exporter command requires flask, which should "
-            "already be installed as a core mite dependency. Try "
-            "reinstalling mite."
-        ) from e
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .web import influx_metrics
 
     include_buckets = opts.get("--include-buckets", False)
     receiver = _create_influxdb_exporter_receiver(opts)
@@ -360,7 +336,9 @@ def influxdb_exporter(opts):
     try:
         loop.run_until_complete(receiver.run())
     except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down InfluxDB exporter")
+        logger.info(
+            "Received interrupt signal, shutting down InfluxDB exporter"
+        )
     finally:
         metrics.close()
         loop.close()
@@ -379,25 +357,14 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
-    # Deferred, not module-level - only this command needs jinja2's Template
-    # construction (mite/har_to_mite.py builds one at module scope); every
-    # other mite process imports this module without using it.
-    try:
-        from .har_to_mite import har_convert_to_mite
-    except ImportError as e:
-        # jinja2 is a permanent mandatory dependency - it backs a built-in
-        # CLI feature, and flask hard-depends on it regardless, so it can
-        # never actually be absent. There is no optional extra to direct
-        # the user to. This should only fire on a broken or incomplete
-        # install.
-        raise SystemExit(
-            "The har_converter command requires jinja2, which should "
-            "already be installed as a core mite dependency. Try "
-            "reinstalling mite."
-        ) from e
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .har_to_mite import har_convert_to_mite
 
     har_convert_to_mite(
-        opts["HAR_FILE_PATH"], opts["CONVERTED_FILE_PATH"], opts["--sleep-time"]
+        opts["HAR_FILE_PATH"],
+        opts["CONVERTED_FILE_PATH"],
+        opts["--sleep-time"],
     )
 
 

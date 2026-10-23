@@ -88,7 +88,9 @@ class Histogram(Stat):
 
     def __post_init__(self):
         self.bins = sorted(self.bins)
-        self.bin_counts = defaultdict(lambda: [0 for _ in range(len(self.bins))])
+        self.bin_counts = defaultdict(
+            lambda: [0 for _ in range(len(self.bins))]
+        )
         self.total_counts = defaultdict(int)
         self.sums = defaultdict(int)
 
@@ -130,9 +132,10 @@ def matcher_by_type(*targets):
 
 def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[
-            value_key
-        ]
+        yield (
+            tuple(msg.get(i, "") for i in labels),
+            1 if value_key is None else msg[value_key],
+        )
 
     extract_items.labels = labels
     return Extractor(labels=labels, extract=extract_items)
@@ -150,7 +153,9 @@ _MITE_STATS = [
     Counter(
         name="mite_journey_error_total",
         matcher=matcher_by_type("error", "exception"),
-        extractor=extractor("test journey transaction location ex_type message".split()),
+        extractor=extractor(
+            "test journey transaction location ex_type message".split()
+        ),
     ),
     Counter(
         name="mite_transaction_total",
@@ -189,27 +194,10 @@ def load_stats_entry_points(include=None, exclude=None):
             continue
         logger.info(f"Registering stats processors from {name}")
         try:
-            # Loading a processor imports its package, which may emit this
-            # PR's own mite-3.0 deprecation FutureWarnings (see
-            # mite_http/__init__.py and siblings) - correctly attributed to
-            # a real journey's import site when a journey module does the
-            # importing, but attributed to importlib internals here, since
-            # this process is the one doing the importing, not a journey
-            # author who could act on it. Suppressed for that reason; not
-            # thread-safe (catch_warnings is process-global), which is fine
-            # for a one-shot call at process startup.
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FutureWarning)
                 all_stats += entry_point.load()
         except ImportError as e:
-            # Each mite_* integration package raises ModuleNotFoundError
-            # (an ImportError subclass) at its own import time when its
-            # optional third-party dependency isn't installed - loading its
-            # stats processor imports that package's __init__.py, which
-            # triggers the same raise. Metrics of this type simply won't be
-            # aggregated on this host; the integration itself still works
-            # wherever its dependency is installed (e.g. on the runners
-            # sending these metrics).
             logger.warning(
                 f"Not aggregating metrics from {name}: its stats processor "
                 f"could not be loaded on this host: {e}"
@@ -221,7 +209,9 @@ def load_stats_entry_points(include=None, exclude=None):
 
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
-        self._all_stats = load_stats_entry_points(include=include, exclude=exclude)
+        self._all_stats = load_stats_entry_points(
+            include=include, exclude=exclude
+        )
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
 
