@@ -1,10 +1,18 @@
 import asyncio
 import logging
+import warnings
 from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
 import acurl
+
+warnings.warn(
+    "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
+    "no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,21 @@
 import asyncio
 import logging
+import warnings
 from contextlib import asynccontextmanager
 
 import aio_pika
 
+
 from mite.exceptions import MiteError
 
 logger = logging.getLogger(__name__)
+
+warnings.warn(
+    "mite_amqp will require 'pip install mite[amqp]' starting in mite 3.0; "
+    "no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 
 class AMQPError(MiteError):

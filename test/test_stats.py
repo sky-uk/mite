@@ -1,4 +1,5 @@
 import unittest.mock as mock
+import warnings
 
 from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
 
@@ -34,20 +35,25 @@ def test_label_extractor_txn_msg():
 
 
 class EntryPointMock:
-    def __init__(self, group=""):
+    def __init__(self, group="", raises=None):
         self.__val = group
+        self._raises = raises
 
     @property
     def name(self):
         return self.__val
 
     def load(self):
+        if self._raises is not None:
+            raise self._raises
         return [self.__val]
 
 
 class TestModularity:
     def test_modularity(self):
-        with mock.patch("logging.info") as logging_info, mock.patch(
+        with mock.patch(
+            "mite.stats.logger.info"
+        ) as logging_info, mock.patch(
             "importlib.metadata.entry_points", return_value=[EntryPointMock(group="x")]
         ) as iter_entry_points:
             s = Stats(None)
@@ -70,6 +76,88 @@ class TestModularity:
         ):
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]
+
+    def test_import_error_is_a_warning(self):
+        with mock.patch(
+            "mite.stats.logger.warning"
+        ) as logging_warning, mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[
+                EntryPointMock(
+                    group="x",
+                    raises=ModuleNotFoundError(
+                        "mite_http requires the 'http' extra: pip install mite[http]"
+                    ),
+                ),
+                EntryPointMock(group="y"),
+            ],
+        ):
+            s = Stats(None)
+            assert s._all_stats == ["y"]
+            logging_warning.assert_called_once()
+            message = logging_warning.call_args[0][0]
+            assert "x" in message
+            assert "pip install mite[http]" in message
+
+    def test_other_exception_is_logged_not_raised(self):
+        with mock.patch(
+            "mite.stats.logger.error"
+        ) as logging_error, mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[
+                EntryPointMock(
+                    group="mite_amqp",
+                    raises=AttributeError("plugin bug"),
+                ),
+                EntryPointMock(group="y"),
+            ],
+        ):
+            s = Stats(None)
+            assert s._all_stats == ["y"]
+            logging_error.assert_called_once()
+            assert "mite_amqp" in logging_error.call_args[0][0]
+
+    def test_future_warning_from_a_loaded_processor_does_not_escape(self):
+        def _warn_and_return():
+            warnings.warn("some mite 3.0 deprecation", FutureWarning, stacklevel=2)
+            return ["x"]
+
+        with mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[EntryPointMock(group="x")],
+        ) as iter_entry_points:
+            iter_entry_points.return_value[0].load = _warn_and_return
+            with warnings.catch_warnings(record=True) as record:
+                warnings.simplefilter("always")
+                s = Stats(None)
+            future_warnings = [
+                w for w in record if issubclass(w.category, FutureWarning)
+            ]
+            assert not future_warnings, future_warnings
+            assert s._all_stats == ["x"]
+
+    def test_first_party_stats_actually_load(self):
+        # Unpatched: exercises the real entry points registered in
+        # pyproject.toml for mite's own stats processors.
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            s = Stats(None)
+        future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
+        assert not future_warnings, future_warnings
+        names = [stat.name for stat in s._all_stats]
+        # mite_selenium_page_load_tcp_time_seconds appears twice due to a
+        # pre-existing duplicate in mite_selenium/stats.py, unrelated to
+        # this change - not asserted on beyond allowing it here.
+        duplicates = {n for n in names if names.count(n) > 1}
+        assert duplicates <= {"mite_selenium_page_load_tcp_time_seconds"}, duplicates
+        for expected in (
+            "mite_journey_error_total",  # mite's own _MITE_STATS
+            "mite_http_response_total",
+            "mite_kafka_producer_stats_counter",
+            "mite_selenium_response_total",
+            "mite_finagle_response_total",
+        ):
+            assert expected in names
 
 
 class TestCounter:

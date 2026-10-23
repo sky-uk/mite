@@ -153,11 +153,11 @@ def mite_playwright(func):
 
     @wraps(func)
     async def wrapper(ctx, *args, **kwargs):
-        playwright = await async_playwright().start()
+        playwright_instance = await async_playwright().start()
         try:
-            wrapped_playwright = PlaywrightWrapper(playwright, ctx)
+            wrapped_playwright = PlaywrightWrapper(playwright_instance, ctx)
             return await func(ctx, wrapped_playwright, *args, **kwargs)
         finally:
-            await playwright.stop()
+            await playwright_instance.stop()
 
     return wrapper

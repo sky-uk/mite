@@ -1,6 +1,7 @@
-import importlib
+import importlib.metadata
 import logging
 import time
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from numbers import Number
@@ -87,7 +88,9 @@ class Histogram(Stat):
 
     def __post_init__(self):
         self.bins = sorted(self.bins)
-        self.bin_counts = defaultdict(lambda: [0 for _ in range(len(self.bins))])
+        self.bin_counts = defaultdict(
+            lambda: [0 for _ in range(len(self.bins))]
+        )
         self.total_counts = defaultdict(int)
         self.sums = defaultdict(int)
 
@@ -129,9 +132,10 @@ def matcher_by_type(*targets):
 
 def extractor(labels, value_key=None):
     def extract_items(msg):
-        yield tuple(msg.get(i, "") for i in labels), 1 if value_key is None else msg[
-            value_key
-        ]
+        yield (
+            tuple(msg.get(i, "") for i in labels),
+            1 if value_key is None else msg[value_key],
+        )
 
     extract_items.labels = labels
     return Extractor(labels=labels, extract=extract_items)
@@ -149,7 +153,9 @@ _MITE_STATS = [
     Counter(
         name="mite_journey_error_total",
         matcher=matcher_by_type("error", "exception"),
-        extractor=extractor("test journey transaction location ex_type message".split()),
+        extractor=extractor(
+            "test journey transaction location ex_type message".split()
+        ),
     ),
     Counter(
         name="mite_transaction_total",
@@ -174,20 +180,38 @@ _MITE_STATS = [
 ]
 
 
+def load_stats_entry_points(include=None, exclude=None):
+    """Load every registered mite_stats entry point, applying include/exclude
+    name filters. Shared by mite.stats.Stats and
+    mite.cli.influxdb.influxdb_init so the two don't drift in how they
+    handle a failing source."""
+    all_stats = []
+    for entry_point in importlib.metadata.entry_points(group="mite_stats"):
+        name = entry_point.name
+        if include is not None and name not in include:
+            continue
+        if exclude is not None and name in exclude:
+            continue
+        logger.info(f"Registering stats processors from {name}")
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                all_stats += entry_point.load()
+        except ImportError as e:
+            logger.warning(
+                f"Not aggregating metrics from {name}: its stats processor "
+                f"could not be loaded on this host: {e}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to load stats from entry point {name}: {e}")
+    return all_stats
+
+
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
-        self._all_stats = []
-        for entry_point in importlib.metadata.entry_points(group="mite_stats"):
-            if include is not None and entry_point.name not in include:
-                continue
-            if exclude is not None and entry_point.name in exclude:
-                continue
-            logging.info(f"Registering stats processors from {entry_point.name}")
-            try:
-                self._all_stats += entry_point.load()
-            except Exception as e:
-                logging.warning(f"Failed to load stats from entry point {entry_point.name}: {e}")
-
+        self._all_stats = load_stats_entry_points(
+            include=include, exclude=exclude
+        )
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
 
