@@ -30,3 +30,10 @@ maintains.
 `acurl` is included above for convenience but is not a plugin: it is a separate
 distribution that `mite_http` builds on. Its page explains the distinction.
 ```
+
+```{note}
+If a plugin's third-party dependency isn't installed, importing the plugin
+raises Python's own bare `ModuleNotFoundError` naming the missing package —
+not a custom message pointing at the extra to install. This is consistent
+across every integration package.
+```
