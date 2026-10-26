@@ -272,6 +272,15 @@
 discrete components and distribute them across cores/machines.  Mite as
 an entity consists of a number of these components, each with their own
 responsibilities for test control, execution and/or data collection.</p>
+<section id="message-transport">
+<h3>Message transport<a class="headerlink" href="#message-transport" title="Link to this heading">¶</a></h3>
+<p>Every component below communicates over a message bus, selected with the
+global <code class="docutils literal notranslate"><span class="pre">--message-backend</span></code> flag (default <code class="docutils literal notranslate"><span class="pre">ZMQ</span></code>).  <code class="docutils literal notranslate"><span class="pre">nanomsg</span></code> is also
+available, but deprecated: selecting it emits a warning that nanomsg
+support will move to an optional extra ahead of a future mite 3.0 release,
+with no functional change today.  Use <code class="docutils literal notranslate"><span class="pre">ZMQ</span></code> unless you specifically need
+<code class="docutils literal notranslate"><span class="pre">nanomsg</span></code>.</p>
+</section>
 <section id="duplicator">
 <h3>Duplicator<a class="headerlink" href="#duplicator" title="Link to this heading">¶</a></h3>
 <p>The mite duplicator is responsible for ingesting messages from multiple
@@ -493,6 +502,7 @@ and a name in that module (separated by a colon).</p>
             <ul>
 <li><a class="reference internal" href="#">Mite components</a><ul>
 <li><a class="reference internal" href="#distributed-components">Distributed components</a><ul>
+<li><a class="reference internal" href="#message-transport">Message transport</a></li>
 <li><a class="reference internal" href="#duplicator">Duplicator</a></li>
 <li><a class="reference internal" href="#stats">Stats</a></li>
 <li><a class="reference internal" href="#collector">Collector</a></li>

@@ -10,6 +10,16 @@ discrete components and distribute them across cores/machines.  Mite as
 an entity consists of a number of these components, each with their own
 responsibilities for test control, execution and/or data collection.
 
+Message transport
+------------------
+
+Every component below communicates over a message bus, selected with the
+global ``--message-backend`` flag (default ``ZMQ``).  ``nanomsg`` is also
+available, but deprecated: selecting it emits a warning that nanomsg
+support will move to an optional extra ahead of a future mite 3.0 release,
+with no functional change today.  Use ``ZMQ`` unless you specifically need
+``nanomsg``.
+
 Duplicator
 ----------
 
