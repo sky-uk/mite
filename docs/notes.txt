@@ -17,6 +17,3 @@ OPEN
   mite_http, mite_kafka and mite_amqp have a docs page but no README
   pointing to it; mite_http is the one nearly every user touches.
   mite_selenium, mite_websocket and mite_browser have neither.
-
-- CONTRIBUTING.md is not linked from the docs site. It is current, just
-  unreachable for anyone reading the published docs rather than the repo.

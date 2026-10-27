@@ -31,6 +31,13 @@ We use mite for:
    disappear.  Expect less from us on those. Contributions to any of
    them are welcome.
 
+Contributing
+------------
+
+Bug reports, questions and pull requests are welcome. See
+`CONTRIBUTING <https://github.com/sky-uk/mite/blob/master/CONTRIBUTING.md>`_
+for the workflow, coding standards, and how to reach the maintainers.
+
 
 .. toctree::
    :maxdepth: 2
