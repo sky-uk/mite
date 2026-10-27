@@ -103,7 +103,7 @@ our package:
 .. code-block:: toml
 
    [project.entry-points.mite_stats]
-   mite_amqp = "id_mite_nft.amqp:_MITE_STATS"
+   mite_amqp = "your_package.amqp:_MITE_STATS"
 
 
 Configuring custom stats

@@ -5,7 +5,7 @@
 
 <!-- <img src="https://raw.githubusercontent.com/sky-uk/mite/refs/heads/master/docs/_static/logo.png" alt="Mite logo" width="100" role="img"> -->
 
-[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
 
 [![Hatch project](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pypa/hatch/master/docs/assets/badge/v0.json)](https://github.com/pypa/hatch) [![linting - Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) 
 
@@ -48,10 +48,10 @@ Run `mite --help` for a full list of commands
 
 ### Optional install extras
 
-`pip install mite` already installs every integration mite ships. 
-The extras below are installable labels only, added ahead of a future major 
-release that will actually make them optional. 
-Today, installing any of them (or none) installs exactly the same packages:
+`pip install mite` already installs every integration mite ships. The extras
+below are installable labels only, added ahead of a future major release that
+will actually make them optional. Today, installing any of them (or none)
+installs exactly the same packages:
 
 | Extra | Covers |
 |---|---|
@@ -74,12 +74,12 @@ pip install 'mite[all]'
 
 (quote the brackets so your shell doesn't treat them as a glob)
 
-This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.
+This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`;
 `playwright` needs a separate `playwright install` step to download browser
-binaries so it isn't installed by any extra; 
-`otel`, `influxdb`, and `dev` are separate, pre-existing extras unrelated to this list. 
-**Every extra above is currently a functional no-op**: 
-all of their packages are still in `mite` mandatory dependency list, so
+binaries so it isn't installed by any extra; `otel`, `influxdb`, and `dev` are
+separate, pre-existing extras unrelated to this list. **Every extra above is
+currently a functional no-op**: all of their packages are still in `mite`'s
+mandatory dependency list, so
 `pip install 'mite[kafka]'` installs exactly what `pip install mite` installs.
 They only become meaningful once a future major release actually removes
 packages from the default install.

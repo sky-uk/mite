@@ -33,7 +33,9 @@ distribution that `mite_http` builds on. Its page explains the distinction.
 
 ```{note}
 If a plugin's third-party dependency isn't installed, importing the plugin
-raises Python's own bare `ModuleNotFoundError` naming the missing package —
-not a custom message pointing at the extra to install. This is consistent
-across every integration package.
+raises Python's own bare `ModuleNotFoundError` naming the missing package,
+rather than a custom message pointing at the extra to install. This is true
+at import time for every integration package. One runtime exception: passing
+`wire=True` to `mite_selenium` raises a custom error naming the
+`selenium_wire` extra.
 ```
