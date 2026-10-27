@@ -182,7 +182,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -223,6 +223,9 @@
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/websocket.html">WebSocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/browser.html">Browser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/selenium.html">Selenium</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -259,7 +262,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
@@ -290,10 +293,15 @@ or to build the datapools a test will later draw on</p></li>
 <p>The Kafka, HTTP and InfluxDB integrations are the ones we actively
 use and support.</p>
 <p>The rest still work and are documented here deliberately: other teams
-use them, and we would rather they stay discoverable than quietly
-disappear.  Expect less from us on those, and contributions to any of
+might still use them, and we would rather they stay discoverable than quietly
+disappear.  Expect less from us on those. Contributions to any of
 them are welcome.</p>
 </div>
+<section id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Link to this heading">¶</a></h2>
+<p>Bug reports, questions and pull requests are welcome. See
+<a class="reference external" href="https://github.com/sky-uk/mite/blob/master/CONTRIBUTING.md">CONTRIBUTING</a>
+for the workflow, coding standards, and how to reach the maintainers.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
@@ -368,11 +376,15 @@ them are welcome.</p>
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/websocket.html">WebSocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/browser.html">Browser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/selenium.html">Selenium</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
 </ul>
 </div>
+</section>
 </section>
 
         </article>
@@ -411,8 +423,27 @@ them are welcome.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Mite: the mighty performance testing framework</a><ul>
+<li><a class="reference internal" href="#contributing">Contributing</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

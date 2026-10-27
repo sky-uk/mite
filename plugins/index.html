@@ -223,6 +223,9 @@
 <li class="toctree-l2"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="amqp.html">AMQP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
 <li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -277,21 +280,23 @@ journey can talk to a particular protocol or tool.</p>
 <li class="toctree-l1"><a class="reference internal" href="finagle.html">Finagle</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_datapool.html">Database datapools</a></li>
 <li class="toctree-l1"><a class="reference internal" href="amqp.html">AMQP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="websocket.html">WebSocket</a></li>
+<li class="toctree-l1"><a class="reference internal" href="browser.html">Browser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selenium.html">Selenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="acurl.html">acurl</a></li>
 </ul>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Not every mite package has a page here. <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_websocket</span></code> and
-<code class="docutils literal notranslate"><span class="pre">mite_browser</span></code> currently ship without written documentation of their own — a
-known gap, rather than an omission from the list above.</p>
-<p>Having no page says nothing about whether a package is supported: <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code>
-is listed as a registered stats processor under <a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a> despite having
-no page here. See the module support note on the
+<p><code class="docutils literal notranslate"><span class="pre">acurl</span></code> is included above for convenience but is not a plugin: it is a
+separate distribution that <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> builds on. Its page explains the
+distinction.</p>
+<p><code class="docutils literal notranslate"><span class="pre">wire=True</span></code> support for <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code> does not currently work on a stock
+install — see <a class="reference internal" href="selenium.html"><span class="doc">Selenium</span></a> before relying on it.</p>
+<p>Having a page here says nothing about whether a package is actively
+supported. See the module support note on the
 <a class="reference internal" href="../index.html"><span class="doc">front page</span></a> for which integrations the team actively
 maintains.</p>
-<p><code class="docutils literal notranslate"><span class="pre">acurl</span></code> is included above for convenience but is not a plugin: it is a separate
-distribution that <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> builds on. Its page explains the distinction.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

@@ -223,6 +223,9 @@
 <li class="toctree-l2"><a class="reference internal" href="plugins/finagle.html">Finagle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/db_datapool.html">Database datapools</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/amqp.html">AMQP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/websocket.html">WebSocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/browser.html">Browser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/selenium.html">Selenium</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
 </ul>
 </li>
@@ -276,7 +279,7 @@ responsibilities for test control, execution and/or data collection.</p>
 <h3>Message transport<a class="headerlink" href="#message-transport" title="Link to this heading">¶</a></h3>
 <p>Every component below communicates over a message bus, selected with the
 global <code class="docutils literal notranslate"><span class="pre">--message-backend</span></code> flag (default <code class="docutils literal notranslate"><span class="pre">ZMQ</span></code>).  <code class="docutils literal notranslate"><span class="pre">nanomsg</span></code> is also
-available, but deprecated: selecting it emits a warning that nanomsg
+available: selecting it emits a warning that nanomsg
 support will move to an optional extra ahead of a future mite 3.0 release,
 with no functional change today.  Use <code class="docutils literal notranslate"><span class="pre">ZMQ</span></code> unless you specifically need
 <code class="docutils literal notranslate"><span class="pre">nanomsg</span></code>.</p>
