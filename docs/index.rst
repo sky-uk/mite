@@ -27,8 +27,8 @@ We use mite for:
    use and support.
 
    The rest still work and are documented here deliberately: other teams
-   use them, and we would rather they stay discoverable than quietly
-   disappear.  Expect less from us on those, and contributions to any of
+   might still use them, and we would rather they stay discoverable than quietly
+   disappear.  Expect less from us on those. Contributions to any of
    them are welcome.
 
 
