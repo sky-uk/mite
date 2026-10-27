@@ -1,15 +1,22 @@
-TO BE REVISITED: this list predates the documentation reorganisation and is
-now partly out of date - "writing journeys and scenarios" exists as
-docs/journeys.rst and docs/tutorial.md, and "plugin infrastructure" is
-partly covered by docs/plugins/.  Rewrite or drop it before using it as a
-work list.
 
-To write:
-- intro
-  - philosophy
-  - tests as code
-  - async
-- api / code-level docs
-- writing journeys and scenarios
-- plugin infrastrucutre
-- contributing guidelines
+OPEN
+
+- async, conceptually. docs/tutorial.md and docs/journeys.rst use async
+  throughout (async def, await, async with) but never explain it. A reader
+  unfamiliar with async Python hits the first code example with nothing to
+  read first. Wants a short "why journeys are async" passage early in
+  docs/tutorial.md.
+
+- Plugin authoring. docs/plugins/*.md cover how to use each existing
+  plugin, but nothing covers the entry-point registration pattern or how to
+  write a new mite_* package. Wants one generic worked example, e.g.
+  registering a custom stats processor via pyproject.toml entry points.
+
+- Subpackage README stubs are half-applied. mite_finagle, mite_playwright,
+  mite_db_datapool and acurl have stub READMEs pointing at their docs page.
+  mite_http, mite_kafka and mite_amqp have a docs page but no README
+  pointing to it; mite_http is the one nearly every user touches.
+  mite_selenium, mite_websocket and mite_browser have neither.
+
+- CONTRIBUTING.md is not linked from the docs site. It is current, just
+  unreachable for anyone reading the published docs rather than the repo.
