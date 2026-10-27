@@ -13,22 +13,24 @@ playwright
 finagle
 db_datapool
 amqp
+websocket
+browser
+selenium
 acurl
 ```
 
 ```{note}
-Not every mite package has a page here. `mite_selenium`, `mite_websocket` and
-`mite_browser` currently ship without written documentation of their own — a
-known gap, rather than an omission from the list above.
+`acurl` is included above for convenience but is not a plugin: it is a
+separate distribution that `mite_http` builds on. Its page explains the
+distinction.
 
-Having no page says nothing about whether a package is supported: `mite_selenium`
-is listed as a registered stats processor under {doc}`../stats` despite having
-no page here. See the module support note on the
+`wire=True` support for `mite_selenium` does not currently work on a stock
+install — see {doc}`selenium` before relying on it.
+
+Having a page here says nothing about whether a package is actively
+supported. See the module support note on the
 {doc}`front page <../index>` for which integrations the team actively
 maintains.
-
-`acurl` is included above for convenience but is not a plugin: it is a separate
-distribution that `mite_http` builds on. Its page explains the distinction.
 ```
 
 ```{note}
