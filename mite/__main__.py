@@ -104,6 +104,7 @@ Options:
     --influxdb=N                                            Send stats to N number of InfluxDB instances
     --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
+
 import asyncio
 import logging
 import os
@@ -130,10 +131,8 @@ from .cli.duplicator import duplicator
 from .cli.influxdb import influxdb_init
 from .cli.test import journey_cmd, scenario_cmd
 from .controller import Controller
-from .har_to_mite import har_convert_to_mite
 from .recorder import Recorder
 from .utils import _msg_backend_module
-from .web import app, prometheus_metrics, influx_metrics
 
 
 def _recorder_receiver(opts):
@@ -170,7 +169,7 @@ def _create_controller_server(opts):
 logger = logging.getLogger(__name__)
 
 
-def _start_web_in_thread(opts):
+def _start_web_in_thread(opts, app):
     address = opts["--web-address"]
     kwargs = {"port": 9301}
     if address.startswith("["):
@@ -233,7 +232,9 @@ def _controller_log_end(logging_id, logging_url):
 
     url = f"{logging_url}end"
     logger.info(f"Logging test end to {url}")
-    resp = urlopen(UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode()))
+    resp = urlopen(
+        UrlLibRequest(url, data=ujson.dumps({"id": logging_id}).encode())
+    )
     if resp.status != 204:
         logger.warning(
             f"Could not complete test end logging; status was {resp.status_code}"
@@ -246,7 +247,9 @@ def controller(opts):
     scenario_spec = opts["SCENARIO_SPEC"]
     scenario_manager = _create_scenario_manager(opts)
     sender = _create_sender(opts)
-    scenarios = _get_scenario_with_kwargs(scenario_spec, config_manager, sender)
+    scenarios = _get_scenario_with_kwargs(
+        scenario_spec, config_manager, sender
+    )
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
     # Done setting up scenarios
@@ -274,7 +277,8 @@ def controller(opts):
     try:
         loop.run_until_complete(
             asyncio.gather(
-                controller_report(), server.run(controller, controller.should_stop)
+                controller_report(),
+                server.run(controller, controller.should_stop),
             )
         )
     except KeyboardInterrupt:
@@ -306,15 +310,23 @@ def recorder(opts):
 
 
 def prometheus_exporter(opts):
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .web import app, prometheus_metrics
+
     receiver = _create_prometheus_exporter_receiver(opts)
     receiver.add_listener(prometheus_metrics.process)
-    _start_web_in_thread(opts)
+    _start_web_in_thread(opts, app)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(receiver.run())
 
 
 def influxdb_exporter(opts):
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .web import influx_metrics
+
     include_buckets = opts.get("--include-buckets", False)
     receiver = _create_influxdb_exporter_receiver(opts)
     metrics = influx_metrics(include_buckets=include_buckets)
@@ -324,7 +336,9 @@ def influxdb_exporter(opts):
     try:
         loop.run_until_complete(receiver.run())
     except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down InfluxDB exporter")
+        logger.info(
+            "Received interrupt signal, shutting down InfluxDB exporter"
+        )
     finally:
         metrics.close()
         loop.close()
@@ -343,8 +357,14 @@ def configure_python_path(opts):
 
 
 def har_converter(opts):
+    # Deferred, this import is only needed by this one command.
+    # mite runner/controller/duplicator/collector never call it.
+    from .har_to_mite import har_convert_to_mite
+
     har_convert_to_mite(
-        opts["HAR_FILE_PATH"], opts["CONVERTED_FILE_PATH"], opts["--sleep-time"]
+        opts["HAR_FILE_PATH"],
+        opts["CONVERTED_FILE_PATH"],
+        opts["--sleep-time"],
     )
 
 

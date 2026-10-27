@@ -1,17 +1,19 @@
 import asyncio
 import time
+import warnings
 from contextlib import asynccontextmanager
 from functools import wraps
 from itertools import count
 
-try:
-    from .mux import CanTinit, Dispatch, Init, Message, Ping
-    from .thrift import _ThriftError
-except ImportError as e:
-    # FIXME: are we sure this is the only kind of ImportError we will get?
-    raise ModuleNotFoundError(
-        "The mite_finagle module requires the thrift package to be installed"
-    ) from e
+from .mux import CanTinit, Dispatch, Init, Message, Ping
+from .thrift import _ThriftError
+
+warnings.warn(
+    "mite_finagle will require 'pip install mite[finagle]' starting in "
+    "mite 3.0; no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 # TODO:
 # - headers (ptp, request id, ...)

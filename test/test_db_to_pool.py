@@ -1,4 +1,5 @@
 import sqlite3
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine

@@ -1,15 +1,21 @@
 import logging
 
 from .stats import Stats
-from .web.influxdb import InfluxMetrics
 
 logger = logging.getLogger(__name__)
 
 
 class InfluxDBProcessor:
     def __init__(self, opts, suffix=""):
+        # Deferred, a module-level import here would make
+        # every mite scenario/journey test process pay the import
+        # performance cost whether or not --influxdb was requested.
+        from .web.influxdb import InfluxMetrics
+
         include_buckets = opts.get("--include-buckets", False)
-        self._influx_metrics = InfluxMetrics(include_buckets=include_buckets, suffix=suffix)
+        self._influx_metrics = InfluxMetrics(
+            include_buckets=include_buckets, suffix=suffix
+        )
         # Stats aggregator - instead of sending to socket, we'll capture dumps
         self._stats = Stats(sender=self._on_stats_dump)
 

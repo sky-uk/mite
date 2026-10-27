@@ -2,16 +2,18 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-# Check if playwright is available
+# Check if playwright is available. mite_playwright itself raises
+# ModuleNotFoundError at import time when playwright isn't installed, so
+# that import is the availability check.
 try:
     from mite_playwright import mite_playwright
     PLAYWRIGHT_AVAILABLE = True
-except ImportError:
+except ModuleNotFoundError:
     PLAYWRIGHT_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
     not PLAYWRIGHT_AVAILABLE,
-    reason="Playwright not installed - run with 'hatch run test-playwright.py3.12:test'"
+    reason="Playwright not installed - run 'pip install playwright && playwright install'"
 )
 
 

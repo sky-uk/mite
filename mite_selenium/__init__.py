@@ -2,6 +2,7 @@ import importlib.util
 import logging
 import socket
 import time
+import warnings
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
@@ -14,6 +15,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
+
+warnings.warn(
+    "mite_selenium will require 'pip install mite[selenium]' starting in "
+    "mite 3.0 or mite[selenium_wire] if you use wire=True; "
+    "no functional change today.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +41,19 @@ class _SeleniumWrapper:
             ),
             resolve_ip=False,
         )
-        self._keep_alive = self._context.config.get("webdriver_keep_alive", False)
-        self._file_detector = self._spec_import_if_not_none("webdriver_file_detector")
+        self._keep_alive = self._context.config.get(
+            "webdriver_keep_alive", False
+        )
+        self._file_detector = self._spec_import_if_not_none(
+            "webdriver_file_detector"
+        )
         self._proxy = self._spec_import_if_not_none("webdriver_proxy")
-        self._browser_profile = self._spec_import_if_not_none("webdriver_browser_profile")
-        self._options = deepcopy(self._spec_import_if_not_none("webdriver_options"))
+        self._browser_profile = self._spec_import_if_not_none(
+            "webdriver_browser_profile"
+        )
+        self._options = deepcopy(
+            self._spec_import_if_not_none("webdriver_options")
+        )
 
         # Required param
         self._capabilities = self._context.config.get("webdriver_capabilities")
@@ -109,12 +126,15 @@ class _SeleniumWrapper:
                 "js_onload_time": timings["domContentLoadedEventEnd"]
                 - timings["domContentLoadedEventStart"],
                 "page_weight": timings["transferSize"],
-                "render_time": timings["domInteractive"] - timings["responseEnd"],
+                "render_time": timings["domInteractive"]
+                - timings["responseEnd"],
                 "tcp_time": self._get_tcp_timing(timings),
-                "time_to_first_byte": timings["responseStart"] - timings["connectEnd"],
+                "time_to_first_byte": timings["responseStart"]
+                - timings["connectEnd"],
                 "time_to_interactive": timings["domInteractive"]
                 - timings["requestStart"],
-                "time_to_last_byte": timings["responseEnd"] - timings["connectEnd"],
+                "time_to_last_byte": timings["responseEnd"]
+                - timings["connectEnd"],
                 "tls_time": self._get_tls_timing(timings),
                 "total_time": timings["duration"],
             }
@@ -123,10 +143,14 @@ class _SeleniumWrapper:
 
         _paint_timings = self._extract_entries(paint_entries, expected=2)
         paint_timings = (
-            self._format_paint_timings(_paint_timings) if _paint_timings else None
+            self._format_paint_timings(_paint_timings)
+            if _paint_timings
+            else None
         )
         if paint_timings:
-            metrics["first_contentful_paint"] = paint_timings["first-contentful-paint"]
+            metrics["first_contentful_paint"] = paint_timings[
+                "first-contentful-paint"
+            ]
             metrics["first_paint"] = paint_timings["first-paint"]
 
         if metrics:
@@ -204,7 +228,9 @@ class _SeleniumWrapper:
 
     def _wait_for(self, condition_func, locator, err_msg, timeout=5):
         try:
-            return WebDriverWait(self._remote, timeout).until(condition_func(locator))
+            return WebDriverWait(self._remote, timeout).until(
+                condition_func(locator)
+            )
         except TimeoutException as te:
             raise MiteError(err_msg) from te
 
@@ -246,6 +272,8 @@ class _SeleniumWireWrapper(_SeleniumWrapper):
         )
 
     def _start(self):
+        # FIXME(packaging): see the wire=True guard in mite_selenium()
+        # below. This import is currently broken on a stock install.
         module = importlib.import_module("seleniumwire.webdriver")
         self._context.browser = self
         addr = socket.gethostbyname(socket.gethostname())
@@ -289,6 +317,23 @@ async def _selenium_context_manager(context, wire):
 def mite_selenium(*args, wire=False):
     def wrapper_factory(func):
         if wire:
+            # FIXME(packaging): this guard combines "seleniumwire isn't
+            # installed" with "seleniumwire is installed but broken". Both
+            # raise ModuleNotFoundError here, but for different modules.
+            # selenium-wire==4.6.5 imports blinker._saferef,
+            # which was removed in blinker>=1.9;
+            # mite's own flask>=3.0 pin resolves to flask 3.1.3, which
+            # requires blinker>=1.9.0. No selenium-wire release fixes this.
+            # selenium-wire 5.1.0 (latest, Oct 2022) still declares an unbounded
+            # blinker>=1.4, and additionally requires selenium>=4.0.0, which
+            # mite's own selenium>=3.141,<4 pin forbids.
+            # Upstream has had no release since Oct 2022.
+            # wire=True is non-functional on a current `pip install mite` as a result.
+            # It needs a decision:drop selenium-wire, pin flask back, or something
+            # else, not a packaging-prep fix.
+            # NOTE: Writing this as FIXME becuase we don't really support Selenium
+            # anymore but this is a valid informatino for whoever wants to use it or
+            # contribute to it.
             try:
                 importlib.import_module("seleniumwire.webdriver")
             except ModuleNotFoundError:
