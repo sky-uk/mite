@@ -32,12 +32,10 @@ distribution that `mite_http` builds on. Its page explains the distinction.
 ```
 
 ```{note}
-Behaviour when a plugin's third-party dependency isn't installed is not yet
-consistent across packages. `mite_http`, `mite_kafka`, `mite_finagle` and
-`mite_playwright` raise a clear `ModuleNotFoundError` naming the extra to
-install, the first time their decorator is used on a function.
-`mite_amqp` and `mite_db_datapool` don't guard their import yet, so a
-missing dependency there surfaces as a bare `ModuleNotFoundError` from the
-underlying library instead. This is expected to become more consistent
-ahead of mite 3.0.
+If a plugin's third-party dependency isn't installed, importing the plugin
+raises Python's own bare `ModuleNotFoundError` naming the missing package,
+rather than a custom message pointing at the extra to install. This is true
+at import time for every integration package. One runtime exception: passing
+`wire=True` to `mite_selenium` raises a custom error naming the
+`selenium_wire` extra.
 ```

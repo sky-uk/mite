@@ -12,7 +12,7 @@ The simplest is by using an anonymous (lambda) function:
 
 .. code-block:: python
 
-   lambda start, end: return 10
+   lambda start, end: 10
 
 More complex named functions can also be used.
 

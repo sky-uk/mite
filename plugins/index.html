@@ -295,14 +295,12 @@ distribution that <code class="docutils literal notranslate"><span class="pre">m
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Behaviour when a plugin’s third-party dependency isn’t installed is not yet
-consistent across packages. <code class="docutils literal notranslate"><span class="pre">mite_http</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code>, <code class="docutils literal notranslate"><span class="pre">mite_finagle</span></code> and
-<code class="docutils literal notranslate"><span class="pre">mite_playwright</span></code> raise a clear <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> naming the extra to
-install, the first time their decorator is used on a function.
-<code class="docutils literal notranslate"><span class="pre">mite_amqp</span></code> and <code class="docutils literal notranslate"><span class="pre">mite_db_datapool</span></code> don’t guard their import yet, so a
-missing dependency there surfaces as a bare <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> from the
-underlying library instead. This is expected to become more consistent
-ahead of mite 3.0.</p>
+<p>If a plugin’s third-party dependency isn’t installed, importing the plugin
+raises Python’s own bare <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> naming the missing package,
+rather than a custom message pointing at the extra to install. This is true
+at import time for every integration package. One runtime exception: passing
+<code class="docutils literal notranslate"><span class="pre">wire=True</span></code> to <code class="docutils literal notranslate"><span class="pre">mite_selenium</span></code> raises a custom error naming the
+<code class="docutils literal notranslate"><span class="pre">selenium_wire</span></code> extra.</p>
 </div>
 </section>
 
