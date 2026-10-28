@@ -10,6 +10,16 @@ discrete components and distribute them across cores/machines.  Mite as
 an entity consists of a number of these components, each with their own
 responsibilities for test control, execution and/or data collection.
 
+Message transport
+------------------
+
+Every component below communicates over a message bus, selected with the
+global ``--message-backend`` flag (default ``ZMQ``).  ``nanomsg`` is also
+available: selecting it emits a warning that nanomsg
+support will move to an optional extra ahead of a future mite 3.0 release,
+with no functional change today.  Use ``ZMQ`` unless you specifically need
+``nanomsg``.
+
 Duplicator
 ----------
 
@@ -154,6 +164,20 @@ configured to read from there by default.
 
 
 .. _prometheus: https://prometheus.io/
+
+InfluxDB Exporter
+-----------------
+
+The InfluxDB exporter fills the same role for InfluxDB, but pushes
+rather than waiting to be scraped.  It binds to the socket the stats
+component publishes its dumps on, converts each dump into InfluxDB
+points, and writes them out, independently of any test process.  See
+:doc:`influxdb` for configuration and the alternative of writing to
+InfluxDB from within the test run itself.
+
+.. code-block:: sh
+
+   mite influxdb_exporter --stats-out-socket=tcp://0.0.0.0:14305
 
 Runners
 -------

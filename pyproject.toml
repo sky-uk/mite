@@ -72,6 +72,14 @@ influxdb = [
     "influxdb3-python",
     "influxdb-client",
 ]
+# Documentation build toolchain. Deliberately excluded from `all` below, which
+# covers runtime plugin extras; this is a build-time-only dependency set.
+# myst-parser is required because docs/ mixes .rst and .md sources.
+docs = [
+    "sphinx",
+    "myst-parser",
+    "furo",
+]
 
 # Future extras for mite 3.0's dependency slimming. Every package listed
 # here is still in the mandatory `dependencies` list above, so installing any
@@ -208,6 +216,28 @@ acurl-format = [
     "cd acurl && ruff check --fix .",
     "cd acurl && ruff format .",
 ]
+
+[tool.hatch.envs.docs]
+# detached: conf.py uses no autodoc, so the docs build never imports mite and
+# does not need the package installed.
+#
+# Requires the graphviz `dot` binary on PATH (docs/design-deployment.rst uses
+# the .. graphviz:: directive) — see DEV.md. `dot` is a system binary and
+# cannot be installed by hatch.
+detached = true
+dependencies = [
+    "sphinx",
+    "myst-parser",
+    "furo",
+]
+
+[tool.hatch.envs.docs.scripts]
+# -W turns warnings into errors, so broken toctree entries and dangling
+# references fail the build instead of being silently published. Note this
+# makes the build depend on network access, because sphinx.ext.intersphinx
+# fetches the Python inventory from docs.python.org at build time.
+build = "sphinx-build -W -b html docs docs/_build/html"
+clean = "rm -rf docs/_build"
 
 [tool.hatch.envs.release]
 detached = true

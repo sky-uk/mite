@@ -1,4 +1,4 @@
-# OpenTelemetry Integration
+# OpenTelemetry
 
 Mite provides optional OpenTelemetry tracing for observing journey execution, transactions, and HTTP requests with minimal code changes.
 
@@ -20,7 +20,7 @@ Mite provides optional OpenTelemetry tracing for observing journey execution, tr
 pip install mite[otel]
 ```
 
-## Quick Start
+## Quick start
 
 First, create a simple scenario in `demo_otel.py`:
 

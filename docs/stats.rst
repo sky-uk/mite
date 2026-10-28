@@ -97,20 +97,13 @@ has received – of all types.  Therefore, we need to write a custom
 value)`` tuples.
 
 We also need to inform mite about our stats, using pythonʼs entry points
-mechanism.  To do so, we add a section to the ``setup.cfg`` file for our
-package:
+mechanism.  To do so, we add a section to the ``pyproject.toml`` file for
+our package:
 
-.. code-block:: cfg
+.. code-block:: toml
 
-   [options.entry_points]
-   mite_stats =
-       mite_amqp = id_mite_nft.amqp:_MITE_STATS
-
-
-.. note::
-
-   It is also possible to specify the equivalent information in
-   ``setup.py`` if that is the configuration file your project uses.
+   [project.entry-points.mite_stats]
+   mite_amqp = "your_package.amqp:_MITE_STATS"
 
 
 Configuring custom stats
@@ -140,9 +133,11 @@ Available processors
 The following processors are provided by mite:
 
 - ``mite`` – statistics about the controller and runner workloads
+- ``mite_finagle`` – statistics about miteʼs Finagle RPC calls
 - ``mite_http`` – statistics about miteʼs http calls
+- ``mite_kafka`` – statistics about miteʼs Kafka producer and consumer
+  activity
+- ``mite_playwright`` – statistics about miteʼs Playwright browser
+  testing, including page load, network resource and paint timings
 - ``mite_selenium`` – statistics about miteʼs selenium-integrated
   browser testing
-
-  .. In the future, we can add here any processors provided by
-     third-party libraries (our own, or other teamsʼ)

@@ -5,7 +5,7 @@ The docker-compose is setup to be able to run a separate docker container for ea
 
 ### Running your own API server and performance test
 
-To run mite performance test against an app, the `apiserver` container in the docker-compose.yml can be exchanged with any docker image
+To run mite performance test against an app, the `apiserver` container in the docker_compose.yml can be exchanged with any docker image
 
 
 For example, provide a dockerfile and run command

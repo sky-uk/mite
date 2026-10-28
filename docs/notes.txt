@@ -1,9 +1,13 @@
-To write:
-- intro
-  - philosophy
-  - tests as code
-  - async
-- api / code-level docs
-- writing journeys and scenarios
-- plugin infrastrucutre
-- contributing guidelines
+
+OPEN
+
+- async, conceptually. docs/tutorial.md and docs/journeys.rst use async
+  throughout (async def, await, async with) but never explain it. A reader
+  unfamiliar with async Python hits the first code example with nothing to
+  read first. Wants a short "why journeys are async" passage early in
+  docs/tutorial.md.
+
+- Plugin authoring. docs/plugins/*.md cover how to use each existing
+  plugin, but nothing covers the entry-point registration pattern or how to
+  write a new mite_* package. Wants one generic worked example, e.g.
+  registering a custom stats processor via pyproject.toml entry points.
