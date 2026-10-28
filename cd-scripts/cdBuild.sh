@@ -15,6 +15,7 @@ fi
 
 echo "##### Running tests #####"
 hatch env remove test.py3.14 && hatch run test.py3.14:test-cov ; TESTS_EXIT_CODE=$?
+"$(dirname "${BASH_SOURCE[0]}")/checkCoreInstall.sh" ; BARE_EXIT_CODE=$?
 
-[ "$PRE_COMMIT_STATUS" -eq 0 -a "$TESTS_EXIT_CODE" -eq 0 ] || exit 1
+[ "$PRE_COMMIT_STATUS" -eq 0 -a "$TESTS_EXIT_CODE" -eq 0 -a "$BARE_EXIT_CODE" -eq 0 ] || exit 1
 echo "##### Tests passed #####"
