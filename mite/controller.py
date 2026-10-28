@@ -74,6 +74,7 @@ class Controller:
         self._testname = testname
         self._scenario_manager = scenario_manager
         self._registered_runners = set()
+        self._issued_data = defaultdict(set)
         self._work_tracker = WorkTracker()
         self._runner_tracker = RunnerTracker()
         self._config_manager = config_manager
@@ -108,7 +109,29 @@ class Controller:
             current_work, runner_total, len(active_runner_ids), max_work, hit_rate
         )
         self._add_assumed(runner_id, scenario_volume_map)
+        self._issued_data[runner_id].update(
+            (scenario_id, data_id)
+            for scenario_id, data_id, *_ in work
+            if data_id is not None
+        )
         return work
+
+    def _filter_issued_data(self, runner_id, completed_data_ids):
+        # Only accept data this controller handed out, so stale IDs from a
+        # previous controller (or duplicates) can't corrupt recyclable pools
+        issued = self._issued_data[runner_id]
+        valid = []
+        for scenario_id, data_id in completed_data_ids:
+            key = (scenario_id, data_id)
+            if key in issued:
+                issued.remove(key)
+                valid.append(key)
+        dropped = len(completed_data_ids) - len(valid)
+        if dropped:
+            logger.debug(
+                "Dropping %d stale data ids from runner %s", dropped, runner_id
+            )
+        return valid
 
     async def request_work(
         self, runner_id, current_work, completed_data_ids, max_work=None
@@ -116,8 +139,7 @@ class Controller:
         if runner_id not in self._registered_runners:
             logger.info("Adopting runner %s from a previous controller", runner_id)
             self._registered_runners.add(runner_id)
-            # These data IDs belong to the previous controller's scenarios
-            completed_data_ids = []
+        completed_data_ids = self._filter_issued_data(runner_id, completed_data_ids)
         self._set_actual(runner_id, current_work)
         self._runner_tracker.update(runner_id)
         await self._scenario_manager.checkin_data(completed_data_ids)
@@ -152,5 +174,6 @@ class Controller:
 
     def bye(self, runner_id):
         self._registered_runners.discard(runner_id)
+        self._issued_data.pop(runner_id, None)
         self._runner_tracker.remove_runner(runner_id)
         self._work_tracker.remove_runner(runner_id)

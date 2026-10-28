@@ -13,6 +13,7 @@ from mite.__main__ import duplicator as main_duplicator
 from mite.__main__ import runner as main_runner
 from mite.config import ConfigManager
 from mite.controller import Controller
+from mite.datapools import RecyclableIterableDataPool
 from mite.scenario import ScenarioManager, StopVolumeModel
 
 TESTNAME = "unit_test_name"
@@ -58,11 +59,46 @@ def test_hello_retries_on_id_collision(controller):
         assert controller.hello()[0] == 8
 
 
+def _work_item(scenario_id, data_id):
+    return (scenario_id, data_id, "module:journey", ("data",))
+
+
 @pytest.mark.asyncio
-async def test_known_runner_checks_in_data(controller, scenario):
+async def test_issued_data_is_checked_in(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, 4)], {1: 1})
     runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {}, [], 1)
+    await controller.request_work(runner_id, {1: 1}, [(1, 4)], 0)
+    assert scenario.checkin_data.await_args == mock.call([(1, 4)])
+
+
+@pytest.mark.asyncio
+async def test_issued_data_is_only_checked_in_once(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, 4)], {1: 1})
+    runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {}, [], 1)
+    scenario.get_work.return_value = ([], {})
     await controller.request_work(runner_id, {}, [(1, 4)], 0)
-    scenario.checkin_data.assert_awaited_once_with([(1, 4)])
+    await controller.request_work(runner_id, {}, [(1, 4)], 0)
+    assert scenario.checkin_data.await_args_list[-1] == mock.call([])
+
+
+@pytest.mark.asyncio
+async def test_data_without_id_is_not_tracked(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, None)], {1: 1})
+    runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {}, [], 1)
+    assert not controller._issued_data[runner_id]
+
+
+@pytest.mark.asyncio
+async def test_data_issued_to_another_runner_is_not_checked_in(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, 4)], {1: 1})
+    owner, _, _ = controller.hello()
+    other, _, _ = controller.hello()
+    await controller.request_work(owner, {}, [], 1)
+    await controller.request_work(other, {}, [(1, 4)], 0)
+    assert scenario.checkin_data.await_args == mock.call([])
 
 
 @pytest.mark.asyncio
@@ -74,16 +110,50 @@ async def test_unknown_runner_is_adopted(controller, scenario):
 
 
 @pytest.mark.asyncio
-async def test_unknown_runner_completed_data_is_discarded(controller, scenario):
+async def test_adopted_runner_stale_data_is_dropped(controller, scenario):
     await controller.request_work(12345, {1: 3}, [(1, 4)], 1)
-    scenario.checkin_data.assert_awaited_once_with([])
+    await controller.request_work(12345, {1: 2}, [(1, 5)], 1)
+    await controller.request_work(12345, {1: 1}, [(1, 6)], 1)
+    for call in scenario.checkin_data.await_args_list:
+        assert call == mock.call([])
 
 
 @pytest.mark.asyncio
-async def test_adopted_runner_data_checked_in_on_later_requests(controller, scenario):
-    await controller.request_work(12345, {}, [(1, 4)], 0)
-    await controller.request_work(12345, {}, [(1, 5)], 0)
-    assert scenario.checkin_data.await_args_list[-1] == mock.call([(1, 5)])
+async def test_adopted_runner_new_data_is_checked_in(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, 9)], {1: 1})
+    await controller.request_work(12345, {1: 1}, [(1, 4)], 1)
+    await controller.request_work(12345, {1: 1}, [(1, 5), (1, 9)], 0)
+    assert scenario.checkin_data.await_args == mock.call([(1, 9)])
+
+
+@pytest.mark.asyncio
+async def test_stale_ids_do_not_duplicate_recyclable_pool_items():
+    pool = RecyclableIterableDataPool(["a", "b", "c"])
+    scenario_manager = ScenarioManager()
+    scenario_manager.add_scenario("module:journey", pool, lambda start, end: 1)
+    controller = Controller(TESTNAME, scenario_manager, ConfigManager())
+
+    # Adopted runner reports items 1 and 2, checked out from the old controller
+    work, _, _ = await controller.request_work(12345, {}, [(1, 1), (1, 2)], 1)
+    assert [data_id for _, data_id, _, _ in work] == [0]
+    assert list(pool._available) == [1, 2]
+
+    # Stale IDs arriving later must still be dropped
+    await controller.request_work(12345, {1: 1}, [(1, 1), (1, 2)], 0)
+    assert list(pool._available) == [1, 2]
+
+    await controller.request_work(12345, {}, [(1, 0)], 0)
+    assert 0 in pool._available
+    assert len(pool._available) == len(set(pool._available))
+
+
+@pytest.mark.asyncio
+async def test_bye_clears_issued_data(controller, scenario):
+    scenario.get_work.return_value = ([_work_item(1, 4)], {1: 1})
+    runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {}, [], 1)
+    controller.bye(runner_id)
+    assert runner_id not in controller._issued_data
 
 
 @pytest.mark.asyncio
