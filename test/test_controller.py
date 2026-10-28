@@ -18,14 +18,85 @@ from mite.scenario import ScenarioManager, StopVolumeModel
 TESTNAME = "unit_test_name"
 
 
+@pytest.fixture
+def scenario():
+    s = mock.Mock()
+    s.checkin_data = mock.AsyncMock()
+    s.get_work = mock.AsyncMock(return_value=([], {}))
+    s.is_active.return_value = True
+    return s
+
+
+@pytest.fixture
+def controller(scenario):
+    return Controller(TESTNAME, scenario, ConfigManager())
+
+
 def test_controller_hello():
     scenario_manager = ScenarioManager()
     config_manager = ConfigManager()
     controller = Controller(TESTNAME, scenario_manager, config_manager)
-    for i in range(5):
+    for _ in range(5):
         runner_id, test_name, config_list = controller.hello()
         assert test_name == controller._testname
-        assert runner_id == i + 1
+
+
+def test_hello_returns_unique_ids(controller):
+    ids = {controller.hello()[0] for _ in range(100)}
+    assert len(ids) == 100
+
+
+def test_hello_ids_differ_across_controllers(scenario):
+    first = Controller(TESTNAME, scenario, ConfigManager()).hello()[0]
+    second = Controller(TESTNAME, scenario, ConfigManager()).hello()[0]
+    assert first != second
+
+
+def test_hello_retries_on_id_collision(controller):
+    with mock.patch("mite.controller.random.getrandbits", side_effect=[7, 7, 8]):
+        assert controller.hello()[0] == 7
+        assert controller.hello()[0] == 8
+
+
+@pytest.mark.asyncio
+async def test_known_runner_checks_in_data(controller, scenario):
+    runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {}, [(1, 4)], 0)
+    scenario.checkin_data.assert_awaited_once_with([(1, 4)])
+
+
+@pytest.mark.asyncio
+async def test_unknown_runner_is_adopted(controller, scenario):
+    work, _, stop = await controller.request_work(12345, {1: 3}, [], 1)
+    assert stop is False
+    scenario.get_work.assert_awaited_once()
+    assert controller._runner_tracker.get_active_count() == 1
+
+
+@pytest.mark.asyncio
+async def test_unknown_runner_completed_data_is_discarded(controller, scenario):
+    await controller.request_work(12345, {1: 3}, [(1, 4)], 1)
+    scenario.checkin_data.assert_awaited_once_with([])
+
+
+@pytest.mark.asyncio
+async def test_adopted_runner_data_checked_in_on_later_requests(controller, scenario):
+    await controller.request_work(12345, {}, [(1, 4)], 0)
+    await controller.request_work(12345, {}, [(1, 5)], 0)
+    assert scenario.checkin_data.await_args_list[-1] == mock.call([(1, 5)])
+
+
+@pytest.mark.asyncio
+async def test_bye_is_idempotent(controller):
+    runner_id, _, _ = controller.hello()
+    await controller.request_work(runner_id, {1: 2}, [], 0)
+    controller.bye(runner_id)
+    controller.bye(runner_id)
+    assert controller._runner_tracker.get_active_count() == 0
+
+
+def test_bye_from_unknown_runner(controller):
+    controller.bye(12345)
 
 
 def test_controller_log_start(httpserver):
