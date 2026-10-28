@@ -1,7 +1,7 @@
 import logging
+import secrets
 import time
 from collections import defaultdict, deque
-from itertools import count
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,8 @@ class WorkTracker:
         return sum(self._all_work[runner_id].values())
 
     def remove_runner(self, runner_id):
-        for k, v in self._all_work[runner_id].items():
+        for k, v in self._all_work.pop(runner_id, {}).items():
             self._total_work[k] -= v
-        del self._all_work[runner_id]
 
 
 class RunnerTracker:
@@ -60,7 +59,7 @@ class RunnerTracker:
         return len(self._hits) / self._timeout
 
     def remove_runner(self, runner_id):
-        del self._last_seen[runner_id]
+        self._last_seen.pop(runner_id, None)
 
     def get_active(self):
         t = time.time()
@@ -74,13 +73,18 @@ class Controller:
     def __init__(self, testname, scenario_manager, config_manager):
         self._testname = testname
         self._scenario_manager = scenario_manager
-        self._runner_id_gen = count(1)
+        # Runner IDs must not be reused across controller restarts.
+        # Unsigned 64-bit IDs preserve the existing wire protocol.
+        self._registered_runners = set()
         self._work_tracker = WorkTracker()
         self._runner_tracker = RunnerTracker()
         self._config_manager = config_manager
 
     def hello(self):
-        runner_id = next(self._runner_id_gen)
+        runner_id = secrets.randbits(64)
+        while runner_id in self._registered_runners:
+            runner_id = secrets.randbits(64)
+        self._registered_runners.add(runner_id)
         return (
             runner_id,
             self._testname,
@@ -107,6 +111,11 @@ class Controller:
     async def request_work(
         self, runner_id, current_work, completed_data_ids, max_work=None
     ):
+        if runner_id not in self._registered_runners:
+            logger.warning(
+                "Ignoring work request from unknown runner %s", runner_id
+            )
+            return [], [], True
         self._set_actual(runner_id, current_work)
         self._runner_tracker.update(runner_id)
         await self._scenario_manager.checkin_data(completed_data_ids)
@@ -140,5 +149,11 @@ class Controller:
         ) and self._runner_tracker.get_active_count() == 0
 
     def bye(self, runner_id):
+        if runner_id not in self._registered_runners:
+            logger.warning(
+                "Ignoring goodbye from unknown runner %s", runner_id
+            )
+            return
+        self._registered_runners.remove(runner_id)
         self._runner_tracker.remove_runner(runner_id)
         self._work_tracker.remove_runner(runner_id)
