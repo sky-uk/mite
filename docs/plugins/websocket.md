@@ -5,8 +5,7 @@
 helper onto the journey context; everything past that point is plain
 `websockets`.
 
-Install: `pip install mite[websocket]` (no functional change today. Every
-mite install already includes it; this will matter starting in mite 3.0).
+Install: `pip install mite[websocket]`
 
 ## Basic usage
 

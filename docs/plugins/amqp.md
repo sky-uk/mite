@@ -12,8 +12,7 @@ contributions — if you rely on it or want to improve it, it's a good
 candidate.
 ```
 
-Install: `pip install mite[amqp]` (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).
+Install: `pip install mite[amqp]`
 
 ## Basic usage
 

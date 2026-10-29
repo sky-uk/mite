@@ -4,8 +4,7 @@
 [aiokafka](https://aiokafka.readthedocs.io/). It installs a producer and a
 consumer onto the journey context and reports metrics for both.
 
-Install: `pip install mite[kafka]` (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).
+Install: `pip install mite[kafka]`
 
 ## Basic usage
 
