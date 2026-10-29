@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import warnings
+from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
@@ -15,13 +15,6 @@ from .compat import (
     to_curl,
 )
 from .config import ENGINE_OPTIONS, SESSION_OPTIONS, json_dumps, json_loads, options_from_config
-
-warnings.warn(
-    "mite_http will require 'pip install mite[http]' starting in mite 4.0; "
-    "no functional change today.",
-    FutureWarning,
-    stacklevel=2,
-)
 
 __all__ = [
     "AcurlError",
