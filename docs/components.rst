@@ -15,9 +15,9 @@ Message transport
 
 Every component below communicates over a message bus, selected with the
 global ``--message-backend`` flag (default ``ZMQ``).  ``nanomsg`` is also
-available: selecting it emits a warning that nanomsg
-support will move to an optional extra ahead of a future mite 3.0 release,
-with no functional change today.  Use ``ZMQ`` unless you specifically need
+available via the ``nanomsg`` extra (``pip install mite[nanomsg]``) — it
+needs the ``libnanomsg`` C library and has no prebuilt PyPI wheel, so it
+compiles from source on install.  Use ``ZMQ`` unless you specifically need
 ``nanomsg``.
 
 Duplicator

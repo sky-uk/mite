@@ -4,8 +4,7 @@
 the journey context, built on top of {doc}`acurl <acurl>`, and automatically
 reports timing metrics for every request.
 
-Install: `pip install mite[http]` (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).
+Install: `pip install mite[http]`
 
 ## Basic usage
 

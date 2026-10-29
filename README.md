@@ -5,7 +5,7 @@
 
 <!-- <img src="https://raw.githubusercontent.com/sky-uk/mite/refs/heads/master/docs/_static/logo.png" alt="Mite logo" width="100" role="img"> -->
 
-[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
 
 [![Hatch project](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pypa/hatch/master/docs/assets/badge/v0.json)](https://github.com/pypa/hatch) [![linting - Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) 
 
@@ -25,8 +25,21 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 pip install mite
 ```
 
+This installs the core framework only. If you're migrating from a pre-3.0
+version of mite, or just want every integration available, install with the
+`all` extra instead:
 
-This requires that you have libcurl installed on your system (including C header files for development, which are often distributed separately from the shared libraries).  On Ubuntu, this can be accomplished with the command:
+```bash
+pip install 'mite[all]'
+```
+
+See [Optional install extras](#optional-install-extras) below for installing
+only the integrations you need.
+
+Some extras require system libraries. `http`, `browser`, `otel`, and `all`
+need libcurl installed (including C header files for development, which are
+often distributed separately from the shared libraries). On Ubuntu, this can
+be accomplished with the command:
 
 ```
 sudo apt install libcurl4 libcurl4-openssl-dev
@@ -34,6 +47,11 @@ sudo apt install libcurl4 libcurl4-openssl-dev
 (NB we use a version of libcurl linked against openssl rather than
 gnutls. This was originally because gnutls had high memory usage; that
 issue has since been resolved, so use whichever you prefer)
+
+`nanomsg` needs the `libnanomsg` C library and has no prebuilt PyPI wheel, so
+it compiles from source on install — only needed if you select
+`--message-backend=nanomsg` (the default is ZMQ, which has no such
+requirement).
 
 
 You can also use the dockerfile included in this repository to run
@@ -48,10 +66,8 @@ Run `mite --help` for a full list of commands
 
 ### Optional install extras
 
-`pip install mite` already installs every integration mite ships. The extras
-below are installable labels only, added ahead of a future major release that
-will actually make them optional. Today, installing any of them (or none)
-installs exactly the same packages:
+As of mite 3.0, `pip install mite` installs only the core framework.
+Integrations are opt-in — install the extras for the ones you use:
 
 | Extra | Covers |
 |---|---|
@@ -65,7 +81,8 @@ installs exactly the same packages:
 | `websocket` | WebSocket integration |
 | `http` | HTTP integration (`acurl`) |
 | `browser` | Browser/HTML-scraping integration (depends on `http`) |
-| `all` | Union of the above |
+| `nanomsg` | `nanomsg` message backend (ZMQ, the default, needs no extra) |
+| `all` | Union of the above — reproduces the pre-3.0 default install |
 
 ```bash
 pip install 'mite[kafka]'
@@ -74,15 +91,17 @@ pip install 'mite[all]'
 
 (quote the brackets so your shell doesn't treat them as a glob)
 
-This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`;
+**Upgrading from before mite 3.0?** Change `mite` to `mite[all]` in your
+requirements file and nothing else changes.
+
+This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.
 `playwright` needs a separate `playwright install` step to download browser
-binaries so it isn't installed by any extra; `otel`, `influxdb`, and `dev` are
-separate, pre-existing extras unrelated to this list. **Every extra above is
-currently a functional no-op**: all of their packages are still in `mite`'s
-mandatory dependency list, so
-`pip install 'mite[kafka]'` installs exactly what `pip install mite` installs.
-They only become meaningful once a future major release actually removes
-packages from the default install.
+binaries regardless of how it's installed, so no extra is offered for it —
+install `playwright` directly. `otel` is a separate, pre-existing extra that
+also now pulls in `mite[http]`, since mite's OpenTelemetry integration
+instruments `mite_http`. `influxdb` and `dev` are likewise separate and
+unrelated to this list.
+
 
 ## Your first scenario
 
