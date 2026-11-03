@@ -271,9 +271,9 @@ def colorise_result(result, threshold):
     if threshold != 0:
         result_ms = result * 1000
         if result_ms >= threshold:
-            return f"\033[91m{formatted_result}\033[0m"  # red
+            return f"\033[91m{formatted_result} \u2717\033[0m"  # red, cross
         else:
-            return f"\033[92m{formatted_result}\033[0m"  # green
+            return f"\033[92m{formatted_result} \u2713\033[0m"  # green, tick
     return formatted_result
 
 
