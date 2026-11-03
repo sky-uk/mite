@@ -185,6 +185,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         if hasattr(processor, "close"):
             processor.close()
 
+    http_stats_output.finalise()
     http_stats_output._scenarios_completed_time = time.time()
     has_error = False
 
@@ -220,19 +221,39 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     if opts.get("--report"):
         benchmark_report(http_stats_output)
-        for (
-            percentile,
-            threshold,
-            result,
-        ) in http_stats_output.percentiles_list_resp_time_store:
-            if threshold != 0 and result * 1000 >= threshold:
+        if _check_percentile_thresholds(
+            http_stats_output.percentiles_list_resp_time_store
+        ):
+            has_error = True
+        for journey, results in http_stats_output.percentiles_by_journey.items():
+            if http_stats_output.journey_stats[journey].req_total == 0:
+                logging.warning(f"[{journey}] No responses recorded for this journey")
+                continue
+            if _check_percentile_thresholds(results, journey):
                 has_error = True
-                logging.error(
-                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
-                )
 
     if has_error:
         raise Exception("Mite test failed")
+
+
+def _check_percentile_thresholds(results, journey=None):
+    """Log percentile threshold breaches; return True if any were breached."""
+    prefix = f"[{journey}] " if journey else ""
+    breached = False
+    for percentile, threshold, result in results:
+        if threshold == 0:
+            continue
+        if result is None:
+            logging.warning(
+                f"{prefix}Not enough samples to check the {percentile}th percentile "
+                f"against {threshold}ms"
+            )
+        elif result * 1000 >= threshold:
+            breached = True
+            logging.error(
+                f"{prefix}Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
+            )
+    return breached
 
 
 def human_readable_bytes(size):
@@ -244,6 +265,8 @@ def human_readable_bytes(size):
 
 
 def colorise_result(result, threshold):
+    if result is None:
+        return "N/A"
     formatted_result = time_unit_format(result)
     if threshold != 0:
         result_ms = result * 1000
@@ -254,65 +277,137 @@ def colorise_result(result, threshold):
     return formatted_result
 
 
-def benchmark_report(http_stats_output):
-    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+STANDARD_HEADERS = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
 
-    percentiles_headers = [
-        f"{int(percentile[0])} %tile" for percentile in perctile_thresh_results_list
+
+def _or_na(formatter, value):
+    return "N/A" if value is None else formatter(value)
+
+
+def _number_format(number):
+    return f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+
+
+def _percent_format(number):
+    return f"{number:.2f}%"
+
+
+def _latency_row(label, bucket, results, percentiles):
+    """A latency row with a cell for each of `percentiles`; "-" where the
+    journey doesn't report that percentile."""
+    by_pct = {p: (t, r) for p, t, r in results}
+    return [
+        label,
+        _or_na(time_unit_format, bucket.resp_time_mean),
+        _or_na(time_unit_format, bucket.resp_time_min),
+        _or_na(time_unit_format, bucket.resp_time_max),
+        _or_na(time_unit_format, bucket.resp_time_stdev),
+        _or_na(_percent_format, bucket.resp_time_within_stdev),
+        *[
+            colorise_result(by_pct[p][1], by_pct[p][0]) if p in by_pct else "-"
+            for p in percentiles
+        ],
     ]
-    standard_headers = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
+
+
+def _threshold_row(label, results, percentiles):
+    thresholds = {p: t for p, t, _ in results}
+    return [
+        label,
+        *["-" for _ in range(len(STANDARD_HEADERS) - 1)],
+        *[f"{thresholds[p]}ms" if thresholds.get(p) else "-" for p in percentiles],
+    ]
+
+
+def _req_sec_row(label, bucket):
+    return [
+        label,
+        _or_na(_number_format, bucket.req_sec_mean),
+        _or_na(_number_format, bucket.req_sec_min),
+        _or_na(_number_format, bucket.req_sec_max),
+        _or_na(_number_format, bucket.req_sec_stdev),
+        _or_na(_percent_format, bucket.req_sec_within_stdev),
+    ]
+
+
+def _percentile_headers(percentiles):
+    return [f"{p} %tile" for p in percentiles]
+
+
+def _journey_label(journey):
+    # TODO: revisit if short names clash across modules
+    return str(journey).rsplit(":", 1)[-1]
+
+
+def _journey_tables(http_stats_output):
+    journey_stats = http_stats_output.journey_stats
+    journey_results = http_stats_output.percentiles_by_journey
+    # Journeys can have different percentile specs, so use the union of them
+    percentiles = sorted({p for results in journey_results.values() for p, _, _ in results})
 
     latency_table = PrettyTable()
-    latency_table.field_names = standard_headers + percentiles_headers
+    latency_table.field_names = ["Journey", *STANDARD_HEADERS[1:]] + _percentile_headers(
+        percentiles
+    )
+    latency_table.align["Journey"] = "l"
+    requests_table = PrettyTable()
+    requests_table.field_names = ["Journey", *STANDARD_HEADERS[1:], "#Reqs", "#Errs"]
+    requests_table.align["Journey"] = "l"
 
+    for journey, bucket in sorted(
+        journey_stats.items(), key=lambda item: _journey_label(item[0])
+    ):
+        label = _journey_label(journey)
+        results = journey_results[journey]
+        has_thresholds = any(t for _, t, _ in results)
+        latency_table.add_row(
+            _latency_row(label, bucket, results, percentiles),
+            divider=not has_thresholds,
+        )
+        if has_thresholds:
+            latency_table.add_row(
+                _threshold_row("  Test Thresholds", results, percentiles), divider=True
+            )
+        requests_table.add_row(
+            [*_req_sec_row(label, bucket), bucket.req_total, bucket.error_total]
+        )
+    return latency_table, requests_table
+
+
+def benchmark_report(http_stats_output):
+    run_stats = http_stats_output._global
+    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+    percentiles = [p for p, _, _ in perctile_thresh_results_list]
+
+    latency_table = PrettyTable()
+    latency_table.field_names = STANDARD_HEADERS + _percentile_headers(percentiles)
     latency_table.add_row(
-        [
-            "Latency",
-            time_unit_format(http_stats_output.mean_resp_time),
-            time_unit_format(http_stats_output._resp_time_min),
-            time_unit_format(http_stats_output._resp_time_max),
-            time_unit_format(http_stats_output.resp_time_standard_deviation),
-            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
-            *[
-                colorise_result(result, threshold)
-                for _, threshold, result in perctile_thresh_results_list
-            ],
-        ],
+        _latency_row("Latency", run_stats, perctile_thresh_results_list, percentiles),
         divider=True,
     )
-
-    if any(threshold[1] != 0 for threshold in perctile_thresh_results_list):
+    if any(t != 0 for _, t, _ in perctile_thresh_results_list):
         latency_table.add_row(
-            [
-                "Test Thresholds",
-                *["-" for _ in range(len(standard_headers) - 1)],
-                *[
-                    f"{threshold[1]}ms" if threshold[1] != 0 else "-"
-                    for threshold in perctile_thresh_results_list
-                ],
-            ],
+            _threshold_row("Test Thresholds", perctile_thresh_results_list, percentiles)
         )
 
     requests_table = PrettyTable()
-    requests_table.field_names = standard_headers
-    number_format = (
-        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
-    )
-    requests_table.add_row(
-        [
-            "Req/Sec",
-            number_format(http_stats_output.req_sec_mean),
-            number_format(http_stats_output._req_sec_min),
-            number_format(http_stats_output._req_sec_max),
-            number_format(http_stats_output.req_sec_standard_deviation),
-            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
-        ]
-    )
+    requests_table.field_names = STANDARD_HEADERS
+    requests_table.add_row(_req_sec_row("Req/Sec", run_stats))
 
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
     print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20, end="\n\n")
     print(latency_table, end="\n\n")
     print(requests_table, end="\n\n")
+    # A single journey's breakdown would just repeat the run totals
+    if len(http_stats_output.journey_stats) > 1:
+        journey_latency_table, journey_requests_table = _journey_tables(
+            http_stats_output
+        )
+        print("=" * 25 + " Per Journey " + "=" * 25, end="\n\n")
+        print("Latency")
+        print(journey_latency_table, end="\n\n")
+        print("Req/Sec")
+        print(journey_requests_table, end="\n\n")
     print("=" * 27 + " Summary " + "=" * 27)
     print(
         f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred",
