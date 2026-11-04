@@ -219,13 +219,14 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             has_error = True
             logging.error("Request per second exceeded: %s", req_sec_stddev)
 
+    percentile_results = (http_stats_output.percentiles_list_resp_time_store, http_stats_output.percentiles_by_journey)
+
     if opts.get("--report"):
-        benchmark_report(http_stats_output)
-        if _check_percentile_thresholds(
-            http_stats_output.percentiles_list_resp_time_store
-        ):
+        benchmark_report(http_stats_output, percentile_results)
+        global_results, journey_results = percentile_results
+        if _check_percentile_thresholds(global_results):
             has_error = True
-        for journey, results in http_stats_output.percentiles_by_journey.items():
+        for journey, results in journey_results.items():
             if http_stats_output.journey_stats[journey].req_total == 0:
                 logging.warning(f"[{journey}] No responses recorded for this journey")
                 continue
@@ -339,9 +340,8 @@ def _journey_label(journey):
     return str(journey).rsplit(":", 1)[-1]
 
 
-def _journey_tables(http_stats_output):
+def _journey_tables(http_stats_output, journey_results):
     journey_stats = http_stats_output.journey_stats
-    journey_results = http_stats_output.percentiles_by_journey
     # Journeys can have different percentile specs, so use the union of them
     percentiles = sorted({p for results in journey_results.values() for p, _, _ in results})
 
@@ -374,9 +374,10 @@ def _journey_tables(http_stats_output):
     return latency_table, requests_table
 
 
-def benchmark_report(http_stats_output):
+def benchmark_report(http_stats_output, percentile_results):
+    global_results, journey_results = percentile_results
     run_stats = http_stats_output._global
-    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+    perctile_thresh_results_list = global_results
     percentiles = [p for p, _, _ in perctile_thresh_results_list]
 
     latency_table = PrettyTable()
@@ -401,7 +402,7 @@ def benchmark_report(http_stats_output):
     # A single journey's breakdown would just repeat the run totals
     if len(http_stats_output.journey_stats) > 1:
         journey_latency_table, journey_requests_table = _journey_tables(
-            http_stats_output
+            http_stats_output, journey_results
         )
         print("=" * 25 + " Per Journey " + "=" * 25, end="\n\n")
         print("Latency")
