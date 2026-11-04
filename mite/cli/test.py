@@ -142,8 +142,10 @@ def time_unit_format(number):
 
 def test_scenarios(test_name, opts, scenarios, config_manager):
     scenario_manager = _create_scenario_manager(opts)
+    scenario_journeys = set()
     for journey_spec, datapool, volumemodel in scenarios:
         scenario_manager.add_scenario(journey_spec, datapool, volumemodel)
+        scenario_journeys.add(journey_spec)
     controller = Controller(test_name, scenario_manager, config_manager)
     transport = DirectRunnerTransport(controller)
     receiver = DirectReciever()
@@ -151,6 +153,7 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
     receiver.add_listener(debug_message_output.process_message)
     extra_processors = _setup_msg_processors(receiver, opts)
     http_stats_output = _get_http_stats_output(receiver)
+    _warn_unknown_benchmark_journeys(http_stats_output, scenario_journeys)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     if opts["--debugging"]:
@@ -234,6 +237,14 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
 
     if has_error:
         raise Exception("Mite test failed")
+
+
+def _warn_unknown_benchmark_journeys(http_stats_output, scenario_journeys):
+    for journey in http_stats_output.configured_journeys - scenario_journeys:
+        logging.warning(
+            f"[{journey}] Benchmark percentiles configured for a journey that isn't "
+            "in the scenario"
+        )
 
 
 def _check_percentile_thresholds(results, journey=None):
