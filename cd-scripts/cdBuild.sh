@@ -21,11 +21,13 @@ echo $JOB_NAME
 if [[ "$JOB_NAME" =~ "mite-ci" ]]; then
     echo "##### Running as MITE-CI. ######"
     hatch env remove test.py3.12 && hatch run test.py3.12:test-cov ; TESTS_EXIT_CODE=$?
+    "$(dirname "${BASH_SOURCE[0]}")/checkCoreInstall.sh" ; BARE_EXIT_CODE=$?
 
 elif [[ "$JOB_NAME" =~ "acurl-ci" ]]; then
     echo "##### Running as ACURL-CI. ######"
     hatch env remove test.py3.12 && hatch run test.py3.12:acurl-test ; TESTS_EXIT_CODE=$?
+    BARE_EXIT_CODE=0
 fi
 
-[ "$PRE_COMMIT_STATUS" -eq 0 -a "$TESTS_EXIT_CODE" -eq 0 ] || exit 1
+[ "$PRE_COMMIT_STATUS" -eq 0 -a "$TESTS_EXIT_CODE" -eq 0 -a "$BARE_EXIT_CODE" -eq 0 ] || exit 1
 echo "##### Tests passed #####"

@@ -1,25 +1,9 @@
 import asyncio
 import logging
-import warnings
 
 import nanomsg
 
 from .utils import pack_msg, unpack_msg
-
-# TODO: tighten to "pip install mite[nanomsg]" once that extra exists.
-# This module is imported only from mite/utils.py:_msg_backend_module, and
-# only when --message-backend=nanomsg is selected (the default is ZMQ) - so
-# this warning fires once per process, only for nanomsg users. It covers
-# all five socket-owning classes below (Duplicator, Sender, Receiver,
-# RunnerTransport, ControllerServer) since each requires this module to be
-# imported first; a per-class warning would have missed RunnerTransport and
-# ControllerServer, which don't instantiate any of the other three.
-warnings.warn(
-    "nanomsg support will move to an optional extra in a future mite "
-    "3.0 release; no functional change today.",
-    FutureWarning,
-    stacklevel=2,
-)
 
 logger = logging.getLogger(__name__)
 

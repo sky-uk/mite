@@ -1,6 +1,5 @@
 import asyncio
 import re
-import warnings
 from functools import wraps
 from urllib.parse import urlencode, urljoin
 
@@ -9,13 +8,6 @@ from bs4 import BeautifulSoup
 from mite import ensure_fixed_separation
 from mite.exceptions import MiteError
 from mite_http import mite_http
-
-warnings.warn(
-    "mite_browser will require 'pip install mite[browser]' starting "
-    "in mite 3.0; no functional change today.",
-    FutureWarning,
-    stacklevel=2,
-)
 
 EMBEDDED_URL_REGEX = re.compile(
     r"""\(\s*[\]?["']([^"':.]*:)?([^"':.]*\.[^"':.]*)[\]?["']\s*\)""", re.IGNORECASE

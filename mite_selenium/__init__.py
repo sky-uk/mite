@@ -2,7 +2,6 @@ import importlib.util
 import logging
 import socket
 import time
-import warnings
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from functools import wraps
@@ -15,14 +14,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from mite.exceptions import MiteError
 from mite.utils import spec_import
-
-warnings.warn(
-    "mite_selenium will require 'pip install mite[selenium]' starting in "
-    "mite 3.0 or mite[selenium_wire] if you use wire=True; "
-    "no functional change today.",
-    FutureWarning,
-    stacklevel=2,
-)
 
 logger = logging.getLogger(__name__)
 

@@ -8,9 +8,7 @@ page/form/link API on top of plain HTTP requests, which is enough to script
 form submissions and link navigation without hand-rolling HTML parsing in
 every journey.
 
-Install: `pip install mite[browser]` (depends on `http`; no functional change
-today. Every mite install already includes it; this will matter starting in
-mite 3.0).
+Install: `pip install mite[browser]` (depends on `http`)
 
 ## Basic usage
 

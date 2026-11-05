@@ -8,43 +8,32 @@ dynamic = ["version"]
 description = "A Python Performance Testing Framework"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: POSIX :: Linux",
 ]
-# Core dependencies for the base mite framework (runner, controller, messaging, CLI)
-# ALL dependencies included for a "batteries included" experience
-# The only expection is playwright which requires a separate install step to download browser binaries.
+# Core dependencies for the base mite framework (runner, controller,
+# messaging, CLI). Integration dependencies live in the extras below as of
+# 3.0.0 — see [project.optional-dependencies]. `pip install mite[all]`
+# reproduces the pre-3.0.0 "batteries included" default install.
 dependencies = [
-    "acurl>=1.2",
-    "aio_pika>=10.0",
-    "aiokafka>=0.12",
-    "boto3>=1.35",
-    "bs4>=0.0.2",
     "docopt>=0.6",
     "flask>=3.0",
     "jinja2>=3.1",
     "msgpack>=1.0",
-    "nanomsg>=1.0",
     "packaging>=22",
     "prettytable>=3.10",
     "pyzmq>=26.0",
-    "selenium>=3.141,<4",
-    "selenium-wire==4.6.5",
-    "sqlalchemy>=2.0",
-    "thrift>=0.20",
     "ujson>=5.10",
     "uvloop>=0.21.0",
-    "websockets>=13",
 ]
 
 [project.optional-dependencies]
@@ -67,6 +56,9 @@ otel = [
     "opentelemetry-exporter-otlp-proto-http>=1.20.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
     "opentelemetry-exporter-zipkin>=1.20.0",
+    # mite/otel/acurl_integration.py and mite/otel/instrumentation.py both
+    # import mite_http; this worked only while acurl was a core dependency.
+    "mite[http]",
 ]
 influxdb = [
     "influxdb3-python",
@@ -81,22 +73,28 @@ docs = [
     "furo",
 ]
 
-# Future extras for mite 3.0's dependency slimming. Every package listed
-# here is still in the mandatory `dependencies` list above, so installing any
-# of these extras today is a functional no-op. It installs exactly what
-# `pip install mite` already installs. They become load-bearing once a future
-# major release removes these packages from `dependencies`.
-kafka         = ["aiokafka"]
-amqp          = ["aio_pika"]
-finagle       = ["thrift"]
+# Optional integration extras. Load-bearing as of 3.0.0: the packages listed
+# here are no longer in [project].dependencies, so the matching extra is
+# required to use that integration. `pip install mite[all]` reproduces the
+# pre-3.0.0 default install exactly.
+#
+# Version bounds MUST match what [project].dependencies carried pre-3.0.0 —
+# they are the only remaining floor now that core no longer declares them.
+#
+# No `playwright` extra: playwright additionally requires `playwright
+# install` to fetch browser binaries, so an extra for it would be a no-op.
+kafka         = ["aiokafka>=0.12"]
+amqp          = ["aio_pika>=10.0"]
+finagle       = ["thrift>=0.20"]
 selenium      = ["selenium>=3.141,<4"]
 selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
-s3            = ["boto3"]
-db            = ["sqlalchemy"]
-websocket     = ["websockets"]
-http          = ["acurl"]
-browser       = ["bs4", "mite[http]"]
-all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser]"]
+s3            = ["boto3>=1.35"]
+db            = ["sqlalchemy>=2.0"]
+websocket     = ["websockets>=13"]
+http          = ["acurl>=1.2"]
+browser       = ["bs4>=0.0.2", "mite[http]"]
+nanomsg       = ["nanomsg>=1.0"]
+all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser,nanomsg]"]
 
 [project.urls]
 Homepage = "https://github.com/sky-uk/mite/"
@@ -156,12 +154,12 @@ packages = [
 ]
 
 [tool.hatch.envs.default]
-features = ["dev"]
+features = ["dev", "all"]
 installer = "uv"
 
 
 [tool.hatch.envs.test]
-features = ["dev", "otel", "influxdb"]
+features = ["dev", "otel", "influxdb", "all"]
 
 [tool.hatch.envs.test.scripts]
 test = "pytest {args:test/}"
@@ -170,11 +168,11 @@ cov-report = "python -m webbrowser coverage_html_report/index.html"
 acurl-test = "pytest {args:acurl/tests/}"
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11", "3.12", "3.13"]
+python = ["3.11", "3.12", "3.13"]
 
 
 [tool.hatch.envs.perf-test]
-features = ["dev"]
+features = ["dev", "all"]
 dependencies = [
     "aiohttp",
     "sanic",
@@ -190,7 +188,7 @@ MITE_PERFTEST_OUT = "output"
 perf-test = "python test/perf/perftest.py {args:}"
 
 [[tool.hatch.envs.perf-test.matrix]]
-python = ["3.10", "3.11", "3.12", "3.13"]
+python = ["3.11", "3.12", "3.13"]
 
 
 [tool.hatch.envs.lint]
