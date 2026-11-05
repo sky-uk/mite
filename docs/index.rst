@@ -48,6 +48,7 @@ for the workflow, coding standards, and how to reach the maintainers.
    journeys
    volume-model
    config
+   benchmark
    design-deployment
    prometheus
    stats
