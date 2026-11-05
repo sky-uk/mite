@@ -58,6 +58,27 @@ def _parse_journey_pct_specs(spec):
         spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
     return {journey: _parse_pct_spec(pcts) for journey, pcts in spec.items()}
 
+def _parse_transaction_pct_specs(spec):
+    if not spec:
+        return {}
+    if isinstance(spec, str):
+        spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
+    results = {}
+    for name, values in spec.items():
+        pairs = (
+            [(int(percentile), threshold) for percentile, threshold in values.items()]
+            if isinstance(values, dict)
+            else _parse_pct_spec(values)
+        )
+        results[name] = pairs
+    return results
+
+def _transaction_name(message):
+    name = message.get("transaction")
+    if name and name.startswith("__root__ :: "):
+        name = name[len("__root__ :: "):]
+    return name
+
 
 class _StatsBucket:
     """Response time and throughput samples for a run, or one journey of a run."""
@@ -176,15 +197,21 @@ class GenericStatsOutput:
         self._scenarios_completed_time = 0
         self._global = _StatsBucket()
         self._journeys = defaultdict(_StatsBucket)
+        self._transaction = defaultdict(_StatsBucket)
         self._pct_spec = _parse_pct_spec(opts.get("--benchmark-percentiles"))
         # TODO: decide whether a journey's percentiles should fully replace the
         # global spec (current behaviour) or be merged over it.
         self._journey_pct_specs = _parse_journey_pct_specs(
             opts.get("--journey-percentiles")
         )
+        self._transaction_pct_specs = _parse_transaction_pct_specs(
+            opts.get("--transaction-percentiles")
+        )
         # Journeys with their own spec are always reported, even with no samples
         for journey in self._journey_pct_specs:
             self._journeys[journey]
+        for transaction in self._transaction_pct_specs:
+            self._transaction[transaction]
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -238,6 +265,7 @@ class GenericStatsOutput:
     def _buckets(self):
         yield self._global
         yield from self._journeys.values()
+        yield from self._transaction.values()
 
     def _end_period(self, t):
         self.print_output(t)
@@ -266,14 +294,22 @@ class GenericStatsOutput:
             self._end_period(t)
         if msg_type in self.message_types:
             journey = self._journeys[message.get("journey")]
-            for bucket in (self._global, journey):
-                bucket.add_response(message["total_time"], message.get("download_size", 0))
+            transaction = _transaction_name(message)
+            for bucket in (self._global, journey, self._transaction[transaction] if transaction else None):
+                if bucket:
+                    bucket.add_response(message["total_time"], message.get("download_size", 0))
+            # if transaction:
+            #     self._transaction[transaction].add_response(message["total_time"], message.get("download_size", 0))
         elif msg_type in ("error", "exception"):
             journey = self._journeys[message.get("journey")]
-            for bucket in (self._global, journey):
-                bucket.add_error()
+            transaction = _transaction_name(message)
+            for bucket in (self._global, journey, self._transaction[transaction] if transaction else None):
+                if bucket:
+                    bucket.add_error()
 
-    def pct_spec_for(self, journey=None):
+    def pct_spec_for(self, journey=None, transaction=None):
+        if transaction:
+            return self._transaction_pct_specs.get(transaction, self._pct_spec)
         return self._journey_pct_specs.get(journey, self._pct_spec)
 
     @property
@@ -283,8 +319,15 @@ class GenericStatsOutput:
     @property
     def percentiles_by_journey(self):
         return {
-            journey: bucket.percentiles(self.pct_spec_for(journey))
+            journey: bucket.percentiles(self.pct_spec_for(journey=journey))
             for journey, bucket in self._journeys.items()
+        }
+
+    @property
+    def percentiles_by_transaction(self):
+        return {
+            transaction: bucket.percentiles(self.pct_spec_for(transaction=transaction))
+            for transaction, bucket in self._transaction.items()
         }
 
     @property

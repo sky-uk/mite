@@ -219,11 +219,14 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             has_error = True
             logging.error("Request per second exceeded: %s", req_sec_stddev)
 
-    percentile_results = (http_stats_output.percentiles_list_resp_time_store, http_stats_output.percentiles_by_journey)
 
     if opts.get("--report"):
+        percentile_results = (
+                http_stats_output.percentiles_list_resp_time_store,
+                http_stats_output.percentiles_by_journey,
+                http_stats_output.percentiles_by_transaction,)
         benchmark_report(http_stats_output, percentile_results)
-        global_results, journey_results = percentile_results
+        global_results, journey_results, transaction_results = percentile_results
         if _check_percentile_thresholds(global_results):
             has_error = True
         for journey, results in journey_results.items():
@@ -232,14 +235,21 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
                 continue
             if _check_percentile_thresholds(results, journey):
                 has_error = True
+        if transaction_results:
+            for transaction, results in transaction_results.items():
+                if http_stats_output._transaction[transaction].req_total == 0:
+                    logging.warning(f"[{transaction}] No responses recorded for this transaction")
+                    continue
+                if _check_percentile_thresholds(results, transaction):
+                    has_error = True
 
     if has_error:
         raise Exception("Mite test failed")
 
 
-def _check_percentile_thresholds(results, journey=None):
+def _check_percentile_thresholds(results, journey=None, transaction=None):
     """Log percentile threshold breaches; return True if any were breached."""
-    prefix = f"[{journey}] " if journey else ""
+    prefix = f"[{journey}] " if journey else f"[{transaction}] " if transaction else ""
     breached = False
     for percentile, threshold, result in results:
         if threshold == 0:
@@ -374,8 +384,42 @@ def _journey_tables(http_stats_output, journey_results):
     return latency_table, requests_table
 
 
+def _transaction_tables(http_stats_output, transaction_results):
+    transaction_stats = http_stats_output._transaction
+    # Transactions can have different percentile specs, so use the union of them
+    percentiles = sorted({p for results in transaction_results.values() for p, _, _ in results})
+
+    latency_table = PrettyTable()
+    latency_table.field_names = ["Transaction", *STANDARD_HEADERS[1:]] + _percentile_headers(
+        percentiles
+    )
+    latency_table.align["Transaction"] = "l"
+    requests_table = PrettyTable()
+    requests_table.field_names = ["Transaction", *STANDARD_HEADERS[1:], "#Reqs", "#Errs"]
+    requests_table.align["Transaction"] = "l"
+
+    for transaction, bucket in sorted(
+        transaction_stats.items(), key=lambda item: item[0]
+    ):
+        label = transaction
+        results = transaction_results[transaction]
+        has_thresholds = any(t for _, t, _ in results)
+        latency_table.add_row(
+            _latency_row(label, bucket, results, percentiles),
+            divider=not has_thresholds,
+        )
+        if has_thresholds:
+            latency_table.add_row(
+                _threshold_row("  Test Thresholds", results, percentiles), divider=True
+            )
+        requests_table.add_row(
+            [*_req_sec_row(label, bucket), bucket.req_total, bucket.error_total]
+        )
+    return latency_table, requests_table
+
+
 def benchmark_report(http_stats_output, percentile_results):
-    global_results, journey_results = percentile_results
+    global_results, journey_results, transaction_results = percentile_results
     run_stats = http_stats_output._global
     perctile_thresh_results_list = global_results
     percentiles = [p for p, _, _ in perctile_thresh_results_list]
@@ -409,6 +453,15 @@ def benchmark_report(http_stats_output, percentile_results):
         print(journey_latency_table, end="\n\n")
         print("Req/Sec")
         print(journey_requests_table, end="\n\n")
+    if transaction_results:
+        transaction_latency_table, transaction_requests_table = _transaction_tables(
+            http_stats_output, transaction_results
+        )
+        print("=" * 25 + " Per Transaction " + "=" * 25, end="\n\n")
+        print("Latency")
+        print(transaction_latency_table, end="\n\n")
+        print("Req/Sec")
+        print(transaction_requests_table, end="\n\n")
     print("=" * 27 + " Summary " + "=" * 27)
     print(
         f"{http_stats_output._req_total} requests in {http_stats_output._scenarios_completed_time - http_stats_output._init_time:.2f}s, {data_transfer:.2f} {data_unit} data transferred",
