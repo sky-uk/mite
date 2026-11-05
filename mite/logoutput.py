@@ -4,6 +4,8 @@ import statistics
 import time
 from collections import defaultdict
 
+from .utils import spec_import
+
 
 class MsgOutput:
     def __init__(self, opts):
@@ -35,32 +37,93 @@ class DebugMessageOutput:
             self._logger.info(text)
 
 
+# Keep in sync with the --benchmark-percentiles default in mite/__main__.py
+DEFAULT_BENCHMARK_PERCENTILES = "50:0,90:0,98:0,99:0"
+# Config key for percentiles applying to every transaction without its own entry
+ALL_TRANSACTIONS_KEY = "*"
+
+
+def _validated(pct_thresholds, source):
+    for percentile, threshold in pct_thresholds:
+        if not 1 <= percentile <= 99:
+            raise ValueError(f"{source}: percentile {percentile} must be between 1 and 99")
+        if threshold < 0:
+            raise ValueError(f"{source}: threshold {threshold} must not be negative")
+    return pct_thresholds
+
+
 def _parse_pct_spec(spec):
     """Parse a "percentile:threshold_ms,..." string into [(int, int), ...]."""
     if not spec:
         return []
-    return [
-        (int(percentile), int(threshold))
-        for percentile, threshold in (p.split(":") for p in spec.split(","))
-    ]
+    return _validated(
+        [
+            (int(percentile), int(threshold))
+            for percentile, threshold in (p.split(":") for p in spec.split(","))
+        ],
+        spec,
+    )
 
 
-def _parse_journey_pct_specs(spec):
-    """Parse per-journey percentile overrides.
+def _pct_dict_to_list(pcts, source):
+    if not isinstance(pcts, dict):
+        raise ValueError(
+            f"{source}: expected a {{percentile: threshold_ms}} dict, got {pcts!r}"
+        )
+    return _validated(
+        [(int(percentile), int(threshold)) for percentile, threshold in pcts.items()],
+        source,
+    )
 
-    Placeholder format until the CLI interface is decided:
-    "pkg.mod:journey=50:100,90:200;pkg.mod:other=99:500"
-    A pre-built {journey_spec: "50:100,..."} dict is also accepted.
+
+def load_benchmark_percentiles(value):
+    """Resolve --benchmark-percentiles into (global_spec, {transaction: spec}).
+
+    `value` is either the inline "percentile:threshold_ms,..." format, or a mite
+    spec ("module:attribute") naming a flat dict keyed by transaction name,
+    matched exactly (nested transactions use their full "outer :: inner" name):
+
+        {
+            "*": {50: 0, 90: 200},
+            "Login": {90: 300, 99: 800},
+            "Login :: Fetch token": {99: 500},
+        }
+
+    "*" sets the percentiles for the whole run only, exactly as the inline
+    format does; it is a literal key, not a wildcard pattern. Only transactions
+    with their own entry are tracked, reported and checked against thresholds.
+
+    Module names can't start with a digit, which distinguishes the two forms.
     """
-    if not spec:
-        return {}
-    if isinstance(spec, str):
-        spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
-    return {journey: _parse_pct_spec(pcts) for journey, pcts in spec.items()}
+    # TODO: discuss whether we're happy with this flat "*" + transaction name
+    # keyed dict as the DSL for benchmark thresholds.
+    value = value or DEFAULT_BENCHMARK_PERCENTILES
+    if value[0].isdigit():
+        return _parse_pct_spec(value), {}
+
+    config = spec_import(value)
+    if not isinstance(config, dict):
+        raise ValueError(
+            f"--benchmark-percentiles spec {value} must refer to a dict, "
+            f"got {type(config).__name__}"
+        )
+    global_spec = (
+        _pct_dict_to_list(
+            config[ALL_TRANSACTIONS_KEY], f"{value}[{ALL_TRANSACTIONS_KEY!r}]"
+        )
+        if ALL_TRANSACTIONS_KEY in config
+        else _parse_pct_spec(DEFAULT_BENCHMARK_PERCENTILES)
+    )
+    transaction_specs = {
+        transaction: _pct_dict_to_list(pcts, f"{value}[{transaction!r}]")
+        for transaction, pcts in config.items()
+        if transaction != ALL_TRANSACTIONS_KEY
+    }
+    return global_spec, transaction_specs
 
 
 class _StatsBucket:
-    """Response time and throughput samples for a run, or one journey of a run."""
+    """Response time and throughput samples for a run, or one transaction of a run."""
 
     def __init__(self):
         self.resp_times = []
@@ -175,16 +238,19 @@ class GenericStatsOutput:
         self._start_t = None
         self._scenarios_completed_time = 0
         self._global = _StatsBucket()
-        self._journeys = defaultdict(_StatsBucket)
-        self._pct_spec = _parse_pct_spec(opts.get("--benchmark-percentiles"))
-        # TODO: decide whether a journey's percentiles should fully replace the
-        # global spec (current behaviour) or be merged over it.
-        self._journey_pct_specs = _parse_journey_pct_specs(
-            opts.get("--journey-percentiles")
+        self._error_journeys = defaultdict(int)
+        # TODO: decide whether a transaction's percentiles should stand alone
+        # (current behaviour) or be merged over the "*" percentiles.
+        self._pct_spec, self._transaction_pct_specs = load_benchmark_percentiles(
+            opts.get("--benchmark-percentiles")
         )
-        # Journeys with their own spec are always reported, even with no samples
-        for journey in self._journey_pct_specs:
-            self._journeys[journey]
+        # Only configured transactions are tracked, keyed by their full (nested)
+        # name; they're reported even with no samples. Everything else only
+        # counts towards the global stats.
+        # TODO: consider also rolling nested transactions up into their parents.
+        self._transactions = {
+            transaction: _StatsBucket() for transaction in self._transaction_pct_specs
+        }
 
     def _pct(self, percentile):
         """Percentile calculation with linear interpolation.
@@ -223,9 +289,8 @@ class GenericStatsOutput:
             )
         # only output journey logs if the --journey_logging switch is set
         if self._journey_logging:
-            for journey, bucket in self._journeys.items():
-                if bucket.error_total:
-                    self._logger.info(f"Total errors for {journey} :{bucket.error_total}")
+            for journey, errors in self._error_journeys.items():
+                self._logger.info(f"Total errors for {journey} :{errors}")
         if not self._hide_constant_logs:
             self._logger.info(
                 f"Last {self._period} Secs> #Reqs:{recent.req_recent} #Errs:{recent.error_recent} "
@@ -237,7 +302,7 @@ class GenericStatsOutput:
 
     def _buckets(self):
         yield self._global
-        yield from self._journeys.values()
+        yield from self._transactions.values()
 
     def _end_period(self, t):
         self.print_output(t)
@@ -255,6 +320,12 @@ class GenericStatsOutput:
         for bucket in self._buckets():
             bucket.flush()
 
+    def _buckets_for(self, message):
+        yield self._global
+        bucket = self._transactions.get(message.get("transaction"))
+        if bucket is not None:
+            yield bucket
+
     def process_message(self, message):
         if "type" not in message:
             return
@@ -265,26 +336,23 @@ class GenericStatsOutput:
         if self._start_t + self._period < t:
             self._end_period(t)
         if msg_type in self.message_types:
-            journey = self._journeys[message.get("journey")]
-            for bucket in (self._global, journey):
+            for bucket in self._buckets_for(message):
                 bucket.add_response(message["total_time"], message.get("download_size", 0))
         elif msg_type in ("error", "exception"):
-            journey = self._journeys[message.get("journey")]
-            for bucket in (self._global, journey):
+            for bucket in self._buckets_for(message):
                 bucket.add_error()
-
-    def pct_spec_for(self, journey=None):
-        return self._journey_pct_specs.get(journey, self._pct_spec)
-
-    @property
-    def journey_stats(self):
-        return dict(self._journeys)
+            if self._journey_logging:
+                self._error_journeys[message.get("journey")] += 1
 
     @property
-    def percentiles_by_journey(self):
+    def transaction_stats(self):
+        return dict(self._transactions)
+
+    @property
+    def percentiles_by_transaction(self):
         return {
-            journey: bucket.percentiles(self.pct_spec_for(journey))
-            for journey, bucket in self._journeys.items()
+            transaction: bucket.percentiles(self._transaction_pct_specs[transaction])
+            for transaction, bucket in self._transactions.items()
         }
 
     @property
