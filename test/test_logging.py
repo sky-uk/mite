@@ -1,12 +1,19 @@
 import logging
+import re
 import statistics
 import sys
 import types
 
 import pytest
 
-from mite.cli.test import _check_percentile_thresholds, benchmark_report
+from mite.cli.test import (
+    _check_error_thresholds,
+    _check_percentile_thresholds,
+    _report_tables,
+    benchmark_report,
+)
 from mite.logoutput import (
+    BenchmarkSpec,
     HttpStatsOutput,
     _parse_pct_spec,
     _StatsBucket,
@@ -93,25 +100,37 @@ def test_parse_pct_spec_rejects_out_of_range_percentile():
 
 
 def test_load_inline_percentiles():
-    assert load_benchmark_percentiles("50:0,90:200") == ([(50, 0), (90, 200)], {})
+    assert load_benchmark_percentiles("50:0,90:200") == (
+        BenchmarkSpec([(50, 0), (90, 200)]),
+        {},
+    )
     assert load_benchmark_percentiles(None) == (
-        [(50, 0), (90, 0), (98, 0), (99, 0)],
+        BenchmarkSpec([(50, 0), (90, 0), (98, 0), (99, 0)]),
         {},
     )
 
 
 def test_load_percentiles_from_spec(pct_config):
-    spec = pct_config({"*": {50: 0, 90: 200}, TXN_A: {99: 500}})
+    spec = pct_config(
+        {
+            "*": {50: 0, 90: 200, "max_errors_threshold": 5},
+            TXN_A: {99: 500, "max_errors_threshold": 0},
+            TXN_B: {90: 100},
+        }
+    )
     assert load_benchmark_percentiles(spec) == (
-        [(50, 0), (90, 200)],
-        {TXN_A: [(99, 500)]},
+        BenchmarkSpec([(50, 0), (90, 200)], max_errors_threshold=5),
+        {
+            TXN_A: BenchmarkSpec([(99, 500)], max_errors_threshold=0),
+            TXN_B: BenchmarkSpec([(90, 100)]),
+        },
     )
 
 
 def test_load_percentiles_from_spec_without_default(pct_config):
     spec = pct_config({TXN_A: {99: 500}})
-    global_spec, _ = load_benchmark_percentiles(spec)
-    assert global_spec == [(50, 0), (90, 0), (98, 0), (99, 0)]
+    run_spec, _ = load_benchmark_percentiles(spec)
+    assert run_spec == BenchmarkSpec([(50, 0), (90, 0), (98, 0), (99, 0)])
 
 
 @pytest.mark.parametrize(
@@ -121,6 +140,11 @@ def test_load_percentiles_from_spec_without_default(pct_config):
         {TXN_A: "99:500"},
         {TXN_A: {0: 500}},
         {TXN_A: {90: -1}},
+        {TXN_A: {"max_errors": 0}},
+        {TXN_A: {"max_errors_threshold": -1}},
+        {TXN_A: {"max_errors_threshold": "0"}},
+        {TXN_A: {"max_errors_threshold": True}},
+        {"*": {"max_errors_threshold": -1}},
     ],
 )
 def test_load_percentiles_from_spec_rejects_bad_config(pct_config, config):
@@ -262,18 +286,140 @@ def _report(h):
     )
 
 
-def test_benchmark_report_per_transaction(pct_config, capsys):
-    spec = pct_config({"*": {50: 0, 90: 100}, TXN_B: {99: 650}})
+def _error(transaction):
+    return {"type": "error", "journey": "pkg.mod:j", "transaction": transaction}
+
+
+def test_cli_error_threshold_used_without_config():
+    errors = [_error(TXN_A)]
+    h = _stats({"--max-errors-threshold": "1"}, errors)
+    assert h.max_errors_threshold == 1
+    assert _check_error_thresholds(h) is False
+    h = _stats({"--max-errors-threshold": "0"}, errors)
+    assert _check_error_thresholds(h) is True
+
+
+def test_error_threshold_defaults_to_zero():
+    assert HttpStatsOutput({}).max_errors_threshold == 0
+
+
+def test_star_error_threshold_overrides_cli_option(pct_config):
+    spec = pct_config({"*": {50: 0, "max_errors_threshold": 2}})
+    h = _stats(
+        {"--benchmark-percentiles": spec, "--max-errors-threshold": "0"},
+        [_error(TXN_A), _error(None)],
+    )
+    assert h.max_errors_threshold == 2
+    assert _check_error_thresholds(h) is False
+
+    spec = pct_config({"*": {50: 0, "max_errors_threshold": 0}})
+    h = _stats(
+        {"--benchmark-percentiles": spec, "--max-errors-threshold": "10"},
+        [_error(None)],
+    )
+    assert _check_error_thresholds(h) is True
+
+
+def test_transaction_error_threshold(pct_config, caplog):
+    spec = pct_config(
+        {
+            "*": {50: 0, "max_errors_threshold": 100},
+            TXN_A: {50: 0, "max_errors_threshold": 1},
+        }
+    )
+    h = _stats({"--benchmark-percentiles": spec}, [_error(TXN_A)])
+    assert _check_error_thresholds(h) is False
+
+    h = _stats({"--benchmark-percentiles": spec}, [_error(TXN_A), _error(TXN_A)])
+    assert _check_error_thresholds(h) is True
+    assert f"[{TXN_A}] Error count exceeded 1: 2" in caplog.text
+
+
+def test_transaction_error_threshold_zero_allows_no_errors(pct_config):
+    spec = pct_config(
+        {
+            "*": {50: 0, "max_errors_threshold": 100},
+            TXN_A: {50: 0, "max_errors_threshold": 0},
+        }
+    )
+    h = _stats({"--benchmark-percentiles": spec})
+    assert _check_error_thresholds(h) is False
+    h = _stats({"--benchmark-percentiles": spec}, [_error(TXN_A)])
+    assert _check_error_thresholds(h) is True
+
+
+def test_transaction_errors_not_checked_without_threshold(pct_config):
+    spec = pct_config({"*": {50: 0, "max_errors_threshold": 100}, TXN_A: {50: 0}})
+    h = _stats({"--benchmark-percentiles": spec}, [_error(TXN_A)] * 5)
+    assert h.transaction_max_errors_thresholds == {}
+    assert _check_error_thresholds(h) is False
+
+
+def _plain(cell):
+    return re.sub(r"\x1b\[\d+m", "", str(cell))
+
+
+def _latency_rows(h):
+    latency_table, _ = _report_tables(
+        h, (h.percentiles_list_resp_time_store, h.percentiles_by_transaction)
+    )
+    headers = latency_table.field_names
+    return headers, {
+        row[0]: dict(zip(headers, map(_plain, row))) for row in latency_table.rows
+    }
+
+
+def test_report_combines_run_and_transactions(pct_config):
+    spec = pct_config({"*": {50: 0, 90: 400}, TXN_B: {99: 650}})
     h = _stats({"--benchmark-percentiles": spec}, MESSAGES)
-    _report(h)
+    headers, rows = _latency_rows(h)
+    assert headers[0] == "Transaction"
+    assert headers[-1] == "Errors"
+    assert [h for h in headers if "%tile" in h] == ["50 %tile", "90 %tile", "99 %tile"]
+    assert list(rows) == ["*", TXN_B]
+    assert rows["*"]["99 %tile"] == "-"
+    assert rows[TXN_B]["50 %tile"] == "-"
+
+
+def test_report_without_configured_transactions_has_only_run_row():
+    _, rows = _latency_rows(_stats(messages=MESSAGES))
+    assert list(rows) == ["*"]
+
+
+def test_report_threshold_in_same_cell(pct_config):
+    spec = pct_config({"*": {50: 0, 90: 400}, TXN_A: {90: 100}})
+    h = _stats({"--benchmark-percentiles": spec}, MESSAGES)
+    _, rows = _latency_rows(h)
+    assert rows["*"]["50 %tile"] == "120.00ms"
+    assert rows["*"]["90 %tile"] == "560.00ms \u2717\n<400ms"
+    assert rows[TXN_A]["90 %tile"] == "189.00ms \u2717\n<100ms"
+
+
+def test_report_error_cells(pct_config):
+    spec = pct_config(
+        {
+            "*": {50: 0, "max_errors_threshold": 2},
+            TXN_A: {50: 0, "max_errors_threshold": 0},
+            TXN_B: {50: 0},
+        }
+    )
+    h = _stats({"--benchmark-percentiles": spec}, MESSAGES + [_error(TXN_A)])
+    _, rows = _latency_rows(h)
+    assert rows["*"]["Errors"] == "1 \u2713\n\u22642"
+    assert rows[TXN_A]["Errors"] == "1 \u2717\n\u22640"
+    assert rows[TXN_B]["Errors"] == "0"
+
+
+def test_report_unrun_transaction_shows_limit(pct_config):
+    spec = pct_config({"Never run": {90: 100}})
+    _, rows = _latency_rows(_stats({"--benchmark-percentiles": spec}, MESSAGES))
+    assert rows["Never run"]["90 %tile"] == "N/A\n<100ms"
+
+
+def test_benchmark_report_prints(pct_config, capsys):
+    spec = pct_config({"*": {50: 0, 90: 400}, TXN_B: {99: 650}})
+    _report(_stats({"--benchmark-percentiles": spec}, MESSAGES))
     out = capsys.readouterr().out
-    assert "Per Transaction" in out
-    assert f"| {TXN_B} " in out
-    assert f"| {TXN_A} " not in out
-    assert "99 %tile" in out
-
-
-def test_benchmark_report_without_configured_transactions(capsys):
-    h = _stats(messages=MESSAGES)
-    _report(h)
-    assert "Per Transaction" not in capsys.readouterr().out
+    assert "Latency" in out and "Req/Sec" in out and "Summary" in out
+    assert "Per Transaction" not in out
+    assert "\u2713 pass" in out

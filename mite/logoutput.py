@@ -3,6 +3,7 @@ import math
 import statistics
 import time
 from collections import defaultdict
+from dataclasses import dataclass, field
 
 from .utils import spec_import
 
@@ -39,8 +40,23 @@ class DebugMessageOutput:
 
 # Keep in sync with the --benchmark-percentiles default in mite/__main__.py
 DEFAULT_BENCHMARK_PERCENTILES = "50:0,90:0,98:0,99:0"
-# Config key for percentiles applying to every transaction without its own entry
+# Config key for the settings that apply to the run as a whole
 ALL_TRANSACTIONS_KEY = "*"
+# Setting name for an error threshold, matching --max-errors-threshold
+MAX_ERRORS_THRESHOLD_KEY = "max_errors_threshold"
+
+
+@dataclass
+class BenchmarkSpec:
+    """Percentile thresholds and an optional error threshold.
+
+    `percentiles` is [(percentile, threshold_ms), ...], a threshold of 0
+    meaning report only. `max_errors_threshold` of None means errors aren't
+    checked; 0 means no errors are allowed.
+    """
+
+    percentiles: list = field(default_factory=list)
+    max_errors_threshold: int = None
 
 
 def _validated(pct_thresholds, source):
@@ -65,41 +81,61 @@ def _parse_pct_spec(spec):
     )
 
 
-def _pct_dict_to_list(pcts, source):
-    if not isinstance(pcts, dict):
+def _benchmark_spec_from_dict(settings, source):
+    """Integer keys are percentiles; string keys are named settings."""
+    if not isinstance(settings, dict):
         raise ValueError(
-            f"{source}: expected a {{percentile: threshold_ms}} dict, got {pcts!r}"
+            f"{source}: expected a {{percentile: threshold_ms}} dict, got {settings!r}"
         )
-    return _validated(
-        [(int(percentile), int(threshold)) for percentile, threshold in pcts.items()],
-        source,
-    )
+    spec = BenchmarkSpec()
+    for key, value in settings.items():
+        if key == MAX_ERRORS_THRESHOLD_KEY:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(
+                    f"{source}: {MAX_ERRORS_THRESHOLD_KEY} must be a non-negative "
+                    f"integer, got {value!r}"
+                )
+            spec.max_errors_threshold = value
+        elif isinstance(key, str):
+            raise ValueError(
+                f"{source}: unknown setting {key!r}; expected an integer percentile "
+                f"or {MAX_ERRORS_THRESHOLD_KEY!r}"
+            )
+        else:
+            spec.percentiles.append((int(key), int(value)))
+    _validated(spec.percentiles, source)
+    return spec
 
 
 def load_benchmark_percentiles(value):
-    """Resolve --benchmark-percentiles into (global_spec, {transaction: spec}).
+    """Resolve --benchmark-percentiles into (run_spec, {transaction: spec}).
+
+    Both are BenchmarkSpecs.
 
     `value` is either the inline "percentile:threshold_ms,..." format, or a mite
     spec ("module:attribute") naming a flat dict keyed by transaction name,
     matched exactly (nested transactions use their full "outer :: inner" name):
 
         {
-            "*": {50: 0, 90: 200},
-            "Login": {90: 300, 99: 800},
+            "*": {50: 0, 90: 200, "max_errors_threshold": 5},
+            "Login": {90: 300, 99: 800, "max_errors_threshold": 0},
             "Login :: Fetch token": {99: 500},
         }
 
     "*" sets the percentiles for the whole run only, exactly as the inline
-    format does; it is a literal key, not a wildcard pattern. Only transactions
-    with their own entry are tracked, reported and checked against thresholds.
+    format does; it is a literal key, not a wildcard pattern. Its
+    max_errors_threshold overrides --max-errors-threshold. Only transactions
+    with their own entry are tracked, reported and checked against thresholds;
+    a transaction's errors are only checked if it sets max_errors_threshold.
 
     Module names can't start with a digit, which distinguishes the two forms.
     """
     # TODO: discuss whether we're happy with this flat "*" + transaction name
-    # keyed dict as the DSL for benchmark thresholds.
+    # keyed dict as the DSL for benchmark thresholds, and whether the option
+    # needs renaming now that it also holds error thresholds.
     value = value or DEFAULT_BENCHMARK_PERCENTILES
     if value[0].isdigit():
-        return _parse_pct_spec(value), {}
+        return BenchmarkSpec(_parse_pct_spec(value)), {}
 
     config = spec_import(value)
     if not isinstance(config, dict):
@@ -107,19 +143,19 @@ def load_benchmark_percentiles(value):
             f"--benchmark-percentiles spec {value} must refer to a dict, "
             f"got {type(config).__name__}"
         )
-    global_spec = (
-        _pct_dict_to_list(
+    run_spec = (
+        _benchmark_spec_from_dict(
             config[ALL_TRANSACTIONS_KEY], f"{value}[{ALL_TRANSACTIONS_KEY!r}]"
         )
         if ALL_TRANSACTIONS_KEY in config
-        else _parse_pct_spec(DEFAULT_BENCHMARK_PERCENTILES)
+        else BenchmarkSpec(_parse_pct_spec(DEFAULT_BENCHMARK_PERCENTILES))
     )
     transaction_specs = {
-        transaction: _pct_dict_to_list(pcts, f"{value}[{transaction!r}]")
-        for transaction, pcts in config.items()
+        transaction: _benchmark_spec_from_dict(settings, f"{value}[{transaction!r}]")
+        for transaction, settings in config.items()
         if transaction != ALL_TRANSACTIONS_KEY
     }
-    return global_spec, transaction_specs
+    return run_spec, transaction_specs
 
 
 class _StatsBucket:
@@ -241,15 +277,16 @@ class GenericStatsOutput:
         self._error_journeys = defaultdict(int)
         # TODO: decide whether a transaction's percentiles should stand alone
         # (current behaviour) or be merged over the "*" percentiles.
-        self._pct_spec, self._transaction_pct_specs = load_benchmark_percentiles(
+        self._run_spec, self._transaction_specs = load_benchmark_percentiles(
             opts.get("--benchmark-percentiles")
         )
+        self._cli_max_errors_threshold = int(opts.get("--max-errors-threshold") or 0)
         # Only configured transactions are tracked, keyed by their full (nested)
         # name; they're reported even with no samples. Everything else only
         # counts towards the global stats.
         # TODO: consider also rolling nested transactions up into their parents.
         self._transactions = {
-            transaction: _StatsBucket() for transaction in self._transaction_pct_specs
+            transaction: _StatsBucket() for transaction in self._transaction_specs
         }
 
     def _pct(self, percentile):
@@ -351,7 +388,9 @@ class GenericStatsOutput:
     @property
     def percentiles_by_transaction(self):
         return {
-            transaction: bucket.percentiles(self._transaction_pct_specs[transaction])
+            transaction: bucket.percentiles(
+                self._transaction_specs[transaction].percentiles
+            )
             for transaction, bucket in self._transactions.items()
         }
 
@@ -359,7 +398,24 @@ class GenericStatsOutput:
     def percentiles_list_resp_time_store(self):
         if not self._global.resp_times:
             return []
-        return self._global.percentiles(self._pct_spec)
+        return self._global.percentiles(self._run_spec.percentiles)
+
+    @property
+    def max_errors_threshold(self):
+        """The run's error threshold: the "*" config's max_errors_threshold if
+        set, otherwise --max-errors-threshold. 0 allows no errors."""
+        if self._run_spec.max_errors_threshold is not None:
+            return self._run_spec.max_errors_threshold
+        return self._cli_max_errors_threshold
+
+    @property
+    def transaction_max_errors_thresholds(self):
+        """{transaction: max_errors_threshold} for transactions that set one."""
+        return {
+            transaction: spec.max_errors_threshold
+            for transaction, spec in self._transaction_specs.items()
+            if spec.max_errors_threshold is not None
+        }
 
     # Run-level accessors, returning 0 rather than None for threshold checks
     @property
