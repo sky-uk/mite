@@ -3,6 +3,7 @@ import math
 import statistics
 import time
 from collections import defaultdict
+from .utils import spec_import
 
 
 class MsgOutput:
@@ -45,33 +46,28 @@ def _parse_pct_spec(spec):
     ]
 
 
-def _parse_journey_pct_specs(spec):
-    """Parse per-journey percentile overrides.
-
-    Placeholder format until the CLI interface is decided:
-    "pkg.mod:journey=50:100,90:200;pkg.mod:other=99:500"
-    A pre-built {journey_spec: "50:100,..."} dict is also accepted.
-    """
+def _parse_named_specs(spec):
     if not spec:
         return {}
     if isinstance(spec, str):
-        spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
-    return {journey: _parse_pct_spec(pcts) for journey, pcts in spec.items()}
+        if spec.startswith("@"):
+            spec = spec_import(spec[1:])
+        else:
+            spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
+    # handle input errors
+    return spec
+
+def _parse_journey_pct_specs(spec):
+    return {
+        journey: _parse_pct_spec(percentiles)
+        for journey, percentiles in _parse_named_specs(spec).items()
+    }
 
 def _parse_transaction_pct_specs(spec):
-    if not spec:
-        return {}
-    if isinstance(spec, str):
-        spec = dict(entry.rsplit("=", 1) for entry in spec.split(";") if entry)
-    results = {}
-    for name, values in spec.items():
-        pairs = (
-            [(int(percentile), threshold) for percentile, threshold in values.items()]
-            if isinstance(values, dict)
-            else _parse_pct_spec(values)
-        )
-        results[name] = pairs
-    return results
+    return {
+        transaction: _parse_pct_spec(percentiles)
+        for transaction, percentiles in _parse_named_specs(spec).items()
+    }
 
 def _transaction_name(message):
     name = message.get("transaction")

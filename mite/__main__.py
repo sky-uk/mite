@@ -101,6 +101,8 @@ Options:
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
+    --journey-percentiles=NEW_VALUE                         Journey percentiles in format 'journey_1=50:0,90:0,98:0,99:0;journey_2....' or import attribute using @module:attribute
+    --transaction-percentiles=NEW_VALUE                     Transaction percentiles in format 'transaction_1=50:0,90:0,98:0,99:0;transaction_2....' or import attribute using @module:attribute
     --influxdb=N                                            Send stats to N number of InfluxDB instances
     --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
 """
