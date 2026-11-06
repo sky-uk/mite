@@ -218,12 +218,12 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             has_error = True
             logging.error("Request per second exceeded: %s", req_sec_stddev)
 
-    percentile_results = (
-        http_stats_output.percentiles_list_resp_time_store,
-        http_stats_output.percentiles_by_transaction,
-    )
 
     if opts.get("--report"):
+        percentile_results = (
+                http_stats_output.percentiles_list_resp_time_store,
+                http_stats_output.percentiles_by_transaction,
+            )
         benchmark_report(http_stats_output, percentile_results)
         global_results, transaction_results = percentile_results
         if _check_percentile_thresholds(global_results):

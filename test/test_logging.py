@@ -41,7 +41,7 @@ def _http(transaction, total_time, size=0, journey="pkg.mod:journey"):
     return {
         "type": "http_metrics",
         "journey": journey,
-        "transaction": transaction,
+        "transaction": f"__root__ :: {transaction}" if transaction else None,
         "total_time": total_time,
         "download_size": size,
     }
@@ -53,7 +53,7 @@ def pct_config(monkeypatch):
 
     def register(config):
         module = types.ModuleType("fake_benchmarks")
-        module.CONFIG = config
+        module.__dict__.update({"CONFIG": config})
         monkeypatch.setitem(sys.modules, "fake_benchmarks", module)
         return "fake_benchmarks:CONFIG"
 
@@ -287,7 +287,11 @@ def _report(h):
 
 
 def _error(transaction):
-    return {"type": "error", "journey": "pkg.mod:j", "transaction": transaction}
+    return {
+        "type": "error",
+        "journey": "pkg.mod:j",
+        "transaction": f"__root__ :: {transaction}" if transaction else None,
+    }
 
 
 def test_cli_error_threshold_used_without_config():

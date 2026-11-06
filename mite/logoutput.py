@@ -357,9 +357,15 @@ class GenericStatsOutput:
         for bucket in self._buckets():
             bucket.flush()
 
+    def _transaction_name(self, message):
+        name = message.get("transaction")
+        if name and name.startswith("__root__ :: "):
+            return name.removeprefix("__root__ :: ")
+        return name
+
     def _buckets_for(self, message):
         yield self._global
-        bucket = self._transactions.get(message.get("transaction"))
+        bucket = self._transactions.get(self._transaction_name(message))
         if bucket is not None:
             yield bucket
 
