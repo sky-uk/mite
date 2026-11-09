@@ -8,7 +8,7 @@ from prettytable import PrettyTable
 
 from mite.datapools import SingleRunDataPoolWrapper
 from mite.influxdb_processor import InfluxDBProcessor
-from mite.logoutput import DebugMessageOutput, HttpStatsOutput
+from mite.logoutput import ALL_TRANSACTIONS_KEY, DebugMessageOutput, HttpStatsOutput
 
 from ..collector import Collector
 from ..controller import Controller
@@ -185,12 +185,12 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
         if hasattr(processor, "close"):
             processor.close()
 
+    http_stats_output.finalise()
     http_stats_output._scenarios_completed_time = time.time()
     has_error = False
 
-    if int(opts.get("--max-errors-threshold")) < http_stats_output.error_total:
+    if _check_error_thresholds(http_stats_output):
         has_error = True
-        logging.error("Error count exceeded: %s", http_stats_output.error_total)
 
     if opts.get("--max-response-time-threshold") != "0":
         max_response_time = http_stats_output._resp_time_max * 1000
@@ -218,21 +218,67 @@ def test_scenarios(test_name, opts, scenarios, config_manager):
             has_error = True
             logging.error("Request per second exceeded: %s", req_sec_stddev)
 
+
     if opts.get("--report"):
-        benchmark_report(http_stats_output)
-        for (
-            percentile,
-            threshold,
-            result,
-        ) in http_stats_output.percentiles_list_resp_time_store:
-            if threshold != 0 and result * 1000 >= threshold:
-                has_error = True
-                logging.error(
-                    f"Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
+        percentile_results = (
+                http_stats_output.percentiles_list_resp_time_store,
+                http_stats_output.percentiles_by_transaction,
+            )
+        benchmark_report(http_stats_output, percentile_results)
+        global_results, transaction_results = percentile_results
+        if _check_percentile_thresholds(global_results):
+            has_error = True
+        for transaction, results in transaction_results.items():
+            if http_stats_output.transaction_stats[transaction].req_total == 0:
+                logging.warning(
+                    f"[{transaction}] No responses recorded for this transaction; "
+                    "check the name matches the transaction exactly"
                 )
+                continue
+            if _check_percentile_thresholds(results, transaction):
+                has_error = True
 
     if has_error:
         raise Exception("Mite test failed")
+
+
+def _check_error_thresholds(http_stats_output):
+    """Log error threshold breaches; return True if any were breached.
+
+    An error threshold of 0 allows no errors.
+    """
+    breached = False
+    if http_stats_output.max_errors_threshold < http_stats_output.error_total:
+        breached = True
+        logging.error("Error count exceeded: %s", http_stats_output.error_total)
+
+    error_thresholds = http_stats_output.transaction_max_errors_thresholds
+    for transaction, threshold in error_thresholds.items():
+        errors = http_stats_output.transaction_stats[transaction].error_total
+        if errors > threshold:
+            breached = True
+            logging.error(f"[{transaction}] Error count exceeded {threshold}: {errors}")
+    return breached
+
+
+def _check_percentile_thresholds(results, transaction=None):
+    """Log percentile threshold breaches; return True if any were breached."""
+    prefix = f"[{transaction}] " if transaction else ""
+    breached = False
+    for percentile, threshold, result in results:
+        if threshold == 0:
+            continue
+        if result is None:
+            logging.warning(
+                f"{prefix}Not enough samples to check the {percentile}th percentile "
+                f"against {threshold}ms"
+            )
+        elif result * 1000 >= threshold:
+            breached = True
+            logging.error(
+                f"{prefix}Response time at {percentile}th percentile exceeded {threshold}ms: {time_unit_format(result)}"
+            )
+    return breached
 
 
 def human_readable_bytes(size):
@@ -243,75 +289,140 @@ def human_readable_bytes(size):
     return size, "PB"
 
 
+def _mark(text, passed):
+    if passed:
+        return f"\033[92m{text} \u2713\033[0m"  # green, tick
+    return f"\033[91m{text} \u2717\033[0m"  # red, cross
+
+
+def _with_limit(text, passed, limit):
+    """A cell showing a result, marked pass/fail, with its limit underneath."""
+    if passed is None:
+        return f"{text}\n{limit}"
+    return f"{_mark(text, passed)}\n{limit}"
+
+
 def colorise_result(result, threshold):
-    formatted_result = time_unit_format(result)
-    if threshold != 0:
-        result_ms = result * 1000
-        if result_ms >= threshold:
-            return f"\033[91m{formatted_result}\033[0m"  # red
-        else:
-            return f"\033[92m{formatted_result}\033[0m"  # green
-    return formatted_result
+    """A percentile cell; a threshold of 0 means report only."""
+    text = "N/A" if result is None else time_unit_format(result)
+    if threshold == 0:
+        return text
+    passed = None if result is None else result * 1000 < threshold
+    return _with_limit(text, passed, f"<{threshold}ms")
 
 
-def benchmark_report(http_stats_output):
-    perctile_thresh_results_list = http_stats_output.percentiles_list_resp_time_store
+def _errors_cell(errors, threshold):
+    """An error count cell. Unlike latency thresholds, 0 allows no errors."""
+    if threshold is None:
+        return str(errors)
+    return _with_limit(str(errors), errors <= threshold, f"\u2264{threshold}")
 
-    percentiles_headers = [
-        f"{int(percentile[0])} %tile" for percentile in perctile_thresh_results_list
-    ]
-    standard_headers = ["", "Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
 
-    latency_table = PrettyTable()
-    latency_table.field_names = standard_headers + percentiles_headers
+LEGEND = (
+    "\u2713 pass  \u2717 fail  "
+    "Limits: <ms for percentiles, \u2264count for errors (\u22640 = no errors allowed)"
+)
+STAT_HEADERS = ["Avg", "Min", "Max", "Std Dev", "+/- Std Dev"]
 
-    latency_table.add_row(
-        [
-            "Latency",
-            time_unit_format(http_stats_output.mean_resp_time),
-            time_unit_format(http_stats_output._resp_time_min),
-            time_unit_format(http_stats_output._resp_time_max),
-            time_unit_format(http_stats_output.resp_time_standard_deviation),
-            f"{http_stats_output.resp_time_within_standard_deviation:.2f}%",
-            *[
-                colorise_result(result, threshold)
-                for _, threshold, result in perctile_thresh_results_list
-            ],
+
+def _or_na(formatter, value):
+    return "N/A" if value is None else formatter(value)
+
+
+def _number_format(number):
+    return f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
+
+
+def _percent_format(number):
+    return f"{number:.2f}%"
+
+
+def _latency_row(label, bucket, results, percentiles, error_threshold):
+    """A latency row with a cell for each of `percentiles`; "-" where the
+    row doesn't report that percentile."""
+    by_pct = {p: (t, r) for p, t, r in results}
+    return [
+        label,
+        _or_na(time_unit_format, bucket.resp_time_mean),
+        _or_na(time_unit_format, bucket.resp_time_min),
+        _or_na(time_unit_format, bucket.resp_time_max),
+        _or_na(time_unit_format, bucket.resp_time_stdev),
+        _or_na(_percent_format, bucket.resp_time_within_stdev),
+        *[
+            colorise_result(by_pct[p][1], by_pct[p][0]) if p in by_pct else "-"
+            for p in percentiles
         ],
-        divider=True,
-    )
+        _errors_cell(bucket.error_total, error_threshold),
+    ]
 
-    if any(threshold[1] != 0 for threshold in perctile_thresh_results_list):
-        latency_table.add_row(
-            [
-                "Test Thresholds",
-                *["-" for _ in range(len(standard_headers) - 1)],
-                *[
-                    f"{threshold[1]}ms" if threshold[1] != 0 else "-"
-                    for threshold in perctile_thresh_results_list
-                ],
-            ],
+
+def _req_sec_row(label, bucket):
+    return [
+        label,
+        _or_na(_number_format, bucket.req_sec_mean),
+        _or_na(_number_format, bucket.req_sec_min),
+        _or_na(_number_format, bucket.req_sec_max),
+        _or_na(_number_format, bucket.req_sec_stdev),
+        _or_na(_percent_format, bucket.req_sec_within_stdev),
+        bucket.req_total,
+        bucket.error_total,
+    ]
+
+
+def _report_rows(http_stats_output, percentile_results):
+    """(label, bucket, percentile results, error threshold) for the run as a
+    whole, labelled "*", followed by each configured transaction."""
+    global_results, transaction_results = percentile_results
+    error_thresholds = http_stats_output.transaction_max_errors_thresholds
+    yield (
+        ALL_TRANSACTIONS_KEY,
+        http_stats_output._global,
+        global_results,
+        http_stats_output.max_errors_threshold,
+    )
+    for transaction, bucket in sorted(http_stats_output.transaction_stats.items()):
+        yield (
+            transaction,
+            bucket,
+            transaction_results[transaction],
+            error_thresholds.get(transaction),
         )
 
-    requests_table = PrettyTable()
-    requests_table.field_names = standard_headers
-    number_format = (
-        lambda number: f"{number / 1000:.2f}K" if number >= 1000 else f"{number:.2f}"
-    )
-    requests_table.add_row(
-        [
-            "Req/Sec",
-            number_format(http_stats_output.req_sec_mean),
-            number_format(http_stats_output._req_sec_min),
-            number_format(http_stats_output._req_sec_max),
-            number_format(http_stats_output.req_sec_standard_deviation),
-            f"{http_stats_output.req_sec_within_standard_deviation:.2f}%",
-        ]
-    )
 
+def _report_tables(http_stats_output, percentile_results):
+    rows = list(_report_rows(http_stats_output, percentile_results))
+    # Rows can have different percentile specs, so use the union of them
+    percentiles = sorted({p for _, _, results, _ in rows for p, _, _ in results})
+
+    latency_table = PrettyTable()
+    latency_table.field_names = [
+        "Transaction",
+        *STAT_HEADERS,
+        *[f"{p} %tile" for p in percentiles],
+        "Errors",
+    ]
+    requests_table = PrettyTable()
+    requests_table.field_names = ["Transaction", *STAT_HEADERS, "#Reqs", "#Errs"]
+    for table in (latency_table, requests_table):
+        table.align["Transaction"] = "l"
+
+    for label, bucket, results, error_threshold in rows:
+        latency_table.add_row(
+            _latency_row(label, bucket, results, percentiles, error_threshold),
+            divider=True,
+        )
+        requests_table.add_row(_req_sec_row(label, bucket))
+    return latency_table, requests_table
+
+
+def benchmark_report(http_stats_output, percentile_results):
+    latency_table, requests_table = _report_tables(http_stats_output, percentile_results)
     data_transfer, data_unit = human_readable_bytes(http_stats_output._data_transferred)
     print("\n" + "=" * 20 + " MITE Benchmark Report " + "=" * 20, end="\n\n")
-    print(latency_table, end="\n\n")
+    print("Latency")
+    print(latency_table)
+    print(LEGEND, end="\n\n")
+    print("Req/Sec")
     print(requests_table, end="\n\n")
     print("=" * 27 + " Summary " + "=" * 27)
     print(
