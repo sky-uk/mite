@@ -6,10 +6,5 @@ repos:
         entry: hatch run lint:check
         language: system
         pass_filenames: false
-      - id: hatch-acurl-lint
-        name: Hatch Lint Check - Acurl
-        entry: hatch run lint:acurl-check
-        language: system
-        pass_filenames: false
 
 exclude: ^mite_finagle/tests/foo_service/.*

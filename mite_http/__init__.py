@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import warnings
-from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 
@@ -15,6 +14,58 @@ warnings.warn(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _to_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
+def _to_verify(value):
+    # True/False, or a path to a CA bundle
+    if isinstance(value, str) and value.strip().lower() in (
+        "0", "1", "true", "false", "yes", "no", "on", "off"
+    ):
+        return _to_bool(value)
+    return value
+
+
+def _to_optional_float(value):
+    return None if value in (None, "") else float(value)
+
+
+# Read from ctx.config (e.g. set as MITE_CONF_http_max_total_connections=100).
+# (config key, acurl Engine argument, converter, default)
+_ENGINE_OPTIONS = (
+    ("http_max_host_connections", "max_host_connections", int, 0),
+    ("http_max_total_connections", "max_total_connections", int, 0),
+    ("http_max_idle_connections", "max_idle_connections", int, 1000),
+)
+
+# (config key, acurl Session argument, converter, default)
+# The defaults keep the connection behaviour of mite's old acurl fork (one
+# shared pool, TLS tickets per session), with HTTP/2 negotiated where offered.
+_SESSION_OPTIONS = (
+    ("http_connections", "connections", str, "shared"),
+    ("http_tls", "tls", str, "session"),
+    ("http_version", "http_version", str, "HTTP/2"),
+    ("http_idle_timeout", "idle_timeout", int, 118),
+    ("http_max_connection_age", "max_connection_age", int, 0),
+    ("http_session_max_host_connections", "max_host_connections", int, 0),
+    ("http_session_max_connections", "max_connections", int, 0),
+    ("http_timeout", "timeout", _to_optional_float, None),
+    ("http_connect_timeout", "connect_timeout", _to_optional_float, None),
+    ("http_verify", "verify", _to_verify, False),
+)
+
+
+def _options_from_config(config, options):
+    result = {}
+    for key, argument, convert, default in options:
+        value = config.get(key, None)
+        result[argument] = default if value is None else convert(value)
+    return result
 
 
 class AcurlSessionWrapper:
@@ -37,22 +88,25 @@ class AcurlSessionWrapper:
 
 
 class SessionPool:
-    """No longer actually goes pooling as this is built into acurl. API just left in place.
-    Will need a refactor"""
+    """Holds one acurl Engine per event loop and gives each journey its own Session.
+
+    Connection pooling is done by acurl, according to the http_* config options.
+    """
 
     # A memoization cache for instances of this class per event loop
     _session_pools = {}
 
     def __init__(self):
-        self._wrapper = None
-        self._pool = deque()
+        self._engine = None
 
     @asynccontextmanager
     async def session_context(self, context):
         context.http = await self._checkout(context)
-        yield
-        await self._checkin(context.http)
-        del context.http
+        try:
+            yield
+        finally:
+            await self._checkin(context.http)
+            del context.http
 
     @classmethod
     def decorator(cls, func):
@@ -71,10 +125,13 @@ class SessionPool:
         return wrapper
 
     async def _checkout(self, context):
-        if self._wrapper is None:
-            loop = asyncio.get_running_loop()
-            self._wrapper = acurl.CurlWrapper(loop)
-        session = self._wrapper.session()
+        if self._engine is None:
+            # Engine options are fixed once the engine exists; session options
+            # are re-read for every session, so config changes apply to new ones.
+            self._engine = acurl.Engine(**_options_from_config(context.config, _ENGINE_OPTIONS))
+        session = acurl.Session(
+            engine=self._engine, **_options_from_config(context.config, _SESSION_OPTIONS)
+        )
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
@@ -102,7 +159,7 @@ class SessionPool:
         return session_wrapper
 
     async def _checkin(self, session):
-        pass
+        session.close()
 
 
 def mite_http(func):

@@ -25,7 +25,10 @@ classifiers = [
 # ALL dependencies included for a "batteries included" experience
 # The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
-    "acurl>=1.2",
+    # TODO: upstream acurl (github.com/tonysimpson/acurl) 1.0 is to be published
+    # under a new PyPI name, as `acurl==1.0` is already taken by our old Cython
+    # fork. Add it here (and to the `http` extra) as "<name>==1.0" once known.
+    # The import name stays `acurl`.
     "aio_pika>=10.0",
     "aiokafka>=0.12",
     "boto3>=1.35",
@@ -59,7 +62,6 @@ dev = [
     "hypothesis", # used in finagle/thrift tests
     "werkzeug==3.1.3",
     "httpbin>=0.10.2", # Required for werkzeug 3.x compatibility
-    "Cython>=3.0", # required for coverage plugin and acurl
 ]
 otel = [
     "opentelemetry-api>=1.20.0",
@@ -94,7 +96,7 @@ selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
 s3            = ["boto3"]
 db            = ["sqlalchemy"]
 websocket     = ["websockets"]
-http          = ["acurl"]
+http          = []  # TODO: upstream acurl "<name>==1.0", see dependencies above
 browser       = ["bs4", "mite[http]"]
 all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser]"]
 
@@ -129,7 +131,6 @@ version-file = "mite/_version.py"
 exclude = [
     "/.github",
     "/.tox",
-    "/acurl",
     "/docs",
     "/test",
     "/coverage_html_report",
@@ -167,7 +168,6 @@ features = ["dev", "otel", "influxdb"]
 test = "pytest {args:test/}"
 test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
-acurl-test = "pytest {args:acurl/tests/}"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13"]
@@ -205,16 +205,9 @@ dependencies = [
 check = [
     "ruff check .",
 ]
-acurl-check = [
-    "cd acurl && ruff check .",
-]
 format-mite = [
     "ruff check --fix .",
     "ruff format .",
-]
-acurl-format = [
-    "cd acurl && ruff check --fix .",
-    "cd acurl && ruff format .",
 ]
 
 [tool.hatch.envs.docs]
@@ -244,7 +237,6 @@ detached = true
 python = "3.12"
 dependencies = [
     "build==1.6.1",
-    "cibuildwheel==4.2.1",
     "docopt==0.6.2",
     "packaging==26.3",
     "twine==7.0.0",
@@ -253,10 +245,7 @@ dependencies = [
 [tool.hatch.envs.release.scripts]
 tag-create    = "python cd-scripts/cdTagRelease.py create {args}"
 tag-push      = "python cd-scripts/cdTagRelease.py push {args}"
-acurl-changed = "python cd-scripts/checkAcurlVersion.py {args}"
 build-mite    = "python -m build --outdir wheelhouse-mite"
-sdist-acurl   = "python -m build --sdist --outdir wheelhouse-acurl acurl/"
-wheels-acurl  = "cd acurl && python -m cibuildwheel --platform linux --output-dir ../wheelhouse-acurl ."
 check         = "python -m twine check {args}"
 upload        = "python -m twine upload --non-interactive --skip-existing {args}"
 
@@ -372,7 +361,6 @@ markers = [
 # [tool.ruff.lint.isort].known-first-party.
 branch = true
 source = [
-    "acurl",
     "mite",
     "mite_http",
     "mite_browser",
@@ -390,7 +378,6 @@ omit = [
     "*/__pycache__/*",
     "mite/example.py",
 ]
-plugins = ["Cython.Coverage"]
 
 [tool.coverage.report]
 exclude_lines = [

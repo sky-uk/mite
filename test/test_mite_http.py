@@ -93,3 +93,86 @@ async def test_decorator_eventloop_memoization():
     await foo(MockContext())
 
     assert asyncio.get_running_loop() in SessionPool._session_pools
+
+
+def test_options_from_config_defaults():
+    from mite_http import _ENGINE_OPTIONS, _SESSION_OPTIONS, _options_from_config
+
+    assert _options_from_config({}, _ENGINE_OPTIONS) == {
+        "max_host_connections": 0,
+        "max_total_connections": 0,
+        "max_idle_connections": 1000,
+    }
+    assert _options_from_config({}, _SESSION_OPTIONS) == {
+        "connections": "shared",
+        "tls": "session",
+        "http_version": "HTTP/2",
+        "idle_timeout": 118,
+        "max_connection_age": 0,
+        "max_host_connections": 0,
+        "max_connections": 0,
+        "timeout": None,
+        "connect_timeout": None,
+        "verify": False,
+    }
+
+
+def test_options_from_config_converts_strings():
+    from mite_http import _ENGINE_OPTIONS, _SESSION_OPTIONS, _options_from_config
+
+    config = {
+        "http_max_total_connections": "100",
+        "http_connections": "session",
+        "http_version": "HTTP/1.1",
+        "http_session_max_host_connections": "6",
+        "http_timeout": "2.5",
+        "http_connect_timeout": "",
+        "http_verify": "true",
+    }
+    engine = _options_from_config(config, _ENGINE_OPTIONS)
+    session = _options_from_config(config, _SESSION_OPTIONS)
+    assert engine["max_total_connections"] == 100
+    assert session["connections"] == "session"
+    assert session["http_version"] == "HTTP/1.1"
+    assert session["max_host_connections"] == 6
+    assert session["timeout"] == 2.5
+    assert session["connect_timeout"] is None
+    assert session["verify"] is True
+    assert _options_from_config({"http_verify": "/etc/ca.pem"}, _SESSION_OPTIONS)["verify"] == "/etc/ca.pem"
+
+
+@pytest.mark.asyncio
+async def test_engine_per_pool_and_session_closed_on_checkin():
+    context = MockContext()
+    context.config = {"http_max_total_connections": "10", "http_connections": "session"}
+
+    with patch("mite_http.acurl") as acurl_mock:
+        pool = SessionPool()
+        wrapper = await pool._checkout(context)
+        await pool._checkout(context)
+        await pool._checkin(wrapper)
+
+    acurl_mock.Engine.assert_called_once()
+    assert acurl_mock.Engine.call_args.kwargs["max_total_connections"] == 10
+    assert acurl_mock.Session.call_count == 2
+    assert acurl_mock.Session.call_args.kwargs["engine"] is acurl_mock.Engine.return_value
+    assert acurl_mock.Session.call_args.kwargs["connections"] == "session"
+    acurl_mock.Session.return_value.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_session_closed_when_journey_raises():
+    context = MockContext()
+
+    @mite_http
+    async def journey(ctx):
+        raise ValueError("boom")
+
+    with patch("mite_http.acurl") as acurl_mock:
+        SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
+        with pytest.raises(ValueError):
+            await journey(context)
+        SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
+
+    acurl_mock.Session.return_value.close.assert_called_once()
+    assert not hasattr(context, "http")

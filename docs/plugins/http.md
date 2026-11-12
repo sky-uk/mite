@@ -113,6 +113,44 @@ export MITE_HTTP_HISTOGRAM_BUCKETS=0.01,0.05,0.1,0.5,1,5
 
 The default buckets run from 100 microseconds to 64 seconds.
 
+## Connection settings
+
+Each `@mite_http` journey gets its own acurl `Session`, and every journey in a
+runner shares one acurl `Engine`. Both are configured through mite config, so set
+them with `MITE_CONF_` environment variables, for example
+`MITE_CONF_http_version=HTTP/1.1`. See the
+[acurl connections guide](https://github.com/tonysimpson/acurl/blob/main/docs/connections.md)
+for what each option does.
+
+Engine options are read once, when a runner makes its first request:
+
+| Config key | Default | acurl `Engine` argument |
+|---|---|---|
+| `http_max_host_connections` | `0` (no limit) | `max_host_connections` |
+| `http_max_total_connections` | `0` (no limit) | `max_total_connections` |
+| `http_max_idle_connections` | `1000` | `max_idle_connections` |
+
+Session options are read at the start of each journey, so changes apply to the
+next journeys:
+
+| Config key | Default | acurl `Session` argument |
+|---|---|---|
+| `http_connections` | `shared` | `connections` (`shared`, `session` or `none`) |
+| `http_tls` | `session` | `tls` (`shared` or `session`) |
+| `http_version` | `HTTP/2` | `http_version` (`HTTP/1.1`, `HTTP/2` or `HTTP/3`) |
+| `http_idle_timeout` | `118` | `idle_timeout` (seconds) |
+| `http_max_connection_age` | `0` (no limit) | `max_connection_age` (seconds) |
+| `http_session_max_host_connections` | `0` (no limit) | `max_host_connections` |
+| `http_session_max_connections` | `0` (no limit) | `max_connections` |
+| `http_timeout` | none | `timeout` (seconds) |
+| `http_connect_timeout` | curl's default | `connect_timeout` (seconds) |
+| `http_verify` | `false` | `verify` (`true`, `false` or a CA bundle path) |
+
+The defaults keep the connection behaviour of mite's old acurl fork (one shared
+pool, TLS session tickets per journey), except that HTTP/2 is now negotiated
+where the server offers it. The session is closed when the journey ends,
+including when it raises.
+
 ## Custom metrics per request
 
 Anything set on `ctx.http.additional_metrics` is merged into the next

@@ -21,38 +21,11 @@ function assertReleasable() {
     fi
 }
 
-function checkAcurl() {
-    local response http_code published
-
-    response=$(curl -sS --retry 3 --retry-connrefused --max-time 30 \
-                    -w '\n%{http_code}' https://pypi.org/pypi/acurl/json)
-    http_code=$(tail -n1 <<<"$response")
-
-    case "$http_code" in
-        200) published=$(sed '$d' <<<"$response" | jq -r '.info.version') ;;
-        404) echo "acurl not yet on PyPI; will publish"; ACURL_CHANGED=true; return ;;
-        *)   echo "PyPI lookup failed (HTTP $http_code); refusing to guess" >&2; exit 1 ;;
-    esac
-
-    [[ -n "$published" && "$published" != "null" ]] \
-        || { echo "could not parse published acurl version" >&2; exit 1; }
-
-    rm -f .acurl-changed
-    hatch run release:acurl-changed --published="$published" --output=.acurl-changed
-    ACURL_CHANGED=$(cat .acurl-changed)
-}
-
 function buildLinuxWheels() {
-    rm -rf wheelhouse-mite wheelhouse-acurl
+    rm -rf wheelhouse-mite
 
     if [ "$VERSION_INCREMENT" = true ]; then
         echo "##### Building Mite #####"
         hatch run release:build-mite
-    fi
-
-    if [ "$ACURL_CHANGED" = true ]; then
-        echo "##### Building Acurl #####"
-        hatch run release:wheels-acurl
-        hatch run release:sdist-acurl
     fi
 }
