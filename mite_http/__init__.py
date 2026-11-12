@@ -222,5 +222,16 @@ def mite_http(func):
     return SessionPool.decorator(func)
 
 
-def create_http_cookie(ctx, *args, **kwargs):
-    return acurl.Cookie(*args, **kwargs)
+def create_http_cookie(ctx, domain, name, value):
+    """Build a session cookie for `domain`, to pass in cookie_list=[...] (or as a
+    value in cookies={...}). Same defaults the old acurl fork used."""
+    return acurl.Cookie(
+        http_only=False,
+        domain=domain,
+        include_subdomains=True,
+        path="/",
+        is_secure=False,
+        expiration=0,
+        name=name,
+        value=value,
+    )

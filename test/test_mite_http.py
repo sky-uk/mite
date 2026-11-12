@@ -335,3 +335,20 @@ async def test_response_callback_sends_new_fields():
     assert fields["posttransfer_time"] == 0.03
     assert fields["http_version"] == "HTTP/2"
     assert fields["upload_size"] == 12
+
+
+def test_create_http_cookie_uses_old_fork_defaults():
+    from mite_http import create_http_cookie
+
+    with patch("mite_http.acurl.Cookie") as cookie_cls:
+        create_http_cookie(None, ".example.com", "session", "abc")
+    cookie_cls.assert_called_once_with(
+        http_only=False,
+        domain=".example.com",
+        include_subdomains=True,
+        path="/",
+        is_secure=False,
+        expiration=0,
+        name="session",
+        value="abc",
+    )

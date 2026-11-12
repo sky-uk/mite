@@ -222,9 +222,43 @@ inspect the response before deciding what to add.
 
 ## Cookies
 
-`create_http_cookie(ctx, *args, **kwargs)` builds a cookie object to populate
-the `cookies` argument above. Session-wide cookies can be cleared with
-`ctx.http.erase_all_cookies()`.
+Each journey gets a new acurl session with an empty cookie jar, which is
+discarded when the journey ends (whether or not it raised). Cookies set by the
+server, and cookies you pass to requests, stay in the jar for the rest of the
+journey.
+
+Sending cookies:
+
+- `cookies={"name": "value"}` on any request adds them to the jar as session
+  cookies for the request's host and its subdomains, path `/`.
+- `cookie_list=[...]` adds `acurl.Cookie` objects, for control over domain,
+  path, expiry and flags. `create_http_cookie(ctx, domain, name, value)` builds
+  one with the same defaults as `cookies=`:
+
+  ```python
+  cookie = create_http_cookie(ctx, ".example.com", "session", "abc")
+  await ctx.http.get(url, cookie_list=[cookie])
+  ```
+
+  `Cookie` objects passed as values in `cookies={...}` are also accepted, and
+  moved to `cookie_list` for you.
+
+Reading and changing the jar:
+
+| Call | Returns or does |
+|---|---|
+| `ctx.http.cookies()` | the jar as a `{name: value}` dict |
+| `ctx.http.get_cookie_list()` | the jar as `acurl.Cookie` objects (domain, path, expiry, flags) |
+| `ctx.http.add_cookie_list(cookies)` | adds `Cookie` objects to the jar |
+| `ctx.http.erase_all_cookies()` | empties the jar |
+| `ctx.http.erase_session_cookies()` | removes cookies without an expiry, as a browser restart would |
+| `resp.cookies`, `resp.cookielist` | the **whole jar** at the time you read it, as a dict or as `Cookie` objects, not only the cookies that response set. Empty once the journey has ended. |
+| `resp.request.cookie_list` | only the cookies passed to that request |
+
+`get_cookie_list()`, `resp.cookielist` and `cookie_list=` all use
+`acurl.Cookie`, so cookies read from one place can be passed straight to another.
+In the dict forms, cookies with the same name on different domains overwrite
+each other.
 
 ## See also
 
