@@ -68,6 +68,32 @@ def _options_from_config(config, options):
     return result
 
 
+# The old acurl fork raised AcurlError for failed transfers
+AcurlError = acurl.RequestError
+
+
+def _adapt_request_kwargs(kwargs):
+    """Translate request arguments from the old acurl fork's API to upstream's."""
+    cert = kwargs.get("cert")
+    if cert is not None:
+        # The old fork took (keyfile, certfile); upstream takes (certfile, keyfile)
+        kwargs["cert"] = (cert[1], cert[0])
+    cookies = kwargs.get("cookies")
+    if cookies and any(isinstance(v, acurl.Cookie) for v in cookies.values()):
+        # The old fork accepted Cookie objects as values of the cookies dict;
+        # upstream only takes strings there, and Cookie objects in cookie_list
+        cookie_list = list(kwargs.get("cookie_list") or ())
+        plain = {}
+        for name, value in cookies.items():
+            if isinstance(value, acurl.Cookie):
+                cookie_list.append(value)
+            else:
+                plain[name] = value
+        kwargs["cookies"] = plain or None
+        kwargs["cookie_list"] = cookie_list
+    return kwargs
+
+
 class AcurlSessionWrapper:
     def __init__(self, session):
         self.__session = session
@@ -81,6 +107,30 @@ class AcurlSessionWrapper:
 
     def set_response_callback(self, cb):
         self.__callback = cb
+
+    async def request(self, method, url, **kwargs):
+        return await self.__session.request(method, url, **_adapt_request_kwargs(kwargs))
+
+    async def get(self, url, **kwargs):
+        return await self.__session.get(url, **_adapt_request_kwargs(kwargs))
+
+    async def post(self, url, **kwargs):
+        return await self.__session.post(url, **_adapt_request_kwargs(kwargs))
+
+    async def put(self, url, **kwargs):
+        return await self.__session.put(url, **_adapt_request_kwargs(kwargs))
+
+    async def patch(self, url, **kwargs):
+        return await self.__session.patch(url, **_adapt_request_kwargs(kwargs))
+
+    async def delete(self, url, **kwargs):
+        return await self.__session.delete(url, **_adapt_request_kwargs(kwargs))
+
+    async def head(self, url, **kwargs):
+        return await self.__session.head(url, **_adapt_request_kwargs(kwargs))
+
+    async def options(self, url, **kwargs):
+        return await self.__session.options(url, **_adapt_request_kwargs(kwargs))
 
     @property
     def _response_callback(self):

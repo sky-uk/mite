@@ -176,3 +176,45 @@ async def test_session_closed_when_journey_raises():
 
     acurl_mock.Session.return_value.close.assert_called_once()
     assert not hasattr(context, "http")
+
+
+class _FakeCookie:
+    pass
+
+
+def test_adapt_request_kwargs_swaps_cert():
+    from mite_http import _adapt_request_kwargs
+
+    assert _adapt_request_kwargs({"cert": ("key.pem", "cert.pem")})["cert"] == ("cert.pem", "key.pem")
+    assert "cert" not in _adapt_request_kwargs({})
+
+
+def test_adapt_request_kwargs_moves_cookie_objects_to_cookie_list():
+    from mite_http import _adapt_request_kwargs
+
+    cookie = _FakeCookie()
+    with patch("mite_http.acurl.Cookie", _FakeCookie):
+        kwargs = _adapt_request_kwargs({"cookies": {"a": "1", "b": cookie}})
+        assert kwargs["cookies"] == {"a": "1"}
+        assert kwargs["cookie_list"] == [cookie]
+
+        kwargs = _adapt_request_kwargs({"cookies": {"b": cookie}, "cookie_list": ["x"]})
+        assert kwargs["cookies"] is None
+        assert kwargs["cookie_list"] == ["x", cookie]
+
+        kwargs = _adapt_request_kwargs({"cookies": {"a": "1"}})
+        assert kwargs == {"cookies": {"a": "1"}}
+
+
+@pytest.mark.asyncio
+async def test_wrapper_adapts_kwargs_before_calling_session():
+    from unittest.mock import AsyncMock, MagicMock
+
+    from mite_http import AcurlSessionWrapper
+
+    session = MagicMock()
+    session.post = AsyncMock(return_value="resp")
+    wrapper = AcurlSessionWrapper(session)
+
+    assert await wrapper.post("http://x", cert=("k", "c"), json={}) == "resp"
+    session.post.assert_awaited_once_with("http://x", cert=("c", "k"), json={})

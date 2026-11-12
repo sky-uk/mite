@@ -147,9 +147,12 @@ next journeys:
 | `http_verify` | `false` | `verify` (`true`, `false` or a CA bundle path) |
 
 The defaults keep the connection behaviour of mite's old acurl fork (one shared
-pool, TLS session tickets per journey), except that HTTP/2 is now negotiated
-where the server offers it. The session is closed when the journey ends,
-including when it raises.
+pool, TLS session tickets per journey). HTTP/2 is negotiated over https where the
+server offers it, falling back to HTTP/1.1, as before; the difference is that
+requests to an HTTP/2 server now wait to share one connection (curl's
+`PIPEWAIT`) rather than each opening their own. `HTTP/3` has no fallback and
+needs a libcurl built with HTTP/3 support. The session is closed when the journey
+ends, including when it raises.
 
 ## Custom metrics per request
 
