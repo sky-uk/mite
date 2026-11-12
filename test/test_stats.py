@@ -77,6 +77,38 @@ class TestModularity:
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]
 
+    def _entry_points_with_opt_in(self):
+        return [EntryPointMock(group="x"), EntryPointMock(group="mite_http_extended")]
+
+    def test_opt_in_processor_excluded_by_default(self):
+        with mock.patch(
+            "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
+        ):
+            assert Stats(None)._all_stats == ["x"]
+            assert Stats(None, exclude=["y"])._all_stats == ["x"]
+
+    def test_opt_in_processor_added_with_extra(self):
+        with mock.patch(
+            "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
+        ):
+            s = Stats(None, extra=["mite_http_extended"])
+            assert s._all_stats == ["x", "mite_http_extended"]
+
+    def test_opt_in_processor_included_by_name(self):
+        with mock.patch(
+            "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
+        ):
+            s = Stats(None, include=["mite_http_extended"])
+            assert s._all_stats == ["mite_http_extended"]
+
+    def test_extra_adds_to_include_list(self):
+        with mock.patch(
+            "importlib.metadata.entry_points",
+            return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
+        ):
+            s = Stats(None, include=["x"], extra=["y"])
+            assert s._all_stats == ["x", "y"]
+
     def test_import_error_is_a_warning(self):
         with mock.patch(
             "mite.stats.logger.warning"

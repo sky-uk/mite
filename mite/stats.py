@@ -180,16 +180,28 @@ _MITE_STATS = [
 ]
 
 
-def load_stats_entry_points(include=None, exclude=None):
+# Processors that are only loaded when asked for by name, via the include or
+# extra lists, because they add series that most tests don't need
+DEFAULT_EXCLUDED_PROCESSORS = frozenset({"mite_http_extended"})
+
+
+def load_stats_entry_points(include=None, exclude=None, extra=None):
     """Load every registered mite_stats entry point, applying include/exclude
     name filters. Shared by mite.stats.Stats and
     mite.cli.influxdb.influxdb_init so the two don't drift in how they
-    handle a failing source."""
+    handle a failing source.
+
+    Processors in DEFAULT_EXCLUDED_PROCESSORS are skipped unless named in
+    include or extra. extra adds processors on top of the normal set."""
     all_stats = []
+    extra = set(extra or ())
     for entry_point in importlib.metadata.entry_points(group="mite_stats"):
         name = entry_point.name
-        if include is not None and name not in include:
-            continue
+        if name not in extra:
+            if include is not None and name not in include:
+                continue
+            if include is None and name in DEFAULT_EXCLUDED_PROCESSORS:
+                continue
         if exclude is not None and name in exclude:
             continue
         logger.info(f"Registering stats processors from {name}")
@@ -208,9 +220,9 @@ def load_stats_entry_points(include=None, exclude=None):
 
 
 class Stats:
-    def __init__(self, sender, include=None, exclude=None):
+    def __init__(self, sender, include=None, exclude=None, extra=None):
         self._all_stats = load_stats_entry_points(
-            include=include, exclude=exclude
+            include=include, exclude=exclude, extra=extra
         )
         self.sender = sender
         self.dump_timeout = time.time() + 0.25

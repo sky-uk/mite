@@ -218,3 +218,120 @@ async def test_wrapper_adapts_kwargs_before_calling_session():
 
     assert await wrapper.post("http://x", cert=("k", "c"), json={}) == "resp"
     session.post.assert_awaited_once_with("http://x", cert=("c", "k"), json={})
+
+
+def _http_metrics_msg(**fields):
+    msg = {"type": "http_metrics", "transaction": "t", "total_time": 0.5, "first_byte_time": 0.4}
+    msg.update(fields)
+    return msg
+
+
+def _histogram(name):
+    return next(s for s in mite_http_stats._generate_extended_stats() if s.name == name)
+
+
+def test_default_stats_unchanged():
+    assert [s.name for s in mite_http_stats.STATS] == [
+        "mite_http_response_total",
+        "mite_http_response_time_seconds",
+    ]
+
+
+def test_extended_stats_names():
+    assert [s.name for s in mite_http_stats.EXTENDED_HTTP_STATS] == [
+        "mite_http_dns_time_seconds",
+        "mite_http_connect_time_seconds",
+        "mite_http_tls_time_seconds",
+        "mite_http_pretransfer_time_seconds",
+        "mite_http_posttransfer_time_seconds",
+        "mite_http_first_byte_time_seconds",
+        "mite_http_queue_time_seconds",
+        "mite_http_client_lag_seconds",
+        "mite_http_download_size_bytes",
+        "mite_http_upload_size_bytes",
+    ]
+
+
+def test_curl_timing_histograms():
+    for name, field in (
+        ("mite_http_dns_time_seconds", "dns_time"),
+        ("mite_http_pretransfer_time_seconds", "transfer_start_time"),
+        ("mite_http_posttransfer_time_seconds", "posttransfer_time"),
+        ("mite_http_first_byte_time_seconds", "first_byte_time"),
+    ):
+        histogram = _histogram(name)
+        histogram.process(_http_metrics_msg(**{field: 0.25}))
+        assert dict(histogram.sums) == {("t",): 0.25}
+
+
+def test_connect_and_tls_histograms_skip_reused_connections():
+    for name, field in (
+        ("mite_http_connect_time_seconds", "connect_time"),
+        ("mite_http_tls_time_seconds", "tls_time"),
+    ):
+        histogram = _histogram(name)
+        histogram.process(_http_metrics_msg(**{field: 0.05}))
+        histogram.process(_http_metrics_msg(**{field: 0}))  # reused connection
+        histogram.process(_http_metrics_msg())
+        assert dict(histogram.total_counts) == {("t",): 1}
+        assert dict(histogram.sums) == {("t",): 0.05}
+
+
+def test_client_lag_and_queue_time_histograms():
+    for name, field in (
+        ("mite_http_client_lag_seconds", "client_lag"),
+        ("mite_http_queue_time_seconds", "queue_time"),
+    ):
+        histogram = _histogram(name)
+        histogram.process(_http_metrics_msg(**{field: 0.25}))
+        histogram.process(_http_metrics_msg())  # older sender without the field
+        assert dict(histogram.total_counts) == {("t",): 1}
+        assert dict(histogram.sums) == {("t",): 0.25}
+
+
+def test_size_histograms():
+    download = _histogram("mite_http_download_size_bytes")
+    download.process(_http_metrics_msg(download_size=2000))
+    download.process(_http_metrics_msg(download_size=0))  # e.g. HEAD or 204
+    assert dict(download.total_counts) == {("t",): 2}
+    assert dict(download.sums) == {("t",): 2000}
+    assert download.bins[0] == 128
+
+    upload = _histogram("mite_http_upload_size_bytes")
+    upload.process(_http_metrics_msg(upload_size=500))
+    upload.process(_http_metrics_msg(upload_size=0))  # no request body
+    assert dict(upload.total_counts) == {("t",): 1}
+
+
+def test_non_default_size_bins():
+    with patch.dict(os.environ, {"MITE_HTTP_SIZE_HISTOGRAM_BUCKETS": "10,100"}):
+        stats = mite_http_stats._generate_extended_stats()
+    assert next(s for s in stats if s.name == "mite_http_upload_size_bytes").bins == [10, 100]
+
+
+@pytest.mark.asyncio
+async def test_response_callback_sends_new_fields():
+    from unittest.mock import MagicMock
+
+    context = MockContext()
+    with patch("mite_http.acurl") as acurl_mock:
+        await SessionPool()._checkout(context)
+    callback = acurl_mock.Session.return_value.set_response_callback.call_args.args[0]
+
+    response = MagicMock()
+    response.request.method = "GET"
+    response.queue_time = 0.01
+    response.client_lag = 0.02
+    response.posttransfer_time = 0.03
+    response.http_version = "HTTP/2"
+    response.upload_size = 12
+    callback(response)
+
+    (name, fields), = context.messages
+    assert name == "http_metrics"
+    assert fields["method"] == "GET"
+    assert fields["queue_time"] == 0.01
+    assert fields["client_lag"] == 0.02
+    assert fields["posttransfer_time"] == 0.03
+    assert fields["http_version"] == "HTTP/2"
+    assert fields["upload_size"] == 12

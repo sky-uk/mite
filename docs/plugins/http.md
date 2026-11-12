@@ -80,30 +80,81 @@ stats processors (below) turn into Prometheus series:
 
 | Field | Meaning |
 |---|---|
-| `start_time` | when the request started |
+| `start_time` | when the request started (wall clock, seconds as a float) |
 | `effective_url` | the URL actually requested |
 | `response_code` | HTTP status code |
-| `dns_time` | DNS resolution time |
-| `connect_time` | TCP connect time |
-| `tls_time` | TLS handshake time |
-| `transfer_start_time` | time to start of transfer |
-| `first_byte_time` | time to first response byte |
-| `total_time` | total request duration |
+| `dns_time` | curl: DNS lookup complete, from the start of the transfer |
+| `connect_time` | curl: TCP connect complete, from the start of the transfer; 0 when a connection was reused |
+| `tls_time` | curl: TLS handshake complete, from the start of the transfer; 0 for plain http and reused connections |
+| `transfer_start_time` | curl: ready to send the request (curl's `pretransfer_time`), from the start of the transfer |
+| `first_byte_time` | curl: first response byte received (curl's `starttransfer_time`), from the start of the transfer |
+| `total_time` | curl: transfer complete, from the start of the transfer |
 | `primary_ip` | resolved IP the request went to |
-| `method` | HTTP method used |
+| `method` | HTTP method used, e.g. `GET` |
 | `download_size` | bytes downloaded |
+| `upload_size` | bytes uploaded |
+| `queue_time` | time waiting in acurl's queue for a connection, under the connection limits; not part of the other timings |
+| `client_lag` | time the request spent waiting on Python (before it was sent and after it finished); if this grows, the runner is the bottleneck |
+| `posttransfer_time` | curl: request fully sent, from the start of the transfer; `None` with libcurl older than 8.10 |
+| `http_version` | protocol negotiated: `HTTP/1.1`, `HTTP/2` or `HTTP/3` |
 
 ## Stats and tuning
 
-`mite_http` registers two processors under `mite_stats`, listed in full on
-{doc}`../stats`:
+`mite_http` registers two stats processors under `mite_stats` (see
+{doc}`../stats`).
 
-- `mite_http_response_total` — a counter, labelled by `test`, `journey`,
-  `transaction`, `method` and `response_code`
-- `mite_http_response_time_seconds` — a histogram of `total_time`, labelled by
-  `transaction`
+### `mite_http` (on by default)
 
-The histogram's bucket boundaries can be overridden with the
+| Stat | Type | Labels | What it shows |
+|---|---|---|---|
+| `mite_http_response_total` | counter | `test`, `journey`, `transaction`, `method`, `response_code` | Number of responses. Use it for request rates and error rates by status code. |
+| `mite_http_response_time_seconds` | histogram | `transaction` | `total_time`: curl's time for the whole transfer, from the start of the request (DNS, connect and TLS included when a new connection is made) to the last byte of the response. This is the response time a client sees, apart from any time spent queueing in acurl or waiting on Python. |
+
+### `mite_http_extended` (opt-in)
+
+Everything curl and acurl measure beyond the overall response time, broken down
+so you can see where the time goes. They are off by default, because each adds a
+histogram series per transaction. Turn them on with
+`--stats-extra-processors=mite_http_extended`, on `mite stats` or on
+`mite scenario test`/`mite journey test` when used with `--influxdb`.
+
+All are histograms labelled by `transaction`: timings in seconds, sizes in bytes.
+
+**curl's timings.** Like `total_time`, each is measured from the start of the
+transfer, so they add up: DNS ≤ connect ≤ TLS ≤ pretransfer ≤ posttransfer ≤ first
+byte ≤ total. Subtract neighbouring values to get the length of one phase.
+
+```
+start → DNS done → TCP connected → TLS done → ready to send → request sent → first byte → done
+        dns_time   connect_time    tls_time   pretransfer     posttransfer   first_byte   total_time
+```
+
+| Stat | What it shows |
+|---|---|
+| `mite_http_dns_time_seconds` | `dns_time`: time to resolve the host name. Usually near zero once the name is cached; large values point at DNS problems on the load generator's side. |
+| `mite_http_connect_time_seconds` | `connect_time`: time to establish the TCP connection (including DNS). **Only requests that opened a new connection are recorded**; reused connections report 0 and are skipped, so this shows the cost of new connections, and its count shows how many were opened. Growth means slow accepts at the server or load balancer, or network latency. |
+| `mite_http_tls_time_seconds` | `tls_time`: time until the TLS handshake finished (including DNS and connect). Only new https connections are recorded. The gap above `connect_time` is the handshake itself; it is larger for full handshakes than for resumed ones (see `http_tls` under [Connection settings](#connection-settings)). |
+| `mite_http_pretransfer_time_seconds` | `transfer_start_time`: time until curl was ready to send the request, i.e. all connection setup done. For a reused connection this is close to zero. |
+| `mite_http_posttransfer_time_seconds` | `posttransfer_time`: time until the request, including any body, was fully sent. The gap above pretransfer is upload time. Not recorded when libcurl is older than 8.10. |
+| `mite_http_first_byte_time_seconds` | `first_byte_time`: time until the first byte of the response arrived. This is time to first byte as a client sees it, including connection setup and upload. On a reused connection with no request body, it is close to the server's processing time plus one round trip; `first_byte_time - posttransfer_time` gives that for every request. |
+
+**Measured by acurl, outside curl's timings.** Neither is included in
+`total_time` or in the timings above.
+
+| Stat | What it shows |
+|---|---|
+| `mite_http_queue_time_seconds` | `queue_time`: how long a request waited in acurl for a free connection, because of the `http_*max*connections` limits (see [Connection settings](#connection-settings)). Normally zero; if it grows, the connection limits, not the server, are holding requests back. |
+| `mite_http_client_lag_seconds` | `client_lag`: time the request spent waiting on Python, before it was handed to curl and after the response arrived. It measures the load generator, not the service. If it grows, the runner can't keep up (CPU-bound journeys, too many runners per core), so achieved request rates describe the client rather than the server. Report it alongside response times. |
+
+**Sizes**, in bytes. Their buckets are set separately with
+`MITE_HTTP_SIZE_HISTOGRAM_BUCKETS` (default 128 B to 64 MiB, in powers of 4).
+
+| Stat | What it shows |
+|---|---|
+| `mite_http_download_size_bytes` | `download_size`: bytes of response body received, as reported by curl (headers excluded). Includes empty responses such as `HEAD` and `204`. Useful for spotting responses that are bigger than expected, which drive bandwidth and transfer time. |
+| `mite_http_upload_size_bytes` | `upload_size`: bytes of request body sent. **Only requests with a body are recorded**; requests that upload nothing (most `GET`s) are skipped. |
+
+The histograms' bucket boundaries can be overridden with the
 `MITE_HTTP_HISTOGRAM_BUCKETS` environment variable, a comma-separated list of
 floats (seconds):
 

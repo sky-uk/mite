@@ -202,6 +202,12 @@ class SessionPool:
                 primary_ip=r.primary_ip,
                 method=r.request.method,
                 download_size=r.download_size,
+                upload_size=r.upload_size,
+                queue_time=r.queue_time,
+                client_lag=r.client_lag,
+                # None with libcurl older than 8.10
+                posttransfer_time=r.posttransfer_time,
+                http_version=r.http_version,
                 **session_wrapper.additional_metrics,
             )
 

@@ -17,7 +17,11 @@ class InfluxDBProcessor:
             include_buckets=include_buckets, suffix=suffix
         )
         # Stats aggregator - instead of sending to socket, we'll capture dumps
-        self._stats = Stats(sender=self._on_stats_dump)
+        extra = opts.get("--stats-extra-processors")
+        self._stats = Stats(
+            sender=self._on_stats_dump,
+            extra=extra.split(",") if extra else None,
+        )
 
     def _on_stats_dump(self, dumped_stats):
         self._influx_metrics.process(dumped_stats)
