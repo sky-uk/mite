@@ -182,6 +182,15 @@ class _FakeCookie:
     pass
 
 
+def test_adapt_request_kwargs_converts_header_pairs():
+    from mite_http import _adapt_request_kwargs
+
+    assert _adapt_request_kwargs({"headers": [("X-A", "1")]})["headers"] == {"X-A": "1"}
+    headers = {"X-B": "2"}
+    assert _adapt_request_kwargs({"headers": headers})["headers"] is headers
+    assert "headers" not in _adapt_request_kwargs({})
+
+
 def test_adapt_request_kwargs_swaps_cert():
     from mite_http import _adapt_request_kwargs
 
@@ -510,3 +519,57 @@ async def test_json_request_body_and_response_use_ujson(httpserver):
 
     assert results == [{"ok": True, "path": "/x"}]
     loads.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_head_follows_redirects_by_default(httpserver):
+    httpserver.expect_request("/from").respond_with_data("", status=302, headers={"Location": "/to"})
+    httpserver.expect_request("/to").respond_with_data("ok")
+    context = MockContext()
+    statuses = []
+
+    @mite_http
+    async def journey(ctx):
+        statuses.append((await ctx.http.head(httpserver.url_for("/from"))).status_code)
+        statuses.append(
+            (await ctx.http.head(httpserver.url_for("/from"), allow_redirects=False)).status_code
+        )
+
+    await journey(context)
+    assert statuses == [200, 302]
+
+
+def test_journeys_on_event_loops_in_several_threads(httpserver):
+    import threading
+
+    httpserver.expect_request("/x").respond_with_data("ok")
+    errors = []
+    statuses = []
+
+    @mite_http
+    async def journey(ctx):
+        statuses.append((await ctx.http.get(httpserver.url_for("/x"))).status_code)
+
+    async def run_journeys():
+        await asyncio.gather(*(journey(MockContext()) for _ in range(20)))
+        # Each loop gets its own SessionPool and engine
+        pool = SessionPool._session_pools.pop(asyncio.get_running_loop())
+        return pool._engine
+
+    engines = []
+
+    def thread():
+        try:
+            engines.append(asyncio.run(run_journeys()))
+        except Exception as e:  # pragma: no cover - reported below
+            errors.append(e)
+
+    threads = [threading.Thread(target=thread) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    assert not errors
+    assert statuses == [200] * 80
+    assert len({id(e) for e in engines}) == 4

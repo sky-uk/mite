@@ -2,6 +2,7 @@ import asyncio
 import logging
 import shlex
 import warnings
+from collections.abc import Mapping
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 from urllib.parse import urlparse
@@ -83,6 +84,10 @@ AcurlError = httpperf.RequestError
 
 def _adapt_request_kwargs(kwargs):
     """Translate request arguments from the old acurl fork's API to httpperf's."""
+    headers = kwargs.get("headers")
+    if headers is not None and not isinstance(headers, Mapping):
+        # The old fork accepted any dict() input, e.g. a list of (name, value) pairs
+        kwargs["headers"] = dict(headers)
     cert = kwargs.get("cert")
     if cert is not None:
         # The old fork took (keyfile, certfile); upstream takes (certfile, keyfile)
@@ -178,6 +183,8 @@ class AcurlSessionWrapper:
         return ResponseWrapper(await self.__session.delete(url, **_adapt_request_kwargs(kwargs)))
 
     async def head(self, url, **kwargs):
+        # The old acurl fork followed redirects for HEAD too; httpperf doesn't by default
+        kwargs.setdefault("allow_redirects", True)
         return ResponseWrapper(await self.__session.head(url, **_adapt_request_kwargs(kwargs)))
 
     async def options(self, url, **kwargs):
