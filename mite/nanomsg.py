@@ -16,7 +16,7 @@ from .utils import pack_msg, unpack_msg
 # ControllerServer, which don't instantiate any of the other three.
 warnings.warn(
     "nanomsg support will move to an optional extra in a future mite "
-    "3.0 release; no functional change today.",
+    "4.0 release; no functional change today.",
     FutureWarning,
     stacklevel=2,
 )

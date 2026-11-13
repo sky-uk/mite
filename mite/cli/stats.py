@@ -27,7 +27,10 @@ def stats(opts):
     exclude = opts["--stats-exclude-processors"]
     if exclude is not None:
         exclude = exclude.split(",")
-    stats = Stats(sender=agg_sender.send, include=include, exclude=exclude)
+    extra = opts.get("--stats-extra-processors")
+    if extra is not None:
+        extra = extra.split(",")
+    stats = Stats(sender=agg_sender.send, include=include, exclude=exclude, extra=extra)
     receiver.add_listener(stats.process)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

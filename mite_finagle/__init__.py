@@ -10,7 +10,7 @@ from .thrift import _ThriftError
 
 warnings.warn(
     "mite_finagle will require 'pip install mite[finagle]' starting in "
-    "mite 3.0; no functional change today.",
+    "mite 4.0; no functional change today.",
     FutureWarning,
     stacklevel=2,
 )

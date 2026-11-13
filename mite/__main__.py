@@ -2,15 +2,15 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] [--stats-extra-processors=PROCESSORS] SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] [--stats-extra-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
     mite [options] duplicator [--message-socket=SOCKET] OUT_SOCKET...
     mite [options] collector [--collector-socket=SOCKET] [--collector-filter=SPEC] [--collector-roll=NUM_LINES] [--collector-dir=DIRECTORY] [--collector-use-json]
     mite [options] recorder [--recorder-socket=SOCKET]
-    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS]
+    mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS] [--stats-extra-processors=PROCESSORS]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] influxdb_exporter [--stats-out-socket=SOCKET]
@@ -77,6 +77,7 @@ Options:
     --stats-out-socket=SOCKET                               Socket [default: tcp://127.0.0.1:14305]
     --stats-include-processors=PROCESSORS                   Stats processor names to include, as a comma separated list (no spaces)
     --stats-exclude-processors=PROCESSORS                   Stats processor names to exclude, as a comma separated list (no spaces)
+    --stats-extra-processors=PROCESSORS                     Opt-in stats processor names to add to the default set, as a comma separated list (no spaces)
     --recorder-socket=SOCKET                                Socket [default: tcp://127.0.0.1:14306]
     --delay-start-seconds=DELAY                             Delay start allowing others to connect [default: 0]
     --volume=VOLUME                                         Volume to run journey at [default: 1]

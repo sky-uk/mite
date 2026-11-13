@@ -18,7 +18,7 @@ from mite.utils import spec_import
 
 warnings.warn(
     "mite_selenium will require 'pip install mite[selenium]' starting in "
-    "mite 3.0 or mite[selenium_wire] if you use wire=True; "
+    "mite 4.0 or mite[selenium_wire] if you use wire=True; "
     "no functional change today.",
     FutureWarning,
     stacklevel=2,

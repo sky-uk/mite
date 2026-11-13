@@ -7,7 +7,7 @@ from functools import wraps
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 warnings.warn(
-    "mite_kafka will require 'pip install mite[kafka]' starting in mite 3.0; "
+    "mite_kafka will require 'pip install mite[kafka]' starting in mite 4.0; "
     "no functional change today.",
     FutureWarning,
     stacklevel=2,

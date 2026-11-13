@@ -63,7 +63,7 @@ installs exactly the same packages:
 | `s3` | S3-backed datapools (`boto3`) |
 | `db` | SQL-backed datapools (`sqlalchemy`) |
 | `websocket` | WebSocket integration |
-| `http` | HTTP integration (`acurl`) |
+| `http` | HTTP integration (`httpperf`) |
 | `browser` | Browser/HTML-scraping integration (depends on `http`) |
 | `all` | Union of the above |
 

@@ -5,7 +5,7 @@
 consumer onto the journey context and reports metrics for both.
 
 Install: `pip install mite[kafka]` (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).
+install already includes it; this will matter starting in mite 4.0).
 
 ## Basic usage
 

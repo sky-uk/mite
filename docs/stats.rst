@@ -127,6 +127,17 @@ omit the exclude one).
 The format of both argumentsʼ value is a comma-separated list without
 spaces: ``--stats-include-processors=processor1,processor2``
 
+Some processors are opt-in: they are skipped unless asked for by name, because
+they add series that most tests donʼt need. Add them on top of the normal set
+with ``--stats-extra-processors``, or name them in
+``--stats-include-processors``. ``--stats-extra-processors`` is also accepted
+by ``mite scenario test`` and ``mite journey test`` for use with
+``--influxdb``:
+
+.. code-block:: bash
+
+   mite stats --stats-extra-processors=mite_http_extended
+
 Available processors
 --------------------
 
@@ -135,6 +146,9 @@ The following processors are provided by mite:
 - ``mite`` – statistics about the controller and runner workloads
 - ``mite_finagle`` – statistics about miteʼs Finagle RPC calls
 - ``mite_http`` – statistics about miteʼs http calls
+- ``mite_http_extended`` – opt-in: the rest of curlʼs http timings (DNS,
+  connect, TLS, pre/post-transfer, first byte), connection queue time,
+  client lag, and download/upload sizes; see :doc:`plugins/http`
 - ``mite_kafka`` – statistics about miteʼs Kafka producer and consumer
   activity
 - ``mite_playwright`` – statistics about miteʼs Playwright browser

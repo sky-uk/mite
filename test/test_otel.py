@@ -564,3 +564,145 @@ class TestDecoratorEventLoopMemoization:
 
         # Verify session pool was memoized for current event loop
         assert asyncio.get_running_loop() in SessionPool._session_pools
+
+
+class TestAcurlIntegration:
+    """Tests for the HTTP client spans added around AcurlSessionWrapper"""
+
+    @staticmethod
+    def _response():
+        response = MagicMock()
+        response.status_code = 200
+        response.total_time = 0.5
+        response.starttransfer_time = 0.4
+        response.namelookup_time = 0.01
+        response.connect_time = 0.02
+        response.appconnect_time = 0.03
+        response.pretransfer_time = 0.04
+        response.posttransfer_time = None  # libcurl < 8.10
+        response.queue_time = 0.0
+        response.client_lag = 0.001
+        response.download_size = 100
+        response.upload_size = 10
+        response.http_version = "HTTP/2"
+        response.primary_ip = "10.0.0.1"
+        response.headers = {}
+        return response
+
+    @staticmethod
+    def _tracer_with_span():
+        span = MagicMock()
+        span.__enter__ = Mock(return_value=span)
+        span.__exit__ = Mock(return_value=False)
+        tracer = MagicMock()
+        tracer.start_as_current_span.return_value = span
+        return tracer, span
+
+    def test_patch_applies_to_session_wrapper(self):
+        import mite.otel.acurl_integration as integration
+        from mite_http import AcurlSessionWrapper
+
+        names = ["get", "post", "put", "patch", "delete", "head", "options", "request"]
+        originals = {name: AcurlSessionWrapper.__dict__[name] for name in names}
+        patched = integration._patched
+        try:
+            integration._patched = False
+            integration.patch_acurl_session()
+            assert integration._patched is True
+            for name in names:
+                assert AcurlSessionWrapper.__dict__[name] is not originals[name]
+        finally:
+            for name, method in originals.items():
+                setattr(AcurlSessionWrapper, name, method)
+            integration._patched = patched
+
+    @pytest.mark.asyncio
+    async def test_traced_get_creates_client_span_with_attributes(self):
+        from unittest.mock import AsyncMock
+
+        from mite.otel.acurl_integration import _create_http_method_wrapper
+
+        response = self._response()
+        original = AsyncMock(return_value=response)
+        traced = _create_http_method_wrapper("get", original)
+        tracer, span = self._tracer_with_span()
+
+        with patch("mite.otel.instrumentation.is_in_traced_journey", return_value=True), patch(
+            "mite.otel.acurl_integration.get_tracer", return_value=tracer
+        ):
+            assert await traced("self", "https://example.com/a") is response
+
+        assert tracer.start_as_current_span.call_args.args[0] == "HTTP GET"
+        attrs = {c.args[0]: c.args[1] for c in span.set_attribute.call_args_list}
+        assert attrs["http.method"] == "GET"
+        assert attrs["http.response.status_code"] == 200
+        assert attrs["http.response.time.tls"] == 0.03
+        assert attrs["http.response.time.pretransfer"] == 0.04
+        assert "http.response.time.posttransfer" not in attrs
+        assert attrs["http.response.time.queue"] == 0.0
+        assert attrs["http.response.time.client_lag"] == 0.001
+        assert attrs["http.request.body.size"] == 10
+        assert attrs["network.protocol.version"] == "2"
+        assert attrs["network.peer.address"] == "10.0.0.1"
+
+    @pytest.mark.asyncio
+    async def test_untraced_call_creates_no_span(self):
+        from unittest.mock import AsyncMock
+
+        from mite.otel.acurl_integration import _create_http_method_wrapper
+
+        original = AsyncMock(return_value="resp")
+        traced = _create_http_method_wrapper("get", original)
+        tracer, _ = self._tracer_with_span()
+        headers = {"A": "1"}
+
+        with patch("mite.otel.instrumentation.is_in_traced_journey", return_value=False), patch(
+            "mite.otel.acurl_integration.get_tracer", return_value=tracer
+        ):
+            await traced("self", "https://example.com", headers=headers)
+
+        tracer.start_as_current_span.assert_not_called()
+        original.assert_awaited_once_with("self", "https://example.com", headers=headers)
+
+    @pytest.mark.asyncio
+    async def test_callers_headers_dict_not_modified(self):
+        from unittest.mock import AsyncMock
+
+        from mite.otel.acurl_integration import _create_http_method_wrapper
+
+        original = AsyncMock(return_value=self._response())
+        traced = _create_http_method_wrapper("post", original)
+        tracer, _ = self._tracer_with_span()
+        headers = {"A": "1"}
+
+        def inject(h):
+            h["traceparent"] = "00-abc-def-01"
+            return h
+
+        with patch("mite.otel.instrumentation.is_in_traced_journey", return_value=True), patch(
+            "mite.otel.acurl_integration.get_tracer", return_value=tracer
+        ), patch("mite.otel.acurl_integration.inject_headers", side_effect=inject):
+            await traced("self", "https://example.com", headers=headers)
+
+        assert headers == {"A": "1"}
+        sent = original.call_args.kwargs["headers"]
+        assert sent == {"A": "1", "traceparent": "00-abc-def-01"}
+
+    @pytest.mark.asyncio
+    async def test_request_method_is_traced(self):
+        from unittest.mock import AsyncMock
+
+        from mite.otel.acurl_integration import _create_request_wrapper
+
+        response = self._response()
+        original = AsyncMock(return_value=response)
+        traced = _create_request_wrapper(original)
+        tracer, _ = self._tracer_with_span()
+
+        with patch("mite.otel.instrumentation.is_in_traced_journey", return_value=True), patch(
+            "mite.otel.acurl_integration.get_tracer", return_value=tracer
+        ):
+            assert await traced("self", "delete", "https://example.com/x") is response
+
+        assert tracer.start_as_current_span.call_args.args[0] == "HTTP DELETE"
+        assert original.call_args.args == ("self", "delete", "https://example.com/x")
