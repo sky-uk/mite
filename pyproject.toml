@@ -25,10 +25,7 @@ classifiers = [
 # ALL dependencies included for a "batteries included" experience
 # The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
-    # TODO: upstream acurl (github.com/tonysimpson/acurl) 1.0 is to be published
-    # under a new PyPI name, as `acurl==1.0` is already taken by our old Cython
-    # fork. Add it here (and to the `http` extra) as "<name>==1.0" once known.
-    # The import name stays `acurl`.
+    "httpperf==1.0rc1",
     "aio_pika>=10.0",
     "aiokafka>=0.12",
     "boto3>=1.35",
@@ -96,7 +93,7 @@ selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
 s3            = ["boto3"]
 db            = ["sqlalchemy"]
 websocket     = ["websockets"]
-http          = []  # TODO: upstream acurl "<name>==1.0", see dependencies above
+http          = ["httpperf==1.0rc1"]
 browser       = ["bs4", "mite[http]"]
 all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser]"]
 

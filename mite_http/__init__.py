@@ -1,10 +1,12 @@
 import asyncio
 import logging
+import shlex
 import warnings
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
+from urllib.parse import urlparse
 
-import acurl
+import httpperf
 
 warnings.warn(
     "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
@@ -36,14 +38,14 @@ def _to_optional_float(value):
 
 
 # Read from ctx.config (e.g. set as MITE_CONF_http_max_total_connections=100).
-# (config key, acurl Engine argument, converter, default)
+# (config key, httpperf Engine argument, converter, default)
 _ENGINE_OPTIONS = (
     ("http_max_host_connections", "max_host_connections", int, 0),
     ("http_max_total_connections", "max_total_connections", int, 0),
     ("http_max_idle_connections", "max_idle_connections", int, 1000),
 )
 
-# (config key, acurl Session argument, converter, default)
+# (config key, httpperf Session argument, converter, default)
 # The defaults keep the connection behaviour of mite's old acurl fork (one
 # shared pool, TLS tickets per session), with HTTP/2 negotiated where offered.
 _SESSION_OPTIONS = (
@@ -69,29 +71,71 @@ def _options_from_config(config, options):
 
 
 # The old acurl fork raised AcurlError for failed transfers
-AcurlError = acurl.RequestError
+AcurlError = httpperf.RequestError
 
 
 def _adapt_request_kwargs(kwargs):
-    """Translate request arguments from the old acurl fork's API to upstream's."""
+    """Translate request arguments from the old acurl fork's API to httpperf's."""
     cert = kwargs.get("cert")
     if cert is not None:
         # The old fork took (keyfile, certfile); upstream takes (certfile, keyfile)
         kwargs["cert"] = (cert[1], cert[0])
     cookies = kwargs.get("cookies")
-    if cookies and any(isinstance(v, acurl.Cookie) for v in cookies.values()):
+    if cookies and any(isinstance(v, httpperf.Cookie) for v in cookies.values()):
         # The old fork accepted Cookie objects as values of the cookies dict;
         # upstream only takes strings there, and Cookie objects in cookie_list
         cookie_list = list(kwargs.get("cookie_list") or ())
         plain = {}
         for name, value in cookies.items():
-            if isinstance(value, acurl.Cookie):
+            if isinstance(value, httpperf.Cookie):
                 cookie_list.append(value)
             else:
                 plain[name] = value
         kwargs["cookies"] = plain or None
         kwargs["cookie_list"] = cookie_list
     return kwargs
+
+
+class RequestWrapper:
+    """An httpperf Request, plus to_curl() as the old acurl fork's Request had."""
+
+    __slots__ = ("_response",)
+
+    def __init__(self, response):
+        self._response = response
+
+    def __getattr__(self, name):
+        return getattr(self._response.request, name)
+
+    def __repr__(self):
+        return repr(self._response.request)
+
+    def to_curl(self):
+        return to_curl(self._response)
+
+
+class ResponseWrapper:
+    """An httpperf Response whose .request has to_curl(). Everything else is the
+    httpperf Response's own attribute."""
+
+    __slots__ = ("_response",)
+
+    def __init__(self, response):
+        self._response = response
+
+    def __getattr__(self, name):
+        return getattr(self._response, name)
+
+    def __repr__(self):
+        return repr(self._response)
+
+    @property
+    def request(self):
+        return RequestWrapper(self._response)
+
+    @property
+    def history(self):
+        return [ResponseWrapper(r) for r in self._response.history]
 
 
 class AcurlSessionWrapper:
@@ -109,28 +153,28 @@ class AcurlSessionWrapper:
         self.__callback = cb
 
     async def request(self, method, url, **kwargs):
-        return await self.__session.request(method, url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.request(method, url, **_adapt_request_kwargs(kwargs)))
 
     async def get(self, url, **kwargs):
-        return await self.__session.get(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.get(url, **_adapt_request_kwargs(kwargs)))
 
     async def post(self, url, **kwargs):
-        return await self.__session.post(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.post(url, **_adapt_request_kwargs(kwargs)))
 
     async def put(self, url, **kwargs):
-        return await self.__session.put(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.put(url, **_adapt_request_kwargs(kwargs)))
 
     async def patch(self, url, **kwargs):
-        return await self.__session.patch(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.patch(url, **_adapt_request_kwargs(kwargs)))
 
     async def delete(self, url, **kwargs):
-        return await self.__session.delete(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.delete(url, **_adapt_request_kwargs(kwargs)))
 
     async def head(self, url, **kwargs):
-        return await self.__session.head(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.head(url, **_adapt_request_kwargs(kwargs)))
 
     async def options(self, url, **kwargs):
-        return await self.__session.options(url, **_adapt_request_kwargs(kwargs))
+        return ResponseWrapper(await self.__session.options(url, **_adapt_request_kwargs(kwargs)))
 
     @property
     def _response_callback(self):
@@ -138,9 +182,9 @@ class AcurlSessionWrapper:
 
 
 class SessionPool:
-    """Holds one acurl Engine per event loop and gives each journey its own Session.
+    """Holds one httpperf Engine per event loop and gives each journey its own Session.
 
-    Connection pooling is done by acurl, according to the http_* config options.
+    Connection pooling is done by httpperf, according to the http_* config options.
     """
 
     # A memoization cache for instances of this class per event loop
@@ -178,15 +222,17 @@ class SessionPool:
         if self._engine is None:
             # Engine options are fixed once the engine exists; session options
             # are re-read for every session, so config changes apply to new ones.
-            self._engine = acurl.Engine(**_options_from_config(context.config, _ENGINE_OPTIONS))
-        session = acurl.Session(
+            self._engine = httpperf.Engine(**_options_from_config(context.config, _ENGINE_OPTIONS))
+        session = httpperf.Session(
             engine=self._engine, **_options_from_config(context.config, _SESSION_OPTIONS)
         )
         session_wrapper = AcurlSessionWrapper(session)
 
         def response_callback(r):
             if session_wrapper._response_callback is not None:
-                session_wrapper._response_callback(r, session_wrapper.additional_metrics)
+                session_wrapper._response_callback(
+                    ResponseWrapper(r), session_wrapper.additional_metrics
+                )
 
             context.send(
                 "http_metrics",
@@ -225,7 +271,7 @@ def mite_http(func):
 def create_http_cookie(ctx, domain, name, value):
     """Build a session cookie for `domain`, to pass in cookie_list=[...] (or as a
     value in cookies={...}). Same defaults the old acurl fork used."""
-    return acurl.Cookie(
+    return httpperf.Cookie(
         http_only=False,
         domain=domain,
         include_subdomains=True,
@@ -235,3 +281,54 @@ def create_http_cookie(ctx, domain, name, value):
         name=name,
         value=value,
     )
+
+
+def _cookie_matches(cookie, host, path, secure):
+    domain = cookie.domain.lower()
+    if domain.startswith("."):
+        domain = domain[1:]
+    if cookie.include_subdomains:
+        if host != domain and not host.endswith("." + domain):
+            return False
+    elif host != domain:
+        return False
+    cookie_path = cookie.path or "/"
+    if not (path == cookie_path or path.startswith(cookie_path.rstrip("/") + "/")):
+        return False
+    return secure or not cookie.is_secure
+
+
+def to_curl(response):
+    """Return a curl command line that repeats the request behind `response`.
+
+    Includes the method, URL, headers, body, basic auth, and the cookies that
+    would have been sent: those passed to the request plus those in the session's
+    cookie jar for the URL. The jar is read when this is called, so call it while
+    the journey is running (e.g. in a response callback); once the journey has
+    ended only the request's own cookies are included.
+    """
+    request = response.request
+    parts = ["curl", "-X", request.method]
+    data = request.data
+    if data is not None:
+        if isinstance(data, (bytes, bytearray)):
+            data = bytes(data).decode("utf-8", errors="replace")
+        parts += ["--data-raw", shlex.quote(data)]
+    for header in request.header_list or ():
+        parts += ["-H", shlex.quote(header)]
+
+    parsed = urlparse(request.url)
+    host = (parsed.hostname or "").lower()
+    path = parsed.path or "/"
+    secure = parsed.scheme == "https"
+    cookies = {}
+    for cookie in list(response.cookielist) + list(request.cookie_list or ()):
+        if not cookie.has_expired and _cookie_matches(cookie, host, path, secure):
+            cookies[cookie.name] = cookie.value
+    if cookies:
+        parts += ["--cookie", shlex.quote("; ".join(f"{k}={v}" for k, v in cookies.items()))]
+
+    if request.auth is not None:
+        parts += ["--user", shlex.quote(f"{request.auth[0]}:{request.auth[1]}")]
+    parts.append(shlex.quote(request.url))
+    return " ".join(parts)

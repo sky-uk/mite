@@ -43,9 +43,8 @@ One parameter, selected when the job is run:
 |---|---|---|
 | `VERSION_INCREMENT_TYPE` | `patch` / `minor` / `major` | Which segment of **mite's** version to bump |
 
-acurl is no longer built or released from this repo. Mite depends on upstream
-acurl ([tonysimpson/acurl](https://github.com/tonysimpson/acurl)) from PyPI.
-<!-- TODO: name the upstream PyPI distribution once it is published. -->
+acurl is no longer built or released from this repo. Mite's HTTP support uses
+[httpperf](https://github.com/tonysimpson/httpperf) from PyPI instead.
 
 ### What the job does, in order
 

@@ -146,18 +146,18 @@ async def test_engine_per_pool_and_session_closed_on_checkin():
     context = MockContext()
     context.config = {"http_max_total_connections": "10", "http_connections": "session"}
 
-    with patch("mite_http.acurl") as acurl_mock:
+    with patch("mite_http.httpperf") as httpperf_mock:
         pool = SessionPool()
         wrapper = await pool._checkout(context)
         await pool._checkout(context)
         await pool._checkin(wrapper)
 
-    acurl_mock.Engine.assert_called_once()
-    assert acurl_mock.Engine.call_args.kwargs["max_total_connections"] == 10
-    assert acurl_mock.Session.call_count == 2
-    assert acurl_mock.Session.call_args.kwargs["engine"] is acurl_mock.Engine.return_value
-    assert acurl_mock.Session.call_args.kwargs["connections"] == "session"
-    acurl_mock.Session.return_value.close.assert_called_once()
+    httpperf_mock.Engine.assert_called_once()
+    assert httpperf_mock.Engine.call_args.kwargs["max_total_connections"] == 10
+    assert httpperf_mock.Session.call_count == 2
+    assert httpperf_mock.Session.call_args.kwargs["engine"] is httpperf_mock.Engine.return_value
+    assert httpperf_mock.Session.call_args.kwargs["connections"] == "session"
+    httpperf_mock.Session.return_value.close.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -168,13 +168,13 @@ async def test_session_closed_when_journey_raises():
     async def journey(ctx):
         raise ValueError("boom")
 
-    with patch("mite_http.acurl") as acurl_mock:
+    with patch("mite_http.httpperf") as httpperf_mock:
         SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
         with pytest.raises(ValueError):
             await journey(context)
         SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
 
-    acurl_mock.Session.return_value.close.assert_called_once()
+    httpperf_mock.Session.return_value.close.assert_called_once()
     assert not hasattr(context, "http")
 
 
@@ -193,7 +193,7 @@ def test_adapt_request_kwargs_moves_cookie_objects_to_cookie_list():
     from mite_http import _adapt_request_kwargs
 
     cookie = _FakeCookie()
-    with patch("mite_http.acurl.Cookie", _FakeCookie):
+    with patch("mite_http.httpperf.Cookie", _FakeCookie):
         kwargs = _adapt_request_kwargs({"cookies": {"a": "1", "b": cookie}})
         assert kwargs["cookies"] == {"a": "1"}
         assert kwargs["cookie_list"] == [cookie]
@@ -216,7 +216,8 @@ async def test_wrapper_adapts_kwargs_before_calling_session():
     session.post = AsyncMock(return_value="resp")
     wrapper = AcurlSessionWrapper(session)
 
-    assert await wrapper.post("http://x", cert=("k", "c"), json={}) == "resp"
+    response = await wrapper.post("http://x", cert=("k", "c"), json={})
+    assert response._response == "resp"
     session.post.assert_awaited_once_with("http://x", cert=("c", "k"), json={})
 
 
@@ -314,9 +315,9 @@ async def test_response_callback_sends_new_fields():
     from unittest.mock import MagicMock
 
     context = MockContext()
-    with patch("mite_http.acurl") as acurl_mock:
+    with patch("mite_http.httpperf") as httpperf_mock:
         await SessionPool()._checkout(context)
-    callback = acurl_mock.Session.return_value.set_response_callback.call_args.args[0]
+    callback = httpperf_mock.Session.return_value.set_response_callback.call_args.args[0]
 
     response = MagicMock()
     response.request.method = "GET"
@@ -340,7 +341,7 @@ async def test_response_callback_sends_new_fields():
 def test_create_http_cookie_uses_old_fork_defaults():
     from mite_http import create_http_cookie
 
-    with patch("mite_http.acurl.Cookie") as cookie_cls:
+    with patch("mite_http.httpperf.Cookie") as cookie_cls:
         create_http_cookie(None, ".example.com", "session", "abc")
     cookie_cls.assert_called_once_with(
         http_only=False,
@@ -352,3 +353,129 @@ def test_create_http_cookie_uses_old_fork_defaults():
         name="session",
         value="abc",
     )
+
+
+@pytest.mark.asyncio
+async def test_to_curl(httpserver):
+    import shlex
+
+    from mite_http import to_curl
+
+    httpserver.expect_request("/login").respond_with_data(
+        "ok", headers={"Set-Cookie": "session=abc; Path=/"}
+    )
+    httpserver.expect_request("/api").respond_with_data("ok")
+    context = MockContext()
+    commands = []
+
+    @mite_http
+    async def journey(ctx):
+        await ctx.http.get(httpserver.url_for("/login"))
+        resp = await ctx.http.post(
+            httpserver.url_for("/api"),
+            json={"a": "it's"},
+            headers={"X-Test": "1"},
+            cookies={"extra": "x"},
+            auth=("user", "pw"),
+        )
+        commands.append(to_curl(resp))
+        commands.append(resp.request.to_curl())
+
+    await journey(context)
+    assert commands[0] == commands[1]
+
+    args = shlex.split(commands[0])
+    assert args[:3] == ["curl", "-X", "POST"]
+    assert args[args.index("--data-raw") + 1] == '{"a":"it\'s"}'
+    headers = [args[i + 1] for i, a in enumerate(args) if a == "-H"]
+    assert "X-Test: 1" in headers
+    assert "Content-Type: application/json" in headers
+    assert args[args.index("--cookie") + 1] == "session=abc; extra=x"
+    assert args[args.index("--user") + 1] == "user:pw"
+    assert args[-1] == httpserver.url_for("/api")
+
+
+def test_to_curl_without_body_headers_or_cookies():
+    from unittest.mock import MagicMock
+
+    from mite_http import to_curl
+
+    response = MagicMock()
+    response.request.method = "GET"
+    response.request.url = "https://example.com/x?a=1&b=2"
+    response.request.data = None
+    response.request.header_list = None
+    response.request.cookie_list = None
+    response.request.auth = None
+    response.cookielist = []
+    assert to_curl(response) == "curl -X GET 'https://example.com/x?a=1&b=2'"
+
+
+def test_to_curl_only_includes_matching_cookies():
+    from unittest.mock import MagicMock
+
+    import httpperf
+
+    from mite_http import to_curl
+
+    def cookie(domain, name, path="/", subdomains=True, secure=False, expiration=0):
+        return httpperf.Cookie(False, domain, subdomains, path, secure, expiration, name, "v")
+
+    response = MagicMock()
+    response.request.method = "GET"
+    response.request.url = "http://api.example.com/v1/users"
+    response.request.data = None
+    response.request.header_list = None
+    response.request.cookie_list = None
+    response.request.auth = None
+    response.cookielist = [
+        cookie(".example.com", "parent"),
+        cookie("api.example.com", "exact", subdomains=False),
+        cookie("other.com", "other_domain"),
+        cookie("example.com", "host_only_parent", subdomains=False),
+        cookie(".example.com", "wrong_path", path="/v2"),
+        cookie(".example.com", "right_path", path="/v1"),
+        cookie(".example.com", "secure_only", secure=True),
+        cookie(".example.com", "expired", expiration=1),
+    ]
+    assert to_curl(response).split("--cookie ")[1].startswith("'parent=v; exact=v; right_path=v'")
+
+
+@pytest.mark.asyncio
+async def test_response_callback_gets_request_to_curl(httpserver):
+    httpserver.expect_request("/x").respond_with_data("ok")
+    context = MockContext()
+    seen = []
+
+    @mite_http
+    async def journey(ctx):
+        def callback(resp, additional_metrics):
+            additional_metrics["curl-request"] = resp.request.to_curl()
+            seen.append(resp.request.url)
+
+        ctx.http.set_response_callback(callback)
+        resp = await ctx.http.get(httpserver.url_for("/x"))
+        assert resp.status_code == 200
+        assert resp.text == "ok"
+
+    await journey(context)
+    assert seen == [httpserver.url_for("/x")]
+    (_, fields), = context.messages
+    assert fields["curl-request"] == f"curl -X GET {httpserver.url_for('/x')}"
+
+
+@pytest.mark.asyncio
+async def test_redirect_history_is_wrapped(httpserver):
+    httpserver.expect_request("/from").respond_with_data("", status=302, headers={"Location": "/to"})
+    httpserver.expect_request("/to").respond_with_data("ok")
+    context = MockContext()
+
+    @mite_http
+    async def journey(ctx):
+        resp = await ctx.http.get(httpserver.url_for("/from"))
+        assert resp.status_code == 200
+        (first,) = resp.history
+        assert first.status_code == 302
+        assert first.request.to_curl().endswith(httpserver.url_for("/from"))
+
+    await journey(context)

@@ -80,7 +80,7 @@ _EXTENDED_TIME_HISTOGRAMS = (
     ("mite_http_pretransfer_time_seconds", _field("transfer_start_time")),
     ("mite_http_posttransfer_time_seconds", _field("posttransfer_time")),
     ("mite_http_first_byte_time_seconds", _field("first_byte_time")),
-    # measured by acurl outside curl's timings
+    # measured by httpperf outside curl's timings
     ("mite_http_queue_time_seconds", _field("queue_time")),
     ("mite_http_client_lag_seconds", _field("client_lag")),
 )

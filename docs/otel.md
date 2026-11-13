@@ -134,15 +134,15 @@ Mite automatically creates hierarchical traces:
 ```
 journey.user_login (520ms)
   └── transaction.Login (450ms)
-      ├── HTTP POST /auth/login (280ms)
+      ├── HTTP POST (280ms)
       │   ├── http.method: POST
       │   ├── http.url: https://api.example.com/auth/login
-      │   ├── http.status_code: 200
+      │   ├── http.response.status_code: 200
       │   └── http.response.time.total: 0.28
       └── transaction.Fetch_Profile (170ms)
-          └── HTTP GET /users/me (169ms)
+          └── HTTP GET (169ms)
               ├── http.method: GET
-              ├── http.status_code: 200
+              ├── http.response.status_code: 200
               └── http.response.body.size: 2048
 ```
 
@@ -150,13 +150,50 @@ journey.user_login (520ms)
 
 - **Journey spans** - Created for each `@mite_http_traced` decorated function
 - **Transaction spans** - Created for each `ctx.transaction()` call **within traced journeys only**
-- **HTTP spans** - Created for each `ctx.http.*()` request **within traced journeys only**
+- **HTTP spans** - Created for each `ctx.http.*()` request, including
+  `ctx.http.request(method, url)`, **within traced journeys only**. Named
+  `HTTP <METHOD>`, with span kind `CLIENT`. A request that follows redirects is
+  one span, with the final response's attributes.
 
 **Note:** Regular `@mite_http` journeys do not create any spans, even when `MITE_CONF_OTEL_ENABLED=true`. This ensures zero overhead for non-traced journeys.
 
+```{note}
+HTTP spans have only worked since mite moved from its acurl fork to httpperf. Before that,
+the patch that adds them failed silently, so traced journeys had journey and
+transaction spans but no HTTP spans.
+```
+
+### HTTP span attributes
+
+| Attribute | Value |
+|---|---|
+| `http.method` | request method |
+| `http.url` | requested URL |
+| `http.host`, `http.scheme`, `http.target` | host, scheme and path of the URL |
+| `http.response.status_code` | status code of the final response |
+| `http.response.time.total` | curl `total_time`: whole transfer |
+| `http.response.time.dns` | curl `namelookup_time`: DNS done |
+| `http.response.time.connect` | curl `connect_time`: TCP connected (0 if the connection was reused) |
+| `http.response.time.tls` | curl `appconnect_time`: TLS handshake done (0 for plain http or a reused connection) |
+| `http.response.time.pretransfer` | curl `pretransfer_time`: ready to send |
+| `http.response.time.posttransfer` | curl `posttransfer_time`: request sent (omitted with libcurl older than 8.10) |
+| `http.response.time.first_byte` | curl `starttransfer_time`: first response byte |
+| `http.response.time.queue` | httpperf `queue_time`: waiting for a connection under the connection limits |
+| `http.response.time.client_lag` | httpperf `client_lag`: waiting on Python |
+| `http.response.body.size` | response body bytes |
+| `http.request.body.size` | request body bytes |
+| `http.response.header.content-length` | `Content-Length` header, if present |
+| `network.protocol.version` | `1.1`, `2` or `3` |
+| `network.peer.address` | IP address connected to |
+
+Times are in seconds. curl's are measured from the start of the transfer (see
+{doc}`plugins/http` for how they relate); `queue` and `client_lag` are outside
+them. The span itself is timed in Python, so its duration also includes queue
+time and client lag.
+
 ## Distributed Tracing
 
-HTTP requests automatically include W3C `traceparent` headers for distributed tracing:
+HTTP requests in traced journeys automatically include W3C `traceparent` headers for distributed tracing. They are added to a copy of the `headers` you pass, so a shared headers dict never carries one request's trace context into another:
 
 ```python
 from mite.otel import mite_http_traced
