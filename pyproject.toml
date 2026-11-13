@@ -80,7 +80,7 @@ docs = [
     "furo",
 ]
 
-# Future extras for mite 3.0's dependency slimming. Every package listed
+# Future extras for mite 4.0's dependency slimming. Every package listed
 # here is still in the mandatory `dependencies` list above, so installing any
 # of these extras today is a functional no-op. It installs exactly what
 # `pip install mite` already installs. They become load-bearing once a future

@@ -151,7 +151,7 @@ class TestModularity:
 
     def test_future_warning_from_a_loaded_processor_does_not_escape(self):
         def _warn_and_return():
-            warnings.warn("some mite 3.0 deprecation", FutureWarning, stacklevel=2)
+            warnings.warn("some mite 4.0 deprecation", FutureWarning, stacklevel=2)
             return ["x"]
 
         with mock.patch(

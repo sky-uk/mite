@@ -11,7 +11,7 @@ import httpperf
 import ujson
 
 warnings.warn(
-    "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
+    "mite_http will require 'pip install mite[http]' starting in mite 4.0; "
     "no functional change today.",
     FutureWarning,
     stacklevel=2,

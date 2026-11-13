@@ -10,7 +10,7 @@ every journey.
 
 Install: `pip install mite[browser]` (depends on `http`; no functional change
 today. Every mite install already includes it; this will matter starting in
-mite 3.0).
+mite 4.0).
 
 ## Basic usage
 

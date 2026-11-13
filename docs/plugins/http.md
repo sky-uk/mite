@@ -5,7 +5,7 @@ the journey context, built on top of {doc}`httpperf <httpperf>`, and automatical
 reports timing metrics for every request.
 
 Install: `pip install mite[http]` (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).
+install already includes it; this will matter starting in mite 4.0).
 
 ## Basic usage
 
