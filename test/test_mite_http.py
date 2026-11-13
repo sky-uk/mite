@@ -386,7 +386,7 @@ async def test_to_curl(httpserver):
 
     args = shlex.split(commands[0])
     assert args[:3] == ["curl", "-X", "POST"]
-    assert args[args.index("--data-raw") + 1] == '{"a":"it\'s"}'
+    assert args[args.index("--data-raw") + 1] == '{"a": "it\'s"}'
     headers = [args[i + 1] for i, a in enumerate(args) if a == "-H"]
     assert "X-Test: 1" in headers
     assert "Content-Type: application/json" in headers
@@ -479,3 +479,34 @@ async def test_redirect_history_is_wrapped(httpserver):
         assert first.request.to_curl().endswith(httpserver.url_for("/from"))
 
     await journey(context)
+
+
+def test_json_dumps_matches_old_fork_output():
+    import json
+
+    from mite_http import _json_dumps
+
+    obj = {"url": "http://a/b", "u": "é", "n": [1, 2.5, None, True], "nested": {"k": "v"}}
+    assert _json_dumps(obj) == json.dumps(obj)
+
+
+@pytest.mark.asyncio
+async def test_json_request_body_and_response_use_ujson(httpserver):
+    httpserver.expect_request(
+        "/json", method="POST", data='{"url": "http://a/b", "n": [1, 2]}'
+    ).respond_with_json({"ok": True, "path": "/x"})
+    context = MockContext()
+    results = []
+
+    @mite_http
+    async def journey(ctx):
+        resp = await ctx.http.post(httpserver.url_for("/json"), json={"url": "http://a/b", "n": [1, 2]})
+        results.append(resp.json())
+
+    with patch("mite_http.ujson.loads", wraps=__import__("ujson").loads) as loads:
+        SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
+        await journey(context)
+        SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
+
+    assert results == [{"ok": True, "path": "/x"}]
+    loads.assert_called_once()

@@ -59,6 +59,11 @@ await ctx.http.post(
 )
 ```
 
+JSON is encoded and decoded with [ujson](https://github.com/ultrajson/ultrajson).
+`json=` bodies are formatted exactly as the standard library's `json.dumps`
+does by default (`{"username": "test"}`, with spaces after `,` and `:`, and
+non-ASCII characters escaped), so they match what earlier versions of mite sent.
+
 ## The response
 
 Each call returns a response object with:

@@ -7,6 +7,7 @@ from functools import wraps
 from urllib.parse import urlparse
 
 import httpperf
+import ujson
 
 warnings.warn(
     "mite_http will require 'pip install mite[http]' starting in mite 3.0; "
@@ -68,6 +69,12 @@ def _options_from_config(config, options):
         value = config.get(key, None)
         result[argument] = default if value is None else convert(value)
     return result
+
+
+def _json_dumps(obj):
+    # Byte-for-byte the same bodies as the old acurl fork's json.dumps(obj): spaces
+    # after separators, non-ASCII escaped, and "/" not escaped
+    return ujson.dumps(obj, escape_forward_slashes=False, separators=(", ", ": "))
 
 
 # The old acurl fork raised AcurlError for failed transfers
@@ -222,7 +229,11 @@ class SessionPool:
         if self._engine is None:
             # Engine options are fixed once the engine exists; session options
             # are re-read for every session, so config changes apply to new ones.
-            self._engine = httpperf.Engine(**_options_from_config(context.config, _ENGINE_OPTIONS))
+            self._engine = httpperf.Engine(
+                json_dumps=_json_dumps,
+                json_loads=ujson.loads,
+                **_options_from_config(context.config, _ENGINE_OPTIONS),
+            )
         session = httpperf.Session(
             engine=self._engine, **_options_from_config(context.config, _SESSION_OPTIONS)
         )
