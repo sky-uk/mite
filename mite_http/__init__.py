@@ -87,7 +87,20 @@ def _adapt_request_kwargs(kwargs):
     headers = kwargs.get("headers")
     if headers is not None and not isinstance(headers, Mapping):
         # The old fork accepted any dict() input, e.g. a list of (name, value) pairs
-        kwargs["headers"] = dict(headers)
+        kwargs["headers"] = headers = dict(headers)
+    if (
+        isinstance(kwargs.get("data"), (str, bytes, bytearray))
+        and kwargs.get("json") is None
+        and kwargs.get("files") is None
+        and not any(name.lower() == "content-type" for name in headers or ())
+        and not any(
+            line.partition(":")[0].strip().lower() == "content-type"
+            for line in kwargs.get("headers_list") or ()
+        )
+    ):
+        # The old fork let curl add its default form Content-Type to str/bytes
+        # bodies; httpperf sends none
+        kwargs["headers"] = {**(headers or {}), "Content-Type": "application/x-www-form-urlencoded"}
     cert = kwargs.get("cert")
     if cert is not None:
         # The old fork took (keyfile, certfile); upstream takes (certfile, keyfile)
@@ -117,23 +130,25 @@ class RequestWrapper:
         self._response = response
 
     def __getattr__(self, name):
-        return getattr(self._response.request, name)
+        return getattr(self._response._response.request, name)
 
     def __repr__(self):
-        return repr(self._response.request)
+        return repr(self._response._response.request)
 
     def to_curl(self):
         return to_curl(self._response)
 
 
 class ResponseWrapper:
-    """An httpperf Response whose .request has to_curl(). Everything else is the
-    httpperf Response's own attribute."""
+    """An httpperf Response, with the old acurl fork's behaviour where it differs:
+    .request has to_curl(), and .cookies is the session's whole cookie jar. Every
+    other attribute is the httpperf Response's own."""
 
-    __slots__ = ("_response",)
+    __slots__ = ("_response", "_session")
 
-    def __init__(self, response):
+    def __init__(self, response, session):
         self._response = response
+        self._session = session
 
     def __getattr__(self, name):
         return getattr(self._response, name)
@@ -143,11 +158,17 @@ class ResponseWrapper:
 
     @property
     def request(self):
-        return RequestWrapper(self._response)
+        return RequestWrapper(self)
+
+    @property
+    def cookies(self):
+        # httpperf's Response.cookies is only the cookies this response set; the
+        # old fork returned the session's jar. Empty once the journey has ended.
+        return self._session.cookies()
 
     @property
     def history(self):
-        return [ResponseWrapper(r) for r in self._response.history]
+        return [ResponseWrapper(r, self._session) for r in self._response.history]
 
 
 class AcurlSessionWrapper:
@@ -165,30 +186,30 @@ class AcurlSessionWrapper:
         self.__callback = cb
 
     async def request(self, method, url, **kwargs):
-        return ResponseWrapper(await self.__session.request(method, url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.request(method, url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def get(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.get(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.get(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def post(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.post(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.post(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def put(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.put(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.put(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def patch(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.patch(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.patch(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def delete(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.delete(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.delete(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def head(self, url, **kwargs):
         # The old acurl fork followed redirects for HEAD too; httpperf doesn't by default
         kwargs.setdefault("allow_redirects", True)
-        return ResponseWrapper(await self.__session.head(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.head(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     async def options(self, url, **kwargs):
-        return ResponseWrapper(await self.__session.options(url, **_adapt_request_kwargs(kwargs)))
+        return ResponseWrapper(await self.__session.options(url, **_adapt_request_kwargs(kwargs)), self.__session)
 
     @property
     def _response_callback(self):
@@ -249,7 +270,7 @@ class SessionPool:
         def response_callback(r):
             if session_wrapper._response_callback is not None:
                 session_wrapper._response_callback(
-                    ResponseWrapper(r), session_wrapper.additional_metrics
+                    ResponseWrapper(r, session), session_wrapper.additional_metrics
                 )
 
             context.send(
@@ -321,10 +342,12 @@ def to_curl(response):
 
     Includes the method, URL, headers, body, basic auth, and the cookies that
     would have been sent: those passed to the request plus those in the session's
-    cookie jar for the URL. The jar is read when this is called, so call it while
-    the journey is running (e.g. in a response callback); once the journey has
-    ended only the request's own cookies are included.
+    cookie jar for the URL. `response` is one returned by ctx.http (or passed to a
+    response callback). The jar is read when this is called, so call it while the
+    journey is running; once the journey has ended only the request's own cookies
+    are included.
     """
+    jar = response._session.get_cookie_list() if isinstance(response, ResponseWrapper) else []
     request = response.request
     parts = ["curl", "-X", request.method]
     data = request.data
@@ -340,7 +363,7 @@ def to_curl(response):
     path = parsed.path or "/"
     secure = parsed.scheme == "https"
     cookies = {}
-    for cookie in list(response.cookielist) + list(request.cookie_list or ()):
+    for cookie in jar + list(request.cookie_list or ()):
         if not cookie.has_expired and _cookie_matches(cookie, host, path, secure):
             cookies[cookie.name] = cookie.value
     if cookies:

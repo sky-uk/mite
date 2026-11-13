@@ -45,7 +45,7 @@ All of them accept the same keyword arguments:
 | `headers` | a mapping of request headers |
 | `cookies` | a mapping of cookies to send with the request |
 | `auth` | basic auth credentials |
-| `data` | a request body, `str` or `bytes` |
+| `data` | a request body, `str` or `bytes`, sent with `Content-Type: application/x-www-form-urlencoded` unless you set a `Content-Type` (as earlier versions of mite did); or a dict, which is form-encoded |
 | `json` | a JSON-serializable object; mutually exclusive with `data`, and sets `Content-Type: application/json` automatically |
 | `cert` | client certificate |
 | `allow_redirects` | follow redirects automatically (default `True`) |
@@ -241,8 +241,9 @@ running, for example in a response callback. After the journey has ended only
 the request's own cookies are included.
 
 Responses from `ctx.http` (and those passed to response callbacks) are thin
-wrappers around httpperf's `Response` that add this method; every other
-attribute is httpperf's own.
+wrappers around httpperf's `Response` that add this method and keep `cookies`
+as the whole jar (see [Cookies](#cookies)); every other attribute is
+httpperf's own.
 
 ## Cookies
 
@@ -276,7 +277,8 @@ Reading and changing the jar:
 | `ctx.http.add_cookie_list(cookies)` | adds `Cookie` objects to the jar |
 | `ctx.http.erase_all_cookies()` | empties the jar |
 | `ctx.http.erase_session_cookies()` | removes cookies without an expiry, as a browser restart would |
-| `resp.cookies`, `resp.cookielist` | the **whole jar** at the time you read it, as a dict or as `Cookie` objects, not only the cookies that response set. Empty once the journey has ended. |
+| `resp.cookies` | the **whole jar** at the time you read it, as a dict, not only the cookies that response set (as in earlier versions of mite). Empty once the journey has ended. |
+| `resp.cookielist` | only the cookies **that response set**, from its `Set-Cookie` headers, as `Cookie` objects |
 | `resp.request.cookie_list` | only the cookies passed to that request |
 
 `get_cookie_list()`, `resp.cookielist` and `cookie_list=` all use

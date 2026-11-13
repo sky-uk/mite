@@ -25,7 +25,7 @@ classifiers = [
 # ALL dependencies included for a "batteries included" experience
 # The only expection is playwright which requires a separate install step to download browser binaries.
 dependencies = [
-    "httpperf==1.0rc1",
+    "httpperf==1.0rc3",
     "aio_pika>=10.0",
     "aiokafka>=0.12",
     "boto3>=1.35",
@@ -93,7 +93,7 @@ selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
 s3            = ["boto3"]
 db            = ["sqlalchemy"]
 websocket     = ["websockets"]
-http          = ["httpperf==1.0rc1"]
+http          = ["httpperf==1.0rc3"]
 browser       = ["bs4", "mite[http]"]
 all = ["mite[kafka,amqp,finagle,selenium,selenium_wire,s3,db,websocket,http,browser]"]
 

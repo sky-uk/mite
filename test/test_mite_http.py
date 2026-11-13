@@ -416,7 +416,6 @@ def test_to_curl_without_body_headers_or_cookies():
     response.request.header_list = None
     response.request.cookie_list = None
     response.request.auth = None
-    response.cookielist = []
     assert to_curl(response) == "curl -X GET 'https://example.com/x?a=1&b=2'"
 
 
@@ -425,7 +424,7 @@ def test_to_curl_only_includes_matching_cookies():
 
     import httpperf
 
-    from mite_http import to_curl
+    from mite_http import ResponseWrapper, to_curl
 
     def cookie(domain, name, path="/", subdomains=True, secure=False, expiration=0):
         return httpperf.Cookie(False, domain, subdomains, path, secure, expiration, name, "v")
@@ -437,7 +436,8 @@ def test_to_curl_only_includes_matching_cookies():
     response.request.header_list = None
     response.request.cookie_list = None
     response.request.auth = None
-    response.cookielist = [
+    session = MagicMock()
+    session.get_cookie_list.return_value = [
         cookie(".example.com", "parent"),
         cookie("api.example.com", "exact", subdomains=False),
         cookie("other.com", "other_domain"),
@@ -447,6 +447,7 @@ def test_to_curl_only_includes_matching_cookies():
         cookie(".example.com", "secure_only", secure=True),
         cookie(".example.com", "expired", expiration=1),
     ]
+    response = ResponseWrapper(response, session)
     assert to_curl(response).split("--cookie ")[1].startswith("'parent=v; exact=v; right_path=v'")
 
 
@@ -573,3 +574,54 @@ def test_journeys_on_event_loops_in_several_threads(httpserver):
     assert not errors
     assert statuses == [200] * 80
     assert len({id(e) for e in engines}) == 4
+
+
+def test_raw_data_gets_old_default_content_type():
+    from mite_http import _adapt_request_kwargs
+
+    form = "application/x-www-form-urlencoded"
+    assert _adapt_request_kwargs({"data": "a=1"})["headers"] == {"Content-Type": form}
+    assert _adapt_request_kwargs({"data": b"a=1", "headers": {"X": "1"}})["headers"] == {
+        "X": "1",
+        "Content-Type": form,
+    }
+    # Caller's own Content-Type wins, in headers or headers_list
+    assert _adapt_request_kwargs({"data": "{}", "headers": {"content-type": "text/plain"}})["headers"] == {
+        "content-type": "text/plain"
+    }
+    assert "headers" not in _adapt_request_kwargs({"data": "x", "headers_list": ["Content-Type: text/plain"]})
+    # Not for json=, dict data (httpperf form-encodes it), or no body
+    assert "headers" not in _adapt_request_kwargs({"json": {"a": 1}})
+    assert "headers" not in _adapt_request_kwargs({"data": {"a": "1"}})
+    assert "headers" not in _adapt_request_kwargs({})
+
+
+@pytest.mark.asyncio
+async def test_raw_data_content_type_end_to_end(httpserver):
+    httpserver.expect_request(
+        "/form", method="POST", headers={"Content-Type": "application/x-www-form-urlencoded"}, data="a=1"
+    ).respond_with_data("ok")
+    context = MockContext()
+
+    @mite_http
+    async def journey(ctx):
+        assert (await ctx.http.post(httpserver.url_for("/form"), data="a=1")).status_code == 200
+
+    await journey(context)
+
+
+@pytest.mark.asyncio
+async def test_response_cookies_is_session_jar(httpserver):
+    httpserver.expect_request("/login").respond_with_data("ok", headers={"Set-Cookie": "session=abc; Path=/"})
+    httpserver.expect_request("/next").respond_with_data("ok")
+    context = MockContext()
+
+    @mite_http
+    async def journey(ctx):
+        await ctx.http.get(httpserver.url_for("/login"))
+        resp = await ctx.http.get(httpserver.url_for("/next"), cookies={"extra": "x"})
+        # As in the old fork: the whole jar, not only cookies this response set
+        assert resp.cookies == {"session": "abc", "extra": "x"}
+        assert resp.cookielist == []  # httpperf's own: cookies set by this response
+
+    await journey(context)
