@@ -9,6 +9,7 @@ services:
     - "8000:8000"
   runner:
     <<: *mite
+    # Build the shared image once; the other Mite services reuse this tag.
     build:
       context: ..
       dockerfile: docker/Dockerfile
