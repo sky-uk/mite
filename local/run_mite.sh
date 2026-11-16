@@ -1,10 +1,9 @@
 #!/bin/bash
 # This script is to run local mite processes with dockerized prometheus and grafana
-# TODO: Do this in python
 
 # Make sure to have prometheus and grafana running 
 # the prometheus config -> mite/prometheus/prometheus_config_template.yml
-# grafana dashboard templates -> mite/grafana/provisioning/grafana_dashboard_template.json
+# grafana dashboard -> mite/grafana/provisioning/dashboards/mite_docker.json
 docker-compose -f docker_compose_monitoring.yml up -d
 
 # Run mite stack w/o controller
