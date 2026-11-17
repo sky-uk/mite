@@ -119,9 +119,9 @@ stats processors (below) turn into Prometheus series:
 
 Everything curl and httpperf measure beyond the overall response time, broken down
 so you can see where the time goes. They are off by default, because each adds a
-histogram series per transaction. Turn them on with
-`--stats-extra-processors=mite_http_extended`, on `mite stats` or on
-`mite scenario test`/`mite journey test` when used with `--influxdb`.
+histogram series per transaction. Turn them on by naming the processor in
+`mite stats --stats-include-processors`, alongside the others you want, for
+example `--stats-include-processors=mite,mite_http,mite_http_extended`.
 
 All are histograms labelled by `transaction`: timings in seconds, sizes in bytes.
 

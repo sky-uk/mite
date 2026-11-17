@@ -94,8 +94,8 @@ _EXTENDED_SIZE_HISTOGRAMS = (
 
 
 def _generate_extended_stats():
-    # Opt-in (see DEFAULT_EXCLUDED_PROCESSORS in mite.stats): enable with
-    # --stats-extra-processors=mite_http_extended
+    # Opt-in (see DEFAULT_EXCLUDED_PROCESSORS in mite.stats): enable by naming
+    # mite_http_extended in --stats-include-processors
     return tuple(
         Histogram(
             name=name,

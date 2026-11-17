@@ -127,16 +127,13 @@ omit the exclude one).
 The format of both argumentsʼ value is a comma-separated list without
 spaces: ``--stats-include-processors=processor1,processor2``
 
-Some processors are opt-in: they are skipped unless asked for by name, because
-they add series that most tests donʼt need. Add them on top of the normal set
-with ``--stats-extra-processors``, or name them in
-``--stats-include-processors``. ``--stats-extra-processors`` is also accepted
-by ``mite scenario test`` and ``mite journey test`` for use with
-``--influxdb``:
+Some processors are opt-in: they are skipped unless named in
+``--stats-include-processors``, because they add series that most tests donʼt
+need. List them alongside the other processors you want:
 
 .. code-block:: bash
 
-   mite stats --stats-extra-processors=mite_http_extended
+   mite stats --stats-include-processors=mite,mite_http,mite_http_extended
 
 Available processors
 --------------------
