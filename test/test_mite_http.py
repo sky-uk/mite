@@ -96,14 +96,14 @@ async def test_decorator_eventloop_memoization():
 
 
 def test_options_from_config_defaults():
-    from mite_http import _ENGINE_OPTIONS, _SESSION_OPTIONS, _options_from_config
+    from mite_http.config import ENGINE_OPTIONS, SESSION_OPTIONS, options_from_config
 
-    assert _options_from_config({}, _ENGINE_OPTIONS) == {
+    assert options_from_config({}, ENGINE_OPTIONS) == {
         "max_host_connections": 0,
         "max_total_connections": 0,
         "max_idle_connections": 1000,
     }
-    assert _options_from_config({}, _SESSION_OPTIONS) == {
+    assert options_from_config({}, SESSION_OPTIONS) == {
         "connections": "shared",
         "tls": "session",
         "http_version": "HTTP/2",
@@ -118,7 +118,7 @@ def test_options_from_config_defaults():
 
 
 def test_options_from_config_converts_strings():
-    from mite_http import _ENGINE_OPTIONS, _SESSION_OPTIONS, _options_from_config
+    from mite_http.config import ENGINE_OPTIONS, SESSION_OPTIONS, options_from_config
 
     config = {
         "http_max_total_connections": "100",
@@ -129,8 +129,8 @@ def test_options_from_config_converts_strings():
         "http_connect_timeout": "",
         "http_verify": "true",
     }
-    engine = _options_from_config(config, _ENGINE_OPTIONS)
-    session = _options_from_config(config, _SESSION_OPTIONS)
+    engine = options_from_config(config, ENGINE_OPTIONS)
+    session = options_from_config(config, SESSION_OPTIONS)
     assert engine["max_total_connections"] == 100
     assert session["connections"] == "session"
     assert session["http_version"] == "HTTP/1.1"
@@ -138,7 +138,7 @@ def test_options_from_config_converts_strings():
     assert session["timeout"] == 2.5
     assert session["connect_timeout"] is None
     assert session["verify"] is True
-    assert _options_from_config({"http_verify": "/etc/ca.pem"}, _SESSION_OPTIONS)["verify"] == "/etc/ca.pem"
+    assert options_from_config({"http_verify": "/etc/ca.pem"}, SESSION_OPTIONS)["verify"] == "/etc/ca.pem"
 
 
 @pytest.mark.asyncio
@@ -183,35 +183,35 @@ class _FakeCookie:
 
 
 def test_adapt_request_kwargs_converts_header_pairs():
-    from mite_http import _adapt_request_kwargs
+    from mite_http.compat import adapt_request_kwargs
 
-    assert _adapt_request_kwargs({"headers": [("X-A", "1")]})["headers"] == {"X-A": "1"}
+    assert adapt_request_kwargs({"headers": [("X-A", "1")]})["headers"] == {"X-A": "1"}
     headers = {"X-B": "2"}
-    assert _adapt_request_kwargs({"headers": headers})["headers"] is headers
-    assert "headers" not in _adapt_request_kwargs({})
+    assert adapt_request_kwargs({"headers": headers})["headers"] is headers
+    assert "headers" not in adapt_request_kwargs({})
 
 
 def test_adapt_request_kwargs_swaps_cert():
-    from mite_http import _adapt_request_kwargs
+    from mite_http.compat import adapt_request_kwargs
 
-    assert _adapt_request_kwargs({"cert": ("key.pem", "cert.pem")})["cert"] == ("cert.pem", "key.pem")
-    assert "cert" not in _adapt_request_kwargs({})
+    assert adapt_request_kwargs({"cert": ("key.pem", "cert.pem")})["cert"] == ("cert.pem", "key.pem")
+    assert "cert" not in adapt_request_kwargs({})
 
 
 def test_adapt_request_kwargs_moves_cookie_objects_to_cookie_list():
-    from mite_http import _adapt_request_kwargs
+    from mite_http.compat import adapt_request_kwargs
 
     cookie = _FakeCookie()
     with patch("mite_http.httpperf.Cookie", _FakeCookie):
-        kwargs = _adapt_request_kwargs({"cookies": {"a": "1", "b": cookie}})
+        kwargs = adapt_request_kwargs({"cookies": {"a": "1", "b": cookie}})
         assert kwargs["cookies"] == {"a": "1"}
         assert kwargs["cookie_list"] == [cookie]
 
-        kwargs = _adapt_request_kwargs({"cookies": {"b": cookie}, "cookie_list": ["x"]})
+        kwargs = adapt_request_kwargs({"cookies": {"b": cookie}, "cookie_list": ["x"]})
         assert kwargs["cookies"] is None
         assert kwargs["cookie_list"] == ["x", cookie]
 
-        kwargs = _adapt_request_kwargs({"cookies": {"a": "1"}})
+        kwargs = adapt_request_kwargs({"cookies": {"a": "1"}})
         assert kwargs == {"cookies": {"a": "1"}}
 
 
@@ -494,10 +494,10 @@ async def test_redirect_history_is_wrapped(httpserver):
 def test_json_dumps_matches_old_fork_output():
     import json
 
-    from mite_http import _json_dumps
+    from mite_http.config import json_dumps
 
     obj = {"url": "http://a/b", "u": "é", "n": [1, 2.5, None, True], "nested": {"k": "v"}}
-    assert _json_dumps(obj) == json.dumps(obj)
+    assert json_dumps(obj) == json.dumps(obj)
 
 
 @pytest.mark.asyncio
@@ -513,7 +513,7 @@ async def test_json_request_body_and_response_use_ujson(httpserver):
         resp = await ctx.http.post(httpserver.url_for("/json"), json={"url": "http://a/b", "n": [1, 2]})
         results.append(resp.json())
 
-    with patch("mite_http.ujson.loads", wraps=__import__("ujson").loads) as loads:
+    with patch("mite_http.json_loads", wraps=__import__("ujson").loads) as loads:
         SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
         await journey(context)
         SessionPool._session_pools.pop(asyncio.get_running_loop(), None)
@@ -577,23 +577,23 @@ def test_journeys_on_event_loops_in_several_threads(httpserver):
 
 
 def test_raw_data_gets_old_default_content_type():
-    from mite_http import _adapt_request_kwargs
+    from mite_http.compat import adapt_request_kwargs
 
     form = "application/x-www-form-urlencoded"
-    assert _adapt_request_kwargs({"data": "a=1"})["headers"] == {"Content-Type": form}
-    assert _adapt_request_kwargs({"data": b"a=1", "headers": {"X": "1"}})["headers"] == {
+    assert adapt_request_kwargs({"data": "a=1"})["headers"] == {"Content-Type": form}
+    assert adapt_request_kwargs({"data": b"a=1", "headers": {"X": "1"}})["headers"] == {
         "X": "1",
         "Content-Type": form,
     }
     # Caller's own Content-Type wins, in headers or headers_list
-    assert _adapt_request_kwargs({"data": "{}", "headers": {"content-type": "text/plain"}})["headers"] == {
+    assert adapt_request_kwargs({"data": "{}", "headers": {"content-type": "text/plain"}})["headers"] == {
         "content-type": "text/plain"
     }
-    assert "headers" not in _adapt_request_kwargs({"data": "x", "headers_list": ["Content-Type: text/plain"]})
+    assert "headers" not in adapt_request_kwargs({"data": "x", "headers_list": ["Content-Type: text/plain"]})
     # Not for json=, dict data (httpperf form-encodes it), or no body
-    assert "headers" not in _adapt_request_kwargs({"json": {"a": 1}})
-    assert "headers" not in _adapt_request_kwargs({"data": {"a": "1"}})
-    assert "headers" not in _adapt_request_kwargs({})
+    assert "headers" not in adapt_request_kwargs({"json": {"a": 1}})
+    assert "headers" not in adapt_request_kwargs({"data": {"a": "1"}})
+    assert "headers" not in adapt_request_kwargs({})
 
 
 @pytest.mark.asyncio
