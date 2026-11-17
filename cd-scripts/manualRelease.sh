@@ -4,7 +4,6 @@ set -E                        # ERR trap must fire inside functions
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-VERSION_INCREMENT=true        # buildLinuxWheels tests `= true`
 NEW_TAG=""
 
 function cleanup_on_failure() {
@@ -44,21 +43,19 @@ buildLinuxWheels
 shopt -s nullglob
 mite_artifacts=(wheelhouse-mite/*)
 
-if [ "$VERSION_INCREMENT" = true ] && (( ${#mite_artifacts[@]} == 0 )); then
+if (( ${#mite_artifacts[@]} == 0 )); then
     echo "expected mite artifacts, found none" >&2; exit 1
 fi
 
-(( ${#mite_artifacts[@]}  > 0 )) && hatch run release:check "${mite_artifacts[@]}"
+hatch run release:check "${mite_artifacts[@]}"
 
 # ---- 4. upload ----------------------------------------------------
 export TWINE_USERNAME=__token__
 export TWINE_PASSWORD="$PYPI_TOKEN"
-(( ${#mite_artifacts[@]}  > 0 )) && hatch run release:upload "${mite_artifacts[@]}"
+hatch run release:upload "${mite_artifacts[@]}"
 
 # ---- 5. push the tag LAST -----------------------------------------
-if [ -n "$NEW_TAG" ]; then
-    echo "##### Publishing tag $NEW_TAG #####"
-    hatch run release:tag-push --tag="$NEW_TAG"
-fi
+echo "##### Publishing tag $NEW_TAG #####"
+hatch run release:tag-push --tag="$NEW_TAG"
 
 echo "Release complete: ${NEW_TAG}"

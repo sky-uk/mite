@@ -23,9 +23,6 @@ function assertReleasable() {
 
 function buildLinuxWheels() {
     rm -rf wheelhouse-mite
-
-    if [ "$VERSION_INCREMENT" = true ]; then
-        echo "##### Building Mite #####"
-        hatch run release:build-mite
-    fi
+    echo "##### Building Mite #####"
+    hatch run release:build-mite
 }
