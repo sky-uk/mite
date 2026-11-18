@@ -157,7 +157,7 @@ make clean # remove all mite containers
 ```
 or
 ```
-docker-compose -f docker_compose.yml up
+docker-compose -f docker/docker_compose.yml up
 ```
 
 For more information on distributed mite usage, [info](/local/README.md)

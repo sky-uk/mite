@@ -41,21 +41,13 @@ Grafana
 
 The grafana instance you are using will need to be set up with your
 prometheus as a data source.  `The Prometheus documentation`_ has an
-example of how to accomplish this.  We provide `a dashboard`_ which is
-pre-configured for mite.  The dashboard assumes that you have several
-applications under test, which will have their measurements tagged in
-Prometheus with an ``application`` label.  You will need to edit the
-`dashboard variables`_ so that they reflect the names of your
-applications.  (Otherwise, you can take out the ``application=~$app``
-query from all the dashboard panels).  As the grafana documentation
-points out, you will also need to edit the datasource of the dashboard
-to match the prometheus instance you configured grafana with.
+example of how to accomplish this.
 
 The docker compose stack at the root of the repository provisions `its own
-dashboard`_ instead, already wired to the prometheus in that stack, so there
-is nothing to edit if you only want to see mite reporting locally.
+dashboard`_, already wired to the prometheus in that stack, so there
+is nothing to edit if you only want to see mite reporting locally. If you
+are not using the docker compose stack, you can still import that same
+dashboard manually and point it at your own prometheus datasource.
 
 .. _The Prometheus documentation: https://prometheus.io/docs/visualization/grafana/
-.. _a dashboard: https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/grafana_dashboard_template.json
 .. _its own dashboard: https://github.com/sky-uk/mite/blob/master/grafana/provisioning/dashboards/mite_docker.json
-.. _dashboard variables: https://grafana.com/docs/reference/templating/
