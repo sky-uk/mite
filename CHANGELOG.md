@@ -5,7 +5,7 @@
 ### Breaking changes
 - **HTTP client replaced.** mite's vendored Cython fork of acurl (published as
   `acurl` ≤ 1.2.1) is removed. `mite_http` now uses
-  [httpperf](https://github.com/tonysimpson/httpperf) (`httpperf==1.0rc7`),
+  [httpperf](https://github.com/tonysimpson/httpperf) (`httpperf==1.0rc8`),
   which runs libcurl on its own thread. Response timings are no longer inflated
   when the runner's event loop is busy.
 - **`method` label** on `mite_http_response_total` is now `GET` (was `b'GET'`).
