@@ -77,6 +77,25 @@ class TestModularity:
             s = Stats(None, exclude=["x"])
             assert s._all_stats == ["y"]
 
+    def _entry_points_with_opt_in(self):
+        return [EntryPointMock(group="x"), EntryPointMock(group="mite_http_extended")]
+
+    def test_opt_in_processor_excluded_by_default(self):
+        with mock.patch(
+            "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
+        ):
+            assert Stats(None)._all_stats == ["x"]
+            assert Stats(None, exclude=["y"])._all_stats == ["x"]
+
+    def test_opt_in_processor_included_by_name(self):
+        with mock.patch(
+            "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
+        ):
+            s = Stats(None, include=["mite_http_extended"])
+            assert s._all_stats == ["mite_http_extended"]
+            s = Stats(None, include=["x", "mite_http_extended"])
+            assert s._all_stats == ["x", "mite_http_extended"]
+
     def test_import_error_is_a_warning(self):
         with mock.patch(
             "mite.stats.logger.warning"
@@ -119,7 +138,7 @@ class TestModularity:
 
     def test_future_warning_from_a_loaded_processor_does_not_escape(self):
         def _warn_and_return():
-            warnings.warn("some mite 3.0 deprecation", FutureWarning, stacklevel=2)
+            warnings.warn("some mite 4.0 deprecation", FutureWarning, stacklevel=2)
             return ["x"]
 
         with mock.patch(

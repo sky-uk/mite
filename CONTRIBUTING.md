@@ -89,4 +89,4 @@ to reach us for discussion is probably [via email](mailto:DL-Leeds-ID-Performanc
 
 ## Releases
 
-* Release commits will be tagged by a core maintainer and will be available on [Mite-PyPI](https://pypi.org/project/mite/) and [Acurl-PyPI](https://pypi.org/project/acurl/).
+* Release commits will be tagged by a core maintainer and will be available on [Mite-PyPI](https://pypi.org/project/mite/).

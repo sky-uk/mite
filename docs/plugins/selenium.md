@@ -7,7 +7,7 @@ wrapper, onto the journey context and automatically reports page-load timing
 metrics.
 
 Install: `pip install mite[selenium]` (no functional change today, every
-mite install already includes it; this will matter starting in mite 3.0).
+mite install already includes it; this will matter starting in mite 4.0).
 `wire=True` support additionally needs `pip install mite[selenium_wire]`. See
 the warning below before relying on it.
 
