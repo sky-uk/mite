@@ -12,7 +12,7 @@ from mite_http import mite_http
 
 warnings.warn(
     "mite_browser will require 'pip install mite[browser]' starting "
-    "in mite 3.0; no functional change today.",
+    "in mite 4.0; no functional change today.",
     FutureWarning,
     stacklevel=2,
 )

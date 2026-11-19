@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 warnings.warn(
     "mite_db_datapool will require 'pip install mite[db]' starting "
-    "in mite 3.0; no functional change today.",
+    "in mite 4.0; no functional change today.",
     FutureWarning,
     stacklevel=2,
 )
