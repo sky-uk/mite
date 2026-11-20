@@ -16,6 +16,8 @@ Breaking: dependency slimming, part 2 of 2.
   the old default install.
 - `otel` extra now also includes `mite[http]`.
 - Minimum Python raised to 3.11 (`aio_pika` requires it).
+- `http` extra bumped to `httpperf==1.0rc10`, which ships prebuilt wheels
+  for macOS in addition to Linux.
 
 ### Added
 
