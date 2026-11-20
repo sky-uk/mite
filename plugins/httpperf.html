@@ -8,7 +8,7 @@
         <link rel="prefetch" href="../_static/mite.png" as="image">
 
     <!-- Generated with Sphinx 9.2.0 and Furo 2025.12.19 -->
-        <title>acurl - mite documentation</title>
+        <title>httpperf - mite documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">acurl</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -249,7 +249,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/plugins/acurl.md.txt" title="View this page">
+  <a class="muted-link" href="../_sources/plugins/httpperf.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -267,27 +267,31 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="acurl">
-<h1>acurl<a class="headerlink" href="#acurl" title="Link to this heading">¶</a></h1>
-<p>acurl is an asynchronous wrapper around <a class="reference external" href="https://curl.se/libcurl/">libcurl</a>,
-built to interface with the uvloop python library. It is what <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> uses
-underneath to make HTTP calls.</p>
+          <section id="httpperf">
+<h1>httpperf<a class="headerlink" href="#httpperf" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://github.com/tonysimpson/httpperf">httpperf</a> is an asyncio HTTP client
+for load testing, built on <a class="reference external" href="https://curl.se/libcurl/">libcurl</a>. It is what
+<code class="docutils literal notranslate"><span class="pre">mite_http</span></code> uses underneath to make HTTP calls.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Unlike the other pages in this section, acurl is <strong>not</strong> a mite plugin. It is a
-separate distribution, published to PyPI in its own right, and it registers no
-<code class="docutils literal notranslate"><span class="pre">mite_stats</span></code> entry point. There is no <code class="docutils literal notranslate"><span class="pre">mite_acurl</span></code> package.</p>
-<p>Because its <code class="docutils literal notranslate"><span class="pre">README.md</span></code> is also its PyPI description, that file is the canonical
-documentation and is deliberately not duplicated here.</p>
+<p>Unlike the other pages in this section, httpperf is <strong>not</strong> a mite plugin. It is
+a separate distribution, maintained upstream and published to PyPI as
+<code class="docutils literal notranslate"><span class="pre">httpperf</span></code>, and it registers no <code class="docutils literal notranslate"><span class="pre">mite_stats</span></code> entry point.</p>
+<p>httpperf grew out of the original acurl. Mite previously vendored its own Cython
+fork of acurl, published to PyPI as <code class="docutils literal notranslate"><span class="pre">acurl</span></code> (up to 1.2.1). That fork has been
+retired; <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> translates the few places where its API differed (see
+<a class="reference internal" href="http.html"><span class="doc">HTTP</span></a>).</p>
 </div>
 <p><strong>Full documentation:</strong>
-<a class="reference external" href="https://github.com/sky-uk/mite/blob/master/acurl/README.md">acurl/README.md</a></p>
-<p>It covers how mite obtains a <code class="docutils literal notranslate"><span class="pre">CurlWrapper</span></code>, and architectural notes on the
-<code class="docutils literal notranslate"><span class="pre">curl_multi</span></code> integration (<code class="docutils literal notranslate"><span class="pre">handle_socket</span></code> and <code class="docutils literal notranslate"><span class="pre">start_timer</span></code>).</p>
-<p>To install mite with acurl, use the <code class="docutils literal notranslate"><span class="pre">http</span></code> extra:</p>
+<a class="reference external" href="https://github.com/tonysimpson/httpperf/blob/main/README.md">httpperf README</a> and
+<a class="reference external" href="https://github.com/tonysimpson/httpperf/blob/main/docs/connections.md">connections guide</a>,
+covering sessions, engines, connection and TLS reuse, and timings.</p>
+<p>To install mite with httpperf, use the <code class="docutils literal notranslate"><span class="pre">http</span></code> extra:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>mite<span class="o">[</span>http<span class="o">]</span>
 </pre></div>
 </div>
+<p>The Linux wheels on PyPI bundle their own libcurl, built with HTTP/2 and
+HTTP/3, so no system libcurl is needed.</p>
 </section>
 
         </article>

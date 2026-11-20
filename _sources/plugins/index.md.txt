@@ -16,11 +16,11 @@ amqp
 websocket
 browser
 selenium
-acurl
+httpperf
 ```
 
 ```{note}
-`acurl` is included above for convenience but is not a plugin: it is a
+`httpperf` is included above for convenience but is not a plugin: it is a
 separate distribution that `mite_http` builds on. Its page explains the
 distinction.
 

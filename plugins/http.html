@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -270,10 +270,10 @@
           <section id="http">
 <h1>HTTP<a class="headerlink" href="#http" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> is mite’s HTTP integration. It installs an async HTTP client onto
-the journey context, built on top of <a class="reference internal" href="acurl.html"><span class="doc">acurl</span></a>, and automatically
+the journey context, built on top of <a class="reference internal" href="httpperf.html"><span class="doc">httpperf</span></a>, and automatically
 reports timing metrics for every request.</p>
 <p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[http]</span></code> (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).</p>
+install already includes it; this will matter starting in mite 4.0).</p>
 <section id="basic-usage">
 <h2>Basic usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mite_http</span><span class="w"> </span><span class="kn">import</span> <span class="n">mite_http</span>
@@ -321,7 +321,7 @@ this request’s latency later.</p>
 <td><p>basic auth credentials</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data</span></code></p></td>
-<td><p>a request body, <code class="docutils literal notranslate"><span class="pre">str</span></code> or <code class="docutils literal notranslate"><span class="pre">bytes</span></code></p></td>
+<td><p>a request body, <code class="docutils literal notranslate"><span class="pre">str</span></code> or <code class="docutils literal notranslate"><span class="pre">bytes</span></code>, sent with <code class="docutils literal notranslate"><span class="pre">Content-Type:</span> <span class="pre">application/x-www-form-urlencoded</span></code> unless you set a <code class="docutils literal notranslate"><span class="pre">Content-Type</span></code> (as earlier versions of mite did); or a dict, which is form-encoded</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">json</span></code></p></td>
 <td><p>a JSON-serializable object; mutually exclusive with <code class="docutils literal notranslate"><span class="pre">data</span></code>, and sets <code class="docutils literal notranslate"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code> automatically</p></td>
@@ -345,6 +345,10 @@ this request’s latency later.</p>
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>JSON is encoded and decoded with <a class="reference external" href="https://github.com/ultrajson/ultrajson">ujson</a>.
+<code class="docutils literal notranslate"><span class="pre">json=</span></code> bodies are formatted exactly as the standard library’s <code class="docutils literal notranslate"><span class="pre">json.dumps</span></code>
+does by default (<code class="docutils literal notranslate"><span class="pre">{&quot;username&quot;:</span> <span class="pre">&quot;test&quot;}</span></code>, with spaces after <code class="docutils literal notranslate"><span class="pre">,</span></code> and <code class="docutils literal notranslate"><span class="pre">:</span></code>, and
+non-ASCII characters escaped), so they match what earlier versions of mite sent.</p>
 </section>
 <section id="the-response">
 <h2>The response<a class="headerlink" href="#the-response" title="Link to this heading">¶</a></h2>
@@ -374,7 +378,7 @@ stats processors (below) turn into Prometheus series:</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">start_time</span></code></p></td>
-<td><p>when the request started</p></td>
+<td><p>when the request started (wall clock, seconds as a float)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">effective_url</span></code></p></td>
 <td><p>the URL actually requested</p></td>
@@ -383,31 +387,46 @@ stats processors (below) turn into Prometheus series:</p>
 <td><p>HTTP status code</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dns_time</span></code></p></td>
-<td><p>DNS resolution time</p></td>
+<td><p>curl: DNS lookup complete, from the start of the transfer</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">connect_time</span></code></p></td>
-<td><p>TCP connect time</p></td>
+<td><p>curl: TCP connect complete, from the start of the transfer; 0 when a connection was reused</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tls_time</span></code></p></td>
-<td><p>TLS handshake time</p></td>
+<td><p>curl: TLS handshake complete, from the start of the transfer; 0 for plain http and reused connections</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">transfer_start_time</span></code></p></td>
-<td><p>time to start of transfer</p></td>
+<td><p>curl: ready to send the request (curl’s <code class="docutils literal notranslate"><span class="pre">pretransfer_time</span></code>), from the start of the transfer</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">first_byte_time</span></code></p></td>
-<td><p>time to first response byte</p></td>
+<td><p>curl: first response byte received (curl’s <code class="docutils literal notranslate"><span class="pre">starttransfer_time</span></code>), from the start of the transfer</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">total_time</span></code></p></td>
-<td><p>total request duration</p></td>
+<td><p>curl: transfer complete, from the start of the transfer</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">primary_ip</span></code></p></td>
 <td><p>resolved IP the request went to</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">method</span></code></p></td>
-<td><p>HTTP method used</p></td>
+<td><p>HTTP method used, e.g. <code class="docutils literal notranslate"><span class="pre">GET</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">download_size</span></code></p></td>
 <td><p>bytes downloaded</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">upload_size</span></code></p></td>
+<td><p>bytes uploaded</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">queue_time</span></code></p></td>
+<td><p>time waiting in httpperf’s queue for a connection, under the connection limits; not part of the other timings</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">client_lag</span></code></p></td>
+<td><p>time the request spent waiting on Python (before it was sent and after it finished); if this grows, the runner is the bottleneck</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">posttransfer_time</span></code></p></td>
+<td><p>curl: request fully sent, from the start of the transfer; <code class="docutils literal notranslate"><span class="pre">None</span></code> with libcurl older than 8.10</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_version</span></code></p></td>
+<td><p>protocol negotiated: <code class="docutils literal notranslate"><span class="pre">HTTP/1.1</span></code>, <code class="docutils literal notranslate"><span class="pre">HTTP/2</span></code> or <code class="docutils literal notranslate"><span class="pre">HTTP/3</span></code></p></td>
 </tr>
 </tbody>
 </table>
@@ -415,21 +434,219 @@ stats processors (below) turn into Prometheus series:</p>
 </section>
 <section id="stats-and-tuning">
 <h2>Stats and tuning<a class="headerlink" href="#stats-and-tuning" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> registers two processors under <code class="docutils literal notranslate"><span class="pre">mite_stats</span></code>, listed in full on
-<a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a>:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mite_http_response_total</span></code> — a counter, labelled by <code class="docutils literal notranslate"><span class="pre">test</span></code>, <code class="docutils literal notranslate"><span class="pre">journey</span></code>,
-<code class="docutils literal notranslate"><span class="pre">transaction</span></code>, <code class="docutils literal notranslate"><span class="pre">method</span></code> and <code class="docutils literal notranslate"><span class="pre">response_code</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mite_http_response_time_seconds</span></code> — a histogram of <code class="docutils literal notranslate"><span class="pre">total_time</span></code>, labelled by
-<code class="docutils literal notranslate"><span class="pre">transaction</span></code></p></li>
-</ul>
-<p>The histogram’s bucket boundaries can be overridden with the
+<p><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> registers two stats processors under <code class="docutils literal notranslate"><span class="pre">mite_stats</span></code> (see
+<a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a>).</p>
+<section id="mite-http-on-by-default">
+<span id="mite_http-on-by-default"></span><h3><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> (on by default)<a class="headerlink" href="#mite-http-on-by-default" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Stat</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Labels</p></th>
+<th class="head"><p>What it shows</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_response_total</span></code></p></td>
+<td><p>counter</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">test</span></code>, <code class="docutils literal notranslate"><span class="pre">journey</span></code>, <code class="docutils literal notranslate"><span class="pre">transaction</span></code>, <code class="docutils literal notranslate"><span class="pre">method</span></code>, <code class="docutils literal notranslate"><span class="pre">response_code</span></code></p></td>
+<td><p>Number of responses. Use it for request rates and error rates by status code.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_response_time_seconds</span></code></p></td>
+<td><p>histogram</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">transaction</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">total_time</span></code>: curl’s time for the whole transfer, from the start of the request (DNS, connect and TLS included when a new connection is made) to the last byte of the response. This is the response time a client sees, apart from any time spent queueing in httpperf or waiting on Python.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="mite-http-extended-opt-in">
+<span id="mite_http_extended-opt-in"></span><h3><code class="docutils literal notranslate"><span class="pre">mite_http_extended</span></code> (opt-in)<a class="headerlink" href="#mite-http-extended-opt-in" title="Link to this heading">¶</a></h3>
+<p>Everything curl and httpperf measure beyond the overall response time, broken down
+so you can see where the time goes. They are off by default, because each adds a
+histogram series per transaction. Turn them on by naming the processor in
+<code class="docutils literal notranslate"><span class="pre">mite</span> <span class="pre">stats</span> <span class="pre">--stats-include-processors</span></code>, alongside the others you want, for
+example <code class="docutils literal notranslate"><span class="pre">--stats-include-processors=mite,mite_http,mite_http_extended</span></code>.</p>
+<p>All are histograms labelled by <code class="docutils literal notranslate"><span class="pre">transaction</span></code>: timings in seconds, sizes in bytes.</p>
+<p><strong>curl’s timings.</strong> Like <code class="docutils literal notranslate"><span class="pre">total_time</span></code>, each is measured from the start of the
+transfer, so they add up: DNS ≤ connect ≤ TLS ≤ pretransfer ≤ posttransfer ≤ first
+byte ≤ total. Subtract neighbouring values to get the length of one phase.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>start → DNS done → TCP connected → TLS done → ready to send → request sent → first byte → done
+        dns_time   connect_time    tls_time   pretransfer     posttransfer   first_byte   total_time
+</pre></div>
+</div>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Stat</p></th>
+<th class="head"><p>What it shows</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_dns_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dns_time</span></code>: time to resolve the host name. Usually near zero once the name is cached; large values point at DNS problems on the load generator’s side.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_connect_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">connect_time</span></code>: time to establish the TCP connection (including DNS). <strong>Only requests that opened a new connection are recorded</strong>; reused connections report 0 and are skipped, so this shows the cost of new connections, and its count shows how many were opened. Growth means slow accepts at the server or load balancer, or network latency.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_tls_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tls_time</span></code>: time until the TLS handshake finished (including DNS and connect). Only new https connections are recorded. The gap above <code class="docutils literal notranslate"><span class="pre">connect_time</span></code> is the handshake itself; it is larger for full handshakes than for resumed ones (see <code class="docutils literal notranslate"><span class="pre">http_tls</span></code> under <a class="reference internal" href="#connection-settings">Connection settings</a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_pretransfer_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">transfer_start_time</span></code>: time until curl was ready to send the request, i.e. all connection setup done. For a reused connection this is close to zero.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_posttransfer_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">posttransfer_time</span></code>: time until the request, including any body, was fully sent. The gap above pretransfer is upload time. Not recorded when libcurl is older than 8.10.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_first_byte_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">first_byte_time</span></code>: time until the first byte of the response arrived. This is time to first byte as a client sees it, including connection setup and upload. On a reused connection with no request body, it is close to the server’s processing time plus one round trip; <code class="docutils literal notranslate"><span class="pre">first_byte_time</span> <span class="pre">-</span> <span class="pre">posttransfer_time</span></code> gives that for every request.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Measured by httpperf, outside curl’s timings.</strong> Neither is included in
+<code class="docutils literal notranslate"><span class="pre">total_time</span></code> or in the timings above.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Stat</p></th>
+<th class="head"><p>What it shows</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_queue_time_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">queue_time</span></code>: how long a request waited in httpperf for a free connection, because of the <code class="docutils literal notranslate"><span class="pre">http_*max*connections</span></code> limits (see <a class="reference internal" href="#connection-settings">Connection settings</a>). Normally zero; if it grows, the connection limits, not the server, are holding requests back.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_client_lag_seconds</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">client_lag</span></code>: time the request spent waiting on Python, before it was handed to curl and after the response arrived. It measures the load generator, not the service. If it grows, the runner can’t keep up (CPU-bound journeys, too many runners per core), so achieved request rates describe the client rather than the server. Report it alongside response times.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sizes</strong>, in bytes. Their buckets are set separately with
+<code class="docutils literal notranslate"><span class="pre">MITE_HTTP_SIZE_HISTOGRAM_BUCKETS</span></code> (default 128 B to 64 MiB, in powers of 4).</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Stat</p></th>
+<th class="head"><p>What it shows</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_download_size_bytes</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">download_size</span></code>: bytes of response body received, as reported by curl (headers excluded). Includes empty responses such as <code class="docutils literal notranslate"><span class="pre">HEAD</span></code> and <code class="docutils literal notranslate"><span class="pre">204</span></code>. Useful for spotting responses that are bigger than expected, which drive bandwidth and transfer time.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mite_http_upload_size_bytes</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">upload_size</span></code>: bytes of request body sent. <strong>Only requests with a body are recorded</strong>; requests that upload nothing (most <code class="docutils literal notranslate"><span class="pre">GET</span></code>s) are skipped.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The histograms’ bucket boundaries can be overridden with the
 <code class="docutils literal notranslate"><span class="pre">MITE_HTTP_HISTOGRAM_BUCKETS</span></code> environment variable, a comma-separated list of
 floats (seconds):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">MITE_HTTP_HISTOGRAM_BUCKETS</span><span class="o">=</span><span class="m">0</span>.01,0.05,0.1,0.5,1,5
 </pre></div>
 </div>
 <p>The default buckets run from 100 microseconds to 64 seconds.</p>
+</section>
+</section>
+<section id="connection-settings">
+<h2>Connection settings<a class="headerlink" href="#connection-settings" title="Link to this heading">¶</a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">&#64;mite_http</span></code> journey gets its own httpperf <code class="docutils literal notranslate"><span class="pre">Session</span></code>, and every journey in a
+runner shares one httpperf <code class="docutils literal notranslate"><span class="pre">Engine</span></code>. Both are configured through mite config, so set
+them with <code class="docutils literal notranslate"><span class="pre">MITE_CONF_</span></code> environment variables, for example
+<code class="docutils literal notranslate"><span class="pre">MITE_CONF_http_version=HTTP/1.1</span></code>. See the
+<a class="reference external" href="https://github.com/tonysimpson/httpperf/blob/main/docs/connections.md">httpperf connections guide</a>
+for what each option does.</p>
+<p>Engine options are read once, when a runner makes its first request:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Config key</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>httpperf <code class="docutils literal notranslate"><span class="pre">Engine</span></code> argument</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_max_host_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code> (no limit)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_host_connections</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_max_total_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code> (no limit)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_total_connections</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_max_idle_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_idle_connections</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Session options are read at the start of each journey, so changes apply to the
+next journeys:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Config key</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>httpperf <code class="docutils literal notranslate"><span class="pre">Session</span></code> argument</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">shared</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">connections</span></code> (<code class="docutils literal notranslate"><span class="pre">shared</span></code>, <code class="docutils literal notranslate"><span class="pre">session</span></code> or <code class="docutils literal notranslate"><span class="pre">none</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_tls</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">session</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tls</span></code> (<code class="docutils literal notranslate"><span class="pre">shared</span></code> or <code class="docutils literal notranslate"><span class="pre">session</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_version</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">HTTP/2</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">http_version</span></code> (<code class="docutils literal notranslate"><span class="pre">HTTP/1.1</span></code>, <code class="docutils literal notranslate"><span class="pre">HTTP/2</span></code> or <code class="docutils literal notranslate"><span class="pre">HTTP/3</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_idle_timeout</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">118</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">idle_timeout</span></code> (seconds)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_max_connection_age</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code> (no limit)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_connection_age</span></code> (seconds)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_session_max_host_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code> (no limit)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_host_connections</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_session_max_connections</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code> (no limit)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">max_connections</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_timeout</span></code></p></td>
+<td><p>none</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code> (seconds)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http_connect_timeout</span></code></p></td>
+<td><p>curl’s default</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">connect_timeout</span></code> (seconds)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http_verify</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">verify</span></code> (<code class="docutils literal notranslate"><span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">false</span></code> or a CA bundle path)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The defaults keep the connection behaviour of mite’s old acurl fork (one shared
+pool, TLS session tickets per journey). HTTP/2 is negotiated over https where the
+server offers it, falling back to HTTP/1.1, as before; the difference is that
+requests to an HTTP/2 server now wait to share one connection (curl’s
+<code class="docutils literal notranslate"><span class="pre">PIPEWAIT</span></code>) rather than each opening their own. <code class="docutils literal notranslate"><span class="pre">HTTP/3</span></code> has no fallback and
+needs a libcurl built with HTTP/3 support. The session is closed when the journey
+ends, including when it raises.</p>
 </section>
 <section id="custom-metrics-per-request">
 <h2>Custom metrics per request<a class="headerlink" href="#custom-metrics-per-request" title="Link to this heading">¶</a></h2>
@@ -444,16 +661,89 @@ invoked with every response: <code class="docutils literal notranslate"><span cl
 <code class="docutils literal notranslate"><span class="pre">additional_metrics</span></code> is the same dict described above, so the callback can
 inspect the response before deciding what to add.</p>
 </section>
+<section id="reproducing-a-request-with-curl">
+<h2>Reproducing a request with curl<a class="headerlink" href="#reproducing-a-request-with-curl" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">resp.request.to_curl()</span></code> returns a curl command line that repeats the request:
+method, URL, headers, body, basic auth, and the cookies that would have been
+sent (those passed to the request plus those in the journey’s cookie jar for the
+URL). <code class="docutils literal notranslate"><span class="pre">mite_http.to_curl(resp)</span></code> does the same.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Reproduce with: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">to_curl</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The cookie jar is read when you call it, so call it while the journey is
+running, for example in a response callback. After the journey has ended only
+the request’s own cookies are included.</p>
+<p>Responses from <code class="docutils literal notranslate"><span class="pre">ctx.http</span></code> (and those passed to response callbacks) are thin
+wrappers around httpperf’s <code class="docutils literal notranslate"><span class="pre">Response</span></code> that add this method and keep <code class="docutils literal notranslate"><span class="pre">cookies</span></code>
+as the whole jar (see <a class="reference internal" href="#cookies">Cookies</a>); every other attribute is
+httpperf’s own.</p>
+</section>
 <section id="cookies">
 <h2>Cookies<a class="headerlink" href="#cookies" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">create_http_cookie(ctx,</span> <span class="pre">*args,</span> <span class="pre">**kwargs)</span></code> builds a cookie object to populate
-the <code class="docutils literal notranslate"><span class="pre">cookies</span></code> argument above. Session-wide cookies can be cleared with
-<code class="docutils literal notranslate"><span class="pre">ctx.http.erase_all_cookies()</span></code>.</p>
+<p>Each journey gets a new httpperf session with an empty cookie jar, which is
+discarded when the journey ends (whether or not it raised). Cookies set by the
+server, and cookies you pass to requests, stay in the jar for the rest of the
+journey.</p>
+<p>Sending cookies:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">cookies={&quot;name&quot;:</span> <span class="pre">&quot;value&quot;}</span></code> on any request adds them to the jar as session
+cookies for the request’s host and its subdomains, path <code class="docutils literal notranslate"><span class="pre">/</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cookie_list=[...]</span></code> adds <code class="docutils literal notranslate"><span class="pre">httpperf.Cookie</span></code> objects, for control over domain,
+path, expiry and flags. <code class="docutils literal notranslate"><span class="pre">create_http_cookie(ctx,</span> <span class="pre">domain,</span> <span class="pre">name,</span> <span class="pre">value)</span></code> builds
+one with the same defaults as <code class="docutils literal notranslate"><span class="pre">cookies=</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cookie</span> <span class="o">=</span> <span class="n">create_http_cookie</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="s2">".example.com"</span><span class="p">,</span> <span class="s2">"session"</span><span class="p">,</span> <span class="s2">"abc"</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">http</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">cookie_list</span><span class="o">=</span><span class="p">[</span><span class="n">cookie</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Cookie</span></code> objects passed as values in <code class="docutils literal notranslate"><span class="pre">cookies={...}</span></code> are also accepted, and
+moved to <code class="docutils literal notranslate"><span class="pre">cookie_list</span></code> for you.</p>
+</li>
+</ul>
+<p>Reading and changing the jar:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Call</p></th>
+<th class="head"><p>Returns or does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctx.http.cookies()</span></code></p></td>
+<td><p>the jar as a <code class="docutils literal notranslate"><span class="pre">{name:</span> <span class="pre">value}</span></code> dict</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ctx.http.get_cookie_list()</span></code></p></td>
+<td><p>the jar as <code class="docutils literal notranslate"><span class="pre">httpperf.Cookie</span></code> objects (domain, path, expiry, flags)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctx.http.add_cookie_list(cookies)</span></code></p></td>
+<td><p>adds <code class="docutils literal notranslate"><span class="pre">Cookie</span></code> objects to the jar</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ctx.http.erase_all_cookies()</span></code></p></td>
+<td><p>empties the jar</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctx.http.erase_session_cookies()</span></code></p></td>
+<td><p>removes cookies without an expiry, as a browser restart would</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">resp.cookies</span></code></p></td>
+<td><p>the <strong>whole jar</strong> at the time you read it, as a dict, not only the cookies that response set (as in earlier versions of mite). Empty once the journey has ended.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">resp.cookielist</span></code></p></td>
+<td><p>only the cookies <strong>that response set</strong>, from its <code class="docutils literal notranslate"><span class="pre">Set-Cookie</span></code> headers, as <code class="docutils literal notranslate"><span class="pre">Cookie</span></code> objects</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">resp.request.cookie_list</span></code></p></td>
+<td><p>only the cookies passed to that request</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">get_cookie_list()</span></code>, <code class="docutils literal notranslate"><span class="pre">resp.cookielist</span></code> and <code class="docutils literal notranslate"><span class="pre">cookie_list=</span></code> all use
+<code class="docutils literal notranslate"><span class="pre">httpperf.Cookie</span></code>, so cookies read from one place can be passed straight to another.
+In the dict forms, cookies with the same name on different domains overwrite
+each other.</p>
 </section>
 <section id="see-also">
 <h2>See also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="acurl.html"><span class="doc">acurl</span></a> — the libcurl wrapper <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> is built on</p></li>
+<li><p><a class="reference internal" href="httpperf.html"><span class="doc">httpperf</span></a> — the libcurl wrapper <code class="docutils literal notranslate"><span class="pre">mite_http</span></code> is built on</p></li>
 <li><p><a class="reference internal" href="../otel.html"><span class="doc">OpenTelemetry</span></a> — <code class="docutils literal notranslate"><span class="pre">mite_http_traced</span></code>, a drop-in replacement for <code class="docutils literal notranslate"><span class="pre">&#64;mite_http</span></code>
 that additionally creates OpenTelemetry spans</p></li>
 <li><p><a class="reference internal" href="../stats.html"><span class="doc">Customizing miteʼs stats</span></a> — the full list of registered stats processors</p></li>
@@ -524,8 +814,14 @@ that additionally creates OpenTelemetry spans</p></li>
 <li><a class="reference internal" href="#making-requests">Making requests</a></li>
 <li><a class="reference internal" href="#the-response">The response</a></li>
 <li><a class="reference internal" href="#metrics-emitted">Metrics emitted</a></li>
-<li><a class="reference internal" href="#stats-and-tuning">Stats and tuning</a></li>
+<li><a class="reference internal" href="#stats-and-tuning">Stats and tuning</a><ul>
+<li><a class="reference internal" href="#mite-http-on-by-default"><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> (on by default)</a></li>
+<li><a class="reference internal" href="#mite-http-extended-opt-in"><code class="docutils literal notranslate"><span class="pre">mite_http_extended</span></code> (opt-in)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#connection-settings">Connection settings</a></li>
 <li><a class="reference internal" href="#custom-metrics-per-request">Custom metrics per request</a></li>
+<li><a class="reference internal" href="#reproducing-a-request-with-curl">Reproducing a request with curl</a></li>
 <li><a class="reference internal" href="#cookies">Cookies</a></li>
 <li><a class="reference internal" href="#see-also">See also</a></li>
 </ul>

@@ -10,7 +10,7 @@ every journey.
 
 Install: `pip install mite[browser]` (depends on `http`; no functional change
 today. Every mite install already includes it; this will matter starting in
-mite 3.0).
+mite 4.0).
 
 ## Basic usage
 
@@ -87,7 +87,7 @@ exist creates one, so you can inject values a form doesn't declare.
 ```{important}
 File upload fields are parsed but not actually submitted: `Form._serialize`
 only encodes the non-file fields, with a `TODO` in source noting file
-support depends on the underlying HTTP backend (`acurl`) supporting
+support depends on the underlying HTTP backend (`httpperf`) supporting
 multipart uploads, which it does not today. A form with a file input submits
 successfully, just without the file.
 ```

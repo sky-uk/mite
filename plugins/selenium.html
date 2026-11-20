@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="acurl" href="acurl.html"><link rel="prev" title="Browser" href="browser.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="httpperf" href="httpperf.html"><link rel="prev" title="Browser" href="browser.html">
         <link rel="prefetch" href="../_static/mite.png" as="image">
         <link rel="prefetch" href="../_static/mite.png" as="image">
 
@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -275,7 +275,7 @@ need a real browser rather than the HTTP/HTML-scraping approach of
 wrapper, onto the journey context and automatically reports page-load timing
 metrics.</p>
 <p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[selenium]</span></code> (no functional change today, every
-mite install already includes it; this will matter starting in mite 3.0).
+mite install already includes it; this will matter starting in mite 4.0).
 <code class="docutils literal notranslate"><span class="pre">wire=True</span></code> support additionally needs <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[selenium_wire]</span></code>. See
 the warning below before relying on it.</p>
 <div class="admonition important">
@@ -344,7 +344,7 @@ way as everything else in mite. See <a class="reference internal" href="../confi
 </div>
 </section>
 <section id="ctx-browser-reference">
-<h2><code class="docutils literal notranslate"><span class="pre">ctx.browser</span></code> reference<a class="headerlink" href="#ctx-browser-reference" title="Link to this heading">¶</a></h2>
+<span id="ctxbrowser-reference"></span><h2><code class="docutils literal notranslate"><span class="pre">ctx.browser</span></code> reference<a class="headerlink" href="#ctx-browser-reference" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">get(url)</span></code> navigates and automatically reports page-load metrics (see
 below).</p></li>
@@ -405,12 +405,12 @@ journeys that don’t need a real browser engine or JavaScript execution</p></li
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="acurl.html">
+          <a class="next-page" href="httpperf.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">acurl</div>
+                <div class="title">httpperf</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>

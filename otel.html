@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="plugins/websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -317,21 +317,21 @@
 </pre></div>
 </div>
 <section id="enable-tracing">
-<h3>1. Enable Tracing<a class="headerlink" href="#enable-tracing" title="Link to this heading">¶</a></h3>
+<span id="1-enable-tracing"></span><h3>1. Enable Tracing<a class="headerlink" href="#enable-tracing" title="Link to this heading">¶</a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">MITE_CONF_OTEL_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 </pre></div>
 </div>
 <p>This environment variable controls whether tracing is available. When <code class="docutils literal notranslate"><span class="pre">false</span></code>, even <code class="docutils literal notranslate"><span class="pre">&#64;mite_http_traced</span></code> journeys will behave like regular <code class="docutils literal notranslate"><span class="pre">&#64;mite_http</span></code> journeys with no tracing.</p>
 </section>
 <section id="run-your-test">
-<h3>2. Run Your Test<a class="headerlink" href="#run-your-test" title="Link to this heading">¶</a></h3>
+<span id="2-run-your-test"></span><h3>2. Run Your Test<a class="headerlink" href="#run-your-test" title="Link to this heading">¶</a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mite<span class="w"> </span>scenario<span class="w"> </span><span class="nb">test</span><span class="w"> </span>demo_otel:scenario<span class="w"> </span>--hide-constant-logs
 </pre></div>
 </div>
 <p><strong>Important:</strong> Only <code class="docutils literal notranslate"><span class="pre">&#64;mite_http_traced</span></code> journeys and their transactions/HTTP requests will be traced. Regular <code class="docutils literal notranslate"><span class="pre">&#64;mite_http</span></code> journeys have zero tracing overhead.</p>
 </section>
 <section id="view-traces">
-<h3>3. View Traces<a class="headerlink" href="#view-traces" title="Link to this heading">¶</a></h3>
+<span id="3-view-traces"></span><h3>3. View Traces<a class="headerlink" href="#view-traces" title="Link to this heading">¶</a></h3>
 <p>Traces are printed to console by default. For visualization, use Jaeger or Zipkin (see below).</p>
 </section>
 </section>
@@ -420,7 +420,7 @@ mite<span class="w"> </span>scenario<span class="w"> </span><span class="nb">tes
 </div>
 </section>
 <section id="sampling-authenticated">
-<h3>1% sampling, authenticated<a class="headerlink" href="#sampling-authenticated" title="Link to this heading">¶</a></h3>
+<span id="1-sampling-authenticated"></span><h3>1% sampling, authenticated<a class="headerlink" href="#sampling-authenticated" title="Link to this heading">¶</a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MITE_CONF_OTEL_ENABLED</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
 <span class="nv">MITE_CONF_OTEL_SAMPLER_RATIO</span><span class="o">=</span><span class="m">0</span>.01<span class="w"> </span><span class="se">\</span>
 <span class="nv">MITE_CONF_OTEL_SPAN_PROCESSOR</span><span class="o">=</span>otlp<span class="w"> </span><span class="se">\</span>
@@ -436,15 +436,15 @@ mite<span class="w"> </span>scenario<span class="w"> </span><span class="nb">tes
 <p>Mite automatically creates hierarchical traces:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>journey.user_login (520ms)
   └── transaction.Login (450ms)
-      ├── HTTP POST /auth/login (280ms)
+      ├── HTTP POST (280ms)
       │   ├── http.method: POST
       │   ├── http.url: https://api.example.com/auth/login
-      │   ├── http.status_code: 200
+      │   ├── http.response.status_code: 200
       │   └── http.response.time.total: 0.28
       └── transaction.Fetch_Profile (170ms)
-          └── HTTP GET /users/me (169ms)
+          └── HTTP GET (169ms)
               ├── http.method: GET
-              ├── http.status_code: 200
+              ├── http.response.status_code: 200
               └── http.response.body.size: 2048
 </pre></div>
 </div>
@@ -453,14 +453,95 @@ mite<span class="w"> </span>scenario<span class="w"> </span><span class="nb">tes
 <ul class="simple">
 <li><p><strong>Journey spans</strong> - Created for each <code class="docutils literal notranslate"><span class="pre">&#64;mite_http_traced</span></code> decorated function</p></li>
 <li><p><strong>Transaction spans</strong> - Created for each <code class="docutils literal notranslate"><span class="pre">ctx.transaction()</span></code> call <strong>within traced journeys only</strong></p></li>
-<li><p><strong>HTTP spans</strong> - Created for each <code class="docutils literal notranslate"><span class="pre">ctx.http.*()</span></code> request <strong>within traced journeys only</strong></p></li>
+<li><p><strong>HTTP spans</strong> - Created for each <code class="docutils literal notranslate"><span class="pre">ctx.http.*()</span></code> request, including
+<code class="docutils literal notranslate"><span class="pre">ctx.http.request(method,</span> <span class="pre">url)</span></code>, <strong>within traced journeys only</strong>. Named
+<code class="docutils literal notranslate"><span class="pre">HTTP</span> <span class="pre">&lt;METHOD&gt;</span></code>, with span kind <code class="docutils literal notranslate"><span class="pre">CLIENT</span></code>. A request that follows redirects is
+one span, with the final response’s attributes.</p></li>
 </ul>
 <p><strong>Note:</strong> Regular <code class="docutils literal notranslate"><span class="pre">&#64;mite_http</span></code> journeys do not create any spans, even when <code class="docutils literal notranslate"><span class="pre">MITE_CONF_OTEL_ENABLED=true</span></code>. This ensures zero overhead for non-traced journeys.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>HTTP spans have only worked since mite moved from its acurl fork to httpperf. Before that,
+the patch that adds them failed silently, so traced journeys had journey and
+transaction spans but no HTTP spans.</p>
+</div>
+</section>
+<section id="http-span-attributes">
+<h3>HTTP span attributes<a class="headerlink" href="#http-span-attributes" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.method</span></code></p></td>
+<td><p>request method</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.url</span></code></p></td>
+<td><p>requested URL</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.host</span></code>, <code class="docutils literal notranslate"><span class="pre">http.scheme</span></code>, <code class="docutils literal notranslate"><span class="pre">http.target</span></code></p></td>
+<td><p>host, scheme and path of the URL</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.status_code</span></code></p></td>
+<td><p>status code of the final response</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.total</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">total_time</span></code>: whole transfer</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.dns</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">namelookup_time</span></code>: DNS done</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.connect</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">connect_time</span></code>: TCP connected (0 if the connection was reused)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.tls</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">appconnect_time</span></code>: TLS handshake done (0 for plain http or a reused connection)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.pretransfer</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">pretransfer_time</span></code>: ready to send</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.posttransfer</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">posttransfer_time</span></code>: request sent (omitted with libcurl older than 8.10)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.first_byte</span></code></p></td>
+<td><p>curl <code class="docutils literal notranslate"><span class="pre">starttransfer_time</span></code>: first response byte</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.queue</span></code></p></td>
+<td><p>httpperf <code class="docutils literal notranslate"><span class="pre">queue_time</span></code>: waiting for a connection under the connection limits</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.time.client_lag</span></code></p></td>
+<td><p>httpperf <code class="docutils literal notranslate"><span class="pre">client_lag</span></code>: waiting on Python</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.body.size</span></code></p></td>
+<td><p>response body bytes</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">http.request.body.size</span></code></p></td>
+<td><p>request body bytes</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">http.response.header.content-length</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Content-Length</span></code> header, if present</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">network.protocol.version</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1.1</span></code>, <code class="docutils literal notranslate"><span class="pre">2</span></code> or <code class="docutils literal notranslate"><span class="pre">3</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">network.peer.address</span></code></p></td>
+<td><p>IP address connected to</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Times are in seconds. curl’s are measured from the start of the transfer (see
+<a class="reference internal" href="plugins/http.html"><span class="doc">HTTP</span></a> for how they relate); <code class="docutils literal notranslate"><span class="pre">queue</span></code> and <code class="docutils literal notranslate"><span class="pre">client_lag</span></code> are outside
+them. The span itself is timed in Python, so its duration also includes queue
+time and client lag.</p>
 </section>
 </section>
 <section id="distributed-tracing">
 <h2>Distributed Tracing<a class="headerlink" href="#distributed-tracing" title="Link to this heading">¶</a></h2>
-<p>HTTP requests automatically include W3C <code class="docutils literal notranslate"><span class="pre">traceparent</span></code> headers for distributed tracing:</p>
+<p>HTTP requests in traced journeys automatically include W3C <code class="docutils literal notranslate"><span class="pre">traceparent</span></code> headers for distributed tracing. They are added to a copy of the <code class="docutils literal notranslate"><span class="pre">headers</span></code> you pass, so a shared headers dict never carries one request’s trace context into another:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mite.otel</span><span class="w"> </span><span class="kn">import</span> <span class="n">mite_http_traced</span>
 
 <span class="nd">@mite_http_traced</span>
@@ -682,6 +763,7 @@ mite<span class="w"> </span>scenario<span class="w"> </span><span class="nb">tes
 </li>
 <li><a class="reference internal" href="#trace-structure">Trace Structure</a><ul>
 <li><a class="reference internal" href="#span-types">Span Types</a></li>
+<li><a class="reference internal" href="#http-span-attributes">HTTP span attributes</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#distributed-tracing">Distributed Tracing</a></li>

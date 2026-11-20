@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -278,7 +278,7 @@ open to contributions — if you rely on it or want to improve it, it’s a
 good candidate.</p>
 </div>
 <p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[db]</span></code> (no functional change today — every mite
-install already includes it; this will matter starting in mite 3.0).</p>
+install already includes it; this will matter starting in mite 4.0).</p>
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">mite_db_datapool</span></code> provides database-backed data pools for Mite testing scenarios. It allows you to load test data directly from databases and use it in your load testing journeys.</p>
@@ -298,7 +298,7 @@ install already includes it; this will matter starting in mite 3.0).</p>
 <section id="files">
 <h2>Files<a class="headerlink" href="#files" title="Link to this heading">¶</a></h2>
 <section id="db-to-pool-py">
-<h3><code class="docutils literal notranslate"><span class="pre">db_to_pool.py</span></code><a class="headerlink" href="#db-to-pool-py" title="Link to this heading">¶</a></h3>
+<span id="db_to_poolpy"></span><h3><code class="docutils literal notranslate"><span class="pre">db_to_pool.py</span></code><a class="headerlink" href="#db-to-pool-py" title="Link to this heading">¶</a></h3>
 <p>Core implementation containing:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">DBIterableDataPool</span></code>: Load data once, consume sequentially (burned data)</p></li>
@@ -307,7 +307,7 @@ install already includes it; this will matter starting in mite 3.0).</p>
 </ul>
 </section>
 <section id="mite-db-example-py">
-<h3><code class="docutils literal notranslate"><span class="pre">mite_db_example.py</span></code><a class="headerlink" href="#mite-db-example-py" title="Link to this heading">¶</a></h3>
+<span id="mite_db_examplepy"></span><h3><code class="docutils literal notranslate"><span class="pre">mite_db_example.py</span></code><a class="headerlink" href="#mite-db-example-py" title="Link to this heading">¶</a></h3>
 <p>Working example showing:</p>
 <ul class="simple">
 <li><p>SQLite database creation with test data</p></li>

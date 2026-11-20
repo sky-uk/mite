@@ -226,7 +226,7 @@
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -274,7 +274,7 @@
 helper onto the journey context; everything past that point is plain
 <code class="docutils literal notranslate"><span class="pre">websockets</span></code>.</p>
 <p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[websocket]</span></code> (no functional change today. Every
-mite install already includes it; this will matter starting in mite 3.0).</p>
+mite install already includes it; this will matter starting in mite 4.0).</p>
 <section id="basic-usage">
 <h2>Basic usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mite_websocket</span><span class="w"> </span><span class="kn">import</span> <span class="n">mite_websocket</span>
@@ -292,7 +292,7 @@ the journey call and closes every connection it opened before removing it
 afterwards, even if the journey raises.</p>
 </section>
 <section id="ctx-websocket-reference">
-<h2><code class="docutils literal notranslate"><span class="pre">ctx.websocket</span></code> reference<a class="headerlink" href="#ctx-websocket-reference" title="Link to this heading">¶</a></h2>
+<span id="ctxwebsocket-reference"></span><h2><code class="docutils literal notranslate"><span class="pre">ctx.websocket</span></code> reference<a class="headerlink" href="#ctx-websocket-reference" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">connect(*args,</span> <span class="pre">**kwargs)</span></code> a thin wrapper around <code class="docutils literal notranslate"><span class="pre">websockets.connect</span></code>.
 Everything is passed straight through, so <code class="docutils literal notranslate"><span class="pre">websockets</span></code>’s own documentation

@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="websocket.html">WebSocket</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -278,7 +278,7 @@ form submissions and link navigation without hand-rolling HTML parsing in
 every journey.</p>
 <p>Install: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">mite[browser]</span></code> (depends on <code class="docutils literal notranslate"><span class="pre">http</span></code>; no functional change
 today. Every mite install already includes it; this will matter starting in
-mite 3.0).</p>
+mite 4.0).</p>
 <section id="basic-usage">
 <h2>Basic usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mite_browser</span><span class="w"> </span><span class="kn">import</span> <span class="n">browser_decorator</span>
@@ -352,7 +352,7 @@ exist creates one, so you can inject values a form doesn’t declare.
 <p class="admonition-title">Important</p>
 <p>File upload fields are parsed but not actually submitted: <code class="docutils literal notranslate"><span class="pre">Form._serialize</span></code>
 only encodes the non-file fields, with a <code class="docutils literal notranslate"><span class="pre">TODO</span></code> in source noting file
-support depends on the underlying HTTP backend (<code class="docutils literal notranslate"><span class="pre">acurl</span></code>) supporting
+support depends on the underlying HTTP backend (<code class="docutils literal notranslate"><span class="pre">httpperf</span></code>) supporting
 multipart uploads, which it does not today. A form with a file input submits
 successfully, just without the file.</p>
 </div>

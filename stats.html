@@ -226,7 +226,7 @@
 <li class="toctree-l2"><a class="reference internal" href="plugins/websocket.html">WebSocket</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/browser.html">Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plugins/selenium.html">Selenium</a></li>
-<li class="toctree-l2"><a class="reference internal" href="plugins/acurl.html">acurl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins/httpperf.html">httpperf</a></li>
 </ul>
 </li>
 </ul>
@@ -377,6 +377,12 @@ just pass the difference of the two sets as the include argument, and
 omit the exclude one).</p>
 <p>The format of both argumentsʼ value is a comma-separated list without
 spaces: <code class="docutils literal notranslate"><span class="pre">--stats-include-processors=processor1,processor2</span></code></p>
+<p>Some processors are opt-in: they are skipped unless named in
+<code class="docutils literal notranslate"><span class="pre">--stats-include-processors</span></code>, because they add series that most tests donʼt
+need. List them alongside the other processors you want:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mite<span class="w"> </span>stats<span class="w"> </span>--stats-include-processors<span class="o">=</span>mite,mite_http,mite_http_extended
+</pre></div>
+</div>
 </section>
 <section id="available-processors">
 <h2>Available processors<a class="headerlink" href="#available-processors" title="Link to this heading">¶</a></h2>
@@ -385,6 +391,9 @@ spaces: <code class="docutils literal notranslate"><span class="pre">--stats-inc
 <li><p><code class="docutils literal notranslate"><span class="pre">mite</span></code> – statistics about the controller and runner workloads</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mite_finagle</span></code> – statistics about miteʼs Finagle RPC calls</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mite_http</span></code> – statistics about miteʼs http calls</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mite_http_extended</span></code> – opt-in: the rest of curlʼs http timings (DNS,
+connect, TLS, pre/post-transfer, first byte), connection queue time,
+client lag, and download/upload sizes; see <a class="reference internal" href="plugins/http.html"><span class="doc">HTTP</span></a></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mite_kafka</span></code> – statistics about miteʼs Kafka producer and consumer
 activity</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mite_playwright</span></code> – statistics about miteʼs Playwright browser
