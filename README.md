@@ -25,7 +25,7 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 pip install mite
 ```
 
-This installs the core framework only. If you're migrating from a pre-3.0
+This installs the core framework only. If you're migrating from a pre-4.0
 version of mite, or just want every integration available, install with the
 `all` extra instead:
 
@@ -66,7 +66,7 @@ Run `mite --help` for a full list of commands
 
 ### Optional install extras
 
-As of mite 3.0, `pip install mite` installs only the core framework.
+As of mite 4.0, `pip install mite` installs only the core framework.
 Integrations are opt-in — install the extras for the ones you use:
 
 | Extra | Covers |
@@ -82,7 +82,7 @@ Integrations are opt-in — install the extras for the ones you use:
 | `http` | HTTP integration (`httpperf`) |
 | `browser` | Browser/HTML-scraping integration (depends on `http`) |
 | `nanomsg` | `nanomsg` message backend (ZMQ, the default, needs no extra) |
-| `all` | Union of the above — reproduces the pre-3.0 default install |
+| `all` | Union of the above — reproduces the pre-4.0 default install |
 
 ```bash
 pip install 'mite[kafka]'
@@ -91,7 +91,7 @@ pip install 'mite[all]'
 
 (quote the brackets so your shell doesn't treat them as a glob)
 
-**Upgrading from before mite 3.0?** Change `mite` to `mite[all]` in your
+**Upgrading from before mite 4.0?** Change `mite` to `mite[all]` in your
 requirements file and nothing else changes.
 
 This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.

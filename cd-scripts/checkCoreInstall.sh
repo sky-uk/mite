@@ -22,13 +22,9 @@ if ! "$VENV/bin/mite" --help >/dev/null; then
 fi
 
 # Verify stats loading doesn't crash. Integration processors needing a
-# missing extra (acurl, aiokafka, etc.) are EXPECTED to log a warning and be
-# skipped here — assert non-empty, not that every processor loaded.
-#
-# PYTHONSAFEPATH (3.11+) keeps the repo's own acurl/ directory off sys.path,
-# where it would otherwise satisfy `import acurl` as a namespace package and
-# mask a genuinely missing dependency.
-if ! PYTHONSAFEPATH=1 "$VENV/bin/python" -c '
+# missing extra (httpperf, aiokafka, etc.) are EXPECTED to log a warning and
+# be skipped here — assert non-empty, not that every processor loaded.
+if ! "$VENV/bin/python" -c '
 from mite.stats import load_stats_entry_points as f
 assert f(), "no stats processors loaded"
 '; then
