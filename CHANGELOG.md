@@ -1,7 +1,5 @@
 # Changelog
 
-# Changelog
-
 All notable changes to this project are documented here. Format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
@@ -17,7 +15,8 @@ Breaking: dependency slimming, part 2 of 2.
   `pyproject.toml` for exact versions. `pip install 'mite[all]'` reproduces
   the old default install.
 - `otel` extra now also includes `mite[http]`.
-- Minimum Python raised to 3.11 (`aio_pika` requires it).
+- `amqp` extra requires Python 3.11+ (`aio_pika>=10.0` doesn't support
+  3.10). Core and every other extra still support Python 3.10.
 
 ### Added
 
@@ -132,8 +131,10 @@ Non-breaking prep for the dependency slim above.
 
 - Migrated to Python 3.12 and `uv` for the dev/CI environment.
 
-### Known issue, fixed in 3.0.0
+### Known issue, fixed in 4.0.0
 
 Added `aio_pika>=10.0`, which requires Python 3.11+, without noticing
 `requires-python` still advertised 3.10 support. `pip install mite` was
-unsatisfiable on 3.10 from here through 2.12.0.
+unsatisfiable on 3.10 from here through 3.0.1; fixed in 4.0.0 by moving
+`aio_pika` into the `amqp` extra with a `python_version >= '3.11'` marker,
+so core and every other extra still support 3.10.

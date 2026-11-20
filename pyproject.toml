@@ -8,13 +8,14 @@ dynamic = ["version"]
 description = "A Python Performance Testing Framework"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 authors = [
     {name = "Sky UK", email = "mite@sky.uk"},
 ]
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -83,8 +84,11 @@ docs = [
 #
 # No `playwright` extra: playwright additionally requires `playwright
 # install` to fetch browser binaries, so an extra for it would be a no-op.
+#
+# `amqp` is restricted to Python 3.11+: `aio_pika>=10.0` doesn't support
+# 3.10, even though every other extra and core dependency does.
 kafka         = ["aiokafka>=0.12"]
-amqp          = ["aio_pika>=10.0"]
+amqp          = ["aio_pika>=10.0; python_version >= '3.11'"]
 finagle       = ["thrift>=0.20"]
 selenium      = ["selenium>=3.141,<4"]
 selenium_wire = ["selenium>=3.141,<4", "selenium-wire==4.6.5"]
@@ -167,7 +171,7 @@ test-cov = "pytest --cov=mite --cov-report=html --cov-report=term {args:test/}"
 cov-report = "python -m webbrowser coverage_html_report/index.html"
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.11", "3.12", "3.13", "3.14"]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
 
 [tool.hatch.envs.perf-test]
@@ -187,7 +191,7 @@ MITE_PERFTEST_OUT = "output"
 perf-test = "python test/perf/perftest.py {args:}"
 
 [[tool.hatch.envs.perf-test.matrix]]
-python = ["3.11", "3.12", "3.13", "3.14"]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
 
 [tool.hatch.envs.lint]

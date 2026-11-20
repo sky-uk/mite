@@ -12,7 +12,8 @@ contributions — if you rely on it or want to improve it, it's a good
 candidate.
 ```
 
-Install: `pip install mite[amqp]`
+Install: `pip install mite[amqp]` (requires Python 3.11+; `aio_pika>=10.0`
+doesn't support 3.10).
 
 ## Basic usage
 

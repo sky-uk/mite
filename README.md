@@ -5,7 +5,7 @@
 
 <!-- <img src="https://raw.githubusercontent.com/sky-uk/mite/refs/heads/master/docs/_static/logo.png" alt="Mite logo" width="100" role="img"> -->
 
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/) [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/release/python-3140/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/) [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/) [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/) [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/release/python-3140/) [![Docs](https://img.shields.io/badge/docs-read-blue)](https://sky-uk.github.io/mite/)
 
 [![Hatch project](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pypa/hatch/master/docs/assets/badge/v0.json)](https://github.com/pypa/hatch) [![linting - Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sky-uk/mite/blob/master/LICENSE) 
 
@@ -25,7 +25,7 @@ Requests are executed asynchronously, allowing large throughput from relatively 
 pip install mite
 ```
 
-This installs the core framework only. If you're migrating from a pre-3.0
+This installs the core framework only. If you're migrating from a pre-4.0
 version of mite, or just want every integration available, install with the
 `all` extra instead:
 
@@ -66,13 +66,13 @@ Run `mite --help` for a full list of commands
 
 ### Optional install extras
 
-As of mite 3.0, `pip install mite` installs only the core framework.
+As of mite 4.0, `pip install mite` installs only the core framework.
 Integrations are opt-in — install the extras for the ones you use:
 
 | Extra | Covers |
 |---|---|
 | `kafka` | Kafka integration (`aiokafka`) |
-| `amqp` | AMQP/RabbitMQ integration (`aio_pika`) |
+| `amqp` | AMQP/RabbitMQ integration (`aio_pika`; requires Python 3.11+) |
 | `finagle` | Finagle/Thrift integration (`thrift`) |
 | `selenium` | Selenium WebDriver integration |
 | `selenium_wire` | Selenium with request/response capture (`selenium-wire`) |
@@ -82,7 +82,7 @@ Integrations are opt-in — install the extras for the ones you use:
 | `http` | HTTP integration (`httpperf`) |
 | `browser` | Browser/HTML-scraping integration (depends on `http`) |
 | `nanomsg` | `nanomsg` message backend (ZMQ, the default, needs no extra) |
-| `all` | Union of the above — reproduces the pre-3.0 default install |
+| `all` | Union of the above — reproduces the pre-4.0 default install |
 
 ```bash
 pip install 'mite[kafka]'
@@ -91,7 +91,7 @@ pip install 'mite[all]'
 
 (quote the brackets so your shell doesn't treat them as a glob)
 
-**Upgrading from before mite 3.0?** Change `mite` to `mite[all]` in your
+**Upgrading from before mite 4.0?** Change `mite` to `mite[all]` in your
 requirements file and nothing else changes.
 
 This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.

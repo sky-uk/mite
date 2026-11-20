@@ -1,11 +1,13 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-import aio_pika
 import pytest
-from mocks.mock_context import MockContext
 
-from mite_amqp import _AMQPWrapper, mite_amqp
+aio_pika = pytest.importorskip("aio_pika", reason="aio_pika requires Python 3.11+")
+
+from mocks.mock_context import MockContext  # noqa: E402
+
+from mite_amqp import _AMQPWrapper, mite_amqp  # noqa: E402
 
 
 @pytest.mark.asyncio
