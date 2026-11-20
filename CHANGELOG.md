@@ -17,6 +17,8 @@ Breaking: dependency slimming, part 2 of 2.
 - `otel` extra now also includes `mite[http]`.
 - `amqp` extra requires Python 3.11+ (`aio_pika>=10.0` doesn't support
   3.10). Core and every other extra still support Python 3.10.
+- `http` extra bumped to `httpperf==1.0rc10`, which ships prebuilt wheels
+  for macOS in addition to Linux.
 
 ### Added
 
