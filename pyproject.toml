@@ -236,7 +236,9 @@ clean = "rm -rf docs/_build"
 
 [tool.hatch.envs.release]
 detached = true
-python = "3.12"
+# Must match the CI agent's system Python: on the Alpine agent hatch would
+# otherwise download a glibc standalone build that can't use musllinux wheels.
+python = "3.14"
 dependencies = [
     "build==1.6.1",
     "docopt==0.6.2",
