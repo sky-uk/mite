@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.10-3.14
+- Python 3.11-3.14
 - [Hatch](https://hatch.pypa.io/) for project management
 
 Install Hatch:
@@ -129,7 +129,7 @@ git push
 
 ## Unit tests
 
-Run the unit tests on all supported Python versions (currently 3.10-3.14):
+Run the unit tests on all supported Python versions (currently 3.11-3.14):
 
 ```bash
 hatch run test:test
@@ -145,7 +145,7 @@ View the HTML coverage report:
 hatch run test:cov-report
 ```
 
-The tests will automatically run on every installed Python version in the matrix (3.10-3.14) if you have them installed. Hatch will manage the virtual environments for you.
+The tests will automatically run on every installed Python version in the matrix (3.11-3.14) if you have them installed. Hatch will manage the virtual environments for you.
 
 ## Performance tests
 
