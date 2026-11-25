@@ -99,3 +99,17 @@ async def test_decorator():
         assert isinstance(ctx.browser, Browser)
 
     await journey(MockContext())
+
+
+@pytest.mark.parametrize("method", ["put", "delete", "head"])
+@pytest.mark.asyncio
+async def test_browser_methods(httpserver, method):
+    httpserver.expect_oneshot_request("/m", method.upper()).respond_with_data("ok")
+
+    @browser_decorator()
+    async def journey(ctx):
+        return await getattr(ctx.browser, method)(httpserver.url_for("/m"))
+
+    page = await journey(MockContext())
+    assert page.status_code == 200
+    assert len(httpserver.log) == 1

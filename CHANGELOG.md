@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `mite_http.checks`: `check_status_code`, `check_status_code_in_groups`,
+  `is_error_status_code` and `UnexpectedResponseCodeError`. Checks raise
+  `MiteError` (no `assert`) and take an optional `on_failure` hook.
+- `mite_browser.Browser.put`, `.delete` and `.head`.
+
+### Fixed
+
+- `har_to_mite` output now runs as-is: it imports checks from
+  `mite_http.checks` instead of a missing `.utils`, supports
+  PUT/DELETE/HEAD, sends recorded bodies correctly, escapes URLs and
+  headers, and drops `Content-Length` and HTTP/2 pseudo-headers. A recorded
+  304 now expects exactly 200 or 304.
+
 ## 3.0.0
 
 ### Breaking changes

@@ -1,23 +1,29 @@
 import json
+import logging
 import time
 
 from jinja2 import Template
 
+logger = logging.getLogger(__name__)
+
+# Methods available on mite_browser.Browser
+SUPPORTED_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
+
+# Values are pre-rendered with repr() so quotes/backslashes in HAR data stay valid Python
 TEMPLATE = Template(
-    '    async with ctx.transaction("Request {{method}} {{url}}"):\n'
+    "    async with ctx.transaction({{name}}):\n"
     "        resp = await ctx.browser.{{method}}(\n"
-    "            '{{url}}',\n"
+    "            {{url}},\n"
     "            headers={{headers}},\n"
-    "            {{json}}"
-    "            )\n"
-    "        check_status_code{{check_groups}}(resp, {{expected_status}})\n"
+    "{{body}}"
+    "        )\n"
+    "        check_status_code(resp, {{expected_status}})\n"
     "    await sleep({{sleep}})\n\n\n"
 )
 
 
 def set_expected_status_code(cur_page, entries):
     code = cur_page["response"]["status"]
-    status_groups = ""
     if code == 302 and cur_page["response"]["redirectURL"]:
         for other_page in entries:
             if cur_page["response"]["redirectURL"] == other_page["request"]["url"]:
@@ -26,26 +32,34 @@ def set_expected_status_code(cur_page, entries):
                 ]
                 cur_page["response"]["status"] = other_page["response"]["status"]
                 entries.remove(other_page)
-                code, status_groups = set_expected_status_code(cur_page, entries)
+                code = set_expected_status_code(cur_page, entries)
     elif code == 304:
-        code = "200, 304"
-        status_groups = "_in_groups"
-    return code, status_groups
+        # a recorded 304 depends on browser cache state; a replay may get 200
+        code = (200, 304)
+    return code
 
 
 def set_request_headers_dict(page):
+    # Content-Length is recomputed for the replayed body; ":"-prefixed are HTTP/2 pseudo-headers
     return {
         header["name"]: header["value"]
         for header in page["request"]["headers"]
-        if header["name"] != "Cookie"
+        if header["name"].lower() not in ("cookie", "content-length")
+        and not header["name"].startswith(":")
     }
 
 
-def set_request_body(method, page):
-    if method == "post":
-        # the body need to be studied more
-        return "json={}\n".format(page["request"]["postData"])
-    return ""
+def set_request_body(page):
+    post_data = page["request"].get("postData")
+    if not post_data or "text" not in post_data:
+        return ""
+    text = post_data["text"]
+    if "json" in post_data.get("mimeType", "").lower():
+        try:
+            return f"            json={json.loads(text)!r},\n"
+        except ValueError:
+            pass
+    return f"            data={text!r},\n"
 
 
 def _parse_urls(pages):
@@ -64,28 +78,24 @@ def _create_journey_file_start():  # pragma: no cover
     """The lines needed for imports and journey signature needed for
     a working mite script. pragma ensures this is not counted for code
     coverage"""
-    journey_start = "from .utils import check_status_code, check_status_code_in_groups\n"
+    journey_start = "from asyncio import sleep\n\n"
     journey_start += "from mite_browser import browser_decorator\n"
-    journey_start += "from mite.exceptions import MiteError\n"
-    journey_start += "from asyncio import sleep\n\n\n"
+    journey_start += "from mite_http.checks import check_status_code\n\n\n"
     journey_start += "@browser_decorator()\n"
     journey_start += "async def journey(ctx):\n"
     return journey_start
 
 
-def _render_journey_transaction(
-    page, req_method, expected_status_code, group_status, sleep_s
-):
+def _render_journey_transaction(page, req_method, expected_status_code, sleep_s):
     """Renders a single transaction with a predefined template for use
     in a mite journey"""
     return TEMPLATE.render(
-        date_time=page["startedDateTime"],
+        name=repr(f"Request {req_method} {page['request']['url']}"),
         method=req_method,
-        url=page["request"]["url"],
-        headers=set_request_headers_dict(page),
-        json=set_request_body(req_method, page),
-        check_groups=group_status,
-        expected_status=expected_status_code,
+        url=repr(page["request"]["url"]),
+        headers=repr(set_request_headers_dict(page)),
+        body=set_request_body(page),
+        expected_status=repr(expected_status_code),
         sleep=sleep_s,
     )
 
@@ -109,10 +119,15 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
         ):
             continue
 
-        expected_status_code, check_groups_status = set_expected_status_code(
-            cur_page, entries
-        )
+        expected_status_code = set_expected_status_code(cur_page, entries)
         req_method = cur_page["request"]["method"].lower()
+        if req_method not in SUPPORTED_METHODS:
+            logger.warning(
+                "Skipping unsupported method %s %s",
+                req_method.upper(),
+                cur_page["request"]["url"],
+            )
+            continue
 
         if sleep_s != 0:
             sleep_period = sleep_s
@@ -126,7 +141,7 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
 
         # main part of the journey
         journey_main += _render_journey_transaction(
-            cur_page, req_method, expected_status_code, check_groups_status, sleep_period
+            cur_page, req_method, expected_status_code, sleep_period
         )
 
     journey_start = _create_journey_file_start()
