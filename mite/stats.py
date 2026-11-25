@@ -124,7 +124,7 @@ class Histogram(Stat):
 
 def matcher_by_type(*targets):
     def type_matcher(msg):
-        logger.debug(f"message to match by type: {msg}")
+        logger.debug("message to match by type: %s", msg)
         return msg.get("type", None) in targets
 
     return type_matcher

@@ -95,7 +95,7 @@ class PrometheusMetrics:
         self.stats = {}
 
     def process(self, msg):
-        logger.debug(f"message to iterate in prometheus metrics: {msg}")
+        logger.debug("message to iterate in prometheus metrics: %s", msg)
         for stat in msg:
             name = stat["name"]
             if name not in self.stats:

@@ -132,7 +132,11 @@ class RunnerTransport:
 
     async def request_work(self, runner_id, current_work, completed_data_ids, max_work):
         logger.debug(
-            f"Requesting work runner_id={runner_id} current_work={current_work} completed_data_ids={completed_data_ids} max_work={max_work}"
+            "Requesting work runner_id=%s current_work=%s completed_data_ids=%s max_work=%s",
+            runner_id,
+            current_work,
+            completed_data_ids,
+            max_work,
         )
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
