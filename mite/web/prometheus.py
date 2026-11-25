@@ -94,7 +94,7 @@ class PrometheusMetrics:
     def __init__(self):
         self.stats = {}
 
-    def process(self, msg):
+    def send(self, msg):
         logger.debug(f"message to iterate in prometheus metrics: {msg}")
         for stat in msg:
             name = stat["name"]
@@ -102,6 +102,9 @@ class PrometheusMetrics:
                 self.stats[name] = STAT_TYPES[stat["type"]](name, stat)
             else:
                 self.stats[name].update(stat)
+
+    def close(self):
+        pass
 
     def format(self):
         blocks = [stat.format() for stat in self.stats.values()]

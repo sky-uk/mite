@@ -5,7 +5,7 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from numbers import Number
-from typing import Any, Callable, ClassVar, Optional, Sequence, Tuple, Type
+from typing import Any, Callable, ClassVar, Optional, Protocol, Sequence, Tuple, Type
 
 
 logger = logging.getLogger(__name__)
@@ -300,6 +300,19 @@ def load_stats_entry_points(include=None, exclude=None):
     return all_stats
 
 
+class Sender(Protocol):
+    """Where an :class:`Aggregator` sends its dumps.
+
+    The socket senders in ``mite.zmq`` and ``mite.nanomsg`` and the stats
+    outputs loaded by :mod:`mite.stats_outputs` (InfluxDB, Prometheus) all
+    implement this.
+    """
+
+    def send(self, dump): ...
+
+    def close(self): ...
+
+
 class Aggregator:
     """Turns the raw message stream into periodic stat summaries.
 
@@ -307,28 +320,29 @@ class Aggregator:
     is far too many to export individually. The aggregator passes every
     message to each loaded stat, which updates its running values (counts,
     sums, latest values, histogram bins) per label combination. Every 0.25s
-    it calls ``sender`` with a dump: a list with one summary per stat,
+    it sends a dump to each of its senders: a list with one summary per stat,
     covering the messages since the previous dump, and resets the values.
 
-    Exporters (Prometheus, InfluxDB) consume these dumps, either over a
-    socket from ``mite stats`` or in-process during ``mite ... test``.
+    In ``mite stats`` the sender is the stats-out socket, read by
+    ``mite exporter``. In ``mite ... test`` the senders are the stats outputs
+    themselves (InfluxDB, Prometheus).
 
     Each aggregator has its own :class:`StatAggregation` per stat, so several
     aggregators in one process never share or clear each other's data.
 
     Args:
-        sender: Called with each dump.
+        senders: The :class:`Sender` objects each dump is sent to.
         include: Names of the ``mite_stats`` entry points to load. Loads all
             except DEFAULT_EXCLUDED_PROCESSORS when omitted.
         exclude: Names of the ``mite_stats`` entry points to skip.
     """
 
-    def __init__(self, sender, include=None, exclude=None):
+    def __init__(self, senders, include=None, exclude=None):
         self._aggregations = [
             stat.aggregation_class(stat)
             for stat in load_stats_entry_points(include=include, exclude=exclude)
         ]
-        self.sender = sender
+        self._senders = list(senders)
         self.dump_timeout = time.time() + 0.25
 
     def process(self, msg):
@@ -336,11 +350,38 @@ class Aggregator:
             aggregation.process(msg)
         t = time.time()
         if t > self.dump_timeout:
-            self.sender(self.dump())
+            self.flush()
             self.dump_timeout = t + 0.25
 
     def dump(self):
         return [aggregation.dump() for aggregation in self._aggregations]
 
+    def flush(self):
+        """Send everything aggregated since the last dump to every sender.
 
-Stats = Aggregator
+        A sender that fails is logged and doesn't stop the others."""
+        dump = self.dump()
+        for sender in self._senders:
+            try:
+                sender.send(dump)
+            except Exception:
+                logger.exception("Failed to send stats to %r", sender)
+
+    def close(self):
+        """Flush what's left, then close every sender. Every sender is
+        closed even if another fails; the first failure is then raised."""
+        self.flush()
+        close_senders(self._senders)
+
+
+def close_senders(senders):
+    """Close every sender, even if some fail; then raise the first failure."""
+    errors = []
+    for sender in senders:
+        try:
+            sender.close()
+        except Exception as e:
+            logger.exception("Failed to close stats sender %r", sender)
+            errors.append(e)
+    if errors:
+        raise errors[0]

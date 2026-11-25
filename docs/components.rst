@@ -133,7 +133,7 @@ dispatch incoming messages to them.
         def __init__(self):
             sender = Sender()
             sender.bind("tcp://127.0.0.1:14310")
-            self.stats = Aggregator(sender=sender.send)
+            self.stats = Aggregator([sender])
 
         def process_message(self, message):
             return self.stats.process(message)
@@ -149,35 +149,35 @@ dispatch incoming messages to them.
         def process_message(self, message):
             print(message)
 
-Prometheus Exporter
--------------------
+Exporter
+--------
 
-The prometheus exporter provides a http metrics endpoint for the
-:ref:`prometheus <prometheus-doc>` time series database to scrape,
-pulling metrics from the stats components.  In our case, the stats
-components will output on its default socket and the exporter is
-configured to read from there by default.
+The exporter binds to the socket the stats components publish their dumps
+on, combines the dumps from every stats component, and sends them to one or
+more stats outputs, chosen with ``--stats-output=NAME[:INSTANCE]`` (repeat
+it for several outputs):
+
+* ``prometheus`` serves an http ``/metrics`` endpoint on ``--web-address``
+  for the :ref:`prometheus <prometheus-doc>` time series database to scrape.
+* ``influxdb`` pushes the stats to InfluxDB. Add an instance to write to
+  several InfluxDB servers: ``influxdb:secondary`` is configured by the
+  ``INFLUXDB_*_SECONDARY`` environment variables. See :doc:`influxdb`.
 
 .. code-block:: sh
 
-   mite prometheus_exporter
+   mite exporter --stats-output=prometheus
+   mite exporter --stats-output=prometheus --stats-output=influxdb --stats-output=influxdb:secondary
 
+The same ``--stats-output`` option on ``mite scenario test`` and
+``mite journey test`` sends stats straight from the test process, without
+separate stats and exporter components.
+
+Further outputs can be added by plugins through the ``mite_stats_outputs``
+entry point group. Each entry point is a factory, called with the parsed
+``NAME[:INSTANCE]`` spec and the command line options, that returns an
+object with ``send(dump)`` and ``close()`` methods.
 
 .. _prometheus: https://prometheus.io/
-
-InfluxDB Exporter
------------------
-
-The InfluxDB exporter fills the same role for InfluxDB, but pushes
-rather than waiting to be scraped.  It binds to the socket the stats
-component publishes its dumps on, converts each dump into InfluxDB
-points, and writes them out, independently of any test process.  See
-:doc:`influxdb` for configuration and the alternative of writing to
-InfluxDB from within the test run itself.
-
-.. code-block:: sh
-
-   mite influxdb_exporter --stats-out-socket=tcp://0.0.0.0:14305
 
 Runners
 -------

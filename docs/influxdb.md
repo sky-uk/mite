@@ -13,8 +13,11 @@ InfluxDB line-protocol points and writes them to one or more InfluxDB instances.
 ### Configuration
 
 Set `INFLUXDB_VERSION` to select the client (default `v3`), then the
-matching variables below. For additional simultaneous instances, suffix
-every variable with `_2`, `_3`, etc.
+matching variables below. Each InfluxDB instance you write to is named in
+`--stats-output=influxdb:INSTANCE`, and its variables carry that name in upper
+case as a suffix: `influxdb:secondary` reads `INFLUXDB_HOST_SECONDARY` and so
+on, `influxdb:2` reads `INFLUXDB_HOST_2`. Plain `influxdb` reads the
+unsuffixed variables.
 
 | Version | Required env vars |
 |---|---|
@@ -22,37 +25,33 @@ every variable with `_2`, `_3`, etc.
 | v2 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_BUCKET`, `INFLUXDB_ORG` |
 | v3 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_DATABASE` |
 
+Set `INFLUXDB_INCLUDE_BUCKETS{suffix}=true` to also write raw histogram bucket
+points (`le`-tagged, Prometheus-style) alongside the computed percentiles, so
+downstream tools can reconstruct exact distributions.
+
 A fuller reference, including how each version maps onto the underlying
 client, is in [Configuration reference](#configuration-reference) below.
 
 ### Via `mite` test run (in-process)
 
-Pass `--influxdb=N` to attach N `InfluxDBProcessor` message processors
-([mite/influxdb_processor.py](https://github.com/sky-uk/mite/blob/master/mite/influxdb_processor.py))
-alongside the existing message processors:
+Pass `--stats-output=influxdb[:INSTANCE]` once per InfluxDB instance:
 
 ```bash
-# Single InfluxDB instance (suffix "")
-mite journey test --influxdb=1 mite.example:journey mite.example:datapool
+# Default instance (INFLUXDB_* variables)
+mite journey test --stats-output=influxdb mite.example:journey mite.example:datapool
 
-# Two InfluxDB instances at once (suffix "" and "_2")
-mite scenario test --influxdb=2 mite.example:scenario
-
-# Include raw histogram buckets (le-tagged points) in addition to percentiles
-mite scenario test --influxdb=1 --include-buckets mite.example:scenario
+# Two instances at once (INFLUXDB_* and INFLUXDB_*_SECONDARY)
+mite scenario test --stats-output=influxdb --stats-output=influxdb:secondary mite.example:scenario
 ```
 
-`--include-buckets` additionally emits raw histogram bucket points (`le`-tagged,
-Prometheus-style) alongside the computed percentiles, letting downstream tools
-reconstruct exact distributions instead of relying on pre-computed percentiles.
+The test process runs one `Aggregator`
+([mite/stats.py](https://github.com/sky-uk/mite/blob/master/mite/stats.py)) that
+sends each stats dump to every output, so adding instances doesn't repeat the
+aggregation. When the test finishes, the aggregator sends what it gathered since
+its last dump and then closes the outputs, so the final partial interval isn't
+lost.
 
-Each `InfluxDBProcessor` wraps its own `Stats` aggregator
-([mite/stats.py](https://github.com/sky-uk/mite/blob/master/mite/stats.py)) and
-`InfluxMetrics` sink, so stats dumps are converted to points and flushed on the
-cadence described in [Layers](#layers), independent of whatever other message
-processors (`--message-processors`) are attached.
-
-### As an individual component (`influxdb_exporter`)
+### As an individual component (`mite exporter`)
 
 InfluxDB writing can also run completely out-of-process, decoupled from the
 test itself — useful when running distributed load tests (separate
@@ -60,30 +59,26 @@ test itself — useful when running distributed load tests (separate
 message bus rather than consumed in-process:
 
 ```bash
-mite influxdb_exporter --stats-out-socket=tcp://0.0.0.0:14305 --include-buckets
+mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=influxdb --stats-output=influxdb:secondary
 ```
 
 This binds a receiver to `--stats-out-socket` (the same socket `mite stats`
-publishes dumped stats to), feeds every received message into a single
-`InfluxMetrics` instance (via `mite.web.influx_metrics()`,
-[mite/web/\_\_init\_\_.py](https://github.com/sky-uk/mite/blob/master/mite/web/__init__.py)),
-and flushes to InfluxDB on receipt — independent of any particular test process.
-
-It reads the same `INFLUXDB_*`/`INFLUXDB_VERSION` environment variables as
-above, but always the unsuffixed, single-instance config: `influxdb_exporter`
-does not support the `--influxdb=N` multi-instance flag. To write to multiple
-InfluxDB instances, run multiple `influxdb_exporter` processes, each with its
-own (unsuffixed) env vars pointed at a different instance.
+publishes dumped stats to) and sends every received dump to each output. The
+same command can export to Prometheus too, by adding `--stats-output=prometheus`.
 
 ### Seeding metrics before a run (`influxdb init`)
 
 ```bash
-mite influxdb init --influxdb=2
+# Default instance
+mite influxdb init
+
+# Named instances, as in --stats-output=influxdb:INSTANCE
+mite influxdb init secondary 2
 ```
 
 Writes a zero-valued point for every registered `mite_stats` entry point stat
 (see [pyproject.toml](https://github.com/sky-uk/mite/blob/master/pyproject.toml)
-`[project.entry-points.mite_stats]`) to each configured InfluxDB instance, so
+`[project.entry-points.mite_stats]`) to each given InfluxDB instance, so
 dashboards and alerts have a baseline series to chart against before the first
 real test data point arrives (see
 [mite/cli/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/cli/influxdb.py)).
@@ -147,7 +142,7 @@ Files:
 - [mite/web/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/web/influxdb.py)
   — core writer, stat aggregation/point conversion, and backend adapters
 - [mite/web/\_\_init\_\_.py](https://github.com/sky-uk/mite/blob/master/mite/web/__init__.py)
-  — Flask app exposing `/metrics` (Prometheus); also re-exports `InfluxMetrics`
+  — Flask app exposing `/metrics` (Prometheus) and the `prometheus` stats output
 - [mite/web/prometheus.py](https://github.com/sky-uk/mite/blob/master/mite/web/prometheus.py)
   — sibling Prometheus exporter (not covered here)
 
@@ -165,13 +160,14 @@ Files:
    reconstruction downstream.
 
 2. **`InfluxMetrics`** (extends `InfluxdbWriter`)
-   The stats *sink*. `process(message)` is called with a stats dump (a list
-   of per-metric dicts produced by `mite.stats.Stats`). It creates/updates the
+   The `influxdb` stats output, created by `influxdb_output()` for each
+   `--stats-output=influxdb[:INSTANCE]`. `send(message)` is called with a
+   stats dump (a list of per-metric dicts produced by `mite.stats.Aggregator`). It creates/updates the
    relevant `InfluxStat` instances, buffers the resulting points, and flushes
    them to InfluxDB at a throttled cadence:
    - `MIN_FLUSH_INTERVAL = 1.0s` — stats dumps arrive roughly every 0.25s but
      a single Influx write can take longer, so points are buffered across
-     several `process()` calls and flushed at a slower, steadier cadence.
+     several `send()` calls and flushed at a slower, steadier cadence.
    - `MAX_PENDING_POINTS = 5000` — hard cap on buffered points; oldest points
      are dropped (with an error log) if a stalled backend can't keep up, to
      bound memory on long-running tests.
@@ -221,10 +217,10 @@ Files:
 
 Every config lookup and class constructor accepts a `suffix` (e.g. `""`,
 `"_2"`, `"_3"`, ...), allowing simultaneous writes to **N independent InfluxDB
-instances** from a single test run — e.g. `INFLUXDB_HOST` and
-`INFLUXDB_HOST_2` configure two different destinations. The `--influxdb=N`
-CLI flag controls how many `InfluxdbWriter`/`InfluxDBProcessor` instances are
-created, each with its own suffix.
+instances** — e.g. `INFLUXDB_HOST` and `INFLUXDB_HOST_SECONDARY` configure two
+different destinations. Each `--stats-output=influxdb:INSTANCE` creates one
+`InfluxMetrics` with the suffix `_INSTANCE` (upper case); there's no limit on
+the number of instances.
 
 ### Distributed topology
 
@@ -238,7 +234,7 @@ digraph influxdb_topology {
     R2  [label="runner"];
     D   [label="duplicator"];
     ST  [label="mite stats"];
-    EXP [label="mite influxdb_exporter"];
+    EXP [label="mite exporter"];
     DB  [label="InfluxDB", shape=cylinder];
 
     R1 -> D [label="messages"];
@@ -260,8 +256,10 @@ version matters: `1`, `2`, `3`). Remaining variables depend on the version:
 | v2 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_BUCKET`, `INFLUXDB_ORG` | Uses `influxdb_client.InfluxDBClient` directly. |
 | v3 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_DATABASE` | Uses `influxdb_client_3.InfluxDBClient3`. |
 
-For a second simultaneous instance, suffix every variable with `_2`
-(`INFLUXDB_VERSION_2`, `INFLUXDB_HOST_2`, ...), `_3` for a third, etc.
+For another instance, suffix every variable with its name from
+`--stats-output=influxdb:INSTANCE` in upper case (`INFLUXDB_VERSION_SECONDARY`,
+`INFLUXDB_HOST_SECONDARY`, ...). `INFLUXDB_INCLUDE_BUCKETS{suffix}` is optional
+and per instance.
 Missing required variables raise `InfluxConfigError`
 ([mite/exceptions.py](https://github.com/sky-uk/mite/blob/master/mite/exceptions.py))
 and abort writer creation.
@@ -275,4 +273,4 @@ and abort writer creation.
 | `InfluxdbWriter` | Async, single-in-flight-write transport to a configured backend |
 | `InfluxMetrics` | `InfluxdbWriter` subclass; buffers/throttles/flushes points from stats dumps |
 | `_InfluxBackend` / `_InfluxV1Backend` / `_InfluxV2Backend` / `_InfluxV3Backend` | Version-specific client adapters |
-| `InfluxDBProcessor` ([mite/influxdb_processor.py](https://github.com/sky-uk/mite/blob/master/mite/influxdb_processor.py)) | Message processor wiring a `Stats` aggregator to `InfluxMetrics` for in-process test runs |
+| `influxdb_output` | `mite_stats_outputs` factory creating an `InfluxMetrics` per `--stats-output=influxdb[:INSTANCE]` |

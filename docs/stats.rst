@@ -3,11 +3,12 @@ Customizing miteʼs stats
 ========================
 
 There are two components of the mite pipeline that are concerned with
-the reporting of test data: the stats component and the prometheus
-exporter.  The prometheus exporter works in a fully automatic way, based
-on the behavior of the stats component.  Therefore, when customizing the
-statistics that mite exports, it is sufficient to work on the stats
-component; the prometheus exporter will do the right thing.
+the reporting of test data: the stats component and the exporter.  The
+exporter, and its stats outputs such as Prometheus and InfluxDB, works in a
+fully automatic way, based on the behavior of the stats component.
+Therefore, when customizing the statistics that mite exports, it is
+sufficient to work on the stats component; the outputs will do the right
+thing.
 
 Mite stats are registered as `entry points`_ in python.  Therefore, any
 modules that you install that extend miteʼs stats will automatically be
@@ -104,6 +105,42 @@ our package:
 
    [project.entry-points.mite_stats]
    mite_amqp = "your_package.amqp:_MITE_STATS"
+
+Stats are definitions only: they say what to measure and are shared by
+every aggregator.  Each aggregator keeps its own running values for each
+stat, in a ``mite.stats.StatAggregation`` created from the stat's
+``aggregation_class``.
+
+Adding a new kind of stat
+-------------------------
+
+If none of ``Counter``, ``Accumulator``, ``Gauge`` and ``Histogram``
+aggregates values the way you need, subclass ``mite.stats.Stat`` and point
+its ``aggregation_class`` at a ``mite.stats.StatAggregation`` subclass.
+The aggregation's ``process(msg)`` is called with every message, and its
+``dump()`` returns the values gathered since the last dump and resets them.
+The dump must use one of the formats the outputs understand, with
+``"type"`` set to ``"Counter"``, ``"Gauge"`` or ``"Histogram"``; the easiest
+way is to extend one of the built-in aggregations.  For example, a gauge
+that reports the highest value seen in each interval:
+
+.. code-block:: python
+
+   from dataclasses import dataclass
+
+   from mite.stats import GaugeAggregation, Stat
+
+
+   class MaxGaugeAggregation(GaugeAggregation):
+       def process(self, msg):
+           if self.stat.matcher(msg):
+               for key, value in self.stat.extractor.extract(msg):
+                   self.metrics[key] = max(value, self.metrics.get(key, value))
+
+
+   @dataclass(frozen=True)
+   class MaxGauge(Stat):
+       aggregation_class = MaxGaugeAggregation
 
 
 Configuring custom stats

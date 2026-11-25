@@ -25,9 +25,10 @@ The components that make up mite are:
   to a file. This is used for :ref:`data creation scenarios <data-creation-scenarios>`.
 - stats: aggregates raw messages from the controller and runner into
   statistical summaries
-- exporter*: (aka prometheus exporter) listens for aggregations from the
-  stats component, and exposes these via HTTP to a
-  :ref:`Prometheus instance <prometheus-doc>`
+- exporter*: listens for aggregations from the stats components and sends
+  them to the stats outputs chosen with ``--stats-output``, such as a
+  :ref:`Prometheus instance <prometheus-doc>` scraping it over HTTP, or
+  InfluxDB
 
 The components marked with an asterisk are singletons; the rest can be
 scaled up to meet the demand of the test.  The communication pathways

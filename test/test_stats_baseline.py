@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from mite.cli import influxdb as cli_influxdb
-from mite.stats import Stats, load_stats_entry_points
+from mite.stats import Aggregator, load_stats_entry_points
 from mite.web import influxdb
 from mite.web.prometheus import PrometheusMetrics
 
@@ -75,7 +75,7 @@ ROUNDS = [
 
 
 def _dumps():
-    stats = Stats(sender=lambda _: None, include=PROCESSORS)
+    stats = Aggregator([], include=PROCESSORS)
     dumps = []
     for messages in ROUNDS:
         for msg in messages:
@@ -87,7 +87,7 @@ def _dumps():
 def _prometheus(dumps):
     metrics = PrometheusMetrics()
     for dump in dumps:
-        metrics.process(dump)
+        metrics.send(dump)
     return metrics.format().splitlines()
 
 
@@ -103,7 +103,7 @@ def _influx(dumps, include_buckets):
             mock.patch.object(influxdb.InfluxMetrics, "MIN_FLUSH_INTERVAL", 1e9):
         metrics = influxdb.InfluxMetrics(include_buckets=include_buckets)
         for dump in dumps:
-            metrics.process(dump)
+            metrics.send(dump)
         metrics.close()  # everything is buffered until close
     return _sorted_points(backend.write_points.call_args_list)
 
@@ -117,7 +117,7 @@ def _influx_init():
     with mock.patch.object(influxdb, "InfluxdbWriter", writer), \
             mock.patch.object(cli_influxdb, "load_stats_entry_points", return_value=stats), \
             mock.patch.object(cli_influxdb, "time_ns", return_value=FIXED_TIME_NS):
-        assert cli_influxdb.influxdb_init({"--influxdb": "1"}) == 0
+        assert cli_influxdb.influxdb_init({"INSTANCE": []}) == 0
     return _sorted_points(writer.return_value.write_points.call_args_list)
 
 

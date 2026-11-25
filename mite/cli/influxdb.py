@@ -2,6 +2,7 @@ import logging
 from time import time_ns
 from mite.exceptions import InfluxConfigError
 from mite.stats import load_stats_entry_points
+from mite.stats_outputs import OutputSpec
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +68,12 @@ def influxdb_init(opts):
                 )
             )
 
-    influxdb_count = int(opts.get("--influxdb") or 1)
+    # Same instances as --stats-output=influxdb[:INSTANCE]
+    specs = [OutputSpec.parse(f"influxdb:{i}") for i in opts.get("INSTANCE") or []]
     exit_code = 0
 
-    for i in range(influxdb_count):
-        suffix = "" if i == 0 else f"_{i + 1}"
+    for spec in specs or [OutputSpec("influxdb")]:
+        suffix = spec.suffix
         writer = InfluxdbWriter(suffix=suffix)
         try:
             future = writer.write_points(points)

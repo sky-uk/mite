@@ -438,10 +438,10 @@ class InfluxHistogram(InfluxStat):
 INFLUX_STAT_TYPES = {"Counter": InfluxCounter, "Gauge": InfluxGauge, "Histogram": InfluxHistogram}
 
 class InfluxMetrics(InfluxdbWriter):
-    # Stats dumps every ~0.25s (shared with the prometheus exporter, so that
+    # Aggregator dumps every ~0.25s (shared with the other stats outputs, so that
     # cadence can't be changed here), but a single InfluxDB write consistently
     # takes longer than that under load, so points are buffered across
-    # several process() calls and only actually written at this slower
+    # several send() calls and only actually written at this slower
     # cadence instead of dropping batches via the writer's semaphore.
     MIN_FLUSH_INTERVAL = 1.0
     # Hard cap on buffered points so a stalled/unreachable backend can't grow
@@ -455,7 +455,7 @@ class InfluxMetrics(InfluxdbWriter):
         self._pending_points = []
         self._last_flush_time = time.monotonic()
 
-    def process(self, message):
+    def send(self, message):
         logger.debug(f"message to iterate in influxdb metrics: {message}")
         dirty_keys = {}
         for stat in message:
@@ -496,3 +496,18 @@ class InfluxMetrics(InfluxdbWriter):
             self.write_points(self._pending_points)
             self._pending_points = []
         super().close()
+
+
+def _env_flag(name):
+    return os.getenv(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def influxdb_output(spec, opts):
+    """``mite_stats_outputs`` factory: write stats to the InfluxDB configured
+    by the ``INFLUXDB_*`` environment variables with this instance's suffix.
+    ``INFLUXDB_INCLUDE_BUCKETS{suffix}=true`` also writes raw histogram
+    buckets."""
+    return InfluxMetrics(
+        include_buckets=_env_flag(f"INFLUXDB_INCLUDE_BUCKETS{spec.suffix}"),
+        suffix=spec.suffix,
+    )

@@ -7,12 +7,13 @@ import tracemalloc
 from prettytable import PrettyTable
 
 from mite.datapools import SingleRunDataPoolWrapper
-from mite.influxdb_processor import InfluxDBProcessor
 from mite.logoutput import DebugMessageOutput, HttpStatsOutput
 
 from ..collector import Collector
 from ..controller import Controller
 from ..recorder import Recorder
+from ..stats import Aggregator
+from ..stats_outputs import load_stats_outputs
 from ..utils import pack_msg, spec_import
 from ..volume_model import oneshot_vm
 from .common import (
@@ -77,12 +78,6 @@ def _setup_msg_processors(receiver, opts):
         spec_import(x)(opts) for x in opts["--message-processors"].split(",") if x
     ]
 
-    if opts["--influxdb"]:
-        influxdb_count = int(opts["--influxdb"])
-        for i in range(influxdb_count):
-            suffix = "" if i == 0 else f"_{i+1}"
-            extra_processors.append(InfluxDBProcessor(opts, suffix=suffix))
-
     for processor in extra_processors:
         if hasattr(processor, "process_message"):
             receiver.add_listener(processor.process_message)
@@ -92,6 +87,14 @@ def _setup_msg_processors(receiver, opts):
             logging.error(
                 f"Class {processor.__name__} does not have a process(_raw)_message method!"
             )
+
+    # One aggregator for all stats outputs, closed (sending its final dump)
+    # with the other processors at the end of the test
+    stats_outputs = load_stats_outputs(opts.get("--stats-output") or [], opts)
+    if stats_outputs:
+        aggregator = Aggregator(stats_outputs)
+        receiver.add_listener(aggregator.process)
+        extra_processors.append(aggregator)
     return extra_processors
 
 

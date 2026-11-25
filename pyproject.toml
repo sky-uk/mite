@@ -118,6 +118,10 @@ mite_selenium = "mite_selenium.stats:STATS"
 mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
 mite_playwright = "mite_playwright.stats:STATS"
 
+[project.entry-points.mite_stats_outputs]
+influxdb = "mite.web.influxdb:influxdb_output"
+prometheus = "mite.web:prometheus_output"
+
 
 # Hatch configuration ##############################################
 

@@ -11,7 +11,7 @@ from mite.stats import (
     GaugeAggregation,
     Histogram,
     Stat,
-    Stats,
+    Aggregator,
     extractor,
     load_stats_entry_points,
 )
@@ -69,7 +69,7 @@ class TestModularity:
         ) as logging_info, mock.patch(
             "importlib.metadata.entry_points", return_value=[EntryPointMock(group="x")]
         ) as iter_entry_points:
-            s = Stats(None)
+            s = Aggregator([])
             iter_entry_points.assert_called_once()
             logging_info.assert_called_with("Registering stats processors from x")
             assert _names(s) == ["x"]
@@ -79,7 +79,7 @@ class TestModularity:
             "importlib.metadata.entry_points",
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
-            s = Stats(None, include=["x"])
+            s = Aggregator([], include=["x"])
             assert _names(s) == ["x"]
 
     def test_modularity_exclude(self):
@@ -87,7 +87,7 @@ class TestModularity:
             "importlib.metadata.entry_points",
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
-            s = Stats(None, exclude=["x"])
+            s = Aggregator([], exclude=["x"])
             assert _names(s) == ["y"]
 
     def _entry_points_with_opt_in(self):
@@ -97,16 +97,16 @@ class TestModularity:
         with mock.patch(
             "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
         ):
-            assert _names(Stats(None)) == ["x"]
-            assert _names(Stats(None, exclude=["y"])) == ["x"]
+            assert _names(Aggregator([])) == ["x"]
+            assert _names(Aggregator([], exclude=["y"])) == ["x"]
 
     def test_opt_in_processor_included_by_name(self):
         with mock.patch(
             "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
         ):
-            s = Stats(None, include=["mite_http_extended"])
+            s = Aggregator([], include=["mite_http_extended"])
             assert _names(s) == ["mite_http_extended"]
-            s = Stats(None, include=["x", "mite_http_extended"])
+            s = Aggregator([], include=["x", "mite_http_extended"])
             assert _names(s) == ["x", "mite_http_extended"]
 
     def test_import_error_is_a_warning(self):
@@ -124,7 +124,7 @@ class TestModularity:
                 EntryPointMock(group="y"),
             ],
         ):
-            s = Stats(None)
+            s = Aggregator([])
             assert _names(s) == ["y"]
             logging_warning.assert_called_once()
             message = logging_warning.call_args[0][0]
@@ -144,7 +144,7 @@ class TestModularity:
                 EntryPointMock(group="y"),
             ],
         ):
-            s = Stats(None)
+            s = Aggregator([])
             assert _names(s) == ["y"]
             logging_error.assert_called_once()
             assert "mite_amqp" in logging_error.call_args[0][0]
@@ -161,7 +161,7 @@ class TestModularity:
             iter_entry_points.return_value[0].load = _warn_and_return
             with warnings.catch_warnings(record=True) as record:
                 warnings.simplefilter("always")
-                s = Stats(None)
+                s = Aggregator([])
             future_warnings = [
                 w for w in record if issubclass(w.category, FutureWarning)
             ]
@@ -173,7 +173,7 @@ class TestModularity:
         # pyproject.toml for mite's own stats processors.
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
-            s = Stats(None)
+            s = Aggregator([])
         future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
         assert not future_warnings, future_warnings
         names = _names(s)
@@ -339,8 +339,8 @@ def test_two_aggregators_do_not_share_state():
         "importlib.metadata.entry_points",
         return_value=[_EntryPointFor("x", [_counter("mite_transaction_total")])],
     ):
-        s1 = Stats(sender=lambda d: None)
-        s2 = Stats(sender=lambda d: None)
+        s1 = Aggregator([])
+        s2 = Aggregator([])
 
     assert s1._aggregations[0].stat is s2._aggregations[0].stat
     assert s1._aggregations[0] is not s2._aggregations[0]
@@ -385,7 +385,7 @@ def test_custom_stat_type_is_aggregated():
         "importlib.metadata.entry_points",
         return_value=[_EntryPointFor("custom", [stat])],
     ):
-        aggregator = Stats(sender=lambda d: None)
+        aggregator = Aggregator([])
     for value in (3, 7, 5):
         aggregator.process({"test": "t", "value": value})
     assert aggregator.dump() == [
@@ -400,3 +400,70 @@ def test_stat_without_aggregation_class_is_logged_and_skipped():
     ):
         assert load_stats_entry_points() == []
     assert "aggregation_class" in logging_error.call_args[0][0]
+
+
+def _aggregator_with_counter(senders):
+    with mock.patch(
+        "importlib.metadata.entry_points",
+        return_value=[_EntryPointFor("x", [_counter("mite_transaction_total")])],
+    ):
+        return Aggregator(senders)
+
+
+def _txn_total(dump):
+    return sum(dump[0]["metrics"].values())
+
+
+class TestAggregatorSenders:
+    def test_each_sender_gets_each_dump_once(self):
+        senders = [mock.Mock(), mock.Mock()]
+        aggregator = _aggregator_with_counter(senders)
+        aggregator.process(TXN_MSG)
+        aggregator.flush()
+        for sender in senders:
+            sender.send.assert_called_once()
+            assert _txn_total(sender.send.call_args[0][0]) == 1
+
+    def test_process_flushes_after_the_dump_interval(self):
+        sender = mock.Mock()
+        with mock.patch("mite.stats.time") as t:
+            t.time.return_value = 100.0
+            aggregator = _aggregator_with_counter([sender])
+            aggregator.process(TXN_MSG)
+            sender.send.assert_not_called()
+            t.time.return_value = 100.3
+            aggregator.process(TXN_MSG)
+        assert _txn_total(sender.send.call_args[0][0]) == 2
+
+    def test_close_sends_pending_stats_then_closes(self):
+        # Before 4.0 the counts since the last 0.25s dump were lost at the end
+        # of a test run (fix first proposed by Davide in stats-influx-close-flush)
+        sender = mock.Mock()
+        with mock.patch("mite.stats.time") as t:
+            t.time.return_value = 100.0
+            aggregator = _aggregator_with_counter([sender])
+            aggregator.process(TXN_MSG)
+        sender.send.assert_not_called()
+
+        aggregator.close()
+
+        assert _txn_total(sender.send.call_args[0][0]) == 1
+        sender.close.assert_called_once()
+
+    def test_failing_sender_does_not_stop_the_others(self):
+        failing, working = mock.Mock(), mock.Mock()
+        failing.send.side_effect = RuntimeError("boom")
+        aggregator = _aggregator_with_counter([failing, working])
+        aggregator.process(TXN_MSG)
+        with mock.patch("mite.stats.logger.exception") as logging_exception:
+            aggregator.flush()
+        logging_exception.assert_called_once()
+        assert _txn_total(working.send.call_args[0][0]) == 1
+
+    def test_close_closes_every_sender_then_raises_the_first_failure(self):
+        failing, working = mock.Mock(), mock.Mock()
+        failing.close.side_effect = RuntimeError("boom")
+        aggregator = _aggregator_with_counter([failing, working])
+        with pytest.raises(RuntimeError, match="boom"):
+            aggregator.close()
+        working.close.assert_called_once()

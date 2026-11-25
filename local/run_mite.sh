@@ -11,7 +11,7 @@ docker-compose -f docker_compose_monitoring.yml up -d
 mite runner --controller-socket=tcp://127.0.0.1:14301 --message-socket=tcp://127.0.0.1:14302 &
 mite duplicator --message-socket=tcp://0.0.0.0:14302 tcp://0.0.0.0:14303 &
 mite stats --stats-in-socket=tcp://127.0.0.1:14303 --stats-out-socket=tcp://0.0.0.0:14305 --stats-include-processors=mite,mite_http,mite_kafka &
-mite prometheus_exporter --stats-out-socket=tcp://127.0.0.1:14305 --web-address=0.0.0.0:9301 &
+mite exporter --stats-out-socket=tcp://127.0.0.1:14305 --stats-output=prometheus --web-address=0.0.0.0:9301 &
 
 # Start a mock web server
 # python -m http.server 8000 &

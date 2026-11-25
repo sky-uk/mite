@@ -40,6 +40,9 @@ class Sender:
     def send(self, msg):
         self._socket.send(pack_msg(msg))
 
+    def close(self):
+        self._socket.close()
+
 
 class Receiver:
     def __init__(self, listeners=None, raw_listeners=None, loop=None):

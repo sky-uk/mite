@@ -20,12 +20,12 @@ services:
     command: ["mite", "duplicator", "--message-socket=tcp://0.0.0.0:14302", "tcp://0.0.0.0:14303"]
   stats:
     image: mite:latest
-    command: ["mite", "stats", "--stats-in-socket=tcp://duplicator:14303", "--stats-out-socket=tcp://prometheus_exporter:14305", "--stats-include-processors=mite,mite_http"]
+    command: ["mite", "stats", "--stats-in-socket=tcp://duplicator:14303", "--stats-out-socket=tcp://exporter:14305", "--stats-include-processors=mite,mite_http"]
     deploy:
       replicas: 1
-  prometheus_exporter:
+  exporter:
     image: mite:latest
-    command: ["mite", "prometheus_exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--web-address=0.0.0.0:9301"]
+    command: ["mite", "exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--stats-output=prometheus", "--web-address=0.0.0.0:9301"]
   controller:
     image: mite:latest
     command: ["mite", "controller", "--controller-socket=tcp://0.0.0.0:14301", "--message-socket=tcp://duplicator:14302", "local.demo:scenario"]

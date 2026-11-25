@@ -2,8 +2,8 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--influxdb=N] JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=OUTPUT]... SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=OUTPUT]... JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -12,12 +12,11 @@ Usage:
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
-    mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
-    mite [options] influxdb_exporter [--stats-out-socket=SOCKET]
+    mite [options] exporter [--stats-out-socket=SOCKET] (--stats-output=OUTPUT)...
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
-    mite [options] influxdb init [--influxdb=N]
+    mite [options] influxdb init [INSTANCE]...
 
     mite --help
     mite --version
@@ -30,7 +29,7 @@ Arguments:
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
     CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
     PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
-    N                       Number of InfluxDB write destinations
+    INSTANCE                InfluxDB instance to initialise, as in --stats-output=influxdb:INSTANCE; the default instance when omitted
 
 Examples:
     # run the example scenario called "scenario"
@@ -56,6 +55,9 @@ Examples:
 
     # start mite stats
     mite stats --stats-in-socket=tcp://0.0.0.0:14303 --stats-out-socket=tcp://0.0.0.0:14305
+
+    # export the stats to Prometheus and to two InfluxDB instances (configured by INFLUXDB_* and INFLUXDB_*_SECONDARY)
+    mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=prometheus --stats-output=influxdb --stats-output=influxdb:secondary
 
 
 Options:
@@ -101,15 +103,13 @@ Options:
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
-    --influxdb=N                                            Send stats to N number of InfluxDB instances
-    --include-buckets                                       Include histogram buckets when sending stats to InfluxDB
+    --stats-output=OUTPUT                                   Send aggregated stats to OUTPUT, as NAME[:INSTANCE] (repeatable), e.g. prometheus, influxdb, influxdb:secondary
 """
 
 import asyncio
 import logging
 import os
 import sys
-import threading
 from urllib.request import Request as UrlLibRequest
 from urllib.request import urlopen
 
@@ -142,14 +142,7 @@ def _recorder_receiver(opts):
     return receiver
 
 
-def _create_prometheus_exporter_receiver(opts):
-    socket = opts["--stats-out-socket"]
-    receiver = _msg_backend_module(opts).Receiver()
-    receiver.bind(socket)
-    return receiver
-
-
-def _create_influxdb_exporter_receiver(opts):
+def _create_exporter_receiver(opts):
     socket = opts["--stats-out-socket"]
     receiver = _msg_backend_module(opts).Receiver()
     receiver.bind(socket)
@@ -167,28 +160,6 @@ def _create_controller_server(opts):
 
 
 logger = logging.getLogger(__name__)
-
-
-def _start_web_in_thread(opts, app):
-    address = opts["--web-address"]
-    kwargs = {"port": 9301}
-    if address.startswith("["):
-        # IPV6 [host]:port
-        if "]:" in address:
-            host, port = address.split("]:")
-            kwargs["host"] = host[1:]
-            kwargs["port"] = int(port)
-        else:
-            kwargs["host"] = address[1:-1]
-    elif address.count(":") == 1:
-        host, port = address.split(":")
-        kwargs["host"] = host
-        kwargs["port"] = int(port)
-    else:
-        kwargs["host"] = address
-    t = threading.Thread(target=app.run, name="mite.web", kwargs=kwargs)
-    t.daemon = True
-    t.start()
 
 
 def _controller_log_start(scenario_spec, logging_url):
@@ -309,39 +280,27 @@ def recorder(opts):
     loop.run_until_complete(receiver.run())
 
 
-def prometheus_exporter(opts):
+def exporter(opts):
     # Deferred, this import is only needed by this one command.
     # mite runner/controller/duplicator/collector never call it.
-    from .web import app, prometheus_metrics
+    from .stats import close_senders
+    from .stats_outputs import load_stats_outputs
 
-    receiver = _create_prometheus_exporter_receiver(opts)
-    receiver.add_listener(prometheus_metrics.process)
-    _start_web_in_thread(opts, app)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(receiver.run())
-
-
-def influxdb_exporter(opts):
-    # Deferred, this import is only needed by this one command.
-    # mite runner/controller/duplicator/collector never call it.
-    from .web import influx_metrics
-
-    include_buckets = opts.get("--include-buckets", False)
-    receiver = _create_influxdb_exporter_receiver(opts)
-    metrics = influx_metrics(include_buckets=include_buckets)
-    receiver.add_listener(metrics.process)
+    outputs = load_stats_outputs(opts["--stats-output"], opts)
+    receiver = _create_exporter_receiver(opts)
+    for output in outputs:
+        receiver.add_listener(output.send)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(receiver.run())
     except KeyboardInterrupt:
-        logger.info(
-            "Received interrupt signal, shutting down InfluxDB exporter"
-        )
+        logger.info("Received interrupt signal, shutting down exporter")
     finally:
-        metrics.close()
-        loop.close()
+        try:
+            close_senders(outputs)
+        finally:
+            loop.close()
 
 
 def setup_logging(opts):
@@ -390,12 +349,10 @@ def main():
         stats.stats(opts)
     elif opts["receiver"]:
         receiver.generic_receiver(opts)
-    elif opts["prometheus_exporter"]:
-        prometheus_exporter(opts)
+    elif opts["exporter"]:
+        exporter(opts)
     elif opts["influxdb"] and opts["init"]:
         influxdb_init(opts)
-    elif opts["influxdb_exporter"]:
-        influxdb_exporter(opts)
     elif opts["recorder"]:
         recorder(opts)
     elif opts["har"]:

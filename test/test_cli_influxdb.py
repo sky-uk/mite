@@ -21,8 +21,7 @@ def test_influxdb_init_success():
     InfluxdbWriter is patched at its source module because influxdb_init
     imports it function-locally.
 
-    The Histogram branch and the `--influxdb > 1` multi-instance loop are
-    deliberately untested here.
+    The Histogram branch is deliberately untested here.
     """
     fake_stat = _patched_stat("Counter")
 
@@ -36,7 +35,7 @@ def test_influxdb_init_success():
     ), patch(
         "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
     ) as writer_cls:
-        exit_code = influxdb_init({"--influxdb": "1"})
+        exit_code = influxdb_init({"INSTANCE": []})
 
     assert exit_code == 0
     writer_cls.assert_called_once_with(suffix="")
@@ -58,7 +57,28 @@ def test_influxdb_init_busy_writer_sets_exit_code():
     with patch(
         "mite.cli.influxdb.load_stats_entry_points", return_value=[fake_stat]
     ), patch("mite.web.influxdb.InfluxdbWriter", return_value=writer_instance):
-        exit_code = influxdb_init({"--influxdb": "1"})
+        exit_code = influxdb_init({"INSTANCE": []})
 
     assert exit_code == 1
     writer_instance.close.assert_called_once()
+
+
+def test_influxdb_init_writes_to_each_named_instance():
+    future = MagicMock()
+    future.result.return_value = None
+    writer_instance = MagicMock()
+    writer_instance.write_points.return_value = future
+
+    with patch(
+        "mite.cli.influxdb.load_stats_entry_points",
+        return_value=[_patched_stat("Counter")],
+    ), patch(
+        "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
+    ) as writer_cls:
+        exit_code = influxdb_init({"INSTANCE": ["2", "secondary"]})
+
+    assert exit_code == 0
+    assert [c.kwargs for c in writer_cls.call_args_list] == [
+        {"suffix": "_2"},
+        {"suffix": "_SECONDARY"},
+    ]
