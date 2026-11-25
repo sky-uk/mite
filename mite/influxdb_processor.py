@@ -1,6 +1,6 @@
 import logging
 
-from .stats import Stats
+from .stats import Aggregator
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class InfluxDBProcessor:
             include_buckets=include_buckets, suffix=suffix
         )
         # Stats aggregator - instead of sending to socket, we'll capture dumps
-        self._stats = Stats(sender=self._on_stats_dump)
+        self._stats = Aggregator(sender=self._on_stats_dump)
 
     def _on_stats_dump(self, dumped_stats):
         self._influx_metrics.process(dumped_stats)

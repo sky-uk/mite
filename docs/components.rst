@@ -125,7 +125,7 @@ dispatch incoming messages to them.
     from uuid import uuid4
 
     from mite import collector
-    from mite.cli import stats
+    from mite.stats import Aggregator
     from mite.zmq import Sender
 
 
@@ -133,7 +133,7 @@ dispatch incoming messages to them.
         def __init__(self):
             sender = Sender()
             sender.bind("tcp://127.0.0.1:14310")
-            self.stats = stats.Stats(sender=sender.send)
+            self.stats = Aggregator(sender=sender.send)
 
         def process_message(self, message):
             return self.stats.process(message)

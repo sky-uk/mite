@@ -1,6 +1,6 @@
 import asyncio
 
-from ..stats import Stats
+from ..stats import Aggregator
 from ..utils import _msg_backend_module
 
 
@@ -27,7 +27,7 @@ def stats(opts):
     exclude = opts["--stats-exclude-processors"]
     if exclude is not None:
         exclude = exclude.split(",")
-    stats = Stats(sender=agg_sender.send, include=include, exclude=exclude)
+    stats = Aggregator(sender=agg_sender.send, include=include, exclude=exclude)
     receiver.add_listener(stats.process)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

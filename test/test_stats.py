@@ -1,12 +1,16 @@
-import copy
+import dataclasses
 import unittest.mock as mock
 import warnings
+
+import pytest
 
 from mite.stats import (
     Counter,
     Extractor,
     Gauge,
+    GaugeAggregation,
     Histogram,
+    Stat,
     Stats,
     extractor,
     load_stats_entry_points,
@@ -55,7 +59,7 @@ class EntryPointMock:
     def load(self):
         if self._raises is not None:
             raise self._raises
-        return [self.__val]
+        return [_counter(self.__val)]
 
 
 class TestModularity:
@@ -68,7 +72,7 @@ class TestModularity:
             s = Stats(None)
             iter_entry_points.assert_called_once()
             logging_info.assert_called_with("Registering stats processors from x")
-            assert s._all_stats == ["x"]
+            assert _names(s) == ["x"]
 
     def test_modularity_include(self):
         with mock.patch(
@@ -76,7 +80,7 @@ class TestModularity:
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
             s = Stats(None, include=["x"])
-            assert s._all_stats == ["x"]
+            assert _names(s) == ["x"]
 
     def test_modularity_exclude(self):
         with mock.patch(
@@ -84,7 +88,7 @@ class TestModularity:
             return_value=[EntryPointMock(group="x"), EntryPointMock(group="y")],
         ):
             s = Stats(None, exclude=["x"])
-            assert s._all_stats == ["y"]
+            assert _names(s) == ["y"]
 
     def _entry_points_with_opt_in(self):
         return [EntryPointMock(group="x"), EntryPointMock(group="mite_http_extended")]
@@ -93,17 +97,17 @@ class TestModularity:
         with mock.patch(
             "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
         ):
-            assert Stats(None)._all_stats == ["x"]
-            assert Stats(None, exclude=["y"])._all_stats == ["x"]
+            assert _names(Stats(None)) == ["x"]
+            assert _names(Stats(None, exclude=["y"])) == ["x"]
 
     def test_opt_in_processor_included_by_name(self):
         with mock.patch(
             "importlib.metadata.entry_points", return_value=self._entry_points_with_opt_in()
         ):
             s = Stats(None, include=["mite_http_extended"])
-            assert s._all_stats == ["mite_http_extended"]
+            assert _names(s) == ["mite_http_extended"]
             s = Stats(None, include=["x", "mite_http_extended"])
-            assert s._all_stats == ["x", "mite_http_extended"]
+            assert _names(s) == ["x", "mite_http_extended"]
 
     def test_import_error_is_a_warning(self):
         with mock.patch(
@@ -121,7 +125,7 @@ class TestModularity:
             ],
         ):
             s = Stats(None)
-            assert s._all_stats == ["y"]
+            assert _names(s) == ["y"]
             logging_warning.assert_called_once()
             message = logging_warning.call_args[0][0]
             assert "x" in message
@@ -141,14 +145,14 @@ class TestModularity:
             ],
         ):
             s = Stats(None)
-            assert s._all_stats == ["y"]
+            assert _names(s) == ["y"]
             logging_error.assert_called_once()
             assert "mite_amqp" in logging_error.call_args[0][0]
 
     def test_future_warning_from_a_loaded_processor_does_not_escape(self):
         def _warn_and_return():
             warnings.warn("some mite 4.0 deprecation", FutureWarning, stacklevel=2)
-            return ["x"]
+            return [_counter("x")]
 
         with mock.patch(
             "importlib.metadata.entry_points",
@@ -162,7 +166,7 @@ class TestModularity:
                 w for w in record if issubclass(w.category, FutureWarning)
             ]
             assert not future_warnings, future_warnings
-            assert s._all_stats == ["x"]
+            assert _names(s) == ["x"]
 
     def test_first_party_stats_actually_load(self):
         # Unpatched: exercises the real entry points registered in
@@ -172,7 +176,7 @@ class TestModularity:
             s = Stats(None)
         future_warnings = [w for w in record if issubclass(w.category, FutureWarning)]
         assert not future_warnings, future_warnings
-        names = [stat.name for stat in s._all_stats]
+        names = _names(s)
         # mite_selenium_page_load_tcp_time_seconds appears twice due to a
         # pre-existing duplicate in mite_selenium/stats.py, unrelated to
         # this change - not asserted on beyond allowing it here.
@@ -192,18 +196,18 @@ class TestCounter:
     dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 1),))
 
     def test_process(self):
-        counter = Counter("test", lambda x: True, self.dummy_extractor)
+        counter = _aggregation(Counter("test", lambda x: True, self.dummy_extractor))
         counter.process(None)
         assert dict(counter.metrics) == {"foo": 1}
 
     def test_process_additivity(self):
-        counter = Counter("test", lambda x: True, self.dummy_extractor)
+        counter = _aggregation(Counter("test", lambda x: True, self.dummy_extractor))
         counter.process(None)
         counter.process(None)
         assert dict(counter.metrics) == {"foo": 2}
 
     def test_dump(self):
-        counter = Counter("test", lambda x: True, self.dummy_extractor)
+        counter = _aggregation(Counter("test", lambda x: True, self.dummy_extractor))
         counter.process(None)
         assert counter.dump() == {
             "type": "Counter",
@@ -214,7 +218,7 @@ class TestCounter:
         assert dict(counter.metrics) == {}
 
     def test_process_after_dump(self):
-        counter = Counter("test", lambda x: True, self.dummy_extractor)
+        counter = _aggregation(Counter("test", lambda x: True, self.dummy_extractor))
         counter.process(None)
         counter.dump()
         counter.process(None)
@@ -225,18 +229,18 @@ class TestGauge:
     dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 3),))
 
     def test_process(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
+        gauge = _aggregation(Gauge("test", lambda x: True, self.dummy_extractor))
         gauge.process(None)
         assert dict(gauge.metrics) == {"foo": 3.0}
 
     def test_process_non_additivity(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
+        gauge = _aggregation(Gauge("test", lambda x: True, self.dummy_extractor))
         gauge.process(None)
         gauge.process(None)
         assert dict(gauge.metrics) == {"foo": 3.0}
 
     def test_dump(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
+        gauge = _aggregation(Gauge("test", lambda x: True, self.dummy_extractor))
         gauge.process(None)
         assert gauge.dump() == {
             "type": "Gauge",
@@ -247,7 +251,7 @@ class TestGauge:
         assert dict(gauge.metrics) == {}
 
     def test_process_after_dump(self):
-        gauge = Gauge("test", lambda x: True, self.dummy_extractor)
+        gauge = _aggregation(Gauge("test", lambda x: True, self.dummy_extractor))
         gauge.process(None)
         gauge.dump()
         gauge.process(None)
@@ -258,14 +262,14 @@ class TestHistogram:
     dummy_extractor = Extractor(labels=("bar",), extract=lambda x: (("foo", 3),))
 
     def test_process(self):
-        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
+        hist = _aggregation(Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4)))
         hist.process(None)
         assert dict(hist.bin_counts) == {"foo": [0, 0, 1, 1]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}
 
     def test_process_additivity(self):
-        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
+        hist = _aggregation(Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4)))
         hist.process(None)
         hist.process(None)
         assert dict(hist.bin_counts) == {"foo": [0, 0, 2, 2]}
@@ -273,7 +277,7 @@ class TestHistogram:
         assert dict(hist.total_counts) == {"foo": 2}
 
     def test_dump(self):
-        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
+        hist = _aggregation(Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4)))
         hist.process(None)
         assert hist.dump() == {
             "type": "Histogram",
@@ -289,23 +293,13 @@ class TestHistogram:
         assert dict(hist.bin_counts) == {}
 
     def test_process_after_dump(self):
-        hist = Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4))
+        hist = _aggregation(Histogram("test", lambda _: True, self.dummy_extractor, (1, 2, 3, 4)))
         hist.process(None)
         hist.dump()
         hist.process(None)
         assert dict(hist.bin_counts) == {"foo": [0, 0, 1, 1]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}
-
-
-def test_histogram_copy_does_not_depend_on_original_bins():
-    original = Histogram(
-        "h", lambda m: True, Extractor(("bar",), lambda x: (("foo", 1),)), bins=[1, 2, 3]
-    )
-    clone = copy.deepcopy(original)
-    original.bins.append(4)
-    clone.process(None)
-    assert dict(clone.bin_counts) == {"foo": [1, 1, 1]}
 
 
 class _EntryPointFor:
@@ -321,11 +315,26 @@ def _counter(name):
     return Counter(name, lambda m: True, extractor(["test"]))
 
 
-def test_two_stats_instances_do_not_share_state():
-    # Regression for --influxdb=2: entry_point.load() returns the
-    # module-level STATS list, so without a per-instance copy every Stats()
-    # shares the same Counter/Histogram objects, double-counting messages
-    # and letting one instance's dump() clear the other's pending data.
+def _aggregation(stat):
+    return stat.aggregation_class(stat)
+
+
+def _names(aggregator):
+    return [a.stat.name for a in aggregator._aggregations]
+
+
+def test_stat_definitions_are_immutable():
+    hist = Histogram("h", lambda m: True, extractor(["test"]), bins=[3, 1, 2])
+    assert hist.bins == (1, 2, 3)
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        hist.bins = (4,)
+
+
+def test_two_aggregators_do_not_share_state():
+    # Regression for --influxdb=2: entry_point.load() returns the plugin's
+    # module-level STATS list, so every aggregator sees the same definitions.
+    # Each must keep its own counts, or messages are double-counted and one
+    # aggregator's dump() clears the other's pending data.
     with mock.patch(
         "importlib.metadata.entry_points",
         return_value=[_EntryPointFor("x", [_counter("mite_transaction_total")])],
@@ -333,10 +342,61 @@ def test_two_stats_instances_do_not_share_state():
         s1 = Stats(sender=lambda d: None)
         s2 = Stats(sender=lambda d: None)
 
-    assert s1._all_stats[0] is not s2._all_stats[0]
+    assert s1._aggregations[0].stat is s2._aggregations[0].stat
+    assert s1._aggregations[0] is not s2._aggregations[0]
 
     s1.process(TXN_MSG)
     d1 = s1.dump()
     d2 = s2.dump()
     assert sum(d1[0]["metrics"].values()) == 1
     assert sum(d2[0]["metrics"].values()) == 0
+
+
+def test_entry_point_exporting_non_stats_is_logged_and_skipped():
+    with mock.patch("mite.stats.logger.error") as logging_error, mock.patch(
+        "importlib.metadata.entry_points",
+        return_value=[
+            _EntryPointFor("bad", [_counter("ok"), "not a stat"]),
+            _EntryPointFor("good", [_counter("y")]),
+        ],
+    ):
+        stats = load_stats_entry_points()
+    assert [s.name for s in stats] == ["y"]
+    logging_error.assert_called_once()
+    assert "bad" in logging_error.call_args[0][0]
+    assert "not a stat" in logging_error.call_args[0][0]
+
+
+class _MaxGaugeAggregation(GaugeAggregation):
+    def process(self, msg):
+        if self.stat.matcher(msg):
+            for key, value in self.stat.extractor.extract(msg):
+                self.metrics[key] = max(value, self.metrics.get(key, value))
+
+
+@dataclasses.dataclass(frozen=True)
+class _MaxGauge(Stat):
+    aggregation_class = _MaxGaugeAggregation
+
+
+def test_custom_stat_type_is_aggregated():
+    stat = _MaxGauge("peak", lambda m: True, extractor(["test"], "value"))
+    with mock.patch(
+        "importlib.metadata.entry_points",
+        return_value=[_EntryPointFor("custom", [stat])],
+    ):
+        aggregator = Stats(sender=lambda d: None)
+    for value in (3, 7, 5):
+        aggregator.process({"test": "t", "value": value})
+    assert aggregator.dump() == [
+        {"type": "Gauge", "name": "peak", "metrics": {("t",): 7}, "labels": ["test"]}
+    ]
+
+
+def test_stat_without_aggregation_class_is_logged_and_skipped():
+    with mock.patch("mite.stats.logger.error") as logging_error, mock.patch(
+        "importlib.metadata.entry_points",
+        return_value=[_EntryPointFor("bad", [Stat("x", lambda m: True, extractor(["test"]))])],
+    ):
+        assert load_stats_entry_points() == []
+    assert "aggregation_class" in logging_error.call_args[0][0]

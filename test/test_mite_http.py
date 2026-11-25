@@ -44,7 +44,7 @@ def test_default_histogram_bins():
         del os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"]
 
     stats = mite_http_stats._generate_stats()
-    assert stats[1].bins == [
+    assert list(stats[1].bins) == [
         0.0001,
         0.001,
         0.01,
@@ -66,7 +66,7 @@ def test_default_histogram_bins():
 def test_non_default_bins():
     os.environ["MITE_HTTP_HISTOGRAM_BUCKETS"] = "1,2,3"
     stats = mite_http_stats._generate_stats()
-    assert stats[1].bins == [1, 2, 3]
+    assert list(stats[1].bins) == [1, 2, 3]
 
 
 def test_decorator_without_async_loop_running():
@@ -237,7 +237,8 @@ def _http_metrics_msg(**fields):
 
 
 def _histogram(name):
-    return next(s for s in mite_http_stats._generate_extended_stats() if s.name == name)
+    stat = next(s for s in mite_http_stats._generate_extended_stats() if s.name == name)
+    return stat.aggregation_class(stat)
 
 
 def test_default_stats_unchanged():
@@ -305,7 +306,7 @@ def test_size_histograms():
     download.process(_http_metrics_msg(download_size=0))  # e.g. HEAD or 204
     assert dict(download.total_counts) == {("t",): 2}
     assert dict(download.sums) == {("t",): 2000}
-    assert download.bins[0] == 128
+    assert download.stat.bins[0] == 128
 
     upload = _histogram("mite_http_upload_size_bytes")
     upload.process(_http_metrics_msg(upload_size=500))
@@ -316,7 +317,7 @@ def test_size_histograms():
 def test_non_default_size_bins():
     with patch.dict(os.environ, {"MITE_HTTP_SIZE_HISTOGRAM_BUCKETS": "10,100"}):
         stats = mite_http_stats._generate_extended_stats()
-    assert next(s for s in stats if s.name == "mite_http_upload_size_bytes").bins == [10, 100]
+    assert next(s for s in stats if s.name == "mite_http_upload_size_bytes").bins == (10, 100)
 
 
 @pytest.mark.asyncio
