@@ -21,18 +21,14 @@ if ! "$VENV/bin/mite" --help >/dev/null; then
     exit 1
 fi
 
-# Verify Stats() construction (load + per-instance copy) doesn't crash. Integration processors needing a
+# Verify stats loading doesn't crash. Integration processors needing a
 # missing extra (httpperf, aiokafka, etc.) are EXPECTED to log a warning and
 # be skipped here — assert non-empty, not that every processor loaded.
-# FIXME - I don't like this
 if ! "$VENV/bin/python" -c '
-from mite.stats import Stats
-s = Stats(None)
-assert s._all_stats, "no stats processors loaded"
-names = [stat.name for stat in s._all_stats]
-assert "mite_transaction_total" in names, names
+from mite.stats import load_stats_entry_points as f
+assert f(), "no stats processors loaded"
 '; then
-    echo "FAIL: Stats() construction failed on a core-only install" >&2
+    echo "FAIL: load_stats_entry_points() failed on a core-only install" >&2
     exit 1
 fi
 

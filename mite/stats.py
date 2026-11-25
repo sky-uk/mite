@@ -187,19 +187,14 @@ _MITE_STATS = [
 DEFAULT_EXCLUDED_PROCESSORS = frozenset({"mite_http_extended"})
 
 
-def load_stats_entry_points(include=None, exclude=None, *, copy_stats=False):
+def load_stats_entry_points(include=None, exclude=None):
     """Load every registered mite_stats entry point, applying include/exclude
     name filters. Shared by mite.stats.Stats and
     mite.cli.influxdb.influxdb_init so the two don't drift in how they
     handle a failing source.
 
     Processors in DEFAULT_EXCLUDED_PROCESSORS are skipped unless named in
-    include.
-
-    Module-level STATS lists are shared by every Stats() instance unless
-    copied, which double-counts and clobbers dumps when several processors
-    run concurrently (e.g. --influxdb=2). Stats passes copy_stats=True; a
-    plugin whose stats can't be deep-copied is skipped entirely."""
+    include."""
     all_stats = []
     for entry_point in importlib.metadata.entry_points(group="mite_stats"):
         name = entry_point.name
@@ -213,33 +208,24 @@ def load_stats_entry_points(include=None, exclude=None, *, copy_stats=False):
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FutureWarning)
-                loaded_stats = entry_point.load()
+                all_stats += entry_point.load()
         except ImportError as e:
             logger.warning(
                 f"Not aggregating metrics from {name}: its stats processor "
                 f"could not be loaded on this host: {e}"
             )
-            continue
         except Exception as e:
             logger.error(f"Failed to load stats from entry point {name}: {e}")
-            continue
-        if copy_stats:
-            try:
-                loaded_stats = copy.deepcopy(loaded_stats)
-            except Exception as e:
-                logger.error(
-                    f"Not aggregating metrics from {name}: its stats could "
-                    f"not be copied: {e}"
-                )
-                continue
-        all_stats += loaded_stats
     return all_stats
 
 
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
-        self._all_stats = load_stats_entry_points(
-            include=include, exclude=exclude, copy_stats=True
+        # Module-level STATS lists are shared by every Stats() instance
+        # unless copied, which double-counts and clobbers dumps when several
+        # processors run concurrently (e.g. --influxdb=2).
+        self._all_stats = copy.deepcopy(
+            load_stats_entry_points(include=include, exclude=exclude)
         )
         self.sender = sender
         self.dump_timeout = time.time() + 0.25
