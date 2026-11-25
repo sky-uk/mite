@@ -148,3 +148,6 @@ MITE_CONF_test_msg="Hello from mite" mite scenario test mite.example:scenario
 ```
 
 To scale this up across machines, see {doc}`design-deployment`.
+
+To use a run as a pass/fail check with a summary report, for example in
+CI, see {doc}`benchmark`.
