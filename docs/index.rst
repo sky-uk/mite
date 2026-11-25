@@ -46,6 +46,7 @@ for the workflow, coding standards, and how to reach the maintainers.
    tutorial
    components
    journeys
+   har
    volume-model
    config
    benchmark

@@ -14,7 +14,7 @@ Usage:
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
     mite [options] prometheus_exporter [--stats-out-socket=SOCKET] [--web-address=HOST_PORT]
     mite [options] influxdb_exporter [--stats-out-socket=SOCKET]
-    mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
+    mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--host=HOST]... [--include-static] [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
     mite [options] influxdb init [--influxdb=N]
@@ -89,6 +89,8 @@ Options:
     --collector-use-json                                    Output in json format rather than msgpack
     --recorder-dir=DIRECTORY                                Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP                                      Seconds between request starts; 0 uses the recorded gaps [default: 1]
+    --host=HOST                                             Host to keep when converting a HAR (repeatable, globs like *.example.com allowed)
+    --include-static                                        Keep images, CSS, JS and fonts when converting a HAR
     --logging-webhook=URL                                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS                         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                                   Reformat unix timestamps to human readable dates
@@ -359,13 +361,20 @@ def configure_python_path(opts):
 def har_converter(opts):
     # Deferred, this import is only needed by this one command.
     # mite runner/controller/duplicator/collector never call it.
-    from .har_to_mite import har_convert_to_mite
+    from .har_to_mite import HarConversionError, har_convert_to_mite
 
-    har_convert_to_mite(
-        opts["HAR_FILE_PATH"],
-        opts["CONVERTED_FILE_PATH"],
-        opts["--sleep-time"],
-    )
+    try:
+        requests = har_convert_to_mite(
+            opts["HAR_FILE_PATH"],
+            opts["CONVERTED_FILE_PATH"],
+            opts["--sleep-time"],
+            hosts=opts["--host"],
+            include_static=opts["--include-static"],
+        )
+    except HarConversionError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
+    print(f"Wrote {len(requests)} requests to {opts['CONVERTED_FILE_PATH']}")
 
 
 def main():
