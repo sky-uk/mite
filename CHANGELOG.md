@@ -16,6 +16,13 @@
   PUT/DELETE/HEAD, replays recorded bodies byte-for-byte, escapes URLs and
   headers, and drops `Content-Length` and HTTP/2 pseudo-headers. A recorded
   304 now expects exactly 200 or 304.
+- `har_to_mite` paces requests with `ensure_fixed_separation` instead of
+  `sleep`. The recorded gap now applies after the request it belongs to
+  (it was one request late), keeps millisecond precision, and includes the
+  response time. `mite har --sleep-time=0` now uses the recorded gaps; the
+  value used to stay a string and never matched 0.
+- `har_to_mite` no longer drops the request that follows a collapsed
+  redirect.
 
 ## 3.0.0
 

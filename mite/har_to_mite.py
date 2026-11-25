@@ -1,6 +1,6 @@
 import json
 import logging
-import time
+from datetime import datetime
 
 from jinja2 import Template
 
@@ -11,14 +11,16 @@ SUPPORTED_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 
 # Values are pre-rendered with repr() so quotes/backslashes in HAR data stay valid Python
 TEMPLATE = Template(
-    "    async with ctx.transaction({{name}}):\n"
-    "        resp = await ctx.browser.{{method}}(\n"
-    "            {{url}},\n"
-    "            headers={{headers}},\n"
+    "    async with ensure_fixed_separation({{separation}}):\n"
+    "        async with ctx.transaction({{name}}):\n"
+    "            resp = await ctx.browser.{{method}}(\n"
+    "                {{url}},\n"
+    "                headers={{headers}},\n"
     "{{body}}"
-    "        )\n"
-    "        check_status_code(resp, {{expected_status}})\n"
-    "    await sleep({{sleep}})\n\n\n"
+    "            )\n"
+    "            check_status_code(resp, {{expected_status}})\n"
+    "\n",
+    keep_trailing_newline=True,
 )
 
 
@@ -54,7 +56,7 @@ def set_request_body(page):
     post_data = page["request"].get("postData")
     if not post_data or "text" not in post_data:
         return ""
-    return f"            data={post_data['text']!r},\n"
+    return f"                data={post_data['text']!r},\n"
 
 
 def _parse_urls(pages):
@@ -73,7 +75,7 @@ def _create_journey_file_start():  # pragma: no cover
     """The lines needed for imports and journey signature needed for
     a working mite script. pragma ensures this is not counted for code
     coverage"""
-    journey_start = "from asyncio import sleep\n\n"
+    journey_start = "from mite import ensure_fixed_separation\n"
     journey_start += "from mite_browser import browser_decorator\n"
     journey_start += "from mite_http.checks import check_status_code\n\n\n"
     journey_start += "@browser_decorator()\n"
@@ -81,7 +83,7 @@ def _create_journey_file_start():  # pragma: no cover
     return journey_start
 
 
-def _render_journey_transaction(page, req_method, expected_status_code, sleep_s):
+def _render_journey_transaction(page, req_method, expected_status_code, separation_s):
     """Renders a single transaction with a predefined template for use
     in a mite journey"""
     return TEMPLATE.render(
@@ -91,23 +93,33 @@ def _render_journey_transaction(page, req_method, expected_status_code, sleep_s)
         headers=repr(set_request_headers_dict(page)),
         body=set_request_body(page),
         expected_status=repr(expected_status_code),
-        sleep=sleep_s,
+        separation=separation_s,
     )
 
 
-def har_convert_to_mite(file_name, converted_file_name, sleep_s):
+def _started_at(entry):
+    # HAR timestamps are ISO 8601; fromisoformat() only accepts "Z" from 3.11
+    return datetime.fromisoformat(entry["startedDateTime"].replace("Z", "+00:00"))
+
+
+def har_convert_to_mite(file_name, converted_file_name, separation_s):
+    """Convert a HAR file to a mite journey.
+
+    Each request is wrapped in ensure_fixed_separation. With ``separation_s``
+    of 0 the separation is the recorded gap to the next request's start,
+    otherwise every request gets ``separation_s`` seconds.
+    """
+    separation_s = float(separation_s)
     with open(file_name, "r") as f:
         temp_pages = json.loads(f.read())
-    journey_main = ""
     page_urls = _parse_urls(temp_pages)
     entries = _extract_and_sort_requests(temp_pages)
-    timestamp = time.strptime(
-        temp_pages["log"]["pages"][0]["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
-    )
-    previous_timestamp = time.mktime(timestamp)
-    sleep_period = 0
 
-    for cur_page in entries:
+    selected = []
+    # set_expected_status_code removes redirect targets from entries mid-loop
+    for cur_page in list(entries):
+        if not any(cur_page is entry for entry in entries):
+            continue
         if (
             not cur_page["response"]["status"]
             or cur_page["request"]["url"] not in page_urls
@@ -123,23 +135,22 @@ def har_convert_to_mite(file_name, converted_file_name, sleep_s):
                 cur_page["request"]["url"],
             )
             continue
+        selected.append((cur_page, req_method, expected_status_code))
 
-        if sleep_s != 0:
-            sleep_period = sleep_s
+    journey_main = ""
+    for i, (cur_page, req_method, expected_status_code) in enumerate(selected):
+        if separation_s:
+            separation = separation_s
+        elif i + 1 < len(selected):
+            gap = _started_at(selected[i + 1][0]) - _started_at(cur_page)
+            separation = round(max(gap.total_seconds(), 0.0), 3)
         else:
-            timestamp = time.strptime(
-                cur_page["startedDateTime"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
-            timestamp = time.mktime(timestamp)
-            sleep_period = int(timestamp - previous_timestamp)
-            previous_timestamp = timestamp
-
-        # main part of the journey
+            separation = 0
         journey_main += _render_journey_transaction(
-            cur_page, req_method, expected_status_code, sleep_period
+            cur_page, req_method, expected_status_code, separation
         )
 
     journey_start = _create_journey_file_start()
 
     with open(converted_file_name, "w") as nf:
-        nf.write(journey_start + journey_main)
+        nf.write(journey_start + journey_main.rstrip("\n") + "\n")

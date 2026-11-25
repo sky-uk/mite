@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from copy import deepcopy
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pytest
@@ -220,15 +221,15 @@ def test_pseudo_and_length_headers_dropped():
 
 
 def test_json_body_sent_verbatim():
-    assert set_request_body(PAGE_WITH_BODY) == "            data='{\"name0\": \"value0\"}',\n"
+    assert set_request_body(PAGE_WITH_BODY) == "                data='{\"name0\": \"value0\"}',\n"
 
 
 def test_set_form_body():
-    assert set_request_body(PAGE_WITH_FORM_BODY) == '            data="a=1&b=\'2\'",\n'
+    assert set_request_body(PAGE_WITH_FORM_BODY) == '                data="a=1&b=\'2\'",\n'
 
 
 def test_invalid_json_body_sent_verbatim():
-    assert set_request_body(PAGE_WITH_BAD_JSON_BODY) == "            data='not json',\n"
+    assert set_request_body(PAGE_WITH_BAD_JSON_BODY) == "                data='not json',\n"
 
 
 def test_body_empty_without_post_data():
@@ -257,9 +258,14 @@ def test_har_convert_to_mite():
 
         with open(testoutputfile, "r") as testharoutfile:
             testharstr = testharoutfile.read()
-        assert "await sleep(0)" in testharstr
-        assert "await sleep(49)" in testharstr
-        assert "await sleep(4)" in testharstr
+        # each request is separated by the recorded gap to the next one
+        assert [
+            line.strip() for line in testharstr.splitlines() if "separation(" in line
+        ] == [
+            "async with ensure_fixed_separation(48.765):",
+            "async with ensure_fixed_separation(4.762):",
+            "async with ensure_fixed_separation(0):",
+        ]
 
 
 def test_har_convert_to_mite_10secs():
@@ -271,7 +277,7 @@ def test_har_convert_to_mite_10secs():
 
         with open(testoutputfile, "r") as testharoutfile:
             testharstr = testharoutfile.read()
-        assert "await sleep(10)" in testharstr
+        assert testharstr.count("ensure_fixed_separation(10.0):") == 3
 
 
 def test_render_transaction():
@@ -281,15 +287,122 @@ def test_render_transaction():
             "headers": [{"name": "Accept", "value": "*/*"}],
         }
     }
-    assert _render_journey_transaction(page, "get", 200, 1) == (
-        "    async with ctx.transaction(\"Request get http://h/a?q='x'\"):\n"
-        "        resp = await ctx.browser.get(\n"
-        "            \"http://h/a?q='x'\",\n"
-        "            headers={'Accept': '*/*'},\n"
-        "        )\n"
-        "        check_status_code(resp, 200)\n"
-        "    await sleep(1)\n\n"
+    assert _render_journey_transaction(page, "get", 200, 1.5) == (
+        "    async with ensure_fixed_separation(1.5):\n"
+        "        async with ctx.transaction(\"Request get http://h/a?q='x'\"):\n"
+        "            resp = await ctx.browser.get(\n"
+        "                \"http://h/a?q='x'\",\n"
+        "                headers={'Accept': '*/*'},\n"
+        "            )\n"
+        "            check_status_code(resp, 200)\n"
+        "\n"
     )
+
+
+SAMPLE_DIR = Path(__file__).parent / "har"
+SAMPLE_BASE_URL = "https://shop.example"
+
+
+def _sample_har(tmp_path, base_url):
+    har = tmp_path / "sample.har"
+    har.write_text(
+        (SAMPLE_DIR / "sample.har").read_text().replace("__BASE_URL__", base_url)
+    )
+    return har
+
+
+def test_sample_har_matches_expected_journey(tmp_path):
+    """test/har/sample_journey.py is the reference output for test/har/sample.har.
+
+    Regenerate it if the converter output changes on purpose.
+    """
+    out = tmp_path / "journey.py"
+    har_convert_to_mite(str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), 0)
+    assert out.read_text() == (SAMPLE_DIR / "sample_journey.py").read_text()
+
+
+def _import_journey(path):
+    tree = ast.parse(path.read_text())
+    # checks must survive python -O
+    assert not any(isinstance(node, ast.Assert) for node in ast.walk(tree))
+    spec = importlib.util.spec_from_file_location("generated_journey", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.pop("generated_journey", None)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _expect_sample_requests(httpserver, logo_status=304):
+    httpserver.expect_ordered_request("/", "GET").respond_with_data("<html></html>")
+    httpserver.expect_ordered_request(
+        "/api/items", "POST", data='{"name":"café","n":1}'.encode()
+    ).respond_with_data("{}", status=201)
+    httpserver.expect_ordered_request(
+        "/api/items/1", "PUT", data=b"name=tea&n=2"
+    ).respond_with_data("{}")
+    httpserver.expect_ordered_request("/old", "GET").respond_with_data(
+        "", status=302, headers={"Location": httpserver.url_for("/new")}
+    )
+    httpserver.expect_ordered_request("/new", "GET").respond_with_data("new")
+    httpserver.expect_ordered_request("/logo.png", "GET").respond_with_data(
+        "", status=logo_status
+    )
+    httpserver.expect_ordered_request("/api/items/1", "DELETE").respond_with_data(
+        "", status=204
+    )
+    httpserver.expect_ordered_request("/health", "HEAD").respond_with_data("")
+
+
+@pytest.mark.asyncio
+async def test_sample_har_journey_runs(tmp_path, httpserver):
+    base_url = httpserver.url_for("").rstrip("/")
+    out = tmp_path / "journey.py"
+    # small fixed separation keeps the test fast; recorded gaps are covered above
+    har_convert_to_mite(str(_sample_har(tmp_path, base_url)), str(out), 0.001)
+    module = _import_journey(out)
+    _expect_sample_requests(httpserver)
+    ctx, messages = _context()
+
+    await module.journey(ctx)
+
+    httpserver.check_assertions()
+    requests = [request for request, _ in httpserver.log]
+    assert [(r.method, r.path) for r in requests] == [
+        ("GET", "/"),
+        ("POST", "/api/items"),
+        ("PUT", "/api/items/1"),
+        ("GET", "/old"),
+        ("GET", "/new"),
+        ("GET", "/logo.png"),
+        ("DELETE", "/api/items/1"),
+        ("HEAD", "/health"),
+    ]
+    home, post = requests[0], requests[1]
+    assert home.headers["User-Agent"] == "Mozilla/5.0"
+    assert "Cookie" not in home.headers
+    assert post.content_type == "application/json"
+    assert post.content_length == len('{"name":"café","n":1}'.encode())
+    assert not any(m["type"] in ("error", "exception") for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_sample_har_journey_fails_on_unexpected_status(tmp_path, httpserver):
+    base_url = httpserver.url_for("").rstrip("/")
+    out = tmp_path / "journey.py"
+    har_convert_to_mite(str(_sample_har(tmp_path, base_url)), str(out), 0.001)
+    module = _import_journey(out)
+    # recorded 304 accepts 200 or 304 only
+    _expect_sample_requests(httpserver, logo_status=404)
+    ctx, messages = _context()
+
+    with pytest.raises(MiteError) as excinfo:
+        await module.journey(ctx)
+
+    assert excinfo.value.fields["status_code"] == 404
+    assert excinfo.value.fields["expected_status"] == [200, 304]
+    assert [m["status_code"] for m in messages if m["type"] == "error"] == [404]
+    # the journey stops at the failing request
+    assert [r.path for r, _ in httpserver.log][-1] == "/logo.png"
 
 
 def _context():
@@ -320,16 +433,8 @@ def _convert_and_import(tmp_path, entries):
     har = tmp_path / "in.har"
     out = tmp_path / "generated_journey.py"
     _write_har(har, entries)
-    har_convert_to_mite(str(har), str(out), 0)
-    source = out.read_text()
-    tree = ast.parse(source)
-    # checks must survive python -O
-    assert not any(isinstance(node, ast.Assert) for node in ast.walk(tree))
-    spec = importlib.util.spec_from_file_location("generated_journey", out)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules.pop("generated_journey", None)
-    spec.loader.exec_module(module)
-    return module
+    har_convert_to_mite(str(har), str(out), 0.001)
+    return _import_journey(out)
 
 
 # compact form a browser sends; re-encoding through json= would add spaces
