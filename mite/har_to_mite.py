@@ -50,16 +50,11 @@ def set_request_headers_dict(page):
 
 
 def set_request_body(page):
+    # Replay the recorded bytes unchanged; the recorded Content-Type header is kept
     post_data = page["request"].get("postData")
     if not post_data or "text" not in post_data:
         return ""
-    text = post_data["text"]
-    if "json" in post_data.get("mimeType", "").lower():
-        try:
-            return f"            json={json.loads(text)!r},\n"
-        except ValueError:
-            pass
-    return f"            data={text!r},\n"
+    return f"            data={post_data['text']!r},\n"
 
 
 def _parse_urls(pages):

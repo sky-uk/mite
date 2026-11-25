@@ -13,7 +13,7 @@
 
 - `har_to_mite` output now runs as-is: it imports checks from
   `mite_http.checks` instead of a missing `.utils`, supports
-  PUT/DELETE/HEAD, sends recorded bodies correctly, escapes URLs and
+  PUT/DELETE/HEAD, replays recorded bodies byte-for-byte, escapes URLs and
   headers, and drops `Content-Length` and HTTP/2 pseudo-headers. A recorded
   304 now expects exactly 200 or 304.
 
