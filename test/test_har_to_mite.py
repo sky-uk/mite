@@ -219,15 +219,15 @@ def test_pseudo_and_length_headers_dropped():
     assert set_request_headers_dict(page) == {"Accept": "*/*"}
 
 
-def test_set_json_body():
-    assert set_request_body(PAGE_WITH_BODY) == "            json={'name0': 'value0'},\n"
+def test_json_body_sent_verbatim():
+    assert set_request_body(PAGE_WITH_BODY) == "            data='{\"name0\": \"value0\"}',\n"
 
 
 def test_set_form_body():
     assert set_request_body(PAGE_WITH_FORM_BODY) == '            data="a=1&b=\'2\'",\n'
 
 
-def test_invalid_json_body_falls_back_to_data():
+def test_invalid_json_body_sent_verbatim():
     assert set_request_body(PAGE_WITH_BAD_JSON_BODY) == "            data='not json',\n"
 
 
@@ -332,12 +332,16 @@ def _convert_and_import(tmp_path, entries):
     return module
 
 
+# compact form a browser sends; re-encoding through json= would add spaces
+RAW_JSON_BODY = '{"k":1,"s":"\u00e9"}'
+
+
 def _all_methods_entries(httpserver):
     entries = []
     for i, method in enumerate(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]):
         post_data = None
         if method in ("POST", "PUT", "PATCH"):
-            post_data = {"mimeType": "application/json", "text": '{"k": 1}'}
+            post_data = {"mimeType": "application/json", "text": RAW_JSON_BODY}
         entries.append(
             _entry(
                 httpserver.url_for(f"/{method.lower()}"),
@@ -347,6 +351,12 @@ def _all_methods_entries(httpserver):
                 post_data,
             )
         )
+        if post_data:
+            entries[-1]["request"]["headers"] = [
+                {"name": "Content-Type", "value": "application/json"},
+                # deliberately wrong; must not reach the server
+                {"name": "Content-Length", "value": "999"},
+            ]
     return entries
 
 
@@ -357,7 +367,7 @@ async def test_generated_journey_runs_all_methods(tmp_path, httpserver):
         httpserver.expect_request(f"/{method.lower()}", method).respond_with_data("ok")
     for method in ["POST", "PUT", "PATCH"]:
         httpserver.expect_request(
-            f"/{method.lower()}", method, json={"k": 1}
+            f"/{method.lower()}", method, data=RAW_JSON_BODY.encode()
         ).respond_with_data("ok")
     module = _convert_and_import(tmp_path, entries)
 
@@ -368,6 +378,10 @@ async def test_generated_journey_runs_all_methods(tmp_path, httpserver):
         "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
     ]
     assert all(resp.status_code == 200 for _, resp in httpserver.log)
+    for request, _ in httpserver.log:
+        if request.method in ("POST", "PUT", "PATCH"):
+            assert request.content_length == len(RAW_JSON_BODY.encode())
+            assert request.content_type == "application/json"
 
 
 @pytest.mark.asyncio
