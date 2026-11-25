@@ -1,9 +1,14 @@
+import ast
+import importlib.util
+import json
 import os
+import sys
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 
 import pytest
-
+from mite.context import Context
+from mite.exceptions import MiteError
 from mite.har_to_mite import (
     _extract_and_sort_requests,
     _parse_urls,
@@ -115,7 +120,22 @@ PAGE_HEADERS = {
 
 # page with body
 PAGE_WITH_BODY = {
-    "request": {"postData": {"name0": "value0", "name1": "value1; subname1=value11"}}
+    "request": {
+        "postData": {"mimeType": "application/json", "text": '{"name0": "value0"}'}
+    }
+}
+
+PAGE_WITH_FORM_BODY = {
+    "request": {
+        "postData": {
+            "mimeType": "application/x-www-form-urlencoded",
+            "text": "a=1&b='2'",
+        }
+    }
+}
+
+PAGE_WITH_BAD_JSON_BODY = {
+    "request": {"postData": {"mimeType": "application/json", "text": "not json"}}
 }
 
 
@@ -156,24 +176,23 @@ PAGE_TITLES = {
 
 
 def test_status_code_is_not_3xx():
-    status, _ = set_expected_status_code(SIMPLE_PAGE, [SIMPLE_PAGE])
+    status = set_expected_status_code(SIMPLE_PAGE, [SIMPLE_PAGE])
     assert status == 200
 
 
 def test_status_code_304_behaviour():
-    status, groups = set_expected_status_code(PAGE_304, [PAGE_304])
-    assert status == "200, 304"
-    assert groups == "_in_groups"
+    status = set_expected_status_code(PAGE_304, [PAGE_304])
+    assert status == (200, 304)
 
 
 def test_status_code_after_redirect():
     entries = deepcopy(PAGES_200)["log"]["entries"]  # Create a copy
-    status, _ = set_expected_status_code(entries[0], entries)
+    status = set_expected_status_code(entries[0], entries)
     assert status == 200
 
 
 def test_multi_redirect():
-    status, _ = set_expected_status_code(
+    status = set_expected_status_code(
         PAGES_MULTIPLE_REDIRECTS[0], PAGES_MULTIPLE_REDIRECTS
     )
     assert status == 200
@@ -187,12 +206,33 @@ def test_cookie_not_in_headers():
     assert "Cookie" not in set_request_headers_dict(PAGE_HEADERS)
 
 
-def test_set_body():
-    assert "name0" in set_request_body("post", PAGE_WITH_BODY)
+def test_pseudo_and_length_headers_dropped():
+    page = {
+        "request": {
+            "headers": [
+                {"name": ":authority", "value": "x"},
+                {"name": "content-length", "value": "3"},
+                {"name": "Accept", "value": "*/*"},
+            ]
+        }
+    }
+    assert set_request_headers_dict(page) == {"Accept": "*/*"}
 
 
-def test_body_empty_for_get():
-    assert set_request_body("get", PAGE_WITH_BODY) == ""
+def test_set_json_body():
+    assert set_request_body(PAGE_WITH_BODY) == "            json={'name0': 'value0'},\n"
+
+
+def test_set_form_body():
+    assert set_request_body(PAGE_WITH_FORM_BODY) == '            data="a=1&b=\'2\'",\n'
+
+
+def test_invalid_json_body_falls_back_to_data():
+    assert set_request_body(PAGE_WITH_BAD_JSON_BODY) == "            data='not json',\n"
+
+
+def test_body_empty_without_post_data():
+    assert set_request_body({"request": {}}) == ""
 
 
 def test_parse_urls():
@@ -234,18 +274,130 @@ def test_har_convert_to_mite_10secs():
         assert "await sleep(10)" in testharstr
 
 
-@pytest.mark.skip(reason="unfinished")
 def test_render_transaction():
-    assert (
-        _render_journey_transaction(
-            PAGES_MULTIPLE_REDIRECTS[0], "get", "_in_groups", "200", 1
-        )
-        == '    async with ctx.transaction("Request get {{url}}"):\n'
+    page = {
+        "request": {
+            "url": "http://h/a?q='x'",
+            "headers": [{"name": "Accept", "value": "*/*"}],
+        }
+    }
+    assert _render_journey_transaction(page, "get", 200, 1) == (
+        "    async with ctx.transaction(\"Request get http://h/a?q='x'\"):\n"
         "        resp = await ctx.browser.get(\n"
-        "            '{{url}}',\n"
-        "            headers={{headers}},\n"
-        "            {{json}}"
-        "            )\n"
-        "        check_status_code{{check_groups}}(resp, {{expected_status}})\n"
-        "    await sleep({{sleep}})\n\n\n"
+        "            \"http://h/a?q='x'\",\n"
+        "            headers={'Accept': '*/*'},\n"
+        "        )\n"
+        "        check_status_code(resp, 200)\n"
+        "    await sleep(1)\n\n"
     )
+
+
+def _context():
+    messages = []
+    return Context(lambda msg: messages.append(msg), {}), messages
+
+
+def _entry(url, method, status, started, post_data=None):
+    request = {"method": method, "url": url, "headers": []}
+    if post_data is not None:
+        request["postData"] = post_data
+    return {
+        "startedDateTime": started,
+        "request": request,
+        "response": {"status": status, "redirectURL": ""},
+    }
+
+
+def _write_har(path, entries):
+    pages = [
+        {"startedDateTime": "2026-01-01T00:00:00.000Z", "title": e["request"]["url"]}
+        for e in entries
+    ]
+    path.write_text(json.dumps({"log": {"pages": pages, "entries": entries}}))
+
+
+def _convert_and_import(tmp_path, entries):
+    har = tmp_path / "in.har"
+    out = tmp_path / "generated_journey.py"
+    _write_har(har, entries)
+    har_convert_to_mite(str(har), str(out), 0)
+    source = out.read_text()
+    tree = ast.parse(source)
+    # checks must survive python -O
+    assert not any(isinstance(node, ast.Assert) for node in ast.walk(tree))
+    spec = importlib.util.spec_from_file_location("generated_journey", out)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.pop("generated_journey", None)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _all_methods_entries(httpserver):
+    entries = []
+    for i, method in enumerate(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]):
+        post_data = None
+        if method in ("POST", "PUT", "PATCH"):
+            post_data = {"mimeType": "application/json", "text": '{"k": 1}'}
+        entries.append(
+            _entry(
+                httpserver.url_for(f"/{method.lower()}"),
+                method,
+                200,
+                f"2026-01-01T00:00:0{i}.000Z",
+                post_data,
+            )
+        )
+    return entries
+
+
+@pytest.mark.asyncio
+async def test_generated_journey_runs_all_methods(tmp_path, httpserver):
+    entries = _all_methods_entries(httpserver)
+    for method in ["GET", "DELETE", "HEAD", "OPTIONS"]:
+        httpserver.expect_request(f"/{method.lower()}", method).respond_with_data("ok")
+    for method in ["POST", "PUT", "PATCH"]:
+        httpserver.expect_request(
+            f"/{method.lower()}", method, json={"k": 1}
+        ).respond_with_data("ok")
+    module = _convert_and_import(tmp_path, entries)
+
+    ctx, _ = _context()
+    await module.journey(ctx)
+
+    assert [r.method for r, _ in httpserver.log] == [
+        "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
+    ]
+    assert all(resp.status_code == 200 for _, resp in httpserver.log)
+
+
+@pytest.mark.asyncio
+async def test_generated_journey_raises_on_status_mismatch(tmp_path, httpserver):
+    url = httpserver.url_for("/x")
+    httpserver.expect_request("/x").respond_with_data("nope", status=500)
+    module = _convert_and_import(
+        tmp_path, [_entry(url, "GET", 200, "2026-01-01T00:00:00.000Z")]
+    )
+
+    ctx, messages = _context()
+    with pytest.raises(MiteError) as excinfo:
+        await module.journey(ctx)
+    assert excinfo.value.fields["status_code"] == 500
+    assert excinfo.value.fields["expected_status"] == 200
+    assert any(m["type"] == "error" and m["status_code"] == 500 for m in messages)
+
+
+@pytest.mark.parametrize("status,ok", [(200, True), (304, True), (301, False), (204, False)])
+@pytest.mark.asyncio
+async def test_generated_journey_304_is_exact(tmp_path, httpserver, status, ok):
+    url = httpserver.url_for("/cached")
+    httpserver.expect_request("/cached").respond_with_data("", status=status)
+    module = _convert_and_import(
+        tmp_path, [_entry(url, "GET", 304, "2026-01-01T00:00:00.000Z")]
+    )
+
+    ctx, _ = _context()
+    if ok:
+        await module.journey(ctx)
+    else:
+        with pytest.raises(MiteError):
+            await module.journey(ctx)
