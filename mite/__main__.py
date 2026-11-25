@@ -88,7 +88,7 @@ Options:
     --collector-roll=NUM_LINES                              How many lines per collector output file [default: 100000]
     --collector-use-json                                    Output in json format rather than msgpack
     --recorder-dir=DIRECTORY                                Set the recorders output directory [default: recorder_data]
-    --sleep-time=SLEEP                                      Set the second to await between each request [default: 1]
+    --sleep-time=SLEEP                                      Seconds between request starts; 0 uses the recorded gaps [default: 1]
     --logging-webhook=URL                                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS                         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                                   Reformat unix timestamps to human readable dates
