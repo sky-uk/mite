@@ -1,46 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
-### Changed
-
-- `mite har` converts whole UI-driven recordings. It keeps every request
-  to the hosts given with `--host` (repeatable, globs allowed) instead of
-  only requests whose URL matched a page title, and drops static assets
-  and CORS preflights unless `--include-static` is given. Without
-  `--host` it lists the recording's hosts and writes nothing.
-
-### Added
-
-- `mite_http.checks`: `check_status_code`, `check_status_code_in_groups`,
-  `is_error_status_code` and `UnexpectedResponseCodeError`. Checks raise
-  `MiteError` (no `assert`) and take an optional `on_failure` hook.
-- `mite_browser.Browser.put`, `.delete` and `.head`.
-- `mite har` replaces tokens, `Authorization` headers, passwords and
-  email addresses with config lookups (`MITE_CONF_<key>`), and generates a
-  `scenario()` sized from a `TARGET_TPS` setting. See the new "Record and
-  replay a browser journey" docs page.
-
-### Fixed
-
-- `mite har` output now runs without edits.
-  - It imports checks from `mite_http.checks` instead of a missing `.utils`.
-  - It supports PUT, DELETE and HEAD.
-  - It replays recorded bodies byte-for-byte.
-  - It escapes URLs and headers.
-  - It drops `Content-Length` and HTTP/2 pseudo-headers.
-  - A recorded 304 now expects exactly 200 or 304.
-- `mite har` paces requests with `ensure_fixed_separation` instead of
-  `sleep`. Each recorded gap now applies after its own request. Before,
-  it applied one request late. Gaps keep millisecond precision and include
-  the response time.
-- `mite har --sleep-time=0` now uses the recorded gaps. The value used to
-  stay a string and never matched 0.
-- `mite har` no longer drops the request that follows a collapsed
-  redirect.
-- `mite har` collapses 301, 303, 307 and 308 redirects like 302, since
-  the HTTP client follows them.
-
 ## 3.0.0
 
 ### Breaking changes
