@@ -1,8 +1,3 @@
-"""HTTP response status checks that raise ``MiteError`` on mismatch.
-
-Plain ``if``/``raise`` is used throughout so checks still run under ``python -O``.
-"""
-
 from collections.abc import Callable, Iterable
 
 from mite.exceptions import MiteError
@@ -57,7 +52,7 @@ def check_status_code(
     """Raise ``UnexpectedResponseCodeError`` unless ``resp.status_code`` matches exactly.
 
     ``expected`` is an int, or an iterable of ints for any-of matching.
-    ``on_failure(resp)`` is called before raising, e.g. for logging.
+    ``on_failure(resp)`` is called before raising, for example to log the response.
     """
     if isinstance(expected, int):
         matched = resp.status_code == expected
@@ -77,7 +72,7 @@ def check_status_code_in_groups(
 ) -> None:
     """Raise unless the status code's hundreds digit matches one of ``groups``.
 
-    Groups are representative codes, e.g. 200 for 2xx, 400 for 4xx.
+    Groups are representative codes, such as 200 for 2xx and 400 for 4xx.
     """
     if int(resp.status_code) // 100 not in {g // 100 for g in groups}:
         if on_failure is not None:

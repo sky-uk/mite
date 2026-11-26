@@ -3,7 +3,7 @@
 # Kept 9 requests to:
 #   shop.example (9)
 # Dropped 4 static assets and CORS preflights (--include-static keeps them).
-# Dropped 1 requests to hosts not in --host:
+# Dropped 1 request to hosts not in --host:
 #   analytics.example-ads.test (1)
 #
 # Values that looked like credentials or personal data were removed
@@ -12,8 +12,8 @@
 #   export MITE_CONF_password=...
 #   export MITE_CONF_x_api_token=...
 #   export MITE_CONF_authorization=...
-# Tokens the application issues during the journey (e.g. at login)
-# must be set the same way for now.
+# Tokens the application issues during the journey, for example at
+# login, must be set the same way for now.
 #
 # Run the journey once:
 #   mite journey test <module>:journey
@@ -35,7 +35,7 @@ from mite_http.checks import check_status_code
 TARGET_TPS = 1  # requests per second across all running journeys
 DURATION_S = 300
 
-# From the recording: one journey makes this many requests and takes at
+# One journey in the recording makes this many requests. It takes at
 # least this long because of the separations below.
 REQUESTS_PER_JOURNEY = 9
 SECONDS_PER_JOURNEY = 9.0

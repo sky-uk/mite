@@ -23,20 +23,23 @@
 
 ### Fixed
 
-- `har_to_mite` output now runs as-is: it imports checks from
-  `mite_http.checks` instead of a missing `.utils`, supports
-  PUT/DELETE/HEAD, replays recorded bodies byte-for-byte, escapes URLs and
-  headers, and drops `Content-Length` and HTTP/2 pseudo-headers. A recorded
-  304 now expects exactly 200 or 304.
-- `har_to_mite` paces requests with `ensure_fixed_separation` instead of
-  `sleep`. The recorded gap now applies after the request it belongs to
-  (it was one request late), keeps millisecond precision, and includes the
-  response time. `mite har --sleep-time=0` now uses the recorded gaps; the
-  value used to stay a string and never matched 0.
-- `har_to_mite` no longer drops the request that follows a collapsed
+- `mite har` output now runs without edits.
+  - It imports checks from `mite_http.checks` instead of a missing `.utils`.
+  - It supports PUT, DELETE and HEAD.
+  - It replays recorded bodies byte-for-byte.
+  - It escapes URLs and headers.
+  - It drops `Content-Length` and HTTP/2 pseudo-headers.
+  - A recorded 304 now expects exactly 200 or 304.
+- `mite har` paces requests with `ensure_fixed_separation` instead of
+  `sleep`. Each recorded gap now applies after its own request. Before,
+  it applied one request late. Gaps keep millisecond precision and include
+  the response time.
+- `mite har --sleep-time=0` now uses the recorded gaps. The value used to
+  stay a string and never matched 0.
+- `mite har` no longer drops the request that follows a collapsed
   redirect.
-- `har_to_mite` collapses 301/303/307/308 redirects like 302, since the
-  HTTP client follows them.
+- `mite har` collapses 301, 303, 307 and 308 redirects like 302, since
+  the HTTP client follows them.
 
 ## 3.0.0
 

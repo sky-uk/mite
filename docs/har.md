@@ -13,7 +13,7 @@ without writing Python. You record the journey, convert it with
 4. Right-click the request list and choose **Save all as HAR (sanitized)**.
 
 A HAR file holds everything the browser sent, including tokens and email
-addresses. Treat it like a password: don't commit it or share it.
+addresses. Don't commit or share it.
 
 ## 2. Convert
 
@@ -39,8 +39,8 @@ $ mite har journey.har my_journey.py --host=api.shop.example --host=www.shop.exa
 Wrote 30 requests to my_journey.py
 ```
 
-Everything else is dropped: analytics, consent banners, chat widgets and
-monitoring endpoints. The converter also drops static assets (images, CSS,
+The converter drops requests to all other hosts, such as analytics,
+consent banners, chat widgets and monitoring endpoints. The converter also drops static assets (images, CSS,
 JS, fonts) and CORS preflights. Add `--include-static` to keep the static
 assets.
 
@@ -67,10 +67,10 @@ Set them as environment variables. Any other way of supplying mite
 config works too (see {doc}`config`). A journey that runs without a key it
 needs stops with `Missing config 'x_api_token': set MITE_CONF_x_api_token`.
 
-Some tokens are issued by the application during the journey, for
-example at login. These must currently be supplied as config too.
+The application issues some tokens during the journey, for example at
+login. For now, set these as config too.
 
-Cookies are not copied from the recording. The browser session keeps the
+The converter does not copy cookies from the recording. The browser session keeps the
 cookies the server sets while the journey runs.
 
 ## 4. Run
@@ -133,5 +133,5 @@ example. A request looks like this:
 - Requests are grouped under the page they were recorded on.
 - Transaction names leave out the query string, so repeated calls
   aggregate in dashboards.
-- Request bodies are sent exactly as recorded, with config values
-  swapped in.
+- The journey sends each request body exactly as recorded, with config
+  values in place of the removed values.

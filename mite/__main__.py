@@ -90,7 +90,7 @@ Options:
     --recorder-dir=DIRECTORY                                Set the recorders output directory [default: recorder_data]
     --sleep-time=SLEEP                                      Seconds between request starts; 0 uses the recorded gaps [default: 1]
     --host=HOST                                             Host to keep when converting a HAR (repeatable, globs like *.example.com allowed)
-    --include-static                                        Keep images, CSS, JS and fonts when converting a HAR
+    --include-static                                        Keep static assets and CORS preflights when converting a HAR
     --logging-webhook=URL                                   URL of an HTTP server to log test runs to
     --message-processors=PROCESSORS                         Classes to connect to the message bus for local testing [default: mite.logoutput:HttpStatsOutput,mite.logoutput:MsgOutput]
     --prettify-timestamps                                   Reformat unix timestamps to human readable dates

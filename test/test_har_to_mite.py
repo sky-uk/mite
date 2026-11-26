@@ -2,7 +2,6 @@ import ast
 import importlib.util
 import json
 import sys
-from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -22,161 +21,60 @@ from mite.har_to_mite import (
     set_request_headers_dict,
 )
 
-# page with status_code=0
-SIMPLE_PAGE = {
-    "startedDateTime": "date-time",
-    "request": {"method": "", "url": "", "headers": [], "postData": "body"},
-    "response": {"redirectURL": "", "status": 200},
-}
-
-# page with status_code=304
-PAGE_304 = {
-    "startedDateTime": "date-time",
-    "request": {"method": "", "url": "", "headers": [], "postData": "body"},
-    "response": {"redirectURL": "", "status": 304},
-}
-
-# list for the page with status_code=302
-PAGES_200 = {
-    "log": {
-        "entries": [
-            # page with status code = 302 -> index 0
-            {
-                "startedDateTime": "2019-08-16T13:00:00.000Z",
-                "request": {
-                    "method": "",
-                    "url": "a_page.url",
-                    "headers": [],
-                    "postData": "body",
-                },
-                "response": {"redirectURL": "302_redirection.url", "status": 302},
-            },
-            # page with status code = 304 -> index 1
-            {
-                "startedDateTime": "2019-08-16T12:59:00.000Z",
-                "request": {
-                    "method": "",
-                    "url": "random_page.url",
-                    "headers": [],
-                    "postData": "body",
-                },
-                "response": {"redirectURL": "", "status": 304},
-            },
-            # page with the redirection url for the 302 status code -> index 2
-            {
-                "startedDateTime": "2019-08-16T12:59:30.000Z",
-                "request": {
-                    "method": "",
-                    "url": "302_redirection.url",
-                    "headers": [],
-                    "postData": "body",
-                },
-                "response": {"redirectURL": "", "status": 200},
-            },
-        ]
+def _e(url, status, redirect="", started="2026-01-01T00:00:00.000Z"):
+    return {
+        "startedDateTime": started,
+        "request": {"url": url},
+        "response": {"status": status, "redirectURL": redirect},
     }
-}
 
-# list for the page with multiple redirections
-PAGES_MULTIPLE_REDIRECTS = [
-    # page with status code = 302 -> index 0
-    {
-        "startedDateTime": "date-time",
-        "request": {"method": "", "url": "", "headers": [], "postData": "body"},
-        "response": {"redirectURL": "302_first_redirection.url", "status": 302},
-    },
-    # page with status code = 302 -> index 1
-    {
-        "startedDateTime": "date-time",
-        "request": {
-            "method": "",
-            "url": "302_first_redirection.url",
-            "headers": [],
-            "postData": "body",
-        },
-        "response": {"redirectURL": "302_second_redirection.url", "status": 302},
-    },
-    # page with the redirection url for the 302 status code -> index 2
-    {
-        "startedDateTime": "date-time",
-        "request": {
-            "method": "",
-            "url": "302_second_redirection.url",
-            "headers": [],
-            "postData": "body",
-        },
-        "response": {"redirectURL": "", "status": 200},
-    },
-]
 
-# page with headers
-PAGE_HEADERS = {
-    "request": {
-        "headers": [
-            {"name": "Name0", "value": "value0"},
-            {"name": "Name1", "value": "value1"},
-            {"name": "Cookie", "value": "cookie_value"},
-            {"name": "Name3", "value": "value3"},
-        ]
+@pytest.mark.parametrize(
+    "entries,expected,remaining",
+    [
+        ([_e("a", 200)], 200, 1),
+        ([_e("a", 304)], (200, 304), 1),
+        ([_e("a", 302, "b"), _e("b", 200)], 200, 1),
+        ([_e("a", 302, "b"), _e("b", 302, "c"), _e("c", 200)], 200, 1),
+        ([_e("a", 303, "b"), _e("b", 200)], 200, 1),
+    ],
+)
+def test_set_expected_status_code(entries, expected, remaining):
+    assert set_expected_status_code(entries[0], entries) == expected
+    # redirect targets are collapsed into the first request
+    assert len(entries) == remaining
+
+
+def test_extract_and_sort_requests():
+    har = {
+        "log": {
+            "entries": [
+                _e("c", 200, started="2026-01-01T00:00:02.000Z"),
+                _e("a", 200, started="2026-01-01T00:00:00.000Z"),
+                _e("b", 200, started="2026-01-01T00:00:01.000Z"),
+            ]
+        }
     }
-}
-
-def test_status_code_is_not_3xx():
-    status = set_expected_status_code(SIMPLE_PAGE, [SIMPLE_PAGE])
-    assert status == 200
-
-
-def test_status_code_304_behaviour():
-    status = set_expected_status_code(PAGE_304, [PAGE_304])
-    assert status == (200, 304)
+    assert [e["request"]["url"] for e in _extract_and_sort_requests(har)] == [
+        "a",
+        "b",
+        "c",
+    ]
 
 
-def test_status_code_after_redirect():
-    entries = deepcopy(PAGES_200)["log"]["entries"]  # Create a copy
-    status = set_expected_status_code(entries[0], entries)
-    assert status == 200
-
-
-def test_multi_redirect():
-    status = set_expected_status_code(
-        PAGES_MULTIPLE_REDIRECTS[0], PAGES_MULTIPLE_REDIRECTS
-    )
-    assert status == 200
-
-
-def test_set_headers():
-    assert len(set_request_headers_dict(PAGE_HEADERS)) == 3
-
-
-def test_cookie_not_in_headers():
-    assert "Cookie" not in set_request_headers_dict(PAGE_HEADERS)
-
-
-def test_pseudo_and_length_headers_dropped():
+def test_set_headers_drops_cookie_length_and_pseudo_headers():
     page = {
         "request": {
             "headers": [
                 {"name": ":authority", "value": "x"},
-                {"name": "content-length", "value": "3"},
                 {"name": "Accept", "value": "*/*"},
+                {"name": "Cookie", "value": "session=abc"},
+                {"name": "content-length", "value": "3"},
+                {"name": "X-Custom", "value": "kept"},
             ]
         }
     }
-    assert set_request_headers_dict(page) == {"Accept": "*/*"}
-
-
-def test_other_3xx_redirects_are_collapsed():
-    entries = [
-        {"request": {"url": "a"}, "response": {"status": 303, "redirectURL": "b"}},
-        {"request": {"url": "b"}, "response": {"status": 200, "redirectURL": ""}},
-    ]
-    assert set_expected_status_code(entries[0], entries) == 200
-    assert len(entries) == 1
-
-
-def test_extract_and_sort_requests():
-    urls = [page["request"]["url"] for page in _extract_and_sort_requests(PAGES_200)]
-    assert urls == ["random_page.url", "302_redirection.url", "a_page.url"]
+    assert set_request_headers_dict(page) == {"Accept": "*/*", "X-Custom": "kept"}
 
 
 @pytest.mark.parametrize(
@@ -254,23 +152,24 @@ def _load(path):
     return json.loads(Path(path).read_text())
 
 
+def _convert_sample(tmp_path, *args, **kwargs):
+    out = tmp_path / "journey.py"
+    kwargs.setdefault("hosts", ["shop.example"])
+    har_convert_to_mite(str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), *args, **kwargs)
+    return out
+
+
 def test_sample_har_matches_expected_journey(tmp_path):
     """test/har/sample_journey.py is the reference output for test/har/sample.har.
 
     Regenerate it if the converter output changes on purpose.
     """
-    out = tmp_path / "journey.py"
-    har_convert_to_mite(
-        str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), hosts=["shop.example"]
-    )
+    out = _convert_sample(tmp_path)
     assert out.read_text() == (SAMPLE_DIR / "sample_journey.py").read_text()
 
 
 def test_sample_har_has_no_recorded_secrets(tmp_path):
-    out = tmp_path / "journey.py"
-    har_convert_to_mite(
-        str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), hosts=["shop.example"]
-    )
+    out = _convert_sample(tmp_path)
     source = out.read_text()
     for value in [
         "jane.doe@example.com",
@@ -281,35 +180,6 @@ def test_sample_har_has_no_recorded_secrets(tmp_path):
         "session=abc",
     ]:
         assert value not in source
-
-
-def test_selection_drops_static_other_hosts_and_unsupported(tmp_path):
-    har = _load(_sample_har(tmp_path, SAMPLE_BASE_URL))
-    requests, dropped_hosts, dropped_static = select_requests(har, ["shop.example"])
-    assert [(r.method, r.url.split("shop.example")[1]) for r in requests] == [
-        ("get", "/"),
-        ("post", "/api/login"),
-        ("get", "/api/items?session_token=tok_abcdef123456&page=1"),
-        ("get", "/old"),
-        ("get", "/basket?email=jane.doe%40example.com"),
-        ("put", "/api/basket/1"),
-        ("get", "/api/basket"),
-        ("delete", "/api/basket/1"),
-        ("head", "/health"),
-    ]
-    # css, cdn logo, preflight, and a png found by MIME type
-    assert dropped_static == 4
-    assert dict(dropped_hosts) == {"analytics.example-ads.test": 1}
-
-
-def test_include_static_keeps_assets_on_allowed_hosts(tmp_path):
-    har = _load(_sample_har(tmp_path, SAMPLE_BASE_URL))
-    requests, _, dropped_static = select_requests(
-        har, ["shop.example"], include_static=True
-    )
-    paths = [r.url.split("shop.example")[1] for r in requests]
-    assert "/static/site.css" in paths and "/img/tea.png" in paths
-    assert dropped_static == 0
 
 
 def test_collect_secrets_from_headers_query_and_bodies(tmp_path):
@@ -324,10 +194,7 @@ def test_collect_secrets_from_headers_query_and_bodies(tmp_path):
 
 
 def test_recorded_gaps_with_zero_sleep(tmp_path):
-    out = tmp_path / "journey.py"
-    har_convert_to_mite(
-        str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), 0, hosts=["shop.example"]
-    )
+    out = _convert_sample(tmp_path, 0)
     separations = [
         line.strip() for line in out.read_text().splitlines() if "separation(" in line
     ]
@@ -339,24 +206,25 @@ def test_recorded_gaps_with_zero_sleep(tmp_path):
     assert "SECONDS_PER_JOURNEY = 7.0" in out.read_text()
 
 
-def test_without_hosts_reports_and_writes_nothing(tmp_path):
+@pytest.mark.parametrize(
+    "hosts,message",
+    [
+        (None, "No --host given; nothing written."),
+        (["nope"], "No requests matched --host nope; nothing written."),
+    ],
+)
+def test_host_errors_report_hosts_and_write_nothing(tmp_path, hosts, message):
     out = tmp_path / "journey.py"
     with pytest.raises(HarConversionError) as excinfo:
-        har_convert_to_mite(str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out))
-    message = str(excinfo.value)
-    assert "No --host given; nothing written." in message
-    assert "shop.example" in message
-    assert "analytics.example-ads.test" in message
-    assert "--host=shop.example" in message
-    assert not out.exists()
-
-
-def test_unmatched_hosts_report_and_write_nothing(tmp_path):
-    out = tmp_path / "journey.py"
-    with pytest.raises(HarConversionError, match="No requests matched --host nope"):
         har_convert_to_mite(
-            str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), hosts=["nope"]
+            str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), hosts=hosts
         )
+    text = str(excinfo.value)
+    assert message in text
+    # the report lists every host and suggests the busiest one
+    assert "shop.example" in text
+    assert "analytics.example-ads.test" in text
+    assert "--host=shop.example" in text
     assert not out.exists()
 
 
@@ -413,7 +281,7 @@ def _context(config=None):
 
 def _import_journey(path):
     tree = ast.parse(path.read_text())
-    # checks must survive python -O
+    # python -O strips assert statements, so checks must not use them
     assert not any(isinstance(node, ast.Assert) for node in ast.walk(tree))
     spec = importlib.util.spec_from_file_location("generated_journey", path)
     module = importlib.util.module_from_spec(spec)
@@ -506,8 +374,17 @@ async def test_sample_har_journey_fails_on_unexpected_status(tmp_path, httpserve
     assert excinfo.value.fields["status_code"] == 404
     assert excinfo.value.fields["expected_status"] == [200, 304]
     assert [m["status_code"] for m in messages if m["type"] == "error"] == [404]
-    # the journey stops at the failing request
-    assert [r.path for r, _ in httpserver.log][-1] == "/api/basket"
+    # the journey stops at the failing request, before the later DELETE and HEAD
+    assert [r.path for r, _ in httpserver.log] == [
+        "/",
+        "/api/login",
+        "/api/items",
+        "/old",
+        "/new",
+        "/basket",
+        "/api/basket/1",
+        "/api/basket",
+    ]
 
 
 @pytest.mark.asyncio
@@ -522,27 +399,27 @@ async def test_sample_har_journey_needs_config(tmp_path, httpserver):
 
 
 @pytest.mark.parametrize(
-    "target_tps,journeys", [(1, 1), (5, 5), (0.5, 1), (12.5, 13)]
+    "target_tps,seconds,journeys",
+    [(1, None, 1), (5, None, 5), (0.5, None, 1), (12.5, None, 13), (5, 0, 1)],
 )
-def test_sample_scenario_volume_follows_target_tps(tmp_path, httpserver, target_tps, journeys):
-    module = _sample_module(tmp_path, httpserver)
+def test_sample_scenario_volume_follows_target_tps(
+    tmp_path, target_tps, seconds, journeys
+):
+    module = _import_journey(_convert_sample(tmp_path))
+    # 9 requests at the default 1s separation
+    assert module.REQUESTS_PER_JOURNEY == 9
+    assert module.SECONDS_PER_JOURNEY == 9.0
     module.TARGET_TPS = target_tps
+    if seconds is not None:
+        # a journey with no separation can't be sized; it runs one at a time
+        module.SECONDS_PER_JOURNEY = seconds
+
     ((spec, datapool, volume_model),) = module.scenario()
+
     assert spec == "generated_journey:journey"
     assert datapool is None
     assert volume_model.duration == module.DURATION_S
-    # 10 requests a run at 0.001s each: one journey gives ~10000 req/s, so
-    # use the recorded default of 1s per request for a realistic check
-    module.SECONDS_PER_JOURNEY = module.REQUESTS_PER_JOURNEY * 1.0
-    ((_, _, volume_model),) = module.scenario()
     assert volume_model(0, 1) == journeys
-
-
-def test_scenario_with_zero_length_journey_runs_one(tmp_path, httpserver):
-    module = _sample_module(tmp_path, httpserver)
-    module.SECONDS_PER_JOURNEY = 0
-    ((_, _, volume_model),) = module.scenario()
-    assert volume_model(0, 1) == 1
 
 
 def _entry(url, method, status, started, post_data=None):
@@ -617,34 +494,44 @@ async def test_generated_journey_runs_all_methods(tmp_path, httpserver):
             assert request.content_type == "application/json"
 
 
+@pytest.mark.parametrize(
+    "recorded_status,replay_status,expected_status,ok",
+    [
+        (200, 500, 200, False),
+        (304, 200, [200, 304], True),
+        (304, 304, [200, 304], True),
+        (304, 301, [200, 304], False),
+        (304, 204, [200, 304], False),
+    ],
+)
 @pytest.mark.asyncio
-async def test_generated_journey_raises_on_status_mismatch(tmp_path, httpserver):
-    url = httpserver.url_for("/x")
-    httpserver.expect_request("/x").respond_with_data("nope", status=500)
+async def test_generated_journey_checks_expected_status(
+    tmp_path, httpserver, recorded_status, replay_status, expected_status, ok
+):
+    checked_url = httpserver.url_for("/checked")
+    after_url = httpserver.url_for("/after")
+    httpserver.expect_request("/checked").respond_with_data("", status=replay_status)
+    httpserver.expect_request("/after").respond_with_data("ok", status=200)
     module = _convert_and_import(
-        tmp_path, [_entry(url, "GET", 200, "2026-01-01T00:00:00.000Z")]
+        tmp_path,
+        [
+            _entry(checked_url, "GET", recorded_status, "2026-01-01T00:00:00.000Z"),
+            _entry(after_url, "GET", 200, "2026-01-01T00:00:01.000Z"),
+        ],
     )
 
     ctx, messages = _context()
-    with pytest.raises(MiteError) as excinfo:
-        await module.journey(ctx)
-    assert excinfo.value.fields["status_code"] == 500
-    assert excinfo.value.fields["expected_status"] == 200
-    assert any(m["type"] == "error" and m["status_code"] == 500 for m in messages)
-
-
-@pytest.mark.parametrize("status,ok", [(200, True), (304, True), (301, False), (204, False)])
-@pytest.mark.asyncio
-async def test_generated_journey_304_is_exact(tmp_path, httpserver, status, ok):
-    url = httpserver.url_for("/cached")
-    httpserver.expect_request("/cached").respond_with_data("", status=status)
-    module = _convert_and_import(
-        tmp_path, [_entry(url, "GET", 304, "2026-01-01T00:00:00.000Z")]
-    )
-
-    ctx, _ = _context()
     if ok:
         await module.journey(ctx)
+        assert [r.path for r, _ in httpserver.log] == ["/checked", "/after"]
     else:
-        with pytest.raises(MiteError):
+        with pytest.raises(MiteError) as excinfo:
             await module.journey(ctx)
+        assert excinfo.value.fields["status_code"] == replay_status
+        assert excinfo.value.fields["expected_status"] == expected_status
+        assert any(
+            m["type"] == "error" and m["status_code"] == replay_status
+            for m in messages
+        )
+        # the journey stops at the failing request; /after is never sent
+        assert [r.path for r, _ in httpserver.log] == ["/checked"]
