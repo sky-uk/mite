@@ -118,10 +118,10 @@ mite_kafka = "mite_kafka.stats:_KAFKA_STATS"
 mite_playwright = "mite_playwright.stats:STATS"
 
 [project.entry-points.mite_stats_outputs]
-influxdb1 = "mite.web.influxdb:influxdb_output"
-influxdb2 = "mite.web.influxdb:influxdb_output"
-influxdb3 = "mite.web.influxdb:influxdb_output"
-prometheus = "mite.web:prometheus_output"
+influxdb1 = "mite.stats_outputs.influxdb:influxdb_output"
+influxdb2 = "mite.stats_outputs.influxdb:influxdb_output"
+influxdb3 = "mite.stats_outputs.influxdb:influxdb_output"
+prometheus = "mite.stats_outputs.prometheus:prometheus_output"
 
 
 # Hatch configuration ##############################################

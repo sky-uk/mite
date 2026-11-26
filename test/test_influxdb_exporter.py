@@ -2,7 +2,7 @@ import unittest.mock as mock
 
 import pytest
 
-from mite.web.influxdb import InfluxMetrics, InfluxPoint, influxdb_init_points
+from mite.stats_outputs.influxdb import InfluxMetrics, InfluxPoint, influxdb_init_points
 
 TAGS = {"bar": "one", "baz": "two"}
 
@@ -29,7 +29,7 @@ def _histogram():
 
 def _points_per_send(*dumps, include_buckets=False):
     """The points each send() produces, without writing them anywhere."""
-    with mock.patch("mite.web.influxdb.time_ns", return_value=1), mock.patch.object(
+    with mock.patch("mite.stats_outputs.influxdb.time_ns", return_value=1), mock.patch.object(
         InfluxMetrics, "MIN_FLUSH_INTERVAL", 1e9
     ):
         metrics = InfluxMetrics(mock.Mock(), include_buckets=include_buckets)
@@ -82,7 +82,7 @@ class TestHistogram:
 
 def test_unknown_stat_type_is_skipped_and_logged_once():
     unknown = {"type": "Summary", "name": "odd", "labels": (), "metrics": {}}
-    with mock.patch("mite.web.totals.logger.error") as logging_error:
+    with mock.patch("mite.stats_outputs.cumulative.logger.error") as logging_error:
         first, second = _points_per_send([unknown, _counter(1)], [unknown, _counter(1)])
     assert [p.measurement for p in first + second] == ["foo", "foo"]
     logging_error.assert_called_once()

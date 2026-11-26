@@ -11,7 +11,7 @@ def influxdb_init(opts):
     # Deferred, a module-level import here
     # would make every mite process pay the import
     # cost just to register this one subcommand.
-    from mite.web.influxdb import InfluxdbWriter, influxdb_backend, influxdb_init_points
+    from mite.stats_outputs.influxdb import InfluxdbWriter, influxdb_backend, influxdb_init_points
 
     all_stats = load_stats_entry_points()
     # An empty dump per stat gives each one's type and labels, so the points

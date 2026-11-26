@@ -116,7 +116,7 @@ digraph influxdb_architecture {
         J -> S [label="raw messages"];
     }
 
-    IM [label="InfluxMetrics\nmite/web/influxdb.py"];
+    IM [label="InfluxMetrics\nmite/stats_outputs/influxdb.py"];
     W  [label="InfluxdbWriter"];
     B  [label="influxdb_backend(url)", shape=diamond];
     B1 [label="_InfluxDBClientBackend"];
@@ -139,20 +139,21 @@ digraph influxdb_architecture {
 
 Files:
 
-- [mite/web/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/web/influxdb.py)
+- [mite/stats_outputs/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/stats_outputs/influxdb.py)
   — point conversion, writer and backend adapters
-- [mite/web/totals.py](https://github.com/sky-uk/mite/blob/master/mite/web/totals.py)
-  — running totals of the aggregator's dumps, shared with the Prometheus output
-- [mite/web/\_\_init\_\_.py](https://github.com/sky-uk/mite/blob/master/mite/web/__init__.py)
-  and [mite/web/prometheus.py](https://github.com/sky-uk/mite/blob/master/mite/web/prometheus.py)
-  — the `prometheus` stats output (not covered here)
+- [mite/stats_outputs/cumulative.py](https://github.com/sky-uk/mite/blob/master/mite/stats_outputs/cumulative.py)
+  — cumulative values of the aggregator's dumps, shared with the Prometheus output
+- [mite/stats_outputs/\_\_init\_\_.py](https://github.com/sky-uk/mite/blob/master/mite/stats_outputs/__init__.py)
+  — `--stats-output` URL parsing and loading
+- [mite/stats_outputs/prometheus.py](https://github.com/sky-uk/mite/blob/master/mite/stats_outputs/prometheus.py)
+  — the `prometheus://` stats output (not covered here)
 
 ### Layers
 
 1. **Points** (`_counter_points`, `_gauge_points`, `_histogram_points`)
    Each aggregator dump holds what changed since the previous dump, and
-   `RunningTotals` (`mite/web/totals.py`, also used by the Prometheus output)
-   adds it to the totals since the start of the run. Each stat in a dump
+   `CumulativeStats` (`mite/stats_outputs/cumulative.py`, also used by the
+   Prometheus output) adds it to the values since the start of the run. Each stat in a dump
    becomes points with both: the change (`value`, `count`, `sum`, `avg`, and
    percentiles from the change's bucket counts) and the total
    (`value_cumulative`, `count_cumulative`, ...). Only label combinations in the
@@ -247,7 +248,7 @@ digraph influxdb_topology {
 | Class | Role |
 |---|---|
 | `InfluxPoint` | Plain dataclass: `measurement`, `tags`, `fields`, `time_ns` |
-| `RunningTotals` (`mite/web/totals.py`) | Totals of every dump so far, shared with the Prometheus output |
+| `CumulativeStats` (`mite/stats_outputs/cumulative.py`) | Cumulative values of every dump so far, shared with the Prometheus output |
 | `InfluxdbWriter` | Async, single-in-flight-write transport to a configured backend |
 | `InfluxMetrics` | `InfluxdbWriter` subclass; buffers/throttles/flushes points from stats dumps |
 | `_InfluxBackend` / `_InfluxDBClientBackend` / `_InfluxDBClient3Backend` | Version-specific client adapters, built by `influxdb_backend(url)` |

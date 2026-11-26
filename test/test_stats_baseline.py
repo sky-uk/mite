@@ -18,8 +18,8 @@ import pytest
 
 from mite.cli import influxdb as cli_influxdb
 from mite.stats import Aggregator, load_stats_entry_points
-from mite.web import influxdb
-from mite.web.prometheus import PrometheusMetrics
+from mite.stats_outputs import influxdb
+from mite.stats_outputs.prometheus import PrometheusMetrics
 
 EXPECTED_FILE = Path(__file__).parent / "data" / "stats_expected_output.txt"
 

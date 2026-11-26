@@ -8,7 +8,7 @@ from typing import cast
 from concurrent.futures import ThreadPoolExecutor
 from threading import BoundedSemaphore
 
-from .totals import CounterTotals, GaugeTotals, HistogramTotals, RunningTotals
+from .cumulative import CumulativeCounter, CumulativeGauge, CumulativeHistogram, CumulativeStats
 
 
 logger = logging.getLogger(__name__)
@@ -237,23 +237,23 @@ def _percentiles(bins, bin_counts, total):
 # that changes type), so counters are always ints and gauges always floats.
 
 
-def _counter_points(totals, summary, tns, include_buckets):
+def _counter_points(cumulative, summary, tns, include_buckets):
     return [
         InfluxPoint(
-            measurement=totals.name,
-            tags=dict(zip(totals.labels, key)),
-            fields={"value": int(value), "value_cumulative": int(totals.values[key])},
+            measurement=cumulative.name,
+            tags=dict(zip(cumulative.labels, key)),
+            fields={"value": int(value), "value_cumulative": int(cumulative.values[key])},
             time_ns=tns,
         )
         for key, value in summary["metrics"].items()
     ]
 
 
-def _gauge_points(totals, summary, tns, include_buckets):
+def _gauge_points(cumulative, summary, tns, include_buckets):
     return [
         InfluxPoint(
-            measurement=totals.name,
-            tags=dict(zip(totals.labels, key)),
+            measurement=cumulative.name,
+            tags=dict(zip(cumulative.labels, key)),
             fields={"value": float(value)},
             time_ns=tns,
         )
@@ -269,36 +269,36 @@ def _histogram_fields(bins, bin_counts, total, total_sum, suffix=""):
     return fields
 
 
-def _histogram_points(totals, summary, tns, include_buckets):
-    no_counts = [0] * len(totals.bins)
+def _histogram_points(cumulative, summary, tns, include_buckets):
+    no_counts = [0] * len(cumulative.bins)
     keys = set(summary["total_counts"]) | set(summary["sums"]) | set(summary["bin_counts"])
     points = []
     for key in sorted(keys):
-        tags = dict(zip(totals.labels, key))
-        bin_counts = totals.bin_counts.get(key, no_counts)
-        total = totals.total_counts.get(key, 0)
+        tags = dict(zip(cumulative.labels, key))
+        bin_counts = cumulative.bin_counts.get(key, no_counts)
+        total = cumulative.total_counts.get(key, 0)
         fields = _histogram_fields(
-            totals.bins,
+            cumulative.bins,
             summary["bin_counts"].get(key, no_counts),
             summary["total_counts"].get(key, 0),
             summary["sums"].get(key, 0),
         )
         fields.update(
-            _histogram_fields(totals.bins, bin_counts, total, totals.sums.get(key, 0), "_cumulative")
+            _histogram_fields(cumulative.bins, bin_counts, total, cumulative.sums.get(key, 0), "_cumulative")
         )
         points.append(
-            InfluxPoint(measurement=f"{totals.name}_summary", tags=tags, fields=fields, time_ns=tns)
+            InfluxPoint(measurement=f"{cumulative.name}_summary", tags=tags, fields=fields, time_ns=tns)
         )
         if include_buckets:
-            for bin_label, bin_count in zip(totals.bins, bin_counts):
+            for bin_label, bin_count in zip(cumulative.bins, bin_counts):
                 points.append(InfluxPoint(
-                    measurement=f"{totals.name}_bucket",
+                    measurement=f"{cumulative.name}_bucket",
                     tags={**tags, "le": str(bin_label)},
                     fields={"count": int(bin_count)},
                     time_ns=tns,
                 ))
             points.append(InfluxPoint(
-                measurement=f"{totals.name}_bucket",
+                measurement=f"{cumulative.name}_bucket",
                 tags={**tags, "le": "+Inf"},
                 fields={"count": int(total)},
                 time_ns=tns,
@@ -307,16 +307,16 @@ def _histogram_points(totals, summary, tns, include_buckets):
 
 
 _POINT_BUILDERS = {
-    CounterTotals: _counter_points,
-    GaugeTotals: _gauge_points,
-    HistogramTotals: _histogram_points,
+    CumulativeCounter: _counter_points,
+    CumulativeGauge: _gauge_points,
+    CumulativeHistogram: _histogram_points,
 }
 
 
 def _points(updated, tns, include_buckets=False):
     points = []
-    for totals, summary in updated:
-        points.extend(_POINT_BUILDERS[type(totals)](totals, summary, tns, include_buckets))
+    for cumulative, summary in updated:
+        points.extend(_POINT_BUILDERS[type(cumulative)](cumulative, summary, tns, include_buckets))
     return points
 
 
@@ -337,7 +337,7 @@ def influxdb_init_points(dumps, tns):
             })
         else:
             zero_dump.append({**summary, "metrics": {key: 0}})
-    return _points(RunningTotals().update(zero_dump), tns)
+    return _points(CumulativeStats().update(zero_dump), tns)
 
 
 class InfluxMetrics(InfluxdbWriter):
@@ -354,14 +354,14 @@ class InfluxMetrics(InfluxdbWriter):
     def __init__(self, backend, include_buckets=False):
         super().__init__(backend)
         self.include_buckets = include_buckets
-        self.totals = RunningTotals()
+        self.cumulative = CumulativeStats()
         self._pending_points = []
         self._last_flush_time = time.monotonic()
 
     def send(self, message):
         logger.debug("dump received by influxdb metrics: %s", message)
         self._pending_points.extend(
-            _points(self.totals.update(message), time_ns(), self.include_buckets)
+            _points(self.cumulative.update(message), time_ns(), self.include_buckets)
         )
 
         if len(self._pending_points) > self.MAX_PENDING_POINTS:

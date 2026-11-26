@@ -1,8 +1,10 @@
-"""Running totals of aggregator dumps, shared by the stats outputs.
+"""Cumulative values of aggregator dumps, shared by the stats outputs.
 
 An :class:`mite.stats.Aggregator` dump holds what changed since the previous
-dump. Prometheus reports totals since the start of the run, and InfluxDB
-writes both the change and the total, so both build on :class:`RunningTotals`.
+dump. Prometheus reports values since the start of the run, and InfluxDB writes
+both the change and the cumulative value, so both build on
+:class:`CumulativeStats`: counter and histogram values are summed across dumps,
+and gauges keep their latest value.
 """
 
 import logging
@@ -11,7 +13,7 @@ import threading
 logger = logging.getLogger(__name__)
 
 
-class CounterTotals:
+class CumulativeCounter:
     def __init__(self, summary):
         self.name = summary["name"]
         self.labels = summary["labels"]
@@ -22,12 +24,12 @@ class CounterTotals:
             self.values[key] = self.values.get(key, 0) + value
 
 
-class GaugeTotals(CounterTotals):
+class CumulativeGauge(CumulativeCounter):
     def update(self, summary):
         self.values.update(summary["metrics"])
 
 
-class HistogramTotals:
+class CumulativeHistogram:
     def __init__(self, summary):
         self.name = summary["name"]
         self.labels = summary["labels"]
@@ -42,22 +44,22 @@ class HistogramTotals:
         for key, value in summary["sums"].items():
             self.sums[key] = self.sums.get(key, 0) + value
         for key, counts in summary["bin_counts"].items():
-            totals = self.bin_counts.setdefault(key, [0] * len(self.bins))
+            bin_counts = self.bin_counts.setdefault(key, [0] * len(self.bins))
             for i, count in enumerate(counts):
-                totals[i] += count
+                bin_counts[i] += count
 
 
-TOTALS_TYPES = {
-    "Counter": CounterTotals,
-    "Gauge": GaugeTotals,
-    "Histogram": HistogramTotals,
+CUMULATIVE_TYPES = {
+    "Counter": CumulativeCounter,
+    "Gauge": CumulativeGauge,
+    "Histogram": CumulativeHistogram,
 }
 
 
-class RunningTotals:
-    """Totals per stat across every dump given to :meth:`update`.
+class CumulativeStats:
+    """Cumulative values per stat across every dump given to :meth:`update`.
 
-    Hold :attr:`lock` while reading the totals from another thread.
+    Hold :attr:`lock` while reading the values from another thread.
     """
 
     def __init__(self):
@@ -66,22 +68,22 @@ class RunningTotals:
         self._skipped = set()
 
     def update(self, dump):
-        """Add a dump to the totals. Returns a ``(totals, summary)`` pair for
-        each stat in the dump, so outputs can use both the change and the
-        total. Stats with an unknown ``"type"`` are skipped, with an error
+        """Add a dump to the cumulative values. Returns a ``(cumulative,
+        summary)`` pair for each stat in the dump, so outputs can use both the
+        cumulative value and the change. Stats with an unknown ``"type"`` are skipped, with an error
         logged once per stat."""
         updated = []
         with self.lock:
             for summary in dump:
-                totals = self.stats.get(summary["name"])
-                if totals is None:
-                    totals_type = TOTALS_TYPES.get(summary["type"])
-                    if totals_type is None:
+                cumulative = self.stats.get(summary["name"])
+                if cumulative is None:
+                    cumulative_type = CUMULATIVE_TYPES.get(summary["type"])
+                    if cumulative_type is None:
                         self._skip(summary)
                         continue
-                    totals = self.stats[summary["name"]] = totals_type(summary)
-                totals.update(summary)
-                updated.append((totals, summary))
+                    cumulative = self.stats[summary["name"]] = cumulative_type(summary)
+                cumulative.update(summary)
+                updated.append((cumulative, summary))
         return updated
 
     def _skip(self, summary):
@@ -91,5 +93,5 @@ class RunningTotals:
                 "Skipping stat %s: unknown type %r; expected one of %s",
                 summary["name"],
                 summary["type"],
-                ", ".join(TOTALS_TYPES),
+                ", ".join(CUMULATIVE_TYPES),
             )

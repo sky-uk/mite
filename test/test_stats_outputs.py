@@ -4,7 +4,8 @@ import pytest
 
 from mite.stats import Aggregator
 from mite.stats_outputs import OutputURL, StatsOutputError, load_stats_outputs
-from mite.web import influxdb, prometheus_output
+from mite.stats_outputs import influxdb
+from mite.stats_outputs.prometheus import prometheus_output
 
 
 class _EntryPoint:
@@ -183,7 +184,7 @@ class TestPrometheusOutput:
          ("prometheus://h:0", "h", 0), ("prometheus://:9400", "127.0.0.1", 9400)],
     )
     def test_serves_on_the_url_address(self, text, host, port):
-        with mock.patch("mite.web.threading.Thread") as thread:
+        with mock.patch("mite.stats_outputs.prometheus.threading.Thread") as thread:
             prometheus_output(OutputURL.parse(text), {})
         assert thread.call_args.kwargs["kwargs"] == {"host": host, "port": port}
         thread.return_value.start.assert_called_once()

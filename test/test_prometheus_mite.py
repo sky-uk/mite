@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from mite.web.prometheus import PrometheusMetrics
+from mite.stats_outputs.prometheus import PrometheusMetrics
 
 
 def _counter(value, labels=("one", "two")):
@@ -114,9 +114,9 @@ def test_each_prometheus_output_has_its_own_totals():
     from unittest import mock
 
     from mite.stats_outputs import OutputURL
-    from mite.web import prometheus_output
+    from mite.stats_outputs.prometheus import prometheus_output
 
-    with mock.patch("mite.web.threading.Thread"):
+    with mock.patch("mite.stats_outputs.prometheus.threading.Thread"):
         first = prometheus_output(OutputURL.parse("prometheus://:9301"), {})
         second = prometheus_output(OutputURL.parse("prometheus://:9302"), {})
     first.send([_counter(1)])

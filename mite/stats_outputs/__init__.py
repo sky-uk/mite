@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Tuple
 from urllib.parse import parse_qsl, urlsplit
 
-from .stats import close_senders
+from ..stats import close_senders
 
 logger = logging.getLogger(__name__)
 

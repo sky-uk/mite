@@ -26,8 +26,8 @@ def test_influxdb_init_success():
     with patch(
         "mite.cli.influxdb.load_stats_entry_points", return_value=[fake_stat]
     ), patch(
-        "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
-    ) as writer_cls, patch("mite.web.influxdb.influxdb_backend") as backend:
+        "mite.stats_outputs.influxdb.InfluxdbWriter", return_value=writer_instance
+    ) as writer_cls, patch("mite.stats_outputs.influxdb.influxdb_backend") as backend:
         exit_code = influxdb_init({"URL": ["influxdb3://h/db"]})
 
     assert exit_code == 0
@@ -49,8 +49,8 @@ def test_influxdb_init_busy_writer_sets_exit_code():
 
     with patch(
         "mite.cli.influxdb.load_stats_entry_points", return_value=[fake_stat]
-    ), patch("mite.web.influxdb.InfluxdbWriter", return_value=writer_instance), patch(
-        "mite.web.influxdb.influxdb_backend"
+    ), patch("mite.stats_outputs.influxdb.InfluxdbWriter", return_value=writer_instance), patch(
+        "mite.stats_outputs.influxdb.influxdb_backend"
     ):
         exit_code = influxdb_init({"URL": ["influxdb3://h/db"]})
 
@@ -69,8 +69,8 @@ def test_influxdb_init_writes_to_each_url():
         "mite.cli.influxdb.load_stats_entry_points",
         return_value=[_patched_stat("Counter")],
     ), patch(
-        "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
-    ), patch("mite.web.influxdb.influxdb_backend") as backend:
+        "mite.stats_outputs.influxdb.InfluxdbWriter", return_value=writer_instance
+    ), patch("mite.stats_outputs.influxdb.influxdb_backend") as backend:
         exit_code = influxdb_init({"URL": urls})
 
     assert exit_code == 0
@@ -95,8 +95,8 @@ def test_influxdb_init_includes_custom_stat_types():
     stat = MaxGauge("mite_peak", lambda msg: True, extractor(["test"]))
 
     with patch("mite.cli.influxdb.load_stats_entry_points", return_value=[stat]), patch(
-        "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
-    ), patch("mite.web.influxdb.influxdb_backend"):
+        "mite.stats_outputs.influxdb.InfluxdbWriter", return_value=writer_instance
+    ), patch("mite.stats_outputs.influxdb.influxdb_backend"):
         assert influxdb_init({"URL": ["influxdb3://h/db"]}) == 0
 
     (point,) = writer_instance.write_points.call_args[0][0]
