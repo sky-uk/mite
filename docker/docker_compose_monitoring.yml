@@ -4,7 +4,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./prometheus/prometheus_config_template.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus/prometheus_config_template.yml:/etc/prometheus/prometheus.yml
       # - /var/prometheus:/prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml",
               # "--storage.tsdb.path=/prometheus",
@@ -13,8 +13,8 @@ services:
               "--storage.tsdb.retention.size=10GB"]
   grafana:
     build:
-      context: .
-      dockerfile: ./grafana/Dockerfile
+      context: ..
+      dockerfile: docker/grafana.Dockerfile
     ports:
       - 3000:3000
     depends_on:
