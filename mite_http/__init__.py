@@ -6,12 +6,7 @@ from functools import wraps
 
 import httpperf
 
-from .checks import (
-    UnexpectedResponseCodeError,
-    check_status_code,
-    check_status_code_in_groups,
-    is_error_status_code,
-)
+from .checks import UnexpectedResponseCodeError, check_status_code
 from .compat import (
     AcurlError,
     RequestWrapper,
@@ -37,9 +32,7 @@ __all__ = [
     "SessionPool",
     "UnexpectedResponseCodeError",
     "check_status_code",
-    "check_status_code_in_groups",
     "create_http_cookie",
-    "is_error_status_code",
     "mite_http",
     "to_curl",
 ]
