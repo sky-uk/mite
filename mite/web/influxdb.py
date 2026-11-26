@@ -307,11 +307,14 @@ class InfluxHistogram(InfluxStat):
         self.bins = tuple(message["bins"])
         self.include_buckets = include_buckets
 
-        self.bin_counts = defaultdict(lambda: [0] * len(self.bins))
+        # Local n, not self.bins, matching mite.stats.Histogram. Not a live
+        # bug: the lock in InfluxStat makes this class uncopyable anyway.
+        n = len(self.bins)
+        self.bin_counts = defaultdict(lambda: [0] * n)
         self.sums = defaultdict(float)
         self.total_counts = defaultdict(int)
 
-        self._prev_bin_counts = defaultdict(lambda: [0] * len(self.bins))
+        self._prev_bin_counts = defaultdict(lambda: [0] * n)
         self._prev_sums = defaultdict(float)
         self._prev_total_counts = defaultdict(int)
 

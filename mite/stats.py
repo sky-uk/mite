@@ -1,3 +1,4 @@
+import copy
 import importlib.metadata
 import logging
 import time
@@ -88,9 +89,10 @@ class Histogram(Stat):
 
     def __post_init__(self):
         self.bins = sorted(self.bins)
-        self.bin_counts = defaultdict(
-            lambda: [0 for _ in range(len(self.bins))]
-        )
+        # Local n, not self.bins: a factory closing over self would keep
+        # pointing at the original Histogram after copy.deepcopy
+        n = len(self.bins)
+        self.bin_counts = defaultdict(lambda: [0] * n)
         self.total_counts = defaultdict(int)
         self.sums = defaultdict(int)
 
@@ -219,8 +221,11 @@ def load_stats_entry_points(include=None, exclude=None):
 
 class Stats:
     def __init__(self, sender, include=None, exclude=None):
-        self._all_stats = load_stats_entry_points(
-            include=include, exclude=exclude
+        # Module-level STATS lists are shared by every Stats() instance
+        # unless copied, which double-counts and clobbers dumps when several
+        # processors run concurrently (e.g. --influxdb=2).
+        self._all_stats = copy.deepcopy(
+            load_stats_entry_points(include=include, exclude=exclude)
         )
         self.sender = sender
         self.dump_timeout = time.time() + 0.25

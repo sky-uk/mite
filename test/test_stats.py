@@ -1,7 +1,16 @@
+import copy
 import unittest.mock as mock
 import warnings
 
-from mite.stats import Counter, Extractor, Gauge, Histogram, Stats, extractor
+from mite.stats import (
+    Counter,
+    Extractor,
+    Gauge,
+    Histogram,
+    Stats,
+    extractor,
+    load_stats_entry_points,
+)
 
 TXN_MSG = {
     "start_time": 1572604344.7903123,
@@ -287,3 +296,47 @@ class TestHistogram:
         assert dict(hist.bin_counts) == {"foo": [0, 0, 1, 1]}
         assert dict(hist.sums) == {"foo": 3}
         assert dict(hist.total_counts) == {"foo": 1}
+
+
+def test_histogram_copy_does_not_depend_on_original_bins():
+    original = Histogram(
+        "h", lambda m: True, Extractor(("bar",), lambda x: (("foo", 1),)), bins=[1, 2, 3]
+    )
+    clone = copy.deepcopy(original)
+    original.bins.append(4)
+    clone.process(None)
+    assert dict(clone.bin_counts) == {"foo": [1, 1, 1]}
+
+
+class _EntryPointFor:
+    def __init__(self, name, stats):
+        self.name = name
+        self._stats = stats
+
+    def load(self):
+        return self._stats
+
+
+def _counter(name):
+    return Counter(name, lambda m: True, extractor(["test"]))
+
+
+def test_two_stats_instances_do_not_share_state():
+    # Regression for --influxdb=2: entry_point.load() returns the
+    # module-level STATS list, so without a per-instance copy every Stats()
+    # shares the same Counter/Histogram objects, double-counting messages
+    # and letting one instance's dump() clear the other's pending data.
+    with mock.patch(
+        "importlib.metadata.entry_points",
+        return_value=[_EntryPointFor("x", [_counter("mite_transaction_total")])],
+    ):
+        s1 = Stats(sender=lambda d: None)
+        s2 = Stats(sender=lambda d: None)
+
+    assert s1._all_stats[0] is not s2._all_stats[0]
+
+    s1.process(TXN_MSG)
+    d1 = s1.dump()
+    d2 = s2.dump()
+    assert sum(d1[0]["metrics"].values()) == 1
+    assert sum(d2[0]["metrics"].values()) == 0

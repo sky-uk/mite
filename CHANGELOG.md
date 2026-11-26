@@ -46,6 +46,28 @@ for the target shape), and delete the branch headings and this comment.
 Change `mite` to `mite[all]` in your requirements to keep every integration.
 No other changes needed.
 
+#### stats-isolation-fix
+
+<!-- merged: stats-isolation-fix -->
+
+##### Fixed
+
+- Each `Stats()` instance now deep-copies its stat objects instead of
+  sharing the module-level `STATS` lists. Running more than one instance
+  (e.g. `--influxdb=2`) double-counted messages and let one instance's
+  `dump()` clear another's pending data.
+
+#### stats-influx-close-flush
+
+<!-- merged: stats-influx-close-flush -->
+
+##### Fixed
+
+- `InfluxDBProcessor.close()` now flushes pending stats before closing the
+  connection, instead of discarding them.
+- `InfluxHistogram`'s `bin_counts` factory now captures the bin count
+  instead of closing over `self.bins`, matching `mite.stats.Histogram`.
+
 ## 3.0.0
 
 ### Breaking changes

@@ -121,3 +121,17 @@ class TestInfluxHistogram:
         assert point.fields["sum_cumulative"] == pytest.approx(4.0)
         assert point.fields["avg"] == pytest.approx(2.0)
         assert point.fields["p50"] == pytest.approx(1.5)
+
+    def test_histogram_bin_counts_factory_does_not_read_self_bins(self):
+        test_message = {
+            "name": "foo",
+            "labels": ("bar", "baz"),
+            "bin_counts": {},
+            "sums": {},
+            "total_counts": {},
+            "bins": (1, 2, 3),
+        }
+        h = InfluxHistogram("foo", test_message)
+        h.bins = (1, 2, 3, 4)
+        assert h.bin_counts[("unseen",)] == [0, 0, 0]
+        assert h._prev_bin_counts[("unseen",)] == [0, 0, 0]
