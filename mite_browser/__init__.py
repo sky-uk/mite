@@ -122,6 +122,15 @@ class Browser:
     async def patch(self, url, *args, **kwargs):
         return await self.request("PATCH", url, *args, **kwargs)
 
+    async def put(self, url, *args, **kwargs):
+        return await self.request("PUT", url, *args, **kwargs)
+
+    async def delete(self, url, *args, **kwargs):
+        return await self.request("DELETE", url, *args, **kwargs)
+
+    async def head(self, url, *args, **kwargs):
+        return await self.request("HEAD", url, *args, **kwargs)
+
     def erase_all_cookies(self):
         self._session.erase_all_cookies()
 
