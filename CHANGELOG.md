@@ -57,6 +57,17 @@ No other changes needed.
   (e.g. `--influxdb=2`) double-counted messages and let one instance's
   `dump()` clear another's pending data.
 
+#### stats-influx-close-flush
+
+<!-- merged: stats-influx-close-flush -->
+
+##### Fixed
+
+- `InfluxDBProcessor.close()` now flushes pending stats before closing the
+  connection, instead of discarding them.
+- `InfluxHistogram`'s `bin_counts` factory now captures the bin count
+  instead of closing over `self.bins`, matching `mite.stats.Histogram`.
+
 ## 3.0.0
 
 ### Breaking changes

@@ -26,4 +26,7 @@ class InfluxDBProcessor:
         self._stats.process(msg)
 
     def close(self):
-        self._influx_metrics.close()
+        try:
+            self._influx_metrics.process(self._stats.dump())
+        finally:
+            self._influx_metrics.close()
