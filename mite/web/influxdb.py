@@ -8,8 +8,6 @@ from typing import cast
 from concurrent.futures import ThreadPoolExecutor
 from threading import BoundedSemaphore
 
-from mite.exceptions import InfluxConfigError
-
 from .totals import CounterTotals, GaugeTotals, HistogramTotals, RunningTotals
 
 
@@ -96,9 +94,7 @@ def _secret(url, param, default):
     name = url.params.get(param, default)
     value = os.getenv(name)
     if not value:
-        raise InfluxConfigError(
-            f"Stats output {url}: environment variable {name} is not set"
-        )
+        raise url.error(f"environment variable {name} is not set")
     return value
 
 

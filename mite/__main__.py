@@ -333,6 +333,16 @@ def main():
     opts = docopt.docopt(__doc__)
     setup_logging(opts)
     configure_python_path(opts)
+    # Deferred like the other stats imports; only needed to recognise the error
+    from .stats_outputs import StatsOutputError
+
+    try:
+        _run_command(opts)
+    except StatsOutputError as e:
+        sys.exit(f"mite: {e}")
+
+
+def _run_command(opts):
     if opts["scenario"]:
         scenario_cmd(opts)
     elif opts["journey"]:

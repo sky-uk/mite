@@ -3,7 +3,7 @@ import unittest.mock as mock
 import pytest
 
 from mite.stats import Aggregator
-from mite.stats_outputs import OutputURL, load_stats_outputs
+from mite.stats_outputs import OutputURL, StatsOutputError, load_stats_outputs
 from mite.web import influxdb, prometheus_output
 
 
@@ -72,7 +72,7 @@ class TestOutputURL:
             url.check(paths=(("database",),), params=("known",))
         with pytest.raises(ValueError, match="unknown parameter known; allowed: none"):
             url.check(paths=(("a", "b"),))
-        with pytest.raises(ValueError, match="expected path /$"):
+        with pytest.raises(ValueError, match="expected no path$"):
             url.check(params=("known",))
 
     def test_flag(self):
@@ -163,7 +163,7 @@ class TestInfluxDBOutput:
             self._backend(text)
 
     def test_missing_credential_names_the_variable(self):
-        with pytest.raises(influxdb.InfluxConfigError, match="MY_TOKEN is not set"):
+        with pytest.raises(StatsOutputError, match="MY_TOKEN is not set"):
             self._backend("influxdb3://h/db?token_env=MY_TOKEN")
 
     @pytest.mark.parametrize("text, include_buckets", [("influxdb3://h/db", False), ("influxdb3://h/db?buckets=true", True)])
@@ -189,7 +189,7 @@ class TestPrometheusOutput:
         thread.return_value.start.assert_called_once()
 
     def test_rejects_a_path_or_parameters(self):
-        with pytest.raises(ValueError, match="expected path"):
+        with pytest.raises(ValueError, match="expected no path"):
             prometheus_output(OutputURL.parse("prometheus://h/metrics"), {})
 
 
@@ -236,3 +236,12 @@ def test_mite_stats_sends_to_the_socket_and_flushes_on_shutdown():
     txn = next(d for d in dump if d["name"] == "mite_transaction_total")
     assert sum(txn["metrics"].values()) == 1
     sender.close.assert_called_once()
+
+
+def test_cli_reports_a_bad_stats_output_without_a_traceback():
+    from mite import __main__ as cli
+
+    argv = ["mite", "exporter", "--stats-output=influxdb3://s3cr3t@h/db"]
+    with mock.patch("sys.argv", argv), pytest.raises(SystemExit) as exit_:
+        cli.main()
+    assert exit_.value.code.startswith("mite: Invalid stats output 'influxdb3://***@h/db'")

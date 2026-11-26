@@ -33,6 +33,12 @@ ENTRY_POINT_GROUP = "mite_stats_outputs"
 _SCHEME_RE = re.compile(r"[a-z][a-z0-9_]*")
 
 
+class StatsOutputError(ValueError):
+    """A ``--stats-output`` URL is invalid, or its configuration (such as a
+    credential environment variable) is missing. The command line reports
+    these as a one-line error rather than a traceback."""
+
+
 def _mask(text):
     # Hide anything between "//" and "@", in case credentials were given
     return re.sub(r"//[^/@]*@", "//***@", text)
@@ -52,7 +58,7 @@ class OutputURL:
     @classmethod
     def parse(cls, text):
         def invalid(reason):
-            return ValueError(f"Invalid stats output {_mask(text)!r}: {reason}")
+            return StatsOutputError(f"Invalid stats output {_mask(text)!r}: {reason}")
 
         try:
             parts = urlsplit(text)
@@ -83,7 +89,7 @@ class OutputURL:
         return cls(text, parts.scheme, parts.hostname, port, path, params)
 
     def check(self, paths=((),), params=()):
-        """Raise ValueError unless the path matches one of ``paths`` and every
+        """Raise StatsOutputError unless the path matches one of ``paths`` and every
         query parameter is in ``params``.
 
         Each of ``paths`` is a tuple of segment names, e.g.
@@ -91,10 +97,12 @@ class OutputURL:
         allows only an empty path.
         """
         if len(self.path) not in {len(shape) for shape in paths}:
-            shapes = " or ".join(
-                "/" + "/".join(name.upper() for name in shape) for shape in paths
+            shapes = ["/" + "/".join(name.upper() for name in shape) for shape in paths if shape]
+            expected = " or ".join(
+                ([f"path {' or '.join(shapes)}"] if shapes else [])
+                + (["no path"] if () in paths else [])
             )
-            raise self.error(f"expected path {shapes}")
+            raise self.error(f"expected {expected}")
         unknown = sorted(set(self.params) - set(params))
         if unknown:
             raise self.error(
@@ -112,7 +120,7 @@ class OutputURL:
         return value == "true"
 
     def error(self, reason):
-        return ValueError(f"Stats output {self}: {reason}")
+        return StatsOutputError(f"Stats output {self}: {reason}")
 
     def __str__(self):
         return _mask(self.text)
@@ -121,7 +129,7 @@ class OutputURL:
 def load_stats_outputs(urls, opts):
     """Create a sender for each ``--stats-output`` URL.
 
-    Raises ValueError for an invalid, unknown or repeated URL. If creating an
+    Raises StatsOutputError for an invalid, unknown or repeated URL. If creating an
     output fails, the ones already created are closed before re-raising.
     """
     parsed = [OutputURL.parse(url) for url in urls]
@@ -129,14 +137,14 @@ def load_stats_outputs(urls, opts):
         return []
     repeated = sorted({str(u) for u in parsed if parsed.count(u) > 1})
     if repeated:
-        raise ValueError(f"Stats output given more than once: {', '.join(repeated)}")
+        raise StatsOutputError(f"Stats output given more than once: {', '.join(repeated)}")
 
     factories = {
         ep.name: ep for ep in importlib.metadata.entry_points(group=ENTRY_POINT_GROUP)
     }
     unknown = sorted({u.scheme for u in parsed if u.scheme not in factories})
     if unknown:
-        raise ValueError(
+        raise StatsOutputError(
             f"Unknown stats output {', '.join(unknown)}; "
             f"available: {', '.join(sorted(factories)) or 'none'}"
         )
