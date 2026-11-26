@@ -456,7 +456,7 @@ class InfluxMetrics(InfluxdbWriter):
         self._last_flush_time = time.monotonic()
 
     def process(self, message):
-        logger.debug(f"message to iterate in influxdb metrics: {message}")
+        logger.debug("message to iterate in influxdb metrics: %s", message)
         dirty_keys = {}
         for stat in message:
             name = stat["name"]
