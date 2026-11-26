@@ -46,6 +46,17 @@ for the target shape), and delete the branch headings and this comment.
 Change `mite` to `mite[all]` in your requirements to keep every integration.
 No other changes needed.
 
+#### stats-isolation-fix
+
+<!-- merged: stats-isolation-fix -->
+
+##### Fixed
+
+- Each `Stats()` instance now deep-copies its stat objects instead of
+  sharing the module-level `STATS` lists. Running more than one instance
+  (e.g. `--influxdb=2`) double-counted messages and let one instance's
+  `dump()` clear another's pending data.
+
 ## 3.0.0
 
 ### Breaking changes
