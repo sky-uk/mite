@@ -14,7 +14,7 @@ context: sky-identity
 triggering: multibranch
 
 defaultNodes:
-  default: sky-identity-nonprod-mite-slave-buildkit
+  default: sky-identity-nonprod-mite-java21-slave-buildkit
 
 modules:
   mite-ci:
