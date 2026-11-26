@@ -119,9 +119,9 @@ example. A request looks like this:
 
 ```python
     async with ensure_fixed_separation(1.0):
-        async with ctx.transaction('Page 1 | POST shop.example/api/login'):
+        async with ctx.transaction('Page 1 | POST api.shop.example/api/login'):
             resp = await ctx.browser.post(
-                'https://shop.example/api/login',
+                'https://api.shop.example/api/login',
                 headers={
                     'content-type': 'application/json',
                 },

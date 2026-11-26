@@ -131,7 +131,7 @@ def test_secret_keys_are_unique_per_value():
 
 
 SAMPLE_DIR = Path(__file__).parent / "har"
-SAMPLE_BASE_URL = "https://shop.example"
+SAMPLE_HOSTS = ["*.shop.example"]
 SAMPLE_CONFIG = {
     "email": "load.test@example.com",
     "password": "replayed-password",
@@ -140,11 +140,15 @@ SAMPLE_CONFIG = {
 }
 
 
-def _sample_har(tmp_path, base_url):
+def _sample_har(tmp_path, base_url=None):
+    """sample.har, with both shop hosts pointed at ``base_url`` if given."""
+    if base_url is None:
+        return SAMPLE_DIR / "sample.har"
     har = tmp_path / "sample.har"
-    har.write_text(
-        (SAMPLE_DIR / "sample.har").read_text().replace("__BASE_URL__", base_url)
-    )
+    text = (SAMPLE_DIR / "sample.har").read_text()
+    for host in ["https://www.shop.example", "https://api.shop.example"]:
+        text = text.replace(host, base_url)
+    har.write_text(text)
     return har
 
 
@@ -154,8 +158,8 @@ def _load(path):
 
 def _convert_sample(tmp_path, *args, **kwargs):
     out = tmp_path / "journey.py"
-    kwargs.setdefault("hosts", ["shop.example"])
-    har_convert_to_mite(str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), *args, **kwargs)
+    kwargs.setdefault("hosts", SAMPLE_HOSTS)
+    har_convert_to_mite(str(_sample_har(tmp_path)), str(out), *args, **kwargs)
     return out
 
 
@@ -183,8 +187,8 @@ def test_sample_har_has_no_recorded_secrets(tmp_path):
 
 
 def test_collect_secrets_from_headers_query_and_bodies(tmp_path):
-    har = _load(_sample_har(tmp_path, SAMPLE_BASE_URL))
-    requests, _, _ = select_requests(har, ["shop.example"])
+    har = _load(_sample_har(tmp_path))
+    requests, _, _ = select_requests(har, SAMPLE_HOSTS)
     assert collect_secrets(requests).keys == {
         "jane.doe@example.com": "email",
         "hunter2-secret": "password",
@@ -216,15 +220,15 @@ def test_recorded_gaps_with_zero_sleep(tmp_path):
 def test_host_errors_report_hosts_and_write_nothing(tmp_path, hosts, message):
     out = tmp_path / "journey.py"
     with pytest.raises(HarConversionError) as excinfo:
-        har_convert_to_mite(
-            str(_sample_har(tmp_path, SAMPLE_BASE_URL)), str(out), hosts=hosts
-        )
+        har_convert_to_mite(str(_sample_har(tmp_path)), str(out), hosts=hosts)
     text = str(excinfo.value)
     assert message in text
-    # the report lists every host and suggests the busiest one
-    assert "shop.example" in text
-    assert "analytics.example-ads.test" in text
-    assert "--host=shop.example" in text
+    # the report lists every host with non-static requests and suggests the
+    # busiest one
+    for host in ["api.shop.example", "www.shop.example", "analytics.example-ads.test"]:
+        assert host in text
+    assert "cdn.example-cdn.test" not in text
+    assert "--host=api.shop.example" in text
     assert not out.exists()
 
 
@@ -233,7 +237,7 @@ def test_cli_reports_hosts_and_exits_1(tmp_path, capsys):
 
     import mite.__main__ as main
 
-    har = _sample_har(tmp_path, SAMPLE_BASE_URL)
+    har = _sample_har(tmp_path)
     out = tmp_path / "journey.py"
     opts = docopt(main.__doc__, ["har", str(har), str(out)])
     with pytest.raises(SystemExit) as excinfo:
@@ -248,15 +252,17 @@ def test_cli_passes_hosts_and_flags(tmp_path, capsys):
 
     import mite.__main__ as main
 
-    har = _sample_har(tmp_path, SAMPLE_BASE_URL)
+    har = _sample_har(tmp_path)
     out = tmp_path / "journey.py"
     opts = docopt(
         main.__doc__,
-        ["har", str(har), str(out), "--host=shop.example", "--host=x.test",
+        ["har", str(har), str(out), "--host=*.shop.example", "--host=x.test",
          "--include-static", "--sleep-time=0"],
     )
     main.har_converter(opts)
-    assert "Wrote 12 requests" in capsys.readouterr().out
+    # 9 requests plus site.css, app.js, tea.png and the preflight; CDN assets
+    # are on another host
+    assert "Wrote 13 requests" in capsys.readouterr().out
     assert "/static/site.css" in out.read_text()
 
 
