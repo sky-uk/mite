@@ -9,7 +9,6 @@ from time import time_ns
 from typing import cast
 from concurrent.futures import ThreadPoolExecutor
 from threading import BoundedSemaphore
-from packaging.version import Version, InvalidVersion
 
 from mite.exceptions import InfluxConfigError
 
@@ -33,7 +32,24 @@ class _InfluxBackend(ABC):
     def close(self) -> None: ...
 
 
-class _InfluxV2ClientBackend(_InfluxBackend):
+def _client_points(point_type, points):
+    from influxdb_client.domain.write_precision import WritePrecision
+
+    client_points = []
+    for point in points:
+        client_point = point_type(point.measurement)
+        for tag_key, tag_value in point.tags.items():
+            client_point.tag(tag_key, tag_value)
+        for field_key, field_value in point.fields.items():
+            client_point.field(field_key, field_value)
+        client_point.time(point.time_ns, write_precision=WritePrecision.NS)
+        client_points.append(client_point)
+    return client_points
+
+
+class _InfluxDBClientBackend(_InfluxBackend):
+    """InfluxDB 2, and InfluxDB 1.8+ through its v2 compatibility API."""
+
     def __init__(self, *, url, token, org, bucket):
         from influxdb_client.client.influxdb_client import InfluxDBClient
         from influxdb_client.client.write.point import Point
@@ -48,20 +64,10 @@ class _InfluxV2ClientBackend(_InfluxBackend):
     def write_points(self, points: list[InfluxPoint]) -> None:
         from influxdb_client.domain.write_precision import WritePrecision
 
-        influx_points = []
-        for point in points:
-            influx_point = self._point_type(point.measurement)
-            for tag_key, tag_value in point.tags.items():
-                influx_point.tag(tag_key, tag_value)
-            for field_key, field_value in point.fields.items():
-                influx_point.field(field_key, field_value)
-            influx_point.time(point.time_ns, write_precision=WritePrecision.NS)
-            influx_points.append(influx_point)
-
         self._write_api.write(
             bucket=self._bucket,
             org=self._org,
-            record=influx_points,
+            record=_client_points(self._point_type, points),
             write_precision=cast(WritePrecision, WritePrecision.NS),
         )
 
@@ -69,98 +75,74 @@ class _InfluxV2ClientBackend(_InfluxBackend):
         self._client.close()
 
 
-class _InfluxV1Backend(_InfluxV2ClientBackend):
-    def __init__(self, suffix=""):
-        host = os.getenv(f"INFLUXDB_HOST{suffix}")
-        username = os.getenv(f"INFLUXDB_USERNAME{suffix}")
-        password = os.getenv(f"INFLUXDB_PASSWORD{suffix}")
-        database = os.getenv(f"INFLUXDB_DATABASE{suffix}")
-
-        if not host or not username or not password or not database:
-            raise InfluxConfigError("Missing Influxdb1 config")
-
-        retention_policy = os.getenv(f"INFLUXDB_RETENTION_POLICY{suffix}", "autogen")
-        super().__init__(
-            url=host,
-            token=f"{username}:{password}",
-            org="-",
-            bucket=f"{database}/{retention_policy}",
-        )
-
-
-class _InfluxV2Backend(_InfluxV2ClientBackend):
-    def __init__(self, suffix=""):
-        host = os.getenv(f"INFLUXDB_HOST{suffix}")
-        token = os.getenv(f"INFLUXDB_TOKEN{suffix}")
-        bucket = os.getenv(f"INFLUXDB_BUCKET{suffix}")
-        org = os.getenv(f"INFLUXDB_ORG{suffix}")
-
-        if not host or not token or not bucket or not org:
-            raise InfluxConfigError("Missing Influxdb config")
-
-        super().__init__(url=host, token=token, org=org, bucket=bucket)
-
-
-class _InfluxV3Backend(_InfluxBackend):
-    def __init__(self, suffix=""):
+class _InfluxDBClient3Backend(_InfluxBackend):
+    def __init__(self, *, url, token, database):
         from influxdb_client_3 import InfluxDBClient3, Point
 
-        host = os.getenv(f"INFLUXDB_HOST{suffix}")
-        token = os.getenv(f"INFLUXDB_TOKEN{suffix}")
-        database = os.getenv(f"INFLUXDB_DATABASE{suffix}")
-
-        if not host or not token or not database:
-            raise InfluxConfigError("Missing Influxdb config")
-
         self._point_type = Point
-        self._client = InfluxDBClient3(
-            host=host,
-            token=token,
-            database=database,
-        )
+        self._client = InfluxDBClient3(host=url, token=token, database=database)
 
     def write_points(self, points: list[InfluxPoint]) -> None:
-        from influxdb_client.domain.write_precision import WritePrecision
-
-        influx_points = []
-        for point in points:
-            influx_point = self._point_type(point.measurement)
-            for tag_key, tag_value in point.tags.items():
-                influx_point.tag(tag_key, tag_value)
-            for field_key, field_value in point.fields.items():
-                influx_point.field(field_key, field_value)
-            influx_point.time(point.time_ns, write_precision=WritePrecision.NS)
-            influx_points.append(influx_point)
-
-        self._client.write(influx_points)
+        self._client.write(_client_points(self._point_type, points))
 
     def close(self) -> None:
         self._client.close()
 
 
-def _create_influx_backend(suffix: str) -> _InfluxBackend:
-    return _create_single_backend(suffix)
+_COMMON_PARAMS = ("buckets", "tls")
 
 
-def _create_single_backend(suffix: str) -> _InfluxBackend:
-    raw_version = os.getenv(f"INFLUXDB_VERSION{suffix}", "v3")
-    try:
-        major_version = Version(raw_version).major
-    except (TypeError, InvalidVersion) as error:
-        raise ValueError(f"Invalid INFLUXDB_VERSION: {raw_version}") from error
-
-    backends = {
-        1: _InfluxV1Backend,
-        2: _InfluxV2Backend,
-        3: _InfluxV3Backend,
-    }
-
-    try:
-        return backends[major_version](suffix)
-    except KeyError as error:
+def _secret(url, param, default):
+    name = url.params.get(param, default)
+    value = os.getenv(name)
+    if not value:
         raise InfluxConfigError(
-            f"Unsupported InfluxDB major version: {major_version}"
-        ) from error
+            f"Stats output {url}: environment variable {name} is not set"
+        )
+    return value
+
+
+def influxdb_backend(url):
+    """Create the InfluxDB client backend for an ``influxdb1://``,
+    ``influxdb2://`` or ``influxdb3://`` stats output URL (see
+    :func:`influxdb_output`)."""
+    if url.host is None:
+        raise url.error("expected a host, e.g. influxdb3://influx.example:8181/DATABASE")
+    host = f"[{url.host}]" if ":" in url.host else url.host
+    port = f":{url.port}" if url.port is not None else ""
+    base_url = f"{'https' if url.flag('tls') else 'http'}://{host}{port}"
+
+    if url.scheme == "influxdb1":
+        url.check(
+            paths=(("database",), ("database", "retention_policy")),
+            params=_COMMON_PARAMS + ("username_env", "password_env"),
+        )
+        username = _secret(url, "username_env", "INFLUXDB_USERNAME")
+        password = _secret(url, "password_env", "INFLUXDB_PASSWORD")
+        database, retention_policy = (url.path + ("autogen",))[:2]
+        return _InfluxDBClientBackend(
+            url=base_url,
+            token=f"{username}:{password}",
+            org="-",
+            bucket=f"{database}/{retention_policy}",
+        )
+    if url.scheme == "influxdb2":
+        url.check(paths=(("org", "bucket"),), params=_COMMON_PARAMS + ("token_env",))
+        org, bucket = url.path
+        return _InfluxDBClientBackend(
+            url=base_url,
+            token=_secret(url, "token_env", "INFLUXDB_TOKEN"),
+            org=org,
+            bucket=bucket,
+        )
+    if url.scheme == "influxdb3":
+        url.check(paths=(("database",),), params=_COMMON_PARAMS + ("token_env",))
+        return _InfluxDBClient3Backend(
+            url=base_url,
+            token=_secret(url, "token_env", "INFLUXDB_TOKEN"),
+            database=url.path[0],
+        )
+    raise url.error("expected an influxdb1://, influxdb2:// or influxdb3:// URL")
 
 
 class InfluxdbWriter:
@@ -171,13 +153,8 @@ class InfluxdbWriter:
     # WARNING level.
     CONSECUTIVE_SKIP_ALERT_THRESHOLD = 50
 
-    def __init__(self, suffix=""):
-        try:
-            self._backend = _create_influx_backend(suffix)
-        except Exception as error:
-            logger.exception("Failed to create InfluxDB client: %s", error)
-            raise
-
+    def __init__(self, backend):
+        self._backend = backend
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._write_slots = BoundedSemaphore(value=1)
         self._skipped_writes = 0
@@ -448,8 +425,8 @@ class InfluxMetrics(InfluxdbWriter):
     # memory unbounded over a long test run, so oldest points are dropped.
     MAX_PENDING_POINTS = 5000
 
-    def __init__(self, include_buckets=False, suffix=""):
-        super().__init__(suffix=suffix)
+    def __init__(self, backend, include_buckets=False):
+        super().__init__(backend)
         self.include_buckets = include_buckets
         self.stats = {}
         self._pending_points = []
@@ -498,16 +475,22 @@ class InfluxMetrics(InfluxdbWriter):
         super().close()
 
 
-def _env_flag(name):
-    return os.getenv(name, "").strip().lower() in ("1", "true", "yes", "on")
+def influxdb_output(url, opts):
+    """``mite_stats_outputs`` factory for ``influxdb1://``, ``influxdb2://``
+    and ``influxdb3://`` URLs::
 
+        influxdb1://HOST[:PORT]/DATABASE[/RETENTION_POLICY]
+        influxdb2://HOST[:PORT]/ORG/BUCKET
+        influxdb3://HOST[:PORT]/DATABASE
 
-def influxdb_output(spec, opts):
-    """``mite_stats_outputs`` factory: write stats to the InfluxDB configured
-    by the ``INFLUXDB_*`` environment variables with this instance's suffix.
-    ``INFLUXDB_INCLUDE_BUCKETS{suffix}=true`` also writes raw histogram
-    buckets."""
-    return InfluxMetrics(
-        include_buckets=_env_flag(f"INFLUXDB_INCLUDE_BUCKETS{spec.suffix}"),
-        suffix=spec.suffix,
-    )
+    Query parameters:
+
+    * ``tls=true``: connect over https (default http).
+    * ``buckets=true``: also write raw histogram bucket points.
+    * ``token_env`` (v2, v3): environment variable holding the API token,
+      default ``INFLUXDB_TOKEN``.
+    * ``username_env``, ``password_env`` (v1): environment variables holding
+      the credentials, default ``INFLUXDB_USERNAME`` and ``INFLUXDB_PASSWORD``.
+      The retention policy defaults to ``autogen``.
+    """
+    return InfluxMetrics(influxdb_backend(url), include_buckets=url.flag("buckets"))

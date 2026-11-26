@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: 'mite'
     static_configs:
-      - targets: ['exporter:9301'] # this address must equal the mite exporter --web-address arg
+      - targets: ['exporter:9301'] # this address must equal the mite exporter --stats-output=prometheus://HOST:PORT

@@ -16,7 +16,7 @@ Prometheus
 
 Prometheus collects its metrics by scraping an http endpoint at a
 defined interval.  It should be configured to point to port 9301 on the
-machine where the ``mite exporter --stats-output=prometheus`` command runs.  Here is a
+machine where the ``mite exporter --stats-output=prometheus://HOST:PORT`` command runs.  Here is a
 minimal ``prometheus.yml`` config file:
 
 .. code-block:: yaml

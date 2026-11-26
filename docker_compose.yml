@@ -25,7 +25,7 @@ services:
       replicas: 1
   exporter:
     image: mite:latest
-    command: ["mite", "exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--stats-output=prometheus", "--web-address=0.0.0.0:9301"]
+    command: ["mite", "exporter", "--stats-out-socket=tcp://0.0.0.0:14305", "--stats-output=prometheus://0.0.0.0:9301"]
   controller:
     image: mite:latest
     command: ["mite", "controller", "--controller-socket=tcp://0.0.0.0:14301", "--message-socket=tcp://duplicator:14302", "local.demo:scenario"]

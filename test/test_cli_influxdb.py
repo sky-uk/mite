@@ -34,11 +34,11 @@ def test_influxdb_init_success():
         "mite.cli.influxdb.load_stats_entry_points", return_value=[fake_stat]
     ), patch(
         "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
-    ) as writer_cls:
-        exit_code = influxdb_init({"INSTANCE": []})
+    ) as writer_cls, patch("mite.web.influxdb.influxdb_backend") as backend:
+        exit_code = influxdb_init({"URL": ["influxdb3://h/db"]})
 
     assert exit_code == 0
-    writer_cls.assert_called_once_with(suffix="")
+    writer_cls.assert_called_once_with(backend.return_value)
     writer_instance.write_points.assert_called_once()
     points = writer_instance.write_points.call_args[0][0]
     assert len(points) == 1
@@ -56,29 +56,29 @@ def test_influxdb_init_busy_writer_sets_exit_code():
 
     with patch(
         "mite.cli.influxdb.load_stats_entry_points", return_value=[fake_stat]
-    ), patch("mite.web.influxdb.InfluxdbWriter", return_value=writer_instance):
-        exit_code = influxdb_init({"INSTANCE": []})
+    ), patch("mite.web.influxdb.InfluxdbWriter", return_value=writer_instance), patch(
+        "mite.web.influxdb.influxdb_backend"
+    ):
+        exit_code = influxdb_init({"URL": ["influxdb3://h/db"]})
 
     assert exit_code == 1
     writer_instance.close.assert_called_once()
 
 
-def test_influxdb_init_writes_to_each_named_instance():
+def test_influxdb_init_writes_to_each_url():
     future = MagicMock()
     future.result.return_value = None
     writer_instance = MagicMock()
     writer_instance.write_points.return_value = future
+    urls = ["influxdb1://a:8086/db", "influxdb3://b:8181/db"]
 
     with patch(
         "mite.cli.influxdb.load_stats_entry_points",
         return_value=[_patched_stat("Counter")],
     ), patch(
         "mite.web.influxdb.InfluxdbWriter", return_value=writer_instance
-    ) as writer_cls:
-        exit_code = influxdb_init({"INSTANCE": ["2", "secondary"]})
+    ), patch("mite.web.influxdb.influxdb_backend") as backend:
+        exit_code = influxdb_init({"URL": urls})
 
     assert exit_code == 0
-    assert [c.kwargs for c in writer_cls.call_args_list] == [
-        {"suffix": "_2"},
-        {"suffix": "_SECONDARY"},
-    ]
+    assert [str(c.args[0]) for c in backend.call_args_list] == urls

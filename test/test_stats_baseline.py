@@ -48,8 +48,8 @@ def _controller_report(actual, required, num_runners):
     }
 
 
-ERROR = dict(location="proj/file.py:10", ex_type="HTTPError", message="500")
-HTTP = dict(method="GET", response_code=200)
+ERROR = {"location": "proj/file.py:10", "ex_type": "HTTPError", "message": "500"}
+HTTP = {"method": "GET", "response_code": 200}
 
 ROUNDS = [
     [
@@ -98,10 +98,9 @@ def _sorted_points(write_calls):
 
 def _influx(dumps, include_buckets):
     backend = mock.Mock()
-    with mock.patch.object(influxdb, "_create_influx_backend", return_value=backend), \
-            mock.patch.object(influxdb, "time_ns", return_value=FIXED_TIME_NS), \
+    with mock.patch.object(influxdb, "time_ns", return_value=FIXED_TIME_NS), \
             mock.patch.object(influxdb.InfluxMetrics, "MIN_FLUSH_INTERVAL", 1e9):
-        metrics = influxdb.InfluxMetrics(include_buckets=include_buckets)
+        metrics = influxdb.InfluxMetrics(backend, include_buckets=include_buckets)
         for dump in dumps:
             metrics.send(dump)
         metrics.close()  # everything is buffered until close
@@ -115,9 +114,10 @@ def _influx_init():
     writer.return_value.write_points.return_value = done
     stats = load_stats_entry_points(include=PROCESSORS)
     with mock.patch.object(influxdb, "InfluxdbWriter", writer), \
+            mock.patch.object(influxdb, "influxdb_backend"), \
             mock.patch.object(cli_influxdb, "load_stats_entry_points", return_value=stats), \
             mock.patch.object(cli_influxdb, "time_ns", return_value=FIXED_TIME_NS):
-        assert cli_influxdb.influxdb_init({"INSTANCE": []}) == 0
+        assert cli_influxdb.influxdb_init({"URL": ["influxdb3://h/db"]}) == 0
     return _sorted_points(writer.return_value.write_points.call_args_list)
 
 

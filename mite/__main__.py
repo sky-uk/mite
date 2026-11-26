@@ -2,8 +2,8 @@
 Mite Load Test Framework.
 
 Usage:
-    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=OUTPUT]... SCENARIO_SPEC
-    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=OUTPUT]... JOURNEY_SPEC [DATAPOOL_SPEC]
+    mite [options] scenario test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=URL]... SCENARIO_SPEC
+    mite [options] journey test [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] [--memory-tracing] [--stats-output=URL]... JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] journey run [--add-to-config=NEW_VALUE]... [--message-processors=PROCESSORS] JOURNEY_SPEC [DATAPOOL_SPEC]
     mite [options] controller SCENARIO_SPEC [--message-socket=SOCKET] [--controller-socket=SOCKET] [--logging-webhook=URL] [--add-to-config=NEW_VALUE]...
     mite [options] runner [--message-socket=SOCKET] [--controller-socket=SOCKET]
@@ -12,11 +12,11 @@ Usage:
     mite [options] recorder [--recorder-socket=SOCKET]
     mite [options] stats [--stats-in-socket=SOCKET] [--stats-out-socket=SOCKET] [--stats-include-processors=PROCESSORS] [--stats-exclude-processors=PROCESSORS]
     mite [options] receiver RECEIVE_SOCKET [--processor=PROCESSOR]...
-    mite [options] exporter [--stats-out-socket=SOCKET] (--stats-output=OUTPUT)...
+    mite [options] exporter [--stats-out-socket=SOCKET] (--stats-output=URL)...
     mite [options] har HAR_FILE_PATH CONVERTED_FILE_PATH [--sleep-time=SLEEP]
     mite [options] cat [--prettify-timestamps] MSGPACK_FILE_PATH
     mite [options] uncat
-    mite [options] influxdb init [INSTANCE]...
+    mite [options] influxdb init URL...
 
     mite --help
     mite --version
@@ -29,7 +29,7 @@ Arguments:
     HAR_FILE_PATH           Path for the har file to convert into a mite journey
     CONVERTED_FILE_PATH     Path to write the converted mite script to when converting a har file
     PROCESSOR               Class for message handling, must have either process_message or process_raw_message methods
-    INSTANCE                InfluxDB instance to initialise, as in --stats-output=influxdb:INSTANCE; the default instance when omitted
+    URL                     InfluxDB stats output URL to initialise, as given to --stats-output
 
 Examples:
     # run the example scenario called "scenario"
@@ -56,8 +56,9 @@ Examples:
     # start mite stats
     mite stats --stats-in-socket=tcp://0.0.0.0:14303 --stats-out-socket=tcp://0.0.0.0:14305
 
-    # export the stats to Prometheus and to two InfluxDB instances (configured by INFLUXDB_* and INFLUXDB_*_SECONDARY)
-    mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=prometheus --stats-output=influxdb --stats-output=influxdb:secondary
+    # export the stats to Prometheus and to two InfluxDB servers, reading the second one's token from INFLUX_B_TOKEN
+    mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=prometheus://0.0.0.0:9301 \
+        --stats-output=influxdb3://influx-a:8181/mite --stats-output=influxdb2://influx-b:8086/my_org/mite?token_env=INFLUX_B_TOKEN
 
 
 Options:
@@ -82,7 +83,6 @@ Options:
     --recorder-socket=SOCKET                                Socket [default: tcp://127.0.0.1:14306]
     --delay-start-seconds=DELAY                             Delay start allowing others to connect [default: 0]
     --volume=VOLUME                                         Volume to run journey at [default: 1]
-    --web-address=HOST_PORT                                 Web bind address [default: 127.0.0.1:9301]
     --message-backend=BACKEND                               Backend to transport messages over [default: ZMQ]
     --exclude-working-directory                             By default mite puts the current directory on the python path
     --collector-dir=DIRECTORY                               Set the collectors output directory [default: collector_data]
@@ -103,7 +103,7 @@ Options:
     --standard-deviation-response-time-threshold=THRESHOLD  Set the response time standard deviation accepted before setting exit status to 1 [default: 0]
     --standard-deviation-req-sec-threshold=THRESHOLD        Set the request per second standard deviation accepted before setting exit status to 1 [default: 0]
     --benchmark-percentiles=NEW_VALUE                       Percentiles(int):threshold(int in milliseconds) pairs separated by commas [default: 50:0,90:0,98:0,99:0]
-    --stats-output=OUTPUT                                   Send aggregated stats to OUTPUT, as NAME[:INSTANCE] (repeatable), e.g. prometheus, influxdb, influxdb:secondary
+    --stats-output=URL                                      Send aggregated stats to the output at URL (repeatable): prometheus://HOST:PORT, influxdb1://, influxdb2:// or influxdb3:// (see docs/influxdb.md)
 """
 
 import asyncio

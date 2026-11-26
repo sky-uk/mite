@@ -2,7 +2,7 @@ import logging
 from time import time_ns
 from mite.exceptions import InfluxConfigError
 from mite.stats import load_stats_entry_points
-from mite.stats_outputs import OutputSpec
+from mite.stats_outputs import OutputURL
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ def influxdb_init(opts):
     # Deferred, a module-level import here
     # would make every mite process pay the import
     # cost just to register this one subcommand.
-    from mite.web.influxdb import InfluxPoint, InfluxdbWriter
+    from mite.web.influxdb import InfluxPoint, InfluxdbWriter, influxdb_backend
 
     all_stats = load_stats_entry_points()
 
@@ -68,27 +68,25 @@ def influxdb_init(opts):
                 )
             )
 
-    # Same instances as --stats-output=influxdb[:INSTANCE]
-    specs = [OutputSpec.parse(f"influxdb:{i}") for i in opts.get("INSTANCE") or []]
+    urls = [OutputURL.parse(url) for url in opts["URL"]]
     exit_code = 0
 
-    for spec in specs or [OutputSpec("influxdb")]:
-        suffix = spec.suffix
-        writer = InfluxdbWriter(suffix=suffix)
+    for url in urls:
+        writer = InfluxdbWriter(influxdb_backend(url))
         try:
             future = writer.write_points(points)
             if future is None:
                 raise InfluxConfigError(
-                    f"InfluxDB writer{suffix} was busy; init write was skipped"
+                    f"InfluxDB writer for {url} was busy; init write was skipped"
                 )
             future.result()
             logger.info(
-                f"Initialized {len(all_stats)} metrics for instance{suffix or ' (default)'}:"
+                f"Initialized {len(all_stats)} metrics for {url}:"
             )
             for stat in all_stats:
                 logger.info(f"  - {stat.name}")
         except Exception as e:
-            logger.error(f"Error initializing instance{suffix}: {e}")
+            logger.error(f"Error initializing {url}: {e}")
             exit_code = 1
         finally:
             writer.close()

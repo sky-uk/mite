@@ -19,33 +19,15 @@ def metrics():
     return Response(text, mimetype='text/plain')
 
 
-def prometheus_output(spec, opts):
-    """``mite_stats_outputs`` factory: serve stats at ``/metrics`` on
-    ``--web-address`` for Prometheus to scrape."""
-    if spec.instance is not None:
-        raise ValueError(
-            f"Stats output {spec}: prometheus doesn't support instances"
-        )
-    start_web_in_thread(opts["--web-address"])
+def prometheus_output(url, opts):
+    """``mite_stats_outputs`` factory for ``prometheus://[HOST][:PORT]``:
+    serve stats at ``/metrics`` on HOST:PORT (default 127.0.0.1:9301) for
+    Prometheus to scrape. Only one per process."""
+    url.check()
+    host = "127.0.0.1" if url.host is None else url.host
+    port = 9301 if url.port is None else url.port
+    thread = threading.Thread(
+        target=app.run, name="mite.web", kwargs={"host": host, "port": port}, daemon=True
+    )
+    thread.start()
     return prometheus_metrics
-
-
-def start_web_in_thread(address):
-    kwargs = {"port": 9301}
-    if address.startswith("["):
-        # IPV6 [host]:port
-        if "]:" in address:
-            host, port = address.split("]:")
-            kwargs["host"] = host[1:]
-            kwargs["port"] = int(port)
-        else:
-            kwargs["host"] = address[1:-1]
-    elif address.count(":") == 1:
-        host, port = address.split(":")
-        kwargs["host"] = host
-        kwargs["port"] = int(port)
-    else:
-        kwargs["host"] = address
-    t = threading.Thread(target=app.run, name="mite.web", kwargs=kwargs)
-    t.daemon = True
-    t.start()

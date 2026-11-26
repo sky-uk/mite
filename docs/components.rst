@@ -154,28 +154,34 @@ Exporter
 
 The exporter binds to the socket the stats components publish their dumps
 on, combines the dumps from every stats component, and sends them to one or
-more stats outputs, chosen with ``--stats-output=NAME[:INSTANCE]`` (repeat
-it for several outputs):
+more stats outputs. Each output is a URL given with ``--stats-output=URL``;
+repeat it for several outputs:
 
-* ``prometheus`` serves an http ``/metrics`` endpoint on ``--web-address``
-  for the :ref:`prometheus <prometheus-doc>` time series database to scrape.
-* ``influxdb`` pushes the stats to InfluxDB. Add an instance to write to
-  several InfluxDB servers: ``influxdb:secondary`` is configured by the
-  ``INFLUXDB_*_SECONDARY`` environment variables. See :doc:`influxdb`.
+* ``prometheus://HOST:PORT`` serves an http ``/metrics`` endpoint for the
+  :ref:`prometheus <prometheus-doc>` time series database to scrape
+  (default ``127.0.0.1:9301``).
+* ``influxdb1://``, ``influxdb2://`` and ``influxdb3://`` push the stats to
+  InfluxDB; give one URL per server. See :doc:`influxdb`.
 
 .. code-block:: sh
 
-   mite exporter --stats-output=prometheus
-   mite exporter --stats-output=prometheus --stats-output=influxdb --stats-output=influxdb:secondary
+   mite exporter --stats-output=prometheus://0.0.0.0:9301
+   mite exporter --stats-output=prometheus://0.0.0.0:9301 \
+       --stats-output=influxdb3://influx-a:8181/mite \
+       --stats-output=influxdb2://influx-b:8086/my_org/mite?token_env=INFLUX_B_TOKEN
+
+Credentials never go in the URL; outputs read them from environment
+variables, named by parameters such as ``token_env``.
 
 The same ``--stats-output`` option on ``mite scenario test`` and
 ``mite journey test`` sends stats straight from the test process, without
 separate stats and exporter components.
 
 Further outputs can be added by plugins through the ``mite_stats_outputs``
-entry point group. Each entry point is a factory, called with the parsed
-``NAME[:INSTANCE]`` spec and the command line options, that returns an
-object with ``send(dump)`` and ``close()`` methods.
+entry point group, named after the URL scheme they handle. Each entry point
+is a factory, called with the parsed URL (``mite.stats_outputs.OutputURL``)
+and the command line options, that returns an object with ``send(dump)`` and
+``close()`` methods.
 
 .. _prometheus: https://prometheus.io/
 

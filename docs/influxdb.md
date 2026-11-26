@@ -12,41 +12,46 @@ InfluxDB line-protocol points and writes them to one or more InfluxDB instances.
 
 ### Configuration
 
-Set `INFLUXDB_VERSION` to select the client (default `v3`), then the
-matching variables below. Each InfluxDB instance you write to is named in
-`--stats-output=influxdb:INSTANCE`, and its variables carry that name in upper
-case as a suffix: `influxdb:secondary` reads `INFLUXDB_HOST_SECONDARY` and so
-on, `influxdb:2` reads `INFLUXDB_HOST_2`. Plain `influxdb` reads the
-unsuffixed variables.
+Each InfluxDB server is one `--stats-output` URL. The scheme selects the
+InfluxDB version:
 
-| Version | Required env vars |
-|---|---|
-| v1 | `INFLUXDB_HOST`, `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`, `INFLUXDB_DATABASE` (optional `INFLUXDB_RETENTION_POLICY`, default `autogen`) |
-| v2 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_BUCKET`, `INFLUXDB_ORG` |
-| v3 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_DATABASE` |
+```text
+influxdb1://HOST[:PORT]/DATABASE[/RETENTION_POLICY]
+influxdb2://HOST[:PORT]/ORG/BUCKET
+influxdb3://HOST[:PORT]/DATABASE
+```
 
-Set `INFLUXDB_INCLUDE_BUCKETS{suffix}=true` to also write raw histogram bucket
-points (`le`-tagged, Prometheus-style) alongside the computed percentiles, so
-downstream tools can reconstruct exact distributions.
+Query parameters:
 
-A fuller reference, including how each version maps onto the underlying
-client, is in [Configuration reference](#configuration-reference) below.
+| Parameter | Versions | Meaning |
+|---|---|---|
+| `tls=true` | all | Connect over https (default http) |
+| `buckets=true` | all | Also write raw histogram bucket points (`le`-tagged, Prometheus-style) alongside the computed percentiles |
+| `token_env=NAME` | v2, v3 | Environment variable holding the API token (default `INFLUXDB_TOKEN`) |
+| `username_env=NAME`, `password_env=NAME` | v1 | Environment variables holding the credentials (default `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`) |
+
+Credentials never go in the URL, where they'd show up in process lists and
+logs: a URL containing `user:password@` or `token@` is rejected, with the
+credentials masked in the error. Unknown parameters, a missing host, the wrong
+number of path segments, or an unset credential variable are errors too.
 
 ### Via `mite` test run (in-process)
 
-Pass `--stats-output=influxdb[:INSTANCE]` once per InfluxDB instance:
+Pass `--stats-output` once per InfluxDB server:
 
 ```bash
-# Default instance (INFLUXDB_* variables)
-mite journey test --stats-output=influxdb mite.example:journey mite.example:datapool
+mite journey test --stats-output=influxdb3://localhost:8181/mite mite.example:journey mite.example:datapool
 
-# Two instances at once (INFLUXDB_* and INFLUXDB_*_SECONDARY)
-mite scenario test --stats-output=influxdb --stats-output=influxdb:secondary mite.example:scenario
+# Two servers at once, each with its own token
+mite scenario test \
+    --stats-output=influxdb3://influx-a:8181/mite?token_env=INFLUX_A_TOKEN \
+    --stats-output=influxdb1://influx-b:8086/mite?buckets=true \
+    mite.example:scenario
 ```
 
 The test process runs one `Aggregator`
 ([mite/stats.py](https://github.com/sky-uk/mite/blob/master/mite/stats.py)) that
-sends each stats dump to every output, so adding instances doesn't repeat the
+sends each stats dump to every output, so adding servers doesn't repeat the
 aggregation. When the test finishes, the aggregator sends what it gathered since
 its last dump and then closes the outputs, so the final partial interval isn't
 lost.
@@ -59,26 +64,24 @@ test itself — useful when running distributed load tests (separate
 message bus rather than consumed in-process:
 
 ```bash
-mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=influxdb --stats-output=influxdb:secondary
+mite exporter --stats-out-socket=tcp://0.0.0.0:14305 --stats-output=influxdb3://influx-a:8181/mite
 ```
 
 This binds a receiver to `--stats-out-socket` (the same socket `mite stats`
 publishes dumped stats to) and sends every received dump to each output. The
-same command can export to Prometheus too, by adding `--stats-output=prometheus`.
+same command can export to Prometheus too, by adding
+`--stats-output=prometheus://0.0.0.0:9301`.
 
 ### Seeding metrics before a run (`influxdb init`)
 
 ```bash
-# Default instance
-mite influxdb init
-
-# Named instances, as in --stats-output=influxdb:INSTANCE
-mite influxdb init secondary 2
+mite influxdb init influxdb3://influx-a:8181/mite influxdb1://influx-b:8086/mite
 ```
 
-Writes a zero-valued point for every registered `mite_stats` entry point stat
+Takes the same URLs as `--stats-output`, and writes a zero-valued point for
+every registered `mite_stats` entry point stat
 (see [pyproject.toml](https://github.com/sky-uk/mite/blob/master/pyproject.toml)
-`[project.entry-points.mite_stats]`) to each given InfluxDB instance, so
+`[project.entry-points.mite_stats]`) to each one, so
 dashboards and alerts have a baseline series to chart against before the first
 real test data point arrives (see
 [mite/cli/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/cli/influxdb.py)).
@@ -115,10 +118,9 @@ digraph influxdb_architecture {
 
     IM [label="InfluxMetrics\nmite/web/influxdb.py"];
     W  [label="InfluxdbWriter"];
-    B  [label="Backend adapter", shape=diamond];
-    B1 [label="_InfluxV1Backend"];
-    B2 [label="_InfluxV2Backend"];
-    B3 [label="_InfluxV3Backend"];
+    B  [label="influxdb_backend(url)", shape=diamond];
+    B1 [label="_InfluxDBClientBackend"];
+    B3 [label="_InfluxDBClient3Backend"];
     C1 [label="influxdb-client"];
     C2 [label="influxdb_client_3"];
     DB [label="InfluxDB", shape=cylinder];
@@ -126,11 +128,9 @@ digraph influxdb_architecture {
     S  -> IM [label="dumped stats ~4x/sec"];
     IM -> W  [label="InfluxPoint batches"];
     W  -> B;
-    B  -> B1 [label="v1"];
-    B  -> B2 [label="v2"];
-    B  -> B3 [label="v3"];
+    B  -> B1 [label="influxdb1://, influxdb2://"];
+    B  -> B3 [label="influxdb3://"];
     B1 -> C1;
-    B2 -> C1;
     B3 -> C2;
     C1 -> DB;
     C2 -> DB;
@@ -161,7 +161,7 @@ Files:
 
 2. **`InfluxMetrics`** (extends `InfluxdbWriter`)
    The `influxdb` stats output, created by `influxdb_output()` for each
-   `--stats-output=influxdb[:INSTANCE]`. `send(message)` is called with a
+   `influxdb1://`, `influxdb2://` or `influxdb3://` `--stats-output` URL. `send(message)` is called with a
    stats dump (a list of per-metric dicts produced by `mite.stats.Aggregator`). It creates/updates the
    relevant `InfluxStat` instances, buffers the resulting points, and flushes
    them to InfluxDB at a throttled cadence:
@@ -177,7 +177,7 @@ Files:
 
 3. **`InfluxdbWriter`**
    The transport layer, independent of the stats model. Responsibilities:
-   - Instantiates the correct backend adapter via `_create_influx_backend`.
+   - Writes through the backend adapter it is given (see `influxdb_backend`).
    - Writes are asynchronous: a single-worker `ThreadPoolExecutor` plus a
      `BoundedSemaphore(1)` ensure **at most one write is ever in flight**. If
      a new batch of points arrives while a write is still pending,
@@ -196,31 +196,23 @@ Files:
    All adapters implement `write_points(points: list[InfluxPoint])` and
    `close()`, isolating the rest of the system from version-specific client
    APIs:
-   - `_InfluxV2ClientBackend` — base class wrapping `influxdb_client.InfluxDBClient`
-     with `SYNCHRONOUS` writes (used directly for v2).
-   - `_InfluxV1Backend` — subclasses the v2 client backend, mapping the
-     legacy `database`/`retention_policy`/`username:password` model onto the
-     v2 client's `bucket`/`token` model (InfluxDB 1.8+ compatibility API).
-   - `_InfluxV2Backend` — thin config wrapper around `_InfluxV2ClientBackend`.
-   - `_InfluxV3Backend` — uses the separate `influxdb_client_3` package
+   - `_InfluxDBClientBackend` — wraps `influxdb_client.InfluxDBClient` with
+     `SYNCHRONOUS` writes. Used for v2, and for v1 through InfluxDB 1.8+'s v2
+     compatibility API (`bucket=DATABASE/RETENTION_POLICY`,
+     `token=USERNAME:PASSWORD`, `org="-"`).
+   - `_InfluxDBClient3Backend` — uses the separate `influxdb_client_3` package
      (`InfluxDBClient3`), InfluxDB's v3/IOx line.
    - Client imports are deferred (done inside `__init__`/`write_points`) so
      only the SDK needed for the configured version has to be installed.
 
-   The version to use is selected via `_create_influx_backend` /
-   `_create_single_backend`, which reads `INFLUXDB_VERSION` (via
-   `packaging.version.Version`, so values like `1`, `2.0`, `v3` all parse —
-   only the major version is used) and dispatches to the matching adapter,
-   defaulting to v3 if unset.
+   `influxdb_backend(url)` builds the adapter from a `--stats-output` URL,
+   choosing it by the URL scheme.
 
-### Multi-instance support
+### Multiple servers
 
-Every config lookup and class constructor accepts a `suffix` (e.g. `""`,
-`"_2"`, `"_3"`, ...), allowing simultaneous writes to **N independent InfluxDB
-instances** — e.g. `INFLUXDB_HOST` and `INFLUXDB_HOST_SECONDARY` configure two
-different destinations. Each `--stats-output=influxdb:INSTANCE` creates one
-`InfluxMetrics` with the suffix `_INSTANCE` (upper case); there's no limit on
-the number of instances.
+Each `--stats-output` URL creates its own `InfluxMetrics`, writer and backend,
+so there's no limit on the number of InfluxDB servers, and servers of different
+versions can be mixed.
 
 ### Distributed topology
 
@@ -245,25 +237,6 @@ digraph influxdb_topology {
 }
 ```
 
-## Configuration reference
-
-Selected once via `INFLUXDB_VERSION{suffix}` (default `"v3"`; only the major
-version matters: `1`, `2`, `3`). Remaining variables depend on the version:
-
-| Version | Required env vars | Notes |
-|---|---|---|
-| v1 | `INFLUXDB_HOST`, `INFLUXDB_USERNAME`, `INFLUXDB_PASSWORD`, `INFLUXDB_DATABASE` | `INFLUXDB_RETENTION_POLICY` optional, defaults to `autogen`. Internally mapped to the v2 client (`bucket=database/retention_policy`, `token=username:password`, `org="-"`). |
-| v2 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_BUCKET`, `INFLUXDB_ORG` | Uses `influxdb_client.InfluxDBClient` directly. |
-| v3 | `INFLUXDB_HOST`, `INFLUXDB_TOKEN`, `INFLUXDB_DATABASE` | Uses `influxdb_client_3.InfluxDBClient3`. |
-
-For another instance, suffix every variable with its name from
-`--stats-output=influxdb:INSTANCE` in upper case (`INFLUXDB_VERSION_SECONDARY`,
-`INFLUXDB_HOST_SECONDARY`, ...). `INFLUXDB_INCLUDE_BUCKETS{suffix}` is optional
-and per instance.
-Missing required variables raise `InfluxConfigError`
-([mite/exceptions.py](https://github.com/sky-uk/mite/blob/master/mite/exceptions.py))
-and abort writer creation.
-
 ## Key classes reference
 
 | Class | Role |
@@ -272,5 +245,5 @@ and abort writer creation.
 | `InfluxStat` / `InfluxCounter` / `InfluxGauge` / `InfluxHistogram` | Convert `mite.stats` dumps into `InfluxPoint`s, tracking deltas |
 | `InfluxdbWriter` | Async, single-in-flight-write transport to a configured backend |
 | `InfluxMetrics` | `InfluxdbWriter` subclass; buffers/throttles/flushes points from stats dumps |
-| `_InfluxBackend` / `_InfluxV1Backend` / `_InfluxV2Backend` / `_InfluxV3Backend` | Version-specific client adapters |
-| `influxdb_output` | `mite_stats_outputs` factory creating an `InfluxMetrics` per `--stats-output=influxdb[:INSTANCE]` |
+| `_InfluxBackend` / `_InfluxDBClientBackend` / `_InfluxDBClient3Backend` | Version-specific client adapters, built by `influxdb_backend(url)` |
+| `influxdb_output` | `mite_stats_outputs` factory for `influxdb1://`, `influxdb2://` and `influxdb3://` URLs |
