@@ -32,7 +32,90 @@ Breaking: dependency slimming, part 2 of 2.
 ### Migration
 
 Change `mite` to `mite[all]` in your requirements to keep every integration.
-No other changes needed.
+See also the stats pipeline migration below.
+
+### Stats pipeline
+
+Breaking: one aggregation pipeline for every run mode, with any number of
+stats outputs.
+
+#### Changed
+
+- **Stats outputs are URLs.** `--stats-output=URL`, repeated once per output,
+  replaces `--influxdb=N`, `--include-buckets` and `--web-address`, on
+  `mite scenario test`, `mite journey test` and the new `mite exporter`:
+  - `prometheus://[HOST][:PORT]` (default `127.0.0.1:9301`)
+  - `influxdb1://HOST[:PORT]/DATABASE[/RETENTION_POLICY]`
+  - `influxdb2://HOST[:PORT]/ORG/BUCKET`
+  - `influxdb3://HOST[:PORT]/DATABASE`
+  - query parameters `tls=true`, `buckets=true`, `token_env` (v2, v3),
+    `username_env` / `password_env` (v1)
+
+  Credentials are read from environment variables named by the `*_env`
+  parameters (defaults `INFLUXDB_TOKEN`, `INFLUXDB_USERNAME`,
+  `INFLUXDB_PASSWORD`). A URL containing credentials is rejected, with them
+  masked in the error. `INFLUXDB_HOST`, `_VERSION`, `_DATABASE`, `_BUCKET`,
+  `_ORG`, `_RETENTION_POLICY`, `_INCLUDE_BUCKETS` and their `_2`, `_3`, ...
+  forms are no longer read.
+- **`mite exporter`** replaces `mite prometheus_exporter` and
+  `mite influxdb_exporter`; choose its outputs with `--stats-output`.
+- **`mite influxdb init URL...`** takes the same URLs as `--stats-output`,
+  replacing `--influxdb=N`.
+- **Stat definitions are immutable.** `Counter`, `Accumulator`, `Gauge` and
+  `Histogram` keep their constructor arguments, so plugins that build stats
+  with them need no changes. The running values move to `StatAggregation`
+  objects (`CounterAggregation`, ...) that each aggregator creates, so
+  `process()`, `dump()`, `metrics`, `bin_counts`, `sums` and `total_counts`
+  are no longer on the definitions. `Histogram.bins` is a sorted tuple.
+- **`mite.stats.Stats` is now `Aggregator`**, and takes a list of senders
+  (anything with `send(dump)` and `close()`) instead of a `sender` callable:
+  `Aggregator([sender])`. `flush()` sends a dump to every sender; `close()`
+  sends what's left and closes them.
+- **`mite ... test` runs one aggregator** for all outputs, instead of one per
+  InfluxDB instance.
+- Prometheus prints counters as integers throughout (a label combination
+  first seen after the first dump used to print as `1.0`).
+- A bad `--stats-output` is reported as a one-line `mite: ...` error.
+
+#### Added
+
+- `mite_stats_outputs` entry point group, so plugins can add stats outputs
+  for a URL scheme.
+- Custom stat types: subclass `Stat` and `StatAggregation` (see
+  `docs/stats.rst`).
+- Several `prometheus://` outputs in one process, on different ports.
+
+#### Removed
+
+- `mite.influxdb_processor.InfluxDBProcessor`, `mite.web` (now
+  `mite.stats_outputs`), `mite.web.influx_metrics`, and the `packaging`
+  dependency.
+
+#### Fixed
+
+- With `--influxdb=2` (now two InfluxDB `--stats-output`s), every message was
+  counted twice and one output's dump cleared the other's counts, because all
+  aggregators shared the plugins' stat objects (first reported, and a fix
+  proposed, by Davide Annunziata).
+- Stats gathered since the last dump were lost at the end of a test run, and
+  when `mite stats` or `mite exporter` stopped.
+- `mite stats` and `mite exporter` now exit cleanly on SIGINT and SIGTERM,
+  sending their final dump. Before, they hung on SIGINT and lost the final
+  dump on SIGTERM, which Kubernetes sends.
+- `mite influxdb init` includes custom stat types, and a stat with an
+  unknown dump type is skipped with an error instead of crashing the output.
+
+#### Migration
+
+| Before | After |
+|---|---|
+| `mite prometheus_exporter --web-address=0.0.0.0:9301` | `mite exporter --stats-output=prometheus://0.0.0.0:9301` |
+| `mite influxdb_exporter` with `INFLUXDB_*` | `mite exporter --stats-output=influxdb3://HOST:PORT/DATABASE` (or `influxdb1://`, `influxdb2://`) |
+| `--influxdb=2` with `INFLUXDB_*` and `INFLUXDB_*_2` | one `--stats-output` per server, e.g. `...?token_env=INFLUXDB_TOKEN_2` for the second |
+| `--include-buckets` | `?buckets=true` on the InfluxDB URL |
+| `mite influxdb init --influxdb=2` | `mite influxdb init URL URL` |
+| `Stats(sender=s.send)` | `Aggregator([s])` |
+| `stat.process(msg)` / `stat.dump()` | `a = stat.aggregation_class(stat)`, then `a.process(msg)` / `a.dump()` |
 
 ## 3.0.0
 
