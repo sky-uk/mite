@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from collections import deque
 from contextlib import asynccontextmanager, suppress
 from functools import wraps
 

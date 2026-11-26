@@ -49,7 +49,7 @@ gnutls. This was originally because gnutls had high memory usage; that
 issue has since been resolved, so use whichever you prefer)
 
 `nanomsg` needs the `libnanomsg` C library and has no prebuilt PyPI wheel, so
-it compiles from source on install — only needed if you select
+it compiles from source on install. It's only needed if you select
 `--message-backend=nanomsg` (the default is ZMQ, which has no such
 requirement).
 
@@ -67,7 +67,7 @@ Run `mite --help` for a full list of commands
 ### Optional install extras
 
 As of mite 4.0, `pip install mite` installs only the core framework.
-Integrations are opt-in — install the extras for the ones you use:
+Integrations are opt-in. Install the extras for the ones you use:
 
 | Extra | Covers |
 |---|---|
@@ -82,7 +82,7 @@ Integrations are opt-in — install the extras for the ones you use:
 | `http` | HTTP integration (`httpperf`) |
 | `browser` | Browser/HTML-scraping integration (depends on `http`) |
 | `nanomsg` | `nanomsg` message backend (ZMQ, the default, needs no extra) |
-| `all` | Union of the above — reproduces the pre-4.0 default install |
+| `all` | Union of the above. Reproduces the pre-4.0 default install |
 
 ```bash
 pip install 'mite[kafka]'
@@ -96,8 +96,8 @@ requirements file and nothing else changes.
 
 This list doesn't include `playwright`, `otel`, `influxdb`, or `dev`.
 `playwright` needs a separate `playwright install` step to download browser
-binaries regardless of how it's installed, so no extra is offered for it —
-install `playwright` directly. `otel` is a separate, pre-existing extra that
+binaries regardless of how it's installed, so no extra is offered for it.
+Install `playwright` directly. `otel` is a separate, pre-existing extra that
 also now pulls in `mite[http]`, since mite's OpenTelemetry integration
 instruments `mite_http`. `influxdb` and `dev` are likewise separate and
 unrelated to this list.

@@ -5,31 +5,43 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Breaking: dependency slimming, part 2 of 2.
+<!--
+Working section for the mite-v4-major-release merge. Entries are grouped
+by source branch, in merge order, so a later branch's revert of an earlier
+branch's change is visible instead of silently landing twice. Before
+tagging 4.0.0: walk the branches in order, drop any entry that a later
+branch undoes, flatten what's left into the standard Breaking
+changes/Added/Changed/Fixed/Removed sections (see the 3.0.0 entry below
+for the target shape), and delete the branch headings and this comment.
+-->
 
-### Changed
+#### feature/packaging-4.0.0
 
-- `pip install mite` now installs only the core framework. Integrations
-  must be installed via their extra (`http`, `kafka`, `amqp`, `websocket`,
-  `finagle`, `selenium`, `selenium_wire`, `s3`, `db`, `browser`) — see
-  `pyproject.toml` for exact versions. `pip install 'mite[all]'` reproduces
-  the old default install.
-- `otel` extra now also includes `mite[http]`.
-- Minimum Python raised to 3.11 (`aio_pika` requires it).
-- `http` extra bumped to `httpperf==1.0rc10`, which ships prebuilt wheels
-  for macOS in addition to Linux.
+<!-- merged: feature/packaging-4.0.0 -->
 
-### Added
+##### Breaking changes
+
+- **Core-only install.** `pip install mite` now installs only the core
+  framework. Integrations must be installed via their extra (`http`,
+  `kafka`, `amqp`, `websocket`, `finagle`, `selenium`, `selenium_wire`,
+  `s3`, `db`, `browser`). See `pyproject.toml` for exact versions.
+  `pip install 'mite[all]'` reproduces the old default install.
+- **`otel` extra** now also includes `mite[http]`.
+- **Minimum Python raised to 3.11** (`aio_pika` requires it).
+- **`http` extra bumped to `httpperf==1.0rc10`**, which ships prebuilt
+  wheels for macOS in addition to Linux.
+
+##### Added
 
 - `nanomsg` extra (previously a core dependency).
 - CI check that a core-only install still works
   (`cd-scripts/checkCoreInstall.sh`).
 
-### Removed
+##### Removed
 
 - The `FutureWarning`s added in 2.12.0 announcing this release.
 
-### Migration
+##### Migration
 
 Change `mite` to `mite[all]` in your requirements to keep every integration.
 No other changes needed.
