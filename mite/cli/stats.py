@@ -1,10 +1,6 @@
-import asyncio
-import logging
-
 from ..stats import Aggregator
 from ..utils import _msg_backend_module
-
-logger = logging.getLogger(__name__)
+from .common import run_receiver_until_stopped
 
 
 def _create_sender(opts):
@@ -32,14 +28,7 @@ def stats(opts):
         exclude = exclude.split(",")
     aggregator = Aggregator([agg_sender], include=include, exclude=exclude)
     receiver.add_listener(aggregator.process)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(receiver.run())
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down stats")
+        run_receiver_until_stopped(receiver)
     finally:
-        try:
-            aggregator.close()
-        finally:
-            loop.close()
+        aggregator.close()

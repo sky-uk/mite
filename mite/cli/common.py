@@ -1,9 +1,15 @@
+import asyncio
 import inspect
+import logging
+import signal
+import threading
 
 from ..config import ConfigManager
 from ..runner import Runner
 from ..scenario import ScenarioManager
 from ..utils import _msg_backend_module, spec_import
+
+logger = logging.getLogger(__name__)
 
 
 def _create_config_manager(opts):
@@ -63,3 +69,27 @@ def _get_scenario_with_kwargs(scenario_spec, config_manager, sender):
                 f"Don't know how to inject {param_name} into a scenario function!"
             )
     return scenarios_fn(**scenarios_kwargs)
+
+
+def run_receiver_until_stopped(receiver):
+    """Run ``receiver`` until the process gets SIGINT or SIGTERM.
+
+    Returns once the receiver has handled its last message, so the caller
+    can then flush and close what the receiver was feeding without racing
+    the receiver's thread.
+    """
+    stop = threading.Event()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    def on_signal(sig):
+        logger.info("Received %s, shutting down", sig.name)
+        stop.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, on_signal, sig)
+    try:
+        loop.run_until_complete(receiver.run(stop.is_set))
+    finally:
+        loop.close()
+

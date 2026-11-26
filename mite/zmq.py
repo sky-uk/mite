@@ -42,6 +42,8 @@ class Duplicator:
                     )
 
 
+CLOSE_LINGER_MS = 1000
+
 class Sender:
     def __init__(self):
         self._zmq_context = zmq.Context()
@@ -59,7 +61,15 @@ class Sender:
         self._socket.send(pack_msg(msg))
 
     def close(self):
-        self._socket.close()
+        # Give queued messages up to CLOSE_LINGER_MS to reach a peer. zmq's
+        # default is to wait forever, which hangs the process at exit when
+        # nothing is connected
+        self._socket.close(linger=CLOSE_LINGER_MS)
+        self._zmq_context.term()
+
+
+# How often a Receiver given a stop_func checks it when no messages arrive
+STOP_CHECK_INTERVAL = 0.1
 
 
 class Receiver:
@@ -88,11 +98,16 @@ class Receiver:
         return self._socket.recv()
 
     async def run(self, stop_func=None):
+        """Receive messages until ``stop_func()`` returns true, or forever
+        without one. With a ``stop_func``, waits for messages in slices of
+        STOP_CHECK_INTERVAL seconds, so it stops even when none arrive."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._run, stop_func)
 
     def _run(self, stop_func=None):
         while stop_func is None or not stop_func():
+            if stop_func is not None and not self._socket.poll(STOP_CHECK_INTERVAL * 1000):
+                continue
             raw = self._recv()
             for raw_listener in self._raw_listeners:
                 raw_listener(raw)

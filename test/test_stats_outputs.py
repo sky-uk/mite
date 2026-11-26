@@ -217,14 +217,14 @@ def test_test_mode_sends_to_all_outputs_through_one_aggregator():
     assert aggregators[0]._senders == outputs
 
 
-def test_mite_stats_sends_to_the_socket_and_flushes_on_shutdown():
+def test_mite_stats_sends_to_the_socket_and_flushes_when_stopped():
     from mite.cli import stats as cli_stats
 
     receiver = mock.Mock()
 
-    async def run():
+    async def run(stop_func):
+        # As if a signal stopped the receiver straight after one message
         receiver.add_listener.call_args[0][0]({"type": "txn", "test": "t"})
-        raise KeyboardInterrupt
 
     receiver.run = run
     sender = mock.Mock()

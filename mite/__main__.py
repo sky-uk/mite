@@ -126,6 +126,7 @@ from .cli.common import (
     _create_scenario_manager,
     _create_sender,
     _get_scenario_with_kwargs,
+    run_receiver_until_stopped,
 )
 from .cli.duplicator import duplicator
 from .cli.influxdb import influxdb_init
@@ -290,17 +291,10 @@ def exporter(opts):
     receiver = _create_exporter_receiver(opts)
     for output in outputs:
         receiver.add_listener(output.send)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(receiver.run())
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down exporter")
+        run_receiver_until_stopped(receiver)
     finally:
-        try:
-            close_senders(outputs)
-        finally:
-            loop.close()
+        close_senders(outputs)
 
 
 def setup_logging(opts):
