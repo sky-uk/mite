@@ -1835,7 +1835,7 @@
                 '1',
                 'mite_http_response_total '
                 '{test="proj.file:scenario",journey="proj.file:journey",transaction="search",method="GET",response_code="504"} '
-                '1.0',
+                '1',
                 '',
                 '# TYPE mite_http_tls_time_seconds histogram',
                 'mite_http_tls_time_seconds_bucket{transaction="login",le="0.000100"} 0',
@@ -1896,4 +1896,4 @@
                 '1',
                 'mite_transaction_total '
                 '{test="proj.file:scenario",journey="proj.file:journey",transaction="search",had_error="False"} '
-                '1.0']}
+                '1']}

@@ -93,10 +93,10 @@ pytest test/test_influxdb_exporter.py
 ```
 
 [test/test_influxdb_exporter.py](https://github.com/sky-uk/mite/blob/master/test/test_influxdb_exporter.py)
-covers `InfluxCounter`, `InfluxGauge` and `InfluxHistogram` point conversion,
-delta/cumulative field correctness, and histogram percentile math. These tests
-exercise the stat model directly and do not require a running InfluxDB instance
-or network access (no backend is constructed).
+covers point conversion for counters, gauges and histograms, the change and
+cumulative fields, histogram percentiles, and `influxdb init` points. These
+tests use a mock backend and don't need a running InfluxDB instance or network
+access.
 
 ## Architecture
 
@@ -140,30 +140,35 @@ digraph influxdb_architecture {
 Files:
 
 - [mite/web/influxdb.py](https://github.com/sky-uk/mite/blob/master/mite/web/influxdb.py)
-  — core writer, stat aggregation/point conversion, and backend adapters
+  — point conversion, writer and backend adapters
+- [mite/web/totals.py](https://github.com/sky-uk/mite/blob/master/mite/web/totals.py)
+  — running totals of the aggregator's dumps, shared with the Prometheus output
 - [mite/web/\_\_init\_\_.py](https://github.com/sky-uk/mite/blob/master/mite/web/__init__.py)
-  — Flask app exposing `/metrics` (Prometheus) and the `prometheus` stats output
-- [mite/web/prometheus.py](https://github.com/sky-uk/mite/blob/master/mite/web/prometheus.py)
-  — sibling Prometheus exporter (not covered here)
+  and [mite/web/prometheus.py](https://github.com/sky-uk/mite/blob/master/mite/web/prometheus.py)
+  — the `prometheus` stats output (not covered here)
 
 ### Layers
 
-1. **Stat model** (`InfluxStat`, `InfluxCounter`, `InfluxGauge`, `InfluxHistogram`)
-   Mirror the shape of `mite.stats` types but render to `InfluxPoint` objects
-   instead of Prometheus text. Each keeps running totals plus a
-   `_prev_*` snapshot so that `to_points()` can emit both a delta (`value`,
-   `count`, `sum`, percentiles computed from the delta buckets) and a
-   cumulative value (`value_cumulative`, `count_cumulative`, ...) per flush.
-   `InfluxHistogram` additionally reconstructs percentiles from histogram
-   buckets (`_percentile_from_buckets`) and can optionally emit raw bucket
-   points (`include_buckets=True`, Prometheus-style `le` tag) for exact
-   reconstruction downstream.
+1. **Points** (`_counter_points`, `_gauge_points`, `_histogram_points`)
+   Each aggregator dump holds what changed since the previous dump, and
+   `RunningTotals` (`mite/web/totals.py`, also used by the Prometheus output)
+   adds it to the totals since the start of the run. Each stat in a dump
+   becomes points with both: the change (`value`, `count`, `sum`, `avg`, and
+   percentiles from the change's bucket counts) and the total
+   (`value_cumulative`, `count_cumulative`, ...). Only label combinations in the
+   dump are written. Percentiles are estimated from the histogram buckets
+   (`_percentiles`), and raw cumulative bucket points can be added (`buckets=true`,
+   Prometheus-style `le` tag) for exact reconstruction downstream. Counters are
+   always written as integers and gauges as floats, because InfluxDB rejects a
+   field that changes type. `influxdb_init_points` builds the `influxdb init`
+   points the same way, from zero values. A stat with an unknown dump `"type"`
+   is skipped, with an error logged once.
 
 2. **`InfluxMetrics`** (extends `InfluxdbWriter`)
    The `influxdb` stats output, created by `influxdb_output()` for each
    `influxdb1://`, `influxdb2://` or `influxdb3://` `--stats-output` URL. `send(message)` is called with a
-   stats dump (a list of per-metric dicts produced by `mite.stats.Aggregator`). It creates/updates the
-   relevant `InfluxStat` instances, buffers the resulting points, and flushes
+   stats dump (a list of per-metric dicts produced by `mite.stats.Aggregator`). It converts the
+   dump to points, buffers them, and flushes
    them to InfluxDB at a throttled cadence:
    - `MIN_FLUSH_INTERVAL = 1.0s` — stats dumps arrive roughly every 0.25s but
      a single Influx write can take longer, so points are buffered across
@@ -242,7 +247,7 @@ digraph influxdb_topology {
 | Class | Role |
 |---|---|
 | `InfluxPoint` | Plain dataclass: `measurement`, `tags`, `fields`, `time_ns` |
-| `InfluxStat` / `InfluxCounter` / `InfluxGauge` / `InfluxHistogram` | Convert `mite.stats` dumps into `InfluxPoint`s, tracking deltas |
+| `RunningTotals` (`mite/web/totals.py`) | Totals of every dump so far, shared with the Prometheus output |
 | `InfluxdbWriter` | Async, single-in-flight-write transport to a configured backend |
 | `InfluxMetrics` | `InfluxdbWriter` subclass; buffers/throttles/flushes points from stats dumps |
 | `_InfluxBackend` / `_InfluxDBClientBackend` / `_InfluxDBClient3Backend` | Version-specific client adapters, built by `influxdb_backend(url)` |
